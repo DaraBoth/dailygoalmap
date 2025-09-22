@@ -1,0 +1,293 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --warning: 38 92.7% 50.2%;
+    --warning-foreground: 355.7 100% 97.3%;
+    --info: 201.9 94.5% 43.1%;
+    --info-foreground: 355.7 100% 97.3%;
+    --card-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.05);
+    --sidebar-width: 280px;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 8.4%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 8.4%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 21.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+    --success: 142.1 70.6% 45.3%;
+    --card-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .font-heading {
+    @apply text-4xl md:text-5xl lg:text-6xl font-bold;
+  }
+  
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+
+  /* Fade in animation */
+  .animate-fadeIn {
+    animation: fadeIn 0.6s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Task completion animation */
+  .task-complete {
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  .task-complete-animation {
+    animation: taskComplete 0.6s ease-out forwards;
+  }
+  
+  @keyframes taskComplete {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.05);
+      background-color: hsl(var(--success));
+      color: hsl(var(--success-foreground));
+    }
+    100% {
+      transform: scale(1);
+      opacity: 0.7;
+    }
+  }
+
+  /* Custom scrollbar styles */
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--primary); /* Use theme primary color */
+    border-radius: 6px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-foreground); /* Use theme primary foreground color */
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(210, 36%, 96%);
+    border-radius: 6px;
+  }
+
+  .dark ::-webkit-scrollbar-track {
+    background: hsl(220, 13%, 18%);
+  }
+}
+
+/* Disable zooming on mobile input focus */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Add meta tag to prevent zooming */
+head {
+  display: block;
+}
+
+head::before {
+  content: '';
+  display: block;
+}
+
+/* Fix for form inputs causing zoom on mobile */
+input, select, textarea, button {
+  font-size: 16px !important;
+}
+
+/* Ensure no zooming on touch devices */
+html {
+  touch-action: manipulation;
+}
+
+/* Mobile dialog improvements */
+@media (max-width: 640px) {
+  /* Improve touch scrolling on mobile */
+  .touch-pan-y {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Prevent body scroll when dialog is open */
+  body:has([data-state="open"]) {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+}
+
+/* PWA Safe Area Support */
+@supports (padding: env(safe-area-inset-top)) {
+  .pt-safe-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+  
+  .pb-safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  .pl-safe-left {
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+  
+  .pr-safe-right {
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}
+
+/* PWA Status Bar */
+.pwa-status-bar {
+  background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--muted)) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Glass Morphism Effects */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass-panel {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Native App-like Interactions */
+.touch-interaction {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile-first PWA styling */
+.mobile-nav-safe {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+/* Touch-friendly sizing */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* PWA App-like Scrolling */
+.native-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Floating Action Button */
+.fab-shadow {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark .fab-shadow {
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1), 0 1px 3px rgba(255, 255, 255, 0.05);
+}
+
+/* Extra small screens (320px and up) - Custom responsive utilities */
+@media (min-width: 320px) {
+  /* Custom xs breakpoint utilities for components that need them */
+  .xs-max-w-380 {
+    max-width: 380px;
+  }
+
+  .xs-space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 1rem;
+  }
+
+  .xs-p-4 {
+    padding: 1rem;
+  }
+
+  .xs-h-12 {
+    height: 3rem;
+  }
+
+  .xs-gap-3 {
+    gap: 0.75rem;
+  }
+}

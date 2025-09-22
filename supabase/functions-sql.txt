@@ -1,0 +1,158 @@
+
+-- Function to check if a user is already a member of a goal
+CREATE OR REPLACE FUNCTION public.check_goal_membership(p_goal_id UUID, p_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 
+    FROM goal_members 
+    WHERE goal_id = p_goal_id 
+    AND user_id = p_user_id
+  );
+END;
+$$;
+
+-- Function to join a goal
+CREATE OR REPLACE FUNCTION public.join_goal(p_goal_id UUID, p_user_id UUID, p_role TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  INSERT INTO goal_members (goal_id, user_id, role)
+  VALUES (p_goal_id, p_user_id, p_role);
+END;
+$$;
+
+-- Function to get goal members with their profiles
+CREATE OR REPLACE FUNCTION public.get_goal_members(p_goal_id UUID)
+RETURNS TABLE (
+  id UUID,
+  goal_id UUID,
+  user_id UUID,
+  joined_at TIMESTAMPTZ,
+  role TEXT,
+  avatar_url TEXT,
+  display_name TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    gm.id,
+    gm.goal_id,
+    gm.user_id,
+    gm.joined_at,
+    gm.role,
+    up.avatar_url,
+    up.display_name
+  FROM 
+    goal_members gm
+  LEFT JOIN 
+    user_profiles up ON gm.user_id = up.id
+  WHERE 
+    gm.goal_id = p_goal_id;
+END;
+$$;
+
+-- Function to check if user is goal creator
+CREATE OR REPLACE FUNCTION public.is_goal_creator(p_goal_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 
+    FROM goal_members 
+    WHERE goal_id = p_goal_id 
+    AND user_id = auth.uid()
+    AND role = 'creator'
+  );
+END;
+$$;
+
+-- Function to remove a goal member
+CREATE OR REPLACE FUNCTION public.remove_goal_member(p_member_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_goal_id UUID;
+  v_user_id UUID;
+  v_is_creator BOOLEAN;
+BEGIN
+  -- Get goal_id from member id
+  SELECT goal_id INTO v_goal_id
+  FROM goal_members
+  WHERE id = p_member_id;
+  
+  -- Check if current user is creator
+  SELECT EXISTS (
+    SELECT 1 
+    FROM goal_members 
+    WHERE goal_id = v_goal_id 
+    AND user_id = auth.uid()
+    AND role = 'creator'
+  ) INTO v_is_creator;
+  
+  -- Validate creator status
+  IF NOT v_is_creator THEN
+    RAISE EXCEPTION 'Only the goal creator can remove members';
+  END IF;
+  
+  -- Cannot remove self as creator
+  SELECT user_id INTO v_user_id
+  FROM goal_members
+  WHERE id = p_member_id;
+  
+  IF v_user_id = auth.uid() AND (SELECT role FROM goal_members WHERE id = p_member_id) = 'creator' THEN
+    RAISE EXCEPTION 'Creator cannot remove themselves from the goal';
+  END IF;
+  
+  -- Delete the member
+  DELETE FROM goal_members
+  WHERE id = p_member_id;
+END;
+$$;
+
+-- Function to regenerate goal share code
+CREATE OR REPLACE FUNCTION public.regenerate_goal_share_code(p_goal_id UUID)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_new_share_code UUID;
+    v_is_creator BOOLEAN;
+BEGIN
+    -- Check if user is creator
+    SELECT EXISTS (
+        SELECT 1 FROM goal_members 
+        WHERE goal_id = p_goal_id 
+        AND user_id = auth.uid() 
+        AND role = 'creator'
+    ) INTO v_is_creator;
+    
+    IF NOT v_is_creator THEN
+        RAISE EXCEPTION 'Only the goal creator can regenerate the share code';
+    END IF;
+    
+    -- Generate new share code
+    v_new_share_code := gen_random_uuid();
+    
+    -- Update goal with new share code
+    UPDATE goals
+    SET share_code = v_new_share_code
+    WHERE id = p_goal_id;
+    
+    RETURN v_new_share_code;
+END;
+$$;

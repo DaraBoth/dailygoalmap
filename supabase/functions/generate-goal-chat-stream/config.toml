@@ -1,0 +1,6 @@
+
+project_id = "vddurwzfpcdoafgetnqo"
+name = "generate-goal-chat-stream"
+verify_jwt = false
+command_timeout = 300  # 5 minutes
+

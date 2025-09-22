@@ -1,0 +1,6 @@
+
+project_id = "vddurwzfpcdoafgetnqo"
+
+[api]
+# Port that Edge Functions serve on
+port = 54321

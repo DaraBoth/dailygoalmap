@@ -1,0 +1,103 @@
+{
+  "name": "DailyGoalMap",
+  "short_name": "GoalMap",
+  "description": "Track and achieve your life goals with AI-powered task management. Created by Vong Pichdaraboth.",
+  "theme_color": "#1C355A",
+  "background_color": "#F3F4F6",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "id": "/",
+  "icons": [
+    {
+      "src": "/icon/maskable_icon_x48.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon/maskable_icon_x72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon/maskable_icon_x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon/maskable_icon_x128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon/maskable_icon_x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon/maskable_icon_x384.png",
+      "sizes": "384x384",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon/maskable_icon_x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon/maskable_icon_x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon/maskable_icon_x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Goal",
+      "short_name": "Add Goal",
+      "description": "Create a new goal",
+      "url": "/dashboard?action=add-goal",
+      "icons": [{ "src": "/icon/maskable_icon_x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Join Goal",
+      "short_name": "Join Goal",
+      "description": "Join an existing goal with a share code",
+      "url": "/dashboard?action=join-goal",
+      "icons": [{ "src": "/icon/maskable_icon_x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot/addnewtask.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/screenshot/creategoalpage.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/screenshot/goaldetailpage.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/screenshot/homepage.png",
+      "sizes": "1200x790",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ]
+}

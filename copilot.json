@@ -1,0 +1,11 @@
+{
+    "includeFiles": [
+      "COPILOT_GUIDE.md",
+      "PROJECT_STRUCTURE.md"
+    ],
+    "excludeFiles": [
+      "node_modules",
+      "dist",
+      "build"
+    ]
+  }
