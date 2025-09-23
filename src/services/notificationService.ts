@@ -39,9 +39,9 @@ export async function sendNotificationToUser(
           title: title || 'DailyGoalMap Notification',
           body: body || 'You have a new update!',
           data: {
-            ...data,
             url: window.location.origin,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            ...data,
           }
         }
       })
@@ -99,9 +99,9 @@ export async function sendNotificationToGoalMembers(
           title, 
           body, 
           {
-            ...data,
             goalId, // Include the goal ID in the notification data
-            senderId: exceptUserId // Include the sender ID
+            senderId: exceptUserId, // Include the sender ID
+            ...data,
           }
         );
       })

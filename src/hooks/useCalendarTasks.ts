@@ -364,6 +364,34 @@ export const useCalendarTasks = ({
       const updatedTasks = [...tasks, newTask];
       setTasks(updatedTasks);
 
+      const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
+      const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
+      
+      await sendNotificationToGoalMembers(
+        goalId,
+        newTask.user_id,
+        'New Task added!',
+        `${newTask.title} has been modified`,
+        {
+          type: 'task_added',
+          task_id: taskId,
+          goal_id: goalId,
+          action: 'added'
+        }
+      );
+
+      // Store internal notification
+      await createTaskUpdateNotification(
+        goalId,
+        newTask.user_id,
+        'task_updated',
+        {
+          task_title: newTask.title,
+          task_id: taskId,
+          action: 'added'
+        }
+      );
+
       toast({
         title: "Task added",
         description: `Task "${range?.title || description}" has been added.`,
