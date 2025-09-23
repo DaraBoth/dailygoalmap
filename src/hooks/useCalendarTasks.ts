@@ -371,7 +371,7 @@ export const useCalendarTasks = ({
         goalId,
         newTask.user_id,
         'New Task added!',
-        `${newTask.title} has been modified`,
+        `${newTask.title} has been added!`,
         {
           type: 'task_added',
           task_id: taskId,
