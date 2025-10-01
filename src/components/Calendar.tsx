@@ -247,23 +247,9 @@ const Calendar = ({
         : '';
       const datetimeInfo = timeStr ? `${dateStr} at ${timeStr}` : dateStr;
 
-      // Send notifications AFTER successful backend update
-      const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
+      // Send internal notification only (push notifications handled by database trigger)
       const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
       
-      await sendNotificationToGoalMembers(
-        goalId,
-        taskToUpdate.user_id,
-        'Task updated!',
-        `${updatedTask.title || updatedTask.description} (${datetimeInfo}) has been updated!`,
-        {
-          type: 'task_updated',
-          task_id: taskId,
-          goal_id: goalId,
-          action: 'updated'
-        }
-      );
-
       await createTaskUpdateNotification(
         goalId,
         taskToUpdate.user_id,

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Task } from "./types";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -12,11 +12,15 @@ import {
   Trash2,
   MapPin,
   User,
-  Tag
+  Tag,
+  Bell
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { addTaskToReminders, isNativeReminderSupported } from "@/utils/nativeReminders";
+import { useToast } from "@/hooks/use-toast";
 
 interface TaskDetailsPanelProps {
   selectedTask: Task | null;
@@ -35,6 +39,39 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   onDeleteTask,
   goalTitle
 }) => {
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const [isAddingReminder, setIsAddingReminder] = useState(false);
+
+  const handleAddToReminders = async () => {
+    if (!selectedTask) return;
+
+    setIsAddingReminder(true);
+    try {
+      const success = await addTaskToReminders(selectedTask);
+      
+      if (success) {
+        toast({
+          title: "Reminder Added",
+          description: "Task reminder has been added to your device.",
+        });
+      } else {
+        toast({
+          title: "Failed to Add Reminder",
+          description: "Could not add reminder. Please check permissions.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred while adding the reminder.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingReminder(false);
+    }
+  };
   if (!selectedTask) {
     return (
       <div className="w-full h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border-l border-white/20 dark:border-white/10 overflow-hidden rounded-l-3xl shadow-lg">
@@ -231,6 +268,21 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                     </>
                   )}
                 </Button>
+
+                {/* Add to Reminder (Mobile Only) */}
+                {isMobile && isNativeReminderSupported() && (
+                  <Button
+                    onClick={handleAddToReminders}
+                    disabled={isAddingReminder}
+                    variant="outline"
+                    className="w-full justify-start gap-3 h-12 rounded-xl bg-purple-50/80 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200/60 dark:border-purple-700/50 hover:bg-purple-100/80 dark:hover:bg-purple-900/40 backdrop-blur-sm transition-all duration-200"
+                  >
+                    <Bell className="h-5 w-5" />
+                    <span className="font-medium">
+                      {isAddingReminder ? 'Adding...' : 'Add to Device Reminders'}
+                    </span>
+                  </Button>
+                )}
 
                 {/* Edit and Delete */}
                 <div className="grid grid-cols-2 gap-3">

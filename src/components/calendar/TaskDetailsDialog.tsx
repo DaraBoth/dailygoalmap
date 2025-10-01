@@ -4,11 +4,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Task } from "./types";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle, Circle, X, Edit, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle, Circle, X, Edit, Trash2, Bell } from "lucide-react";
 import { format } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { addTaskToReminders, isNativeReminderSupported } from "@/utils/nativeReminders";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface TaskDetailsDialogProps {
   isOpen: boolean;
@@ -41,6 +44,38 @@ const TaskDetailsDialog = ({
 }: TaskDetailsDialogProps) => {
   const currentIndex = selectedTask ? tasksForDate.findIndex(t => t.id === selectedTask.id) : selectedTaskIndex;
   const safeIndex = currentIndex >= 0 ? currentIndex : selectedTaskIndex;
+  const { toast } = useToast();
+  const [isAddingReminder, setIsAddingReminder] = useState(false);
+
+  const handleAddToReminders = async () => {
+    if (!selectedTask) return;
+
+    setIsAddingReminder(true);
+    try {
+      const success = await addTaskToReminders(selectedTask);
+      
+      if (success) {
+        toast({
+          title: "Reminder Added",
+          description: "Task reminder has been added to your device.",
+        });
+      } else {
+        toast({
+          title: "Failed to Add Reminder",
+          description: "Could not add reminder. Please check permissions.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred while adding the reminder.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingReminder(false);
+    }
+  };
 
 
   return (
@@ -194,6 +229,21 @@ const TaskDetailsDialog = ({
                           </>
                         )}
                       </Button>
+
+                      {/* Add to Reminder Button */}
+                      {isNativeReminderSupported() && (
+                        <Button
+                          onClick={handleAddToReminders}
+                          disabled={isAddingReminder}
+                          variant="outline"
+                          className="w-full justify-start gap-3 h-12 rounded-xl bg-purple-50/80 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200/60 dark:border-purple-700/50 hover:bg-purple-100/80 dark:hover:bg-purple-900/40 backdrop-blur-sm transition-all duration-200"
+                        >
+                          <Bell className="h-5 w-5" />
+                          <span className="font-medium">
+                            {isAddingReminder ? 'Adding...' : 'Add to Device Reminders'}
+                          </span>
+                        </Button>
+                      )}
 
                       <div className="grid grid-cols-2 gap-3">
                         {onEditTask && (

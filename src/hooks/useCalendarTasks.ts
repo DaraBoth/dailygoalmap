@@ -185,23 +185,9 @@ export const useCalendarTasks = ({
         : '';
       const datetimeInfo = timeStr ? `${dateStr} at ${timeStr}` : dateStr;
       
-      // Send notifications to other members AFTER successful update
-      const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
+      // Send internal notification only (push notifications handled by database trigger)
       const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
       
-      await sendNotificationToGoalMembers(
-        goalId,
-        taskToUpdate.user_id,
-        `Task ${newCompletedState ? 'completed' : 'reopened'}!`,
-        `${taskToUpdate.title || taskToUpdate.description} (${datetimeInfo}) has been ${newCompletedState ? 'completed' : 'reopened'}!`,
-        {
-          type: 'task_updated',
-          task_id: taskId,
-          goal_id: goalId,
-          action: newCompletedState ? 'completed' : 'reopened'
-        }
-      );
-
       await createTaskUpdateNotification(
         goalId,
         taskToUpdate.user_id,
@@ -429,23 +415,9 @@ export const useCalendarTasks = ({
         : '';
       const datetimeInfo = timeStr ? `${dateStr} at ${timeStr}` : dateStr;
 
-      const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
+      // Send internal notification only (push notifications handled by database trigger)
       const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
       
-      await sendNotificationToGoalMembers(
-        goalId,
-        newTask.user_id,
-        'New Task added!',
-        `${newTask.title || newTask.description} (${datetimeInfo}) has been added!`,
-        {
-          type: 'task_added',
-          task_id: taskId,
-          goal_id: goalId,
-          action: 'added'
-        }
-      );
-
-      // Store internal notification
       await createTaskUpdateNotification(
         goalId,
         newTask.user_id,
