@@ -200,6 +200,9 @@ const Calendar = ({
     }
   ) => {
     try {
+      const taskToUpdate = tasks.find(t => t.id === taskId);
+      if (!taskToUpdate) return;
+
       const updates: any = {
         description,
         updated_at: new Date().toISOString()
@@ -213,28 +216,72 @@ const Calendar = ({
       updates.daily_end_time = (range?.daily_end_time || (time ? `${time}` : null)) ? `${range?.daily_end_time || time}:00` : null;
       if (typeof range?.completed !== 'undefined') updates.completed = range?.completed;
 
+      // Create updated task object
+      const updatedTask = {
+        ...taskToUpdate,
+        description,
+        title: range?.title ?? taskToUpdate.title,
+        start_date: (range?.start_date || date).toISOString(),
+        end_date: (range?.end_date || date).toISOString(),
+        daily_start_time: (range?.daily_start_time || (time ? `${time}` : null)) ? `${range?.daily_start_time || time}:00` : null,
+        daily_end_time: (range?.daily_end_time || (time ? `${time}` : null)) ? `${range?.daily_end_time || time}:00` : null,
+        ...(typeof range?.completed !== 'undefined' ? { completed: range.completed } : {}),
+      };
+
+      // Update local state FIRST for immediate UI feedback
+      setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? updatedTask : t));
+      
+      // Update selectedTask if it's the one being edited
+      if (selectedTask && selectedTask.id === taskId) {
+        setSelectedTask(updatedTask);
+      }
+
+      // Now update the backend
       await updateTask(taskId, updates);
+      
+      // Format datetime for notification
+      const startDate = new Date(updatedTask.start_date);
+      const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const timeStr = updatedTask.daily_start_time 
+        ? new Date(`2000-01-01T${updatedTask.daily_start_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+        : '';
+      const datetimeInfo = timeStr ? `${dateStr} at ${timeStr}` : dateStr;
+
+      // Send notifications AFTER successful backend update
+      const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
+      const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
+      
+      await sendNotificationToGoalMembers(
+        goalId,
+        taskToUpdate.user_id,
+        'Task updated!',
+        `${updatedTask.title || updatedTask.description} (${datetimeInfo}) has been updated!`,
+        {
+          type: 'task_updated',
+          task_id: taskId,
+          goal_id: goalId,
+          action: 'updated'
+        }
+      );
+
+      await createTaskUpdateNotification(
+        goalId,
+        taskToUpdate.user_id,
+        'task_updated',
+        {
+          task_title: updatedTask.title || updatedTask.description,
+          task_id: taskId,
+          action: 'updated',
+          datetime: datetimeInfo
+        }
+      );
       
       toast({
         title: "Task updated",
         description: "Task has been updated successfully.",
       });
       
-      // Update tasks state instead of refreshing
-      setTasks(prevTasks => prevTasks.map(t => {
-        if (t.id !== taskId) return t;
-        return {
-          ...t,
-          description,
-          title: range?.title ?? t.title,
-          start_date: (range?.start_date || date).toISOString(),
-          end_date: (range?.end_date || date).toISOString(),
-          daily_start_time: (range?.daily_start_time || (time ? `${time}` : null)) ? `${range?.daily_start_time || time}:00` : null,
-          daily_end_time: (range?.daily_end_time || (time ? `${time}` : null)) ? `${range?.daily_end_time || time}:00` : null,
-          ...(typeof range?.completed !== 'undefined' ? { completed: range.completed } : {}),
-        };
-      }));
-      setIsEditTaskOpen(false); // Close the dialog after update
+      setIsEditTaskOpen(false);
     } catch (error) {
       console.error('Error updating task:', error);
       toast({

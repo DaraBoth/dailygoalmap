@@ -151,22 +151,79 @@ export const useCalendarTasks = ({
   }, [getTasksForDateWrapper]);
 
   const handleToggleTaskCompletion = async (taskId: string) => {
-    // if (allTasks) {
-    //   toast({
-    //     title: "Cannot modify tasks in 'All Tasks' view",
-    //     description: "Switch to the specific goal to modify tasks.",
-    //     variant: "destructive",
-    //   });
-    //   return;
-    // }
+    const taskToUpdate = tasks.find(t => t.id === taskId);
+    if (!taskToUpdate) return;
 
-    const updatedTasks = await toggleTaskCompletion(tasks, taskId);
+    const newCompletedState = !taskToUpdate.completed;
+    
+    // Update local state FIRST for immediate UI feedback
+    const updatedTasks = tasks.map(task => 
+      task.id === taskId 
+        ? { ...task, completed: newCompletedState } 
+        : task
+    );
     setTasks(updatedTasks);
 
+    // Update selectedTask if it's the one being toggled
     if (selectedTask && selectedTask.id === taskId) {
-      setSelectedTask({
+      const updatedSelectedTask = {
         ...selectedTask,
-        completed: !selectedTask.completed
+        completed: newCompletedState
+      };
+      setSelectedTask(updatedSelectedTask);
+    }
+
+    // Now update the backend
+    try {
+      await toggleTaskCompletion(tasks, taskId);
+      
+      // Format datetime for notification
+      const startDate = new Date(taskToUpdate.start_date);
+      const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const timeStr = taskToUpdate.daily_start_time 
+        ? new Date(`2000-01-01T${taskToUpdate.daily_start_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+        : '';
+      const datetimeInfo = timeStr ? `${dateStr} at ${timeStr}` : dateStr;
+      
+      // Send notifications to other members AFTER successful update
+      const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
+      const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
+      
+      await sendNotificationToGoalMembers(
+        goalId,
+        taskToUpdate.user_id,
+        `Task ${newCompletedState ? 'completed' : 'reopened'}!`,
+        `${taskToUpdate.title || taskToUpdate.description} (${datetimeInfo}) has been ${newCompletedState ? 'completed' : 'reopened'}!`,
+        {
+          type: 'task_updated',
+          task_id: taskId,
+          goal_id: goalId,
+          action: newCompletedState ? 'completed' : 'reopened'
+        }
+      );
+
+      await createTaskUpdateNotification(
+        goalId,
+        taskToUpdate.user_id,
+        'task_updated',
+        {
+          task_title: taskToUpdate.title || taskToUpdate.description,
+          task_id: taskId,
+          action: newCompletedState ? 'completed' : 'reopened',
+          datetime: datetimeInfo
+        }
+      );
+    } catch (error) {
+      console.error("Failed to toggle task completion:", error);
+      // Revert local state on error
+      setTasks(tasks);
+      if (selectedTask && selectedTask.id === taskId) {
+        setSelectedTask(taskToUpdate);
+      }
+      toast({
+        title: "Error",
+        description: "Failed to update task. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -364,6 +421,14 @@ export const useCalendarTasks = ({
       const updatedTasks = [...tasks, newTask];
       setTasks(updatedTasks);
 
+      // Format datetime for notification
+      const startDate = new Date(newTask.start_date);
+      const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const timeStr = newTask.daily_start_time 
+        ? new Date(`2000-01-01T${newTask.daily_start_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+        : '';
+      const datetimeInfo = timeStr ? `${dateStr} at ${timeStr}` : dateStr;
+
       const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
       const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
       
@@ -371,7 +436,7 @@ export const useCalendarTasks = ({
         goalId,
         newTask.user_id,
         'New Task added!',
-        `${newTask.title} has been added!`,
+        `${newTask.title || newTask.description} (${datetimeInfo}) has been added!`,
         {
           type: 'task_added',
           task_id: taskId,
@@ -386,9 +451,10 @@ export const useCalendarTasks = ({
         newTask.user_id,
         'task_updated',
         {
-          task_title: newTask.title,
+          task_title: newTask.title || newTask.description,
           task_id: taskId,
-          action: 'added'
+          action: 'added',
+          datetime: datetimeInfo
         }
       );
 
