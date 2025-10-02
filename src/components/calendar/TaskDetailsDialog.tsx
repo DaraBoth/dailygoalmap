@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { addTaskToReminders } from "@/utils/nativeReminders";
+import { openCalendarOptionsDialog } from "@/utils/calendarIntegration";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
@@ -52,24 +52,24 @@ const TaskDetailsDialog = ({
 
     setIsAddingReminder(true);
     try {
-      const success = await addTaskToReminders(selectedTask);
-      
-      if (success) {
-        toast({
-          title: "Reminder Downloaded",
-          description: "Open the downloaded .ics file to add it to your calendar/reminder app.",
-        });
-      } else {
-        toast({
-          title: "Failed to Download Reminder",
-          description: "Could not create reminder file.",
-          variant: "destructive",
-        });
+      // Show calendar options dialog
+      openCalendarOptionsDialog(selectedTask);
+
+      // Add desktop notification reminder as a backup
+      const taskDate = new Date(selectedTask.start_date);
+      if (selectedTask.daily_start_time) {
+        const [hours, minutes] = selectedTask.daily_start_time.split(':').map(Number);
+        taskDate.setHours(hours, minutes, 0, 0);
       }
+
+      const { addDesktopReminder } = await import('@/pwa/notificationService');
+      await addDesktopReminder(selectedTask.title || selectedTask.description, taskDate);
+
+      // Note: Success message will be shown after actual calendar addition
     } catch (error) {
       toast({
         title: "Error",
-        description: "An error occurred while adding the reminder.",
+        description: "An error occurred while opening calendar options.",
         variant: "destructive",
       });
     } finally {
@@ -239,7 +239,7 @@ const TaskDetailsDialog = ({
                       >
                         <Bell className="h-5 w-5" />
                         <span className="font-medium">
-                          {isAddingReminder ? 'Downloading...' : 'Download Reminder'}
+                          {isAddingReminder ? 'Adding...' : 'Add Reminder'}
                         </span>
                       </Button>
 

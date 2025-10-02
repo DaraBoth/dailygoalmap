@@ -10,6 +10,67 @@ export const isNotificationsSupported = (): boolean => {
   return 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
 };
 
+// Add desktop reminder for a task
+export const addDesktopReminder = async (taskTitle: string, reminderTime: Date): Promise<boolean> => {
+  if (!isNotificationsSupported()) {
+    toast({
+      title: "Not Supported",
+      description: "Desktop notifications are not supported in your browser.",
+      variant: "destructive"
+    });
+    return false;
+  }
+
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      toast({
+        title: "Permission Denied",
+        description: "Please allow notifications to set reminders.",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // Calculate delay until reminder time
+    const now = new Date();
+    const delay = reminderTime.getTime() - now.getTime();
+    
+    if (delay <= 0) {
+      toast({
+        title: "Invalid Time",
+        description: "Please select a future time for the reminder.",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // Schedule the notification
+    setTimeout(() => {
+      new Notification("Task Reminder", {
+        body: taskTitle,
+        icon: "/icon/maskable_icon_x96.png",
+        badge: "/icon/maskable_icon_x96.png"
+      });
+    }, delay);
+
+    toast({
+      title: "Reminder Set",
+      description: `You will be reminded about "${taskTitle}" at ${reminderTime.toLocaleString()}`,
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error setting reminder:', error);
+    toast({
+      title: "Error",
+      description: "Failed to set reminder. Please try again.",
+      variant: "destructive"
+    });
+    return false;
+  }
+};
+
 // Check if notifications are already enabled
 export const isNotificationsEnabled = async (): Promise<boolean> => {
   if (!isNotificationsSupported()) {
