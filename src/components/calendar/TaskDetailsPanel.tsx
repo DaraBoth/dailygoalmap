@@ -18,7 +18,6 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { addTaskToReminders } from "@/utils/nativeReminders";
 import { useToast } from "@/hooks/use-toast";
 
@@ -39,7 +38,6 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   onDeleteTask,
   goalTitle
 }) => {
-  const isMobile = useIsMobile();
   const { toast } = useToast();
   const [isAddingReminder, setIsAddingReminder] = useState(false);
 
