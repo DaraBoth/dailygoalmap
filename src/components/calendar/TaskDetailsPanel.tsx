@@ -19,7 +19,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { addTaskToReminders, isNativeReminderSupported } from "@/utils/nativeReminders";
+import { addTaskToReminders } from "@/utils/nativeReminders";
 import { useToast } from "@/hooks/use-toast";
 
 interface TaskDetailsPanelProps {
@@ -52,13 +52,13 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
       
       if (success) {
         toast({
-          title: "Reminder Added",
-          description: "Task reminder has been added to your device.",
+          title: "Reminder Downloaded",
+          description: "Open the downloaded .ics file to add it to your calendar/reminder app.",
         });
       } else {
         toast({
-          title: "Failed to Add Reminder",
-          description: "Could not add reminder. Please check permissions.",
+          title: "Failed to Download Reminder",
+          description: "Could not create reminder file.",
           variant: "destructive",
         });
       }
@@ -269,20 +269,18 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                   )}
                 </Button>
 
-                {/* Add to Reminder (Mobile Only) */}
-                {isMobile && isNativeReminderSupported() && (
-                  <Button
-                    onClick={handleAddToReminders}
-                    disabled={isAddingReminder}
-                    variant="outline"
-                    className="w-full justify-start gap-3 h-12 rounded-xl bg-purple-50/80 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200/60 dark:border-purple-700/50 hover:bg-purple-100/80 dark:hover:bg-purple-900/40 backdrop-blur-sm transition-all duration-200"
-                  >
-                    <Bell className="h-5 w-5" />
-                    <span className="font-medium">
-                      {isAddingReminder ? 'Adding...' : 'Add to Device Reminders'}
-                    </span>
-                  </Button>
-                )}
+                {/* Download Reminder */}
+                <Button
+                  onClick={handleAddToReminders}
+                  disabled={isAddingReminder}
+                  variant="outline"
+                  className="w-full justify-start gap-3 h-12 rounded-xl bg-purple-50/80 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200/60 dark:border-purple-700/50 hover:bg-purple-100/80 dark:hover:bg-purple-900/40 backdrop-blur-sm transition-all duration-200"
+                >
+                  <Bell className="h-5 w-5" />
+                  <span className="font-medium">
+                    {isAddingReminder ? 'Downloading...' : 'Download Reminder'}
+                  </span>
+                </Button>
 
                 {/* Edit and Delete */}
                 <div className="grid grid-cols-2 gap-3">

@@ -38,29 +38,29 @@ A modern, AI-powered Progressive Web Application for goal setting, task manageme
 - **AI Integration**: OpenAI GPT, Google Gemini
 - **Charts**: Recharts
 - **PWA**: Service Worker, Web App Manifest
-- **Mobile**: Capacitor (for native Android and iOS apps)
+- **Mobile**: Progressive Web App (PWA) with offline support
 
-## 📱 Mobile App Setup
+## 📱 Mobile & PWA Support
 
-DailyGoalMap can run as a native mobile app on Android and iOS using Capacitor.
+DailyGoalMap is a fully-featured Progressive Web App (PWA) that works seamlessly on mobile and desktop without requiring app store downloads.
 
-**Quick Start:**
-```bash
-npm install
-npm run build
-npx cap add android  # or 'ios'
-npx cap sync
-npx cap run android  # or 'ios'
+**PWA Features:**
+```
+✅ Install on home screen (iOS, Android, Desktop)
+✅ Work offline with automatic sync
+✅ Push notifications for updates
+✅ Export tasks to native calendar/reminders
+✅ Touch-optimized responsive UI
+✅ No app store required
 ```
 
-**Mobile Features:**
-- 📱 Native device reminders integration
-- 🔔 Push notifications for team updates
-- 💾 Offline functionality with sync
-- 🎨 Touch-optimized UI
-- 📲 Install as a native app
+**Task Reminders:**
+- Download tasks as `.ics` calendar files
+- Import directly into iOS Calendar/Reminders
+- Import into Android Calendar/Google Calendar
+- Works on all platforms
 
-For detailed setup instructions, troubleshooting, and platform-specific guides, see [docs/MOBILE_SETUP.md](docs/MOBILE_SETUP.md).
+For detailed setup instructions and troubleshooting, see [docs/MOBILE_SETUP.md](docs/MOBILE_SETUP.md).
 
 ## 📋 Prerequisites
 

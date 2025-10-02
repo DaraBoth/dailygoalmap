@@ -1,218 +1,137 @@
-# Mobile Setup Guide
+# Mobile & PWA Setup Guide
 
-This guide explains how to set up and run DailyGoalMap on mobile devices (Android and iOS) using Capacitor.
+This guide explains how to use the mobile and PWA features of Daily Goal Map.
 
-## Prerequisites
+## Overview
 
-- Node.js and npm installed
-- For iOS: macOS with Xcode installed
-- For Android: Android Studio installed
+Daily Goal Map is built as a Progressive Web App (PWA) that works seamlessly on desktop and mobile browsers. No app store downloads required!
 
-## Initial Setup
+## PWA Features
 
-### 1. Clone and Install Dependencies
+### Installation
 
-```bash
-git clone <your-repo-url>
-cd dailygoalmap
-npm install
-```
+**iOS (iPhone/iPad):**
+1. Open Safari and navigate to your app URL
+2. Tap the Share button (square with arrow pointing up)
+3. Scroll down and tap "Add to Home Screen"
+4. Tap "Add" to confirm
 
-### 2. Initialize Capacitor
+**Android:**
+1. Open Chrome and navigate to your app URL
+2. Tap the three-dot menu in the top right
+3. Tap "Add to Home Screen" or "Install App"
+4. Tap "Add" or "Install" to confirm
 
-The project already has Capacitor configured, but if you need to reinitialize:
+**Desktop:**
+- Look for the install icon in your browser's address bar
+- Click it to install the PWA as a desktop app
 
-```bash
-npx cap init
-```
+### Offline Support
+- The app works offline after initial load
+- Your data syncs automatically when connection is restored
 
-Use these values:
-- **App ID**: `app.lovable.bc33f2b2b2664c9bb48e608d746fd0cd`
-- **App Name**: `dailygoalmap`
+## Task Reminders
 
-### 3. Build the Web App
+### How It Works
 
-```bash
-npm run build
-```
+When you click "Download Reminder" on any task, the app creates an `.ics` calendar file that you can import into your device's calendar or reminder app.
 
-### 4. Add Platforms
+**iOS:**
+1. Click "Download Reminder" on a task
+2. Safari will download a `.ics` file
+3. Tap the file to open it
+4. Tap "Add to Calendar" or "Add to Reminders"
+5. The task will appear in your chosen app with:
+   - Title and description
+   - Date and time
+   - 15-minute advance reminder
 
-For Android:
-```bash
-npx cap add android
-```
+**Android:**
+1. Click "Download Reminder" on a task
+2. Chrome will download a `.ics` file
+3. Open the file from your Downloads
+4. Choose your Calendar or Reminder app
+5. The task will be imported automatically
 
-For iOS:
-```bash
-npx cap add ios
-```
+**Desktop:**
+1. Click "Download Reminder" on a task
+2. Your browser downloads a `.ics` file
+3. Double-click to open in Outlook, Apple Calendar, Google Calendar, etc.
+4. The event will be imported with all details
 
-### 5. Sync the Project
+### What's Included in Reminders
 
-After building, sync the web assets with the native platforms:
+Each reminder contains:
+- **Task title** as the event name
+- **Task description** in the notes
+- **Start date and time** from your task
+- **1-hour duration** (you can adjust in your calendar app)
+- **15-minute advance notification**
 
-```bash
-npx cap sync
-```
+## Push Notifications
 
-## Running on Mobile
+### Web Push Notifications
 
-### Android
-
-1. Open Android Studio:
-```bash
-npx cap open android
-```
-
-2. In Android Studio:
-   - Wait for Gradle sync to complete
-   - Select your device/emulator from the toolbar
-   - Click the "Run" button (green play icon)
-
-Or run directly from command line:
-```bash
-npx cap run android
-```
-
-### iOS
-
-1. Open Xcode:
-```bash
-npx cap open ios
-```
-
-2. In Xcode:
-   - Select your device/simulator from the toolbar
-   - Click the "Run" button (play icon)
-   - You may need to set up code signing in the "Signing & Capabilities" tab
-
-Or run directly from command line:
-```bash
-npx cap run ios
-```
-
-## Mobile Features
-
-### Native Reminders
-
-The app includes native reminder functionality that allows users to add tasks to their device's reminder system.
-
-**Features:**
-- Add task reminders directly to device calendar/reminders
-- Set reminders with specific dates and times
-- Automatic notification permissions handling
-- Works on both Android and iOS
-
-**Usage:**
-1. Open a task detail view on mobile
-2. Click the "Add to Device Reminders" button
-3. Grant notification permissions if prompted
-4. The reminder will be added to your device
-
-### Push Notifications
-
-The app supports push notifications for:
-- Task updates from team members
-- Goal invitations
-- Task completions
-- Member activities
+The app supports browser-based push notifications for:
+- Task deadlines approaching
+- Goal updates and completions
+- Team collaboration updates
 
 **Setup:**
-Push notifications are configured using the tinynotie API and work automatically once the user enables them in the app settings.
+1. Grant notification permissions when prompted
+2. Notifications work even when the browser is closed (on supported browsers)
 
-## Development Workflow
+**Supported Browsers:**
+- Chrome, Edge, Firefox on desktop
+- Chrome, Samsung Internet on Android
+- Safari on macOS (limited support)
+- Safari on iOS (limited - iOS 16.4+)
 
-### Hot Reload (Development)
+## Why PWA Instead of Native App?
 
-During development, you can use hot reload by connecting to the development server:
+**Advantages:**
+- ✅ No app store approval needed
+- ✅ Instant updates without downloads
+- ✅ Works on all devices with a browser
+- ✅ No installation size limits
+- ✅ Easier to maintain and update
+- ✅ Direct access via URL
+- ✅ Cross-platform by design
 
-1. Make sure your mobile device/emulator is on the same network as your development machine
-2. The app is configured to connect to: `https://bc33f2b2-b266-4c9b-b48e-608d746fd0cd.lovableproject.com`
-
-### After Code Changes
-
-Whenever you make changes to the web code:
-
-```bash
-npm run build
-npx cap sync
-```
-
-Then rerun the app on your device.
-
-### After Plugin Changes
-
-If you add or modify Capacitor plugins:
-
-```bash
-npm install
-npx cap sync
-npx cap update ios    # For iOS
-npx cap update android # For Android
-```
+**What You Can Do:**
+- Install on home screen like a native app
+- Work offline
+- Receive push notifications
+- Export tasks to native calendar/reminder apps
+- Full functionality without app store
 
 ## Troubleshooting
 
-### Android Issues
+### Reminders Not Working
+- **File not downloading:** Check browser download settings and permissions
+- **Can't open .ics file:** Ensure you have a calendar app installed
+- **iOS Safari:** Make sure you're not in Private Browsing mode
 
-**Gradle Build Fails:**
-- Update Android Studio and Gradle
-- Clear Gradle cache: `cd android && ./gradlew clean`
+### PWA Not Installing
+- Use a supported browser (Safari on iOS, Chrome on Android)
+- Access via HTTPS (not HTTP)
+- Clear browser cache and try again
+- Ensure you're not in incognito/private mode
 
-**App Won't Install:**
-- Check that USB debugging is enabled on your device
-- Try uninstalling the old version first
+### Notifications Not Working
+- Grant notification permissions in browser settings
+- Check that notifications aren't blocked for the site
+- On iOS: Update to iOS 16.4+ for best support
+- Try reinstalling the PWA
 
-### iOS Issues
-
-**Code Signing Error:**
-- Open Xcode and configure signing in "Signing & Capabilities"
-- Use your Apple Developer account or create a free provisioning profile
-
-**Simulator Not Starting:**
-- Reset simulator: `xcrun simctl erase all`
-- Restart Xcode
-
-### Permission Issues
-
-**Notifications Not Working:**
-1. Check that notification permissions are granted in device settings
-2. Verify that the app has requested permissions
-3. Check console logs for permission errors
-
-## Building for Production
-
-### Android
-
-1. Build the release APK:
-```bash
-cd android
-./gradlew assembleRelease
-```
-
-2. The APK will be in: `android/app/build/outputs/apk/release/`
-
-For Google Play Store, you'll need to create a signed bundle:
-```bash
-./gradlew bundleRelease
-```
-
-### iOS
-
-1. Open Xcode
-2. Select "Any iOS Device" as the build target
-3. Go to Product > Archive
-4. Follow the wizard to submit to App Store Connect
+### Offline Issues
+- Ensure the app loaded fully at least once while online
+- Check your service worker is active (check in browser dev tools)
+- Clear cache and reload if data seems stale
 
 ## Additional Resources
 
-- [Capacitor Documentation](https://capacitorjs.com/docs)
-- [Capacitor Local Notifications Plugin](https://capacitorjs.com/docs/apis/local-notifications)
-- [Android Studio Setup](https://developer.android.com/studio)
-- [Xcode Setup](https://developer.apple.com/xcode/)
-
-## Support
-
-For more information about mobile development with this project, see:
-- [Lovable Mobile Development Blog Post](https://lovable.dev/blogs/TODO)
+- [PWA Best Practices](https://web.dev/progressive-web-apps/)
+- [iCalendar (.ics) Format](https://icalendar.org/)
+- [Web Push Notifications](https://web.dev/push-notifications-overview/)
+- [Browser Support for PWAs](https://caniuse.com/?search=pwa)
