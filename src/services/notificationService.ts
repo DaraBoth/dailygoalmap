@@ -1,5 +1,5 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseAdmin } from "@/integrations/supabase/client";
 
 // Function to send a push notification to a user using tinynotie-api
 export async function sendNotificationToUser(
@@ -10,35 +10,40 @@ export async function sendNotificationToUser(
 ): Promise<boolean> {
   try {
     // Get user's email from the database
-    const { data:userInfo, error } = await supabase.auth.admin.getUserById(userId)
-
-    // Send notification using tinynotie-api
-    const response = await fetch('https://tinynotie-api.vercel.app/openai/push', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        identifier: userInfo.user.email, // Use email as identifier
-        payload: {
-          title: title || 'DailyGoalMap Notification',
-          body: body || 'You have a new update!',
-          data: {
-            url: window.location.origin,
-            timestamp: new Date().toISOString(),
-            ...data,
+    const { data:userInfo, error } = await supabaseAdmin.auth.admin.getUserById(userId)
+    if(userInfo){
+       // Send notification using tinynotie-api
+      const response = await fetch('https://tinynotie-api.vercel.app/openai/push', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identifier: userInfo.user.email, // Use email as identifier
+          payload: {
+            title: title || 'DailyGoalMap Notification',
+            body: body || 'You have a new update!',
+            data: {
+              url: window.location.origin,
+              timestamp: new Date().toISOString(),
+              ...data,
+            }
           }
-        }
-      })
-    });
-  
-    if (!response.ok) {
-      console.error("Error calling tinynotie-api:", response.statusText);
-      return false;
-    }
+        })
+      });
     
-    const result = await response.json();
-    console.log(`Successfully sent notification to user ${userId}:`, result);
+      if (!response.ok) {
+        console.error("Error calling tinynotie-api:", response.statusText);
+        return false;
+      }
+      
+      const result = await response.json();
+      console.log(`Successfully sent notification to user ${userId}:`, result);
+    } else {
+      console.log("user is id", userId , " is ", userInfo);
+      
+      return false
+    }
     
     return true;
   } catch (error) {
