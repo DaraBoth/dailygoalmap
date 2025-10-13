@@ -9,24 +9,9 @@ export async function sendNotificationToUser(
   data?: Record<string, any>
 ): Promise<boolean> {
   try {
-    // Get user's device_id from the database
-    const { data: deviceId, error } = await supabase.rpc(
-      'get_user_device_id', 
-      { user_id_param: userId }
-    );
-    
-    if (error || !deviceId) {
-      console.error("Error fetching user device_id:", error);
-      return false;
-    }
-    
-    if (!deviceId) {
-      console.log(`User ${userId} doesn't have push notifications enabled`);
-      return false;
-    }
-    
-    console.log(`Sending notification to user ${userId} with device_id:`, deviceId);
-    
+    // Get user's email from the database
+    const { data:userInfo, error } = await supabase.auth.admin.getUserById(userId)
+
     // Send notification using tinynotie-api
     const response = await fetch('https://tinynotie-api.vercel.app/openai/push', {
       method: 'POST',
@@ -34,7 +19,7 @@ export async function sendNotificationToUser(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        identifier: deviceId, // Use device_id as identifier
+        identifier: userInfo.user.email, // Use email as identifier
         payload: {
           title: title || 'DailyGoalMap Notification',
           body: body || 'You have a new update!',
@@ -46,7 +31,7 @@ export async function sendNotificationToUser(
         }
       })
     });
-    
+  
     if (!response.ok) {
       console.error("Error calling tinynotie-api:", response.statusText);
       return false;
@@ -54,6 +39,7 @@ export async function sendNotificationToUser(
     
     const result = await response.json();
     console.log(`Successfully sent notification to user ${userId}:`, result);
+    
     return true;
   } catch (error) {
     console.error("Error sending notification to user:", error);
