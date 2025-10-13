@@ -216,7 +216,7 @@ const Calendar = ({
       updates.daily_end_time = (range?.daily_end_time || (time ? `${time}` : null)) ? `${range?.daily_end_time || time}:00` : null;
       if (typeof range?.completed !== 'undefined') updates.completed = range?.completed;
 
-      // Create updated task object
+      // Create updated task object with updated_at field
       const updatedTask = {
         ...taskToUpdate,
         description,
@@ -225,19 +225,20 @@ const Calendar = ({
         end_date: (range?.end_date || date).toISOString(),
         daily_start_time: (range?.daily_start_time || (time ? `${time}` : null)) ? `${range?.daily_start_time || time}:00` : null,
         daily_end_time: (range?.daily_end_time || (time ? `${time}` : null)) ? `${range?.daily_end_time || time}:00` : null,
+        updated_at: new Date().toISOString(),
         ...(typeof range?.completed !== 'undefined' ? { completed: range.completed } : {}),
       };
 
-      // Update local state FIRST for immediate UI feedback
+      // Now update the backend FIRST
+      await updateTask(taskId, updates);
+      
+      // Update local state AFTER successful backend update for immediate UI feedback
       setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? updatedTask : t));
       
       // Update selectedTask if it's the one being edited
       if (selectedTask && selectedTask.id === taskId) {
         setSelectedTask(updatedTask);
       }
-
-      // Now update the backend
-      await updateTask(taskId, updates);
       
       // Format datetime for notification
       const startDate = new Date(updatedTask.start_date);
