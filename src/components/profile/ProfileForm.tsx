@@ -8,6 +8,7 @@ import { Loader2, Upload, UserCircle, Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { put } from "@vercel/blob";
+import { ImageCropDialog } from "./ImageCropDialog";
 
 interface Profile {
   id: string;
@@ -29,6 +30,8 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -90,15 +93,31 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
     fetchProfile();
   }, [toast]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !profile) return;
+    if (!file) return;
+    
+    // Create a URL for the selected image
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageToCrop(reader.result as string);
+      setCropDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
+    
+    // Reset the input so the same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleCropComplete = async (croppedImage: Blob) => {
+    if (!profile) return;
     
     setIsUploading(true);
+    setCropDialogOpen(false);
     
     try {
-      const filename = `goalmap/${Date.now()}-${file.name}`;
-      const { url } = await put(filename, file, {
+      const filename = `goalmap/${Date.now()}-profile.jpg`;
+      const { url } = await put(filename, croppedImage, {
         access: 'public',
         token: import.meta.env.VITE_VERCEL_BLOB,
       });
@@ -118,6 +137,7 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
       });
     } finally {
       setIsUploading(false);
+      setImageToCrop(null);
     }
   };
 
@@ -226,6 +246,18 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
           onChange={handleFileChange}
         />
       </div>
+      
+      {imageToCrop && (
+        <ImageCropDialog
+          open={cropDialogOpen}
+          imageSrc={imageToCrop}
+          onCropComplete={handleCropComplete}
+          onClose={() => {
+            setCropDialogOpen(false);
+            setImageToCrop(null);
+          }}
+        />
+      )}
       
       <div className="space-y-2">
         <Label htmlFor="displayName" className="text-purple-700 font-medium">Display Name</Label>
