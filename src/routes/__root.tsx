@@ -75,8 +75,6 @@ function RootComponent() {
               <Outlet />
             </div>
             <Toaster position={isMobile ? "bottom-center" : "bottom-right"} richColors closeButton />
-            <OfflinePopup />
-            {/* <InstallGuide /> */}
             {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools />}
           </QueryClientProvider>
         </HelmetProvider>
