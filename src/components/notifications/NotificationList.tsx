@@ -45,13 +45,13 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction 
     if (!hasMore && !reset) return;
     setLoading(true);
     const page = await fetchNotifications({
-      limit: 8,
+      limit: 15,
       before: reset ? undefined : cursor,
       onlyUnread: filter === 'unread',
       onlyInvites: filter === 'invites'
     });
     setItems((prev) => reset ? page : [...prev, ...page]);
-    if (page.length < 8) setHasMore(false);
+    if (page.length < 15) setHasMore(false);
     const last = page[page.length - 1];
     if (last) setCursor(last.created_at);
     setLoading(false);
@@ -90,7 +90,8 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction 
 
   const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 40) {
+    // Trigger load when user scrolls near the bottom (within 100px)
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100 && !loading && hasMore) {
       load();
     }
   };
