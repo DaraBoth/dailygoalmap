@@ -19,7 +19,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction 
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [filter, setFilter] = useState<'all' | 'unread' | 'invites'>("all");
   const [counts, setCounts] = useState<{ all: number; unread: number; invites: number }>({ all: 0, unread: 0, invites: 0 });
-  const containerRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
 
   const refreshCounts = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -88,13 +88,22 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction 
     return () => clearTimeout(timer);
   }, [items]);
 
-  const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    // Trigger load when user scrolls near the bottom (within 100px)
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100 && !loading && hasMore) {
-      load();
-    }
-  };
+  useEffect(() => {
+    // Attach scroll listener to the viewport element
+    const viewport = viewportRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement;
+    if (!viewport) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = viewport;
+      // Trigger load when user scrolls near the bottom (within 100px)
+      if (scrollTop + clientHeight >= scrollHeight - 100 && !loading && hasMore) {
+        load();
+      }
+    };
+
+    viewport.addEventListener('scroll', handleScroll);
+    return () => viewport.removeEventListener('scroll', handleScroll);
+  }, [loading, hasMore, cursor]);
 
   const handleAfterAction = () => {
     load(true);
@@ -150,7 +159,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction 
           </Alert>
         )} */}
       </div>
-      <ScrollArea className="h-[75vh] sm:h-80 bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border border-gray-200/60 dark:border-white/25 shadow-xl" ref={containerRef} onScroll={onScroll}>
+      <ScrollArea className="h-[75vh] sm:h-80 bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border border-gray-200/60 dark:border-white/25 shadow-xl" ref={viewportRef}>
         <div className="p-3 space-y-3">
           {items.length === 0 && !loading && (
             <div className="text-sm text-gray-600 dark:text-gray-300 p-8 text-center bg-white/60 dark:bg-white/15 backdrop-blur-sm rounded-xl border border-gray-200/60 dark:border-white/25">
