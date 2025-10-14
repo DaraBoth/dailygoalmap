@@ -28,7 +28,8 @@ export async function sendNotificationToUser(
               timestamp: new Date().toISOString(),
               ...data,
             }
-          }
+          },
+          appId: 2
         })
       });
     
