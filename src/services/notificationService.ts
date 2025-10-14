@@ -24,7 +24,7 @@ export async function sendNotificationToUser(
             title: title || 'DailyGoalMap Notification',
             body: body || 'You have a new update!',
             data: {
-              url: window.location.origin,
+              url: window.location.href.replace(window.location.origin,""),
               timestamp: new Date().toISOString(),
               ...data,
             }

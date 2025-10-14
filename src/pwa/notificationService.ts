@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 // VAPID public key for Web Push  
-const PUBLIC_VAPID_KEY = "BGfjmqSQgx7J6HXnvhxAGSOJ2h5W7mwrWYN8Cqa0Nql5nkoyyhlc49v_x-dIckFRm0rIeAgNxgfAfekqCwX8TNo";
+const PUBLIC_VAPID_KEY = import.meta.env.VITE_VAPID_KEY;
 
 // Check if notifications are supported in the browser
 export const isNotificationsSupported = (): boolean => {
