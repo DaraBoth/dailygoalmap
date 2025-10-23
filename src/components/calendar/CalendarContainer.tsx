@@ -1,6 +1,5 @@
 
 import { motion } from "framer-motion";
-import { useState } from "react";
 import CalendarDisplay from "./CalendarDisplay";
 import { Task } from "./types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,7 +41,7 @@ const CalendarContainer = ({
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 0.2, duration: 0.5 }}
-      className="h-full relative flex-1 overflow-y-auto min-h-[500px]"
+      className="h-full relative flex-1 min-h-[500px]"
     >
       {isLoading ? (
         <div className="grid grid-cols-1 gap-4 p-4">
@@ -64,10 +63,8 @@ const CalendarContainer = ({
             selectedDate={selectedDate}
             onDateChange={(date) => {
               onDateChange(date);
-              // On mobile, open task details when a date is selected
-              if (isMobile && date && onOpenTaskDetails) {
-                onOpenTaskDetails();
-              }
+              // Do not auto-open task details when a date is selected.
+              // Task details should only open when the user taps a specific task.
             }}
             tasks={tasks}
             getTasksForDate={getTasksForDate}

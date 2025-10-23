@@ -2,18 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSearch } from "@tanstack/react-router";
-import TaskSidebar from "./calendar/TaskSidebar";
-import TaskDetailsPanel from "./calendar/TaskDetailsPanel";
 import AddTaskDialog from "./calendar/AddTaskDialog";
-import TaskDetailsDialog from "./calendar/TaskDetailsDialog";
 import EditTaskDialog from "./calendar/EditTaskDialog";
 import CalendarContainer from "./calendar/CalendarContainer";
+import TaskList from "./calendar/TaskList";
+import TaskDetailsSidebar from "./calendar/TaskDetailsSidebar";
+import TaskSidebar from "./calendar/TaskSidebar";
+import TaskDetailsPanel from "./calendar/TaskDetailsPanel";
 import { useCalendarTasks } from "@/hooks/useCalendarTasks";
-import { updateTask, deleteTaskFromDatabase } from "@/utils/supabaseOperations";
+import { updateTask, deleteTaskFromDatabase, insertTask } from "@/utils/supabaseOperations";
 import { Task } from "./calendar/types";
 import { useToast } from "@/hooks/use-toast";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
-import { insertTask } from "@/utils/supabaseOperations";
 
 
 interface CalendarProps {
@@ -37,7 +37,7 @@ const Calendar = ({
 }: CalendarProps) => {
   const calendarRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const searchParams = useSearch({ strict: false }) as any;
+  const searchParams = useSearch({ strict: false }) as { date?: string; taskId?: string };
   const hasInitializedDate = useRef(false);
   const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -85,6 +85,10 @@ const Calendar = ({
 
   const handleInternalDateChange = (date: Date) => {
     handleDateChange(date);
+    // When user selects a date, do not auto-open the task details sidebar.
+    // Ensure the details panel is closed so selecting dates only changes calendar selection.
+    setIsTaskDetailsOpen(false);
+
     if (externalOnDateChange) {
       externalOnDateChange(date);
     }
@@ -94,6 +98,7 @@ const Calendar = ({
     if (hasInitializedDate.current) return;
 
     const dateParam = searchParams?.date;
+    const taskParam = searchParams?.taskId;
     let parsedDate = new Date();
 
     if (dateParam && !isNaN(Date.parse(dateParam))) {
@@ -103,14 +108,39 @@ const Calendar = ({
     if (!selectedDate || parsedDate.getTime() !== selectedDate.getTime()) {
       setSelectedDate(parsedDate);
       handleDateChange(parsedDate);
-      
-      if (!isMobile) {
-        setIsTaskDetailsOpen(true);
-      }
+      // If a taskId is provided in the URL we will defer auto-opening until tasks are loaded
+      // (see effect that watches `tasks`). Do NOT auto-open details here for normal loads.
     }
 
     hasInitializedDate.current = true;
   }, [searchParams, selectedDate, handleDateChange, setSelectedDate, setIsTaskDetailsOpen, isMobile]);
+
+  // If the URL contained a taskId param (for example, coming from a notification),
+  // wait until tasks are loaded and then select + open that task automatically.
+  const hasHandledUrlTask = useRef(false);
+  useEffect(() => {
+    const taskIdParam = searchParams?.taskId;
+    if (!taskIdParam) return;
+    if (hasHandledUrlTask.current) return;
+    if (!tasks || tasks.length === 0) return; // wait until tasks are available
+
+    const found = tasks.find(t => t.id === taskIdParam);
+    if (found) {
+      // Select the date and the task
+      const taskDate = new Date(found.start_date);
+      setSelectedDate(taskDate);
+      handleDateChange(taskDate);
+
+      const tasksForTaskDate = getTasksForDateWrapper(taskDate);
+      const idx = tasksForTaskDate.findIndex(t => t.id === found.id);
+      setSelectedTask(found);
+      setSelectedTaskIndex(idx >= 0 ? idx : 0);
+
+      // Open the details panel so the user sees the task immediately
+      setIsTaskDetailsOpen(true);
+      hasHandledUrlTask.current = true;
+    }
+  }, [searchParams?.taskId, tasks, getTasksForDateWrapper, handleDateChange, setSelectedDate, setSelectedTask, setSelectedTaskIndex, setIsTaskDetailsOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -133,35 +163,7 @@ const Calendar = ({
     };
   }, [handleNavigateTask]);
 
-  const renderNavButtons = () => {
-    return (
-      <div className="flex items-center justify-center gap-2 mt-3 mb-1">
-        <button
-          className="h-8 w-8 p-0 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
-          onClick={() => handleNavigateTask('prev')}
-        >
-          <span className="sr-only">Previous Task</span>
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4">
-            <path d="M8.84182 3.13514C9.04327 3.32401 9.05348 3.64042 8.86462 3.84188L5.43521 7.49991L8.86462 11.1579C9.05348 11.3594 9.04327 11.6758 8.84182 11.8647C8.64036 12.0535 8.32394 12.0433 8.13508 11.8419L4.38508 7.84188C4.20477 7.64955 4.20477 7.35027 4.38508 7.15794L8.13508 3.15794C8.32394 2.95648 8.64036 2.94628 8.84182 3.13514Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-          </svg>
-        </button>
-        
-        <span className="text-xs text-muted-foreground">
-          {selectedTaskIndex + 1} of {getTasksForDateWrapper(selectedDate || new Date()).length}
-        </span>
-        
-        <button
-          className="h-8 w-8 p-0 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
-          onClick={() => handleNavigateTask('next')}
-        >
-          <span className="sr-only">Next Task</span>
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4">
-            <path d="M6.1584 3.13508C6.35985 2.94621 6.67627 2.95642 6.86514 3.15788L10.6151 7.15788C10.7954 7.3502 10.7954 7.64949 10.6151 7.84182L6.86514 11.8418C6.67627 12.0433 6.35985 12.0535 6.1584 11.8646C5.95694 11.6757 5.94673 11.3593 6.1356 11.1579L9.565 7.49985L6.1356 3.84182C5.94673 3.64036 5.95694 3.32394 6.1584 3.13508Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-          </svg>
-        </button>
-      </div>
-    );
-  };
+
 
   const handleOpenTaskDetails = (task?: Task) => {
     if (task) {
@@ -203,7 +205,7 @@ const Calendar = ({
       const taskToUpdate = tasks.find(t => t.id === taskId);
       if (!taskToUpdate) return;
 
-      const updates: any = {
+      const updates: Partial<Task> = {
         description,
         updated_at: new Date().toISOString()
       };
@@ -297,6 +299,8 @@ const Calendar = ({
 
     setIsConfirmDeleteOpen(false); // Close dialog immediately
     setTaskToDelete(null); // Clear task to delete
+    setIsTaskDetailsOpen(false); // Close task details panel
+    setSelectedTask(null); // Clear selected task
 
     try {
       await deleteTaskFromDatabase(deletedTaskId);
@@ -335,53 +339,16 @@ const Calendar = ({
     setTaskToDelete(null);
   };
 
-  // Direct delete function for mobile dialog (already has confirmation)
-  const handleDirectDeleteTask = async (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
-
-    const deletedTaskDescription = task.description;
-
-    try {
-      await deleteTaskFromDatabase(taskId);
-
-      // Temporarily store the deleted task for undo
-      setLastDeletedTask(task);
-
-      // Remove task from state immediately
-      setTasks(prevTasks => prevTasks.filter(t => t.id !== taskId));
-
-      toast({
-        title: "Task deleted",
-        description: `"${deletedTaskDescription}" deleted.`,
-        variant: "default",
-        duration: 5000,
-        action: { label: "Undo", onClick: handleUndoDelete },
-      });
-    } catch (error) {
-      console.error('Error deleting task:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete task. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleUndoDelete = async () => {
     if (!lastDeletedTask) return;
 
     try {
-      // Re-insert the task into the database
       await insertTask(lastDeletedTask);
-
-      // Remove manual update; rely on real-time INSERT event
-      // setTasks(prevTasks => [...prevTasks, lastDeletedTask]); // Removed
-      setLastDeletedTask(null); // Clear the last deleted task
+      setLastDeletedTask(null);
 
       toast({
         title: "Undo Successful",
-        description: `Task "${lastDeletedTask.description}" has been restored.`, // Enhanced description
+        description: `Task "${lastDeletedTask.description}" has been restored.`,
         variant: "default",
       });
     } catch (error) {
@@ -394,17 +361,74 @@ const Calendar = ({
     }
   };
 
+  const renderNavButtons = () => {
+    return (
+      <div className="flex items-center justify-center gap-2 mt-3 mb-1">
+        <button
+          className="h-8 w-8 p-0 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+          onClick={() => handleNavigateTask('prev')}
+        >
+          <span className="sr-only">Previous Task</span>
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4">
+            <path d="M8.84182 3.13514C9.04327 3.32401 9.05348 3.64042 8.86462 3.84188L5.43521 7.49991L8.86462 11.1579C9.05348 11.3594 9.04327 11.6758 8.84182 11.8647C8.64036 12.0535 8.32394 12.0433 8.13508 11.8419L4.38508 7.84188C4.20477 7.64955 4.20477 7.35027 4.38508 7.15794L8.13508 3.15794C8.32394 2.95648 8.64036 2.94628 8.84182 3.13514Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+          </svg>
+        </button>
+        
+        <span className="text-xs text-muted-foreground">
+          {selectedTaskIndex + 1} of {getTasksForDateWrapper(selectedDate || new Date()).length}
+        </span>
+        
+        <button
+          className="h-8 w-8 p-0 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+          onClick={() => handleNavigateTask('next')}
+        >
+          <span className="sr-only">Next Task</span>
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4">
+            <path d="M6.1584 3.13508C6.35985 2.94621 6.67627 2.95642 6.86514 3.15788L10.6151 7.15788C10.7954 7.3502 10.7954 7.64949 10.6151 7.84182L6.86514 11.8418C6.67627 12.0433 6.35985 12.0535 6.1584 11.8646C5.95694 11.6757 5.94673 11.3593 6.1356 11.1579L9.565 7.49985L6.1356 3.84182C5.94673 3.64036 5.95694 3.32394 6.1584 3.13508Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+          </svg>
+        </button>
+      </div>
+    );
+  };
+
   return (
     <motion.div 
       className="grid h-full w-full"
-      style={{ gridTemplateRows: 'minmax(0, 1fr)' }}
+      style={{ gridTemplateRows: isMobile ? 'auto 1fr' : 'minmax(0, 1fr)' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
       ref={calendarRef}
     >
-      <div className="grid grid-cols-1 md:grid-cols-[280px,1fr] lg:grid-cols-[300px,1fr,320px] xl:grid-cols-[320px,1fr,360px] h-full">
-        {!isMobile && (
+      {isMobile ? (
+        <div className="h-full overflow-y-auto pb-28 pb-safe-or-6">
+          <div className="min-h-[500px]">
+            <CalendarContainer
+              selectedDate={selectedDate}
+              onDateChange={handleInternalDateChange}
+              tasks={tasks}
+              getTasksForDate={getTasksForDateWrapper}
+              financialData={financialData}
+              dailySpendingLimit={dailySpendingLimit}
+              isLoading={isLoading}
+              error={error}
+              onAddTask={handleAddTask}
+              onOpenAddTaskDialog={() => setIsAddTaskDialogOpen(true)}
+              onOpenTaskDetails={handleOpenTaskDetails}
+            />
+          </div>
+
+          <div className="pb-safe-or-6">
+            <TaskList
+              selectedDate={selectedDate}
+              tasks={selectedDate ? getTasksForDateWrapper(selectedDate) : []}
+              onTaskClick={handleOpenTaskDetails}
+              onToggleTaskCompletion={handleToggleTaskCompletion}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-[280px,1fr] lg:grid-cols-[300px,1fr,320px] xl:grid-cols-[320px,1fr,360px] h-full">
           <div className="h-full overflow-hidden">
             <TaskSidebar
               tasks={tasks}
@@ -427,23 +451,21 @@ const Calendar = ({
               }}
             />
           </div>
-        )}
 
-        <CalendarContainer
-          selectedDate={selectedDate}
-          onDateChange={handleInternalDateChange}
-          tasks={tasks}
-          getTasksForDate={getTasksForDateWrapper}
-          financialData={financialData}
-          dailySpendingLimit={dailySpendingLimit}
-          isLoading={isLoading || isLoadingAllTasks}
-          error={error}
-          onAddTask={handleAddTask}
-          onOpenAddTaskDialog={() => setIsAddTaskDialogOpen(true)}
-          onOpenTaskDetails={handleOpenTaskDetails}
-        />
+          <CalendarContainer
+            selectedDate={selectedDate}
+            onDateChange={handleInternalDateChange}
+            tasks={tasks}
+            getTasksForDate={getTasksForDateWrapper}
+            financialData={financialData}
+            dailySpendingLimit={dailySpendingLimit}
+            isLoading={isLoading || isLoadingAllTasks}
+            error={error}
+            onAddTask={handleAddTask}
+            onOpenAddTaskDialog={() => setIsAddTaskDialogOpen(true)}
+            onOpenTaskDetails={handleOpenTaskDetails}
+          />
 
-        {!isMobile && (
           <div className="h-full overflow-hidden hidden lg:block">
             <TaskDetailsPanel
               selectedTask={selectedTask}
@@ -454,8 +476,8 @@ const Calendar = ({
               goalTitle={allTasks ? "All Goals" : goalTitle}
             />
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <AddTaskDialog
         isOpen={isAddTaskDialogOpen}
@@ -472,28 +494,23 @@ const Calendar = ({
         task={editingTask}
       />
 
-      {isMobile && (
-        <TaskDetailsDialog
-          isOpen={isTaskDetailsOpen}
-          onClose={() => setIsTaskDetailsOpen(false)}
-          selectedTask={selectedTask}
-          selectedDate={selectedDate}
-          onToggleTaskCompletion={handleToggleTaskCompletion}
-          tasksForDate={getTasksForDateWrapper(selectedTask ? new Date(selectedTask.start_date) : (selectedDate || new Date()))}
-          selectedTaskIndex={selectedTaskIndex}
-          handleNavigateTask={handleNavigateTask}
-          goalTitle={goalTitle}
-          onEditTask={handleEditTask}
-          onDirectDeleteTask={handleDirectDeleteTask}
-        />
-      )}
+      <TaskDetailsSidebar
+        isOpen={isTaskDetailsOpen}
+        onClose={() => setIsTaskDetailsOpen(false)}
+        selectedTask={selectedTask}
+        selectedDate={selectedDate}
+        onToggleTaskCompletion={handleToggleTaskCompletion}
+        goalTitle={goalTitle}
+        onEditTask={handleEditTask}
+        onDeleteTask={handleDeleteTask}
+      />
 
       <DeleteConfirmDialog
         isOpen={isConfirmDeleteOpen}
-        isDeleting={null} // No internal deleting state in this component
+        isDeleting={null}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
-        goalTitle={taskToDelete?.description || "this task"} // Display task description
+        goalTitle={taskToDelete?.description || "this task"}
       />
     </motion.div>
   );

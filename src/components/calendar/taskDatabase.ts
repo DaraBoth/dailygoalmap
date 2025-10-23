@@ -118,19 +118,29 @@ export async function saveTaskToSupabase(task: Task, goalId: string): Promise<vo
         .single();
 
       if (goalData) {
+        // Build a deep link to the new task so recipients can open it directly
+        const deepLinkNew = `/goal/${goalId}?date=${encodeURIComponent(task.start_date)}&taskId=${encodeURIComponent(task.id)}`;
+
         // Send push notification to goal members
         await sendNotificationToGoalMembers(
           goalId,
           userData.user.id,
           "New Task Added",
-          `A new task "${task.description}" was added to "${goalData.title}"`
+          `A new task "${task.description}" was added to "${goalData.title}"`,
+          {
+            type: 'task_created',
+            task_id: task.id,
+            goal_id: goalId,
+            url: deepLinkNew
+          }
         );
 
         // Create internal notification for goal members
         await createTaskNotification(goalId, userData.user.id, 'task_created', {
           task_id: task.id,
           task_title: task.description,
-          goal_title: goalData.title
+          goal_title: goalData.title,
+          url: deepLinkNew
         });
       }
     } catch (notifyError) {
@@ -176,6 +186,9 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
       const { sendNotificationToGoalMembers } = await import("@/services/notificationService");
       const { createTaskUpdateNotification } = await import("@/services/internalNotifications");
       
+      // Build deep link to the task
+      const deepLinkComplete = `/goal/${task.goal_id}?taskId=${encodeURIComponent(taskId)}&date=${encodeURIComponent(new Date().toISOString())}`;
+
       await sendNotificationToGoalMembers(
         task.goal_id,
         user.id,
@@ -185,7 +198,8 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
           type: 'task_updated',
           task_id: taskId,
           goal_id: task.goal_id,
-          action: completed ? 'completed' : 'uncompleted'
+          action: completed ? 'completed' : 'uncompleted',
+          url: deepLinkComplete
         }
       );
 
@@ -197,7 +211,8 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
         {
           task_title: task.title,
           task_id: taskId,
-          action: completed ? 'completed' : 'uncompleted'
+          action: completed ? 'completed' : 'uncompleted',
+          url: deepLinkComplete
         }
       );
     } catch (notifError) {

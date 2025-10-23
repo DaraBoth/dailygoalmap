@@ -83,20 +83,6 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
         </div>
         
       </div>
-      
-      {/* Progress indicator */}
-      {totalTasks > 0 && targetDate && (
-        <div className="w-full px-4 pb-3">
-          <div className="max-w-[2000px] mx-auto">
-            <GoalProgress 
-              totalTasks={totalTasks}
-              completedTasks={completedTasks}
-              targetDate={targetDate}
-              status={status}
-            />
-          </div>
-        </div>
-      )}
     </header>
   );
 };

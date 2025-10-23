@@ -14,6 +14,13 @@ export interface Task {
   end_date: string;          // ISO datetime (date portion used for day)
   daily_start_time?: string | null; // 'HH:MM:SS'
   daily_end_time?: string | null;   // 'HH:MM:SS'
+  tags?: string[];          // Array of task tags
+}
+
+export interface TaskTag {
+  name: string;
+  color?: 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'orange' | 'pink' | 'gray';
+  icon?: 'flag' | 'star' | 'bell' | 'clock' | 'target' | 'heart' | 'circle' | 'check';
 }
 
 export interface TaskManagerProps {

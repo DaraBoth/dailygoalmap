@@ -364,6 +364,9 @@ export const updateTask = async (taskId: string, updates: any) => {
         const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
         const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
         
+        // Build a deep link to the specific task so recipients can open it directly
+        const deepLink = `/goal/${originalTask.goal_id}?date=${encodeURIComponent((updates.start_date || originalTask.start_date))}&taskId=${encodeURIComponent(taskId)}`;
+
         await sendNotificationToGoalMembers(
           originalTask.goal_id,
           user.id,
@@ -373,7 +376,8 @@ export const updateTask = async (taskId: string, updates: any) => {
             type: 'task_updated',
             task_id: taskId,
             goal_id: originalTask.goal_id,
-            action: 'edited'
+            action: 'edited',
+            url: deepLink
           }
         );
 
@@ -385,7 +389,8 @@ export const updateTask = async (taskId: string, updates: any) => {
           {
             task_title: originalTask.title,
             task_id: taskId,
-            action: 'edited'
+            action: 'edited',
+            url: deepLink
           }
         );
       }

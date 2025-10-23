@@ -138,17 +138,10 @@ export const useCalendarTasks = ({
 
   const handleDateChange = useCallback((date: Date | undefined) => {
     setSelectedDate(date);
-    if (date) {
-      const tasksForDate = getTasksForDateWrapper(date);
-      if (tasksForDate.length > 0) {
-        setSelectedTask(tasksForDate[0]);
-        setSelectedTaskIndex(0);
-      } else {
-        setSelectedTask(null);
-        setSelectedTaskIndex(0);
-      }
-    }
-  }, [getTasksForDateWrapper]);
+    // Don't auto-select task on date change
+    setSelectedTask(null);
+    setSelectedTaskIndex(0);
+  }, []);
 
   const handleToggleTaskCompletion = async (taskId: string) => {
     const taskToUpdate = tasks.find(t => t.id === taskId);
@@ -188,6 +181,9 @@ export const useCalendarTasks = ({
       // Send internal notification only (push notifications handled by database trigger)
       const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
       
+      // Build a deep link URL so notification opens the goal page with date and task selected
+      const deepLinkUrl = `/goal/${goalId}?date=${encodeURIComponent(startDate.toISOString())}&taskId=${encodeURIComponent(taskId)}`;
+
       await createTaskUpdateNotification(
         goalId,
         taskToUpdate.user_id,
@@ -196,7 +192,8 @@ export const useCalendarTasks = ({
           task_title: taskToUpdate.title || taskToUpdate.description,
           task_id: taskId,
           action: newCompletedState ? 'completed' : 'reopened',
-          datetime: datetimeInfo
+          datetime: datetimeInfo,
+          url: deepLinkUrl
         }
       );
     } catch (error) {
