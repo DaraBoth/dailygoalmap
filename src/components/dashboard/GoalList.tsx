@@ -3,7 +3,16 @@ import { supabase } from "@/integrations/supabase/client"; // Import supabase cl
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Goal, SortOption } from "@/types/goal";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarDays, CheckCircle2, Clock, Edit } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, Edit, MoreHorizontal, Trash2, ArrowRight } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { differenceInCalendarDays } from 'date-fns';
 import { calculateGoalDeadlineInfo, getDeadlineStatusStyling } from "@/utils/goalDeadlineUtils";
 import { DeadlineStatusBadge } from "@/components/ui/deadline-status-badge";
 import { format } from "date-fns";
@@ -32,6 +41,7 @@ const GoalList: React.FC<GoalListProps> = ({
 }) => {
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [isLeaving, setIsLeaving] = useState<string | null>(null);
+  const [leavingGoalId, setLeavingGoalId] = useState<string | null>(null);
   const { toast } = useToast();
   const { goToGoal } = useRouterNavigation();
 
@@ -59,6 +69,7 @@ const GoalList: React.FC<GoalListProps> = ({
       // Notify remaining members (excluding leaver) BEFORE leaving to avoid RLS issues
       await createMemberLeftNotifications(goalId, userData.user.id);
 
+
       const { error } = await supabase
         .from('goal_members')
         .delete()
@@ -66,9 +77,6 @@ const GoalList: React.FC<GoalListProps> = ({
         .eq('user_id', userData.user.id);
 
       if (error) throw error;
-
-      // Notify remaining members (excluding leaver)
-      await createMemberLeftNotifications(goalId, userData.user.id);
 
       toast({
         title: "Left Goal",
@@ -140,110 +148,116 @@ const GoalList: React.FC<GoalListProps> = ({
       {goals.map((goal) => {
         const deadlineInfo = calculateGoalDeadlineInfo(goal);
         const deadlineStyling = getDeadlineStatusStyling(deadlineInfo.status, deadlineInfo.urgencyLevel);
-
         return (
         <Card
           key={goal.id}
-          className={`bg-white/60 dark:bg-white/10 backdrop-blur-md border rounded-3xl shadow-lg hover:shadow-2xl hover:bg-white/70 dark:hover:bg-white/15 transition-all duration-300 ease-out cursor-pointer group overflow-hidden relative ${deadlineStyling.borderColor}`}
-          onClick={() => goToGoal(goal.id)}
+          className={`bg-white/60 dark:bg-white/10 backdrop-blur-md border rounded-2xl shadow-md hover:shadow-lg transition-all duration-250 ease-out cursor-pointer group overflow-hidden relative ${deadlineStyling.borderColor}`}
+          onClick={(e) => {
+            // Prevent navigation when clicking on interactive controls inside the card
+            const target = e.target as HTMLElement | null;
+            if (target) {
+              // Walk up the DOM tree to see if any ancestor has the data-ignore-navigation attribute
+              let node: HTMLElement | null = target as HTMLElement;
+              while (node && node !== (e.currentTarget as HTMLElement)) {
+                if (node.getAttribute && node.getAttribute('data-ignore-navigation') === 'true') {
+                  return;
+                }
+                node = node.parentElement;
+              }
+            }
+
+            goToGoal(goal.id);
+          }}
         >
-          {/* Gradient accent border */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <div className="relative bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-3xl m-0.5">
-          <CardHeader className="pb-3">
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <CardTitle className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-2">
-                  {goal.title}
-                </CardTitle>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 dark:text-blue-300 border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm rounded-full">
-                    {goal.metadata?.goal_type === 'travel' ? 'Travel' :
-                     goal.metadata?.goal_type === 'finance' ? 'Finance' :
-                     goal.metadata?.goal_type === 'financial' ? 'Financial' :
-                     goal.metadata?.goal_type === 'education' ? 'Education' : 'General'} Goal
-                  </Badge>
-                  <DeadlineStatusBadge
-                    deadlineInfo={calculateGoalDeadlineInfo(goal)}
-                    size="sm"
-                  />
+          <div className="relative bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl m-0.5 p-4">
+            <CardHeader className="p-0">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="h-12 w-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-200 to-purple-200 dark:from-blue-900 dark:to-purple-900 text-blue-700 dark:text-blue-200 font-bold text-lg">
+                    {goal.title ? goal.title.charAt(0).toUpperCase() : 'G'}
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-lg font-semibold text-foreground/90 line-clamp-1">{goal.title}</CardTitle>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-blue-500 dark:text-blue-300 border border-transparent rounded-full px-2 py-0.5 text-xs">
+                        {goal.metadata?.goal_type || 'General'}
+                      </Badge>
+                      <DeadlineStatusBadge deadlineInfo={deadlineInfo} size="sm" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2" data-ignore-navigation="true">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" aria-label="Open actions" data-ignore-navigation="true">
+                        <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent data-ignore-navigation="true">
+                      {currentUser === goal.user_id && onEditGoal && (
+                        <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onEditGoal(goal, e as unknown as React.MouseEvent); }}>
+                          <Edit className="h-4 w-4 mr-2 text-blue-600" /> Edit
+                        </DropdownMenuItem>
+                      )}
+                      {currentUser === goal.user_id && (
+                        <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onDeleteGoal(goal, e as unknown as React.MouseEvent); }}>
+                          <Trash2 className="h-4 w-4 mr-2 text-red-500" /> Delete
+                        </DropdownMenuItem>
+                      )}
+                          {currentUser !== goal.user_id && (
+                            <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); setLeavingGoalId(goal.id); }}>
+                              <ArrowRight className="h-4 w-4 mr-2 text-orange-500" /> Leave
+                            </DropdownMenuItem>
+                          )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
-              <div className="flex gap-2">
-                {currentUser === goal.user_id ? (
-                  <>
-                    {onEditGoal && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEditGoal(goal, e);
-                        }}
-                        className="bg-blue-50/60 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-800/50 hover:bg-blue-100/60 dark:hover:bg-blue-900/30 backdrop-blur-sm rounded-xl transition-all duration-200"
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteGoal(goal, e);
-                      }}
-                      disabled={isDeleting === goal.id}
-                      className="bg-red-50/60 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:bg-red-100/60 dark:hover:bg-red-900/30 backdrop-blur-sm rounded-xl transition-all duration-200"
-                    >
-                      {isDeleting === goal.id ? "Deleting..." : "Delete"}
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => handleLeaveGoal(goal.id, e)}
-                    disabled={isLeaving === goal.id}
-                    className="bg-orange-50/60 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-200/50 dark:border-orange-800/50 hover:bg-orange-100/60 dark:hover:bg-orange-900/30 backdrop-blur-sm rounded-xl transition-all duration-200"
-                  >
-                    {isLeaving === goal.id ? "Leaving..." : "Leave Goal"}
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-sm mb-4 line-clamp-2 text-foreground/80">
-              {goal.description || 'No description provided.'}
-            </p>
-            <div className="flex flex-wrap items-center justify-between text-sm">
-              <div className="flex items-center mb-2 sm:mb-0 bg-white/40 dark:bg-white/10 backdrop-blur-sm rounded-xl px-3 py-1.5 border border-white/20 dark:border-white/10">
-                <CalendarDays className="h-4 w-4 mr-2 text-blue-500" />
-                <span className="font-medium text-foreground/80">Due: {format(new Date(goal.target_date), 'MMM dd, yyyy')}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {goal.taskCounts && (
-                  <>
+            </CardHeader>
+
+            <CardContent className="pt-3 pb-0">
+              <p className="text-sm mb-3 line-clamp-2 text-foreground/80">{goal.description || 'No description provided.'}</p>
+
+              {/* Progress and metadata row */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 pr-4">
+                  <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-green-400 to-emerald-500" style={{ width: `${goal.taskCounts && goal.taskCounts.total > 0 ? Math.round((goal.taskCounts.completed / goal.taskCounts.total) * 100) : 0}%` }} />
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+                    <span>{goal.taskCounts ? `${goal.taskCounts.completed}/${goal.taskCounts.total} tasks` : 'No tasks'}</span>
+                    <span>Due {format(new Date(goal.target_date), 'MMM dd')}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {goal.taskCounts && (
                     <Badge className="bg-green-100/60 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200/50 dark:border-green-800/50 backdrop-blur-sm rounded-xl flex items-center">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
                       {goal.taskCounts.completed}/{goal.taskCounts.total}
                     </Badge>
-                    <Badge
-                      className={`backdrop-blur-sm rounded-xl capitalize ${
-                        goal.status === 'completed'
-                          ? 'bg-emerald-100/60 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200/50 dark:border-emerald-800/50'
-                          : 'bg-gray-100/60 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300 border-gray-200/50 dark:border-gray-700/50'
-                      }`}
-                    >
-                      {goal.status}
-                    </Badge>
-                  </>
-                )}
+                  )}
+                  <Badge className={`backdrop-blur-sm rounded-xl capitalize ${goal.status === 'completed' ? 'bg-emerald-100/60 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200/50 dark:border-emerald-800/50' : 'bg-gray-100/60 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300 border-gray-200/50 dark:border-gray-700/50'}`}>
+                    {goal.status}
+                  </Badge>
+                </div>
               </div>
-            </div>
-          </CardContent>
+            </CardContent>
           </div>
+          {/* Alert dialog for confirming leave action - rendered per card to keep association with the goal */}
+          <AlertDialog open={leavingGoalId === goal.id} onOpenChange={(open) => { if (!open) setLeavingGoalId(null); }}>
+            <AlertDialogContent className="sm:max-w-lg">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Leave Goal</AlertDialogTitle>
+                <AlertDialogDescription>Are you sure you want to leave this goal? Other members will be notified.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={(e) => { e.stopPropagation(); setLeavingGoalId(null); }}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={(e) => { e.stopPropagation(); if (leavingGoalId) handleLeaveGoal(leavingGoalId, e as unknown as React.MouseEvent); }}>Leave</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </Card>
         );
       })}

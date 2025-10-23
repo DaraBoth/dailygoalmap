@@ -6,36 +6,57 @@
 - **PWA**: Service Worker, IndexedDB, Web Push API for offline and notification features
 
 ## Architecture & Data Flow
-- **Major features**: Goals, Tasks, Goal Members, Push Subscriptions, User Profiles
-- **Supabase**: All data and auth flows use Supabase client and RPC functions. See `/src/integrations/supabase/` for setup.
-- **Offline support**: Service worker and IndexedDB store/sync tasks when offline. See `/public/service-worker.js` and `/src/utils/offlineSync.ts`.
-- **Push notifications**: Managed via service worker and Supabase RPC. See `/src/pwa/notificationService.ts`.
-- **Centralized API calls**: Use `/src/utils/clientApi.ts` for client-side API helpers.
+- **Goal-centric architecture**: Goals have tasks, members, chat, and analytics features. See `useGoals`, `useGoalSharing` hooks.
+- **Offline-first design**: Service worker + IndexedDB sync local/remote state. See `/public/service-worker.js` and `offlineSync.ts`.
+- **Notification system**: PWA push notifications with Supabase RPC backend. See `/src/pwa/notificationService.ts`.
+- **Real-time collaboration**: Supabase real-time channels for multi-user goal features.
+- **Type-safe data layer**: Centralized Supabase operations with strong TypeScript types.
 
 ## Developer Workflows
 - **Install dependencies**: `npm i`
 - **Start dev server**: `npm run dev`
 - **Build for production**: `npm run build`
-- **Do NOT run direct SQL on Supabase**. Write schema changes in `sqlExecuter.sql` for manual review.
-- **Deploy**: Use Lovable or Vercel/Netlify. See README for details.
+- **Schema changes**: Write to `sqlExecuter.sql` for manual review. Never run direct SQL.
+- **Task generation**: AI task generation via `generateMultipleTasks` for goal types.
+- **Supabase sync**: Real-time updates via `enableRealtimeForTable` per component.
 
 ## Project-Specific Conventions
-- **Centralize Supabase API calls** in utility files, not scattered in components
-- **Type safety**: Use TypeScript types from `/src/types/`
-- **Error handling**: Always handle Supabase/API errors explicitly
-- **Minimize UI changes** unless requested
-- **Follow code style**: Functional components, hooks, Tailwind for styling
-- **Performance**: Use React.memo/useMemo/useCallback for expensive operations; optimize Supabase queries
+- **Goal metadata schema**: Versioned metadata structure, see `GoalMetadata` in `useCreateGoal.ts`
+- **UI component patterns**: Use shadcn/ui components with Tailwind CSS. See `/components/ui/`
+- **Hook organization**: Feature-specific hooks in `/hooks/` control business logic
+- **Route structure**: TanStack Router with file-based routing in `/routes/`
+- **Error handling**: Toast notifications + explicit error states in each operation
+- **Mobile-first**: Responsive design, offline support, installable PWA
 
 ## Integration Points
-- **Supabase**: `/src/integrations/supabase/` for client, types, and operations
-- **PWA**: `/public/service-worker.js`, `/src/pwa/`, `/src/utils/offlineSync.ts`
-- **Static assets**: `/public/icon/`, `/public/screenshot/`, `/public/manifest.json`
+- **Supabase**: Client setup in `/integrations/supabase/client.ts`
+- **PWA**: Service worker registration in `/pwa/registerSW.ts`
+- **Goal sharing**: Member management via `useGoalSharing` hook
+- **Push notifications**: Subscription flow in `notificationService.ts`
+- **Task sync**: IndexedDB task storage in `taskDatabase.ts`
 
 ## Examples
-- **Fetching goals**: Use hooks like `useGoals.ts` and Supabase client
-- **Offline sync**: Use `saveTaskForSync` and `registerSyncEvent` utilities
-- **Push notifications**: Use `subscribeToPushNotifications` and Supabase RPC
+- **Creating goals**: Use `useCreateGoal` with proper metadata:
+```ts
+const { createGoal } = useCreateGoal();
+await createGoal({
+  title: "Goal Title",
+  description: "Description",
+  target_date: new Date(),
+  metadata: {
+    version: 1,
+    goal_type: "general"
+  }
+});
+```
+- **Real-time tasks**: Enable real-time updates:
+```ts
+enableRealtimeForTable('tasks', {
+  event: 'UPDATE',
+  schema: 'public'
+});
+```
+- **Protected routes**: Use `ConditionalProtectedRoute` for goal access control
 
 ## Known Issues
 - Push notifications to goal members may fail

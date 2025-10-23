@@ -158,7 +158,23 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
     if (!userData.user) {
       throw new Error('User not authenticated');
     }
-    
+
+    // Insert or update push subscription in the database
+    const { error: subError } = await supabase.from('push_subscriptions').upsert({
+      user_id: userData.user.id,
+      identifier: userData.user.email,
+      subscription: JSON.stringify(subscription.toJSON()),
+    }, { onConflict: 'user_id' });
+    if (subError) {
+      console.error('Error saving push subscription:', subError);
+      toast({
+        title: "Error Saving Subscription",
+        description: "Failed to save push subscription. You may not receive notifications.",
+        variant: "destructive",
+      });
+      // Continue, but user may not get notifications
+    }
+
     // Generate a unique device ID based on user ID and timestamp
     const deviceId = `${userData.user.id}-${Date.now()}`;
 
@@ -187,20 +203,6 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
       throw new Error('Failed to register with tinynotie API');
     }
 
-    // Save device_id to user profile (replaces any existing device_id)
-    const { error } = await supabase.rpc(
-      'update_user_device_id',
-      { 
-        user_id_param: userData.user.id,
-        device_id_param: deviceId
-      }
-    );
-
-    if (error) {
-      console.error('Error saving device_id to database:', error);
-      // Continue even if database save fails
-    }
-    
     toast({
       title: "Notifications Enabled",
       description: "You'll now receive notifications for important updates.",
