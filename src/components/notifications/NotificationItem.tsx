@@ -20,6 +20,7 @@ import {
   Info,
   Trash2
 } from "lucide-react";
+import { markNotificationsRead } from "@/services/internalNotifications";
 
 interface NotificationItemProps {
   n: AppNotification;
@@ -33,7 +34,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
   const { goToGoal } = useRouterNavigation();
 
   const senderInitials = useMemo(() => {
-    const name = (n as any).sender_profile?.display_name || (n as any).sender_email || "U";
+    const senderProfile = n as unknown as { sender_profile?: { display_name?: string }; sender_email?: string };
+    const name = senderProfile.sender_profile?.display_name || senderProfile.sender_email || "U";
     return name.split(' ').map((p: string) => p[0]).join('').toUpperCase().slice(0, 2);
   }, [n]);
 
@@ -101,8 +103,9 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
       // Navigate to the goal after joining
       await goToGoal(n.goal_id);
       onAfterAction?.();
-    } catch (e: any) {
-      const msg = e?.message?.includes('violates foreign key') ? 'This goal no longer exists.' : (e?.message || 'Failed to join goal');
+    } catch (e: unknown) {
+      const err = e as Error | undefined;
+      const msg = err?.message?.includes('violates foreign key') ? 'This goal no longer exists.' : (err?.message || 'Failed to join goal');
       toast({ title: "Unable to join", description: msg, variant: "destructive" });
     } finally {
       setWorking(false);
@@ -116,8 +119,9 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
       await updateInvitationStatus(n.id, 'declined');
       toast({ title: "Invitation declined" });
       onAfterAction?.();
-    } catch (e: any) {
-      toast({ title: "Failed", description: e?.message || 'Could not decline the invitation', variant: "destructive" });
+    } catch (e: unknown) {
+      const err = e as Error | undefined;
+      toast({ title: "Failed", description: err?.message || 'Could not decline the invitation', variant: "destructive" });
     } finally {
       setWorking(false);
     }
@@ -166,8 +170,29 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
     return 'gray';
   };
 
-  const handleNotificationClick = () => {
+  // Expose a color scheme and accent for read/unread state for the outer wrapper
+  const colorScheme = getColorScheme();
+  const leftAccentClass = isUnread ? (
+    colorScheme === 'blue' ? 'border-l-4 border-blue-200/70' :
+    colorScheme === 'green' ? 'border-l-4 border-green-200/70' :
+    colorScheme === 'red' ? 'border-l-4 border-red-200/70' :
+    colorScheme === 'orange' ? 'border-l-4 border-orange-200/70' :
+    'border-l-4 border-gray-200/70'
+  ) : '';
+
+  const handleNotificationClick = async () => {
+    if (working) return;
     if (isClickable && n.goal_id) {
+      setWorking(true);
+      try {
+        // Mark this notification as read explicitly
+        await markNotificationsRead([n.id]);
+      } catch (e) {
+        console.error('Failed to mark notification read', e);
+      } finally {
+        setWorking(false);
+      }
+
       // For task notifications, try to navigate to specific task if available
       if ((n.type === 'task_created' || n.type === 'task_deleted' || n.type === 'task_updated') && n.payload?.task_id) {
         // Navigate with task parameter in URL - use router navigation instead of window.location
@@ -179,9 +204,11 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
   };
 
   const renderContent = () => {
-    const goalText = n.payload?.goal_title ? `“${n.payload.goal_title}”` : "the goal";
-    const senderName = (n as any).sender_profile?.display_name || (n as any).sender_email || "";
-    const avatarUrl = (n as any).sender_profile?.avatar_url || undefined;
+    const senderProfile = n as unknown as { sender_profile?: { display_name?: string; avatar_url?: string }; sender_email?: string };
+    const senderName = senderProfile.sender_profile?.display_name || senderProfile.sender_email || "";
+    const avatarUrl = senderProfile.sender_profile?.avatar_url || undefined;
+    const payload = n.payload as unknown as { goal_title?: string; task_title?: string; task_id?: string; action?: string };
+    const goalText = payload.goal_title ? `“${payload.goal_title}”` : "the goal";
 
     const colorScheme = getColorScheme();
 
@@ -425,7 +452,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
           handleNotificationClick();
         }
       } : undefined}
-      aria-label={isClickable ? `Navigate to ${n.payload?.goal_title || 'goal'}` : undefined}
+  aria-label={isClickable ? `Navigate to goal` : undefined}
     >
       {renderContent()}
     </div>

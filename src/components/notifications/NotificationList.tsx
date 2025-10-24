@@ -90,12 +90,11 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
   }, [filter]);
 
   useEffect(() => {
-    // auto mark as read after first render of current items batch
-    const timer = setTimeout(() => {
-      const unreadIds = items.filter((n) => !n.read_at).map((n) => n.id);
-      if (unreadIds.length) markNotificationsRead(unreadIds);
-    }, 600);
-    return () => clearTimeout(timer);
+    // NOTE: We no longer auto-mark notifications as read on render.
+    // Read state should be driven by explicit user actions (clicking a notification
+    // to view the goal or using "Mark all read"). This prevents accidental
+    // marking unread items as read just by opening the list.
+    return;
   }, [items]);
 
   useEffect(() => {
