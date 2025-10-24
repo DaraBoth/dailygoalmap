@@ -6,13 +6,20 @@ import { NotificationItem } from "./NotificationItem";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { X } from "lucide-react";
+import { X, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface NotificationListProps {
   onAnyAction?: () => void;
+  /** Optional callback so parents can show a badge on their trigger (e.g. a 3-dot button).
+   * Will be called with (unreadCount, isOpen)
+   */
+  onUnreadChanged?: (count: number, isOpen?: boolean) => void;
+  /** Whether the notifications dropdown/list is currently open. Parent should pass this. */
+  isOpen?: boolean;
 }
 
-export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction }) => {
+export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction, onUnreadChanged, isOpen }) => {
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -20,6 +27,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction 
   const [filter, setFilter] = useState<'all' | 'unread' | 'invites'>("all");
   const [counts, setCounts] = useState<{ all: number; unread: number; invites: number }>({ all: 0, unread: 0, invites: 0 });
   const viewportRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const refreshCounts = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -33,9 +41,11 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction 
       .eq('receiver_id', user.id).eq('type', 'invitation').eq('invitation_status', 'pending').is('read_at', null);
     const [{ count: allCount }, { count: invitesCount }] = await Promise.all([allQ, invitesQ]);
     setCounts({ all: allCount || 0, unread: unreadCount || 0, invites: invitesCount || 0 });
+    // Notify parent (if any) about unread changes and whether the dropdown is open
+    onUnreadChanged?.(unreadCount || 0, isOpen);
   };
 
-  const load = async (reset = false) => {
+  const load = React.useCallback(async (reset = false) => {
     if (loading) return;
     if (reset) {
       setItems([]);
@@ -55,7 +65,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction 
     const last = page[page.length - 1];
     if (last) setCursor(last.created_at);
     setLoading(false);
-  };
+  }, [loading, hasMore, cursor, filter]);
 
   useEffect(() => {
     // initial load and realtime
@@ -103,12 +113,49 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction 
 
     viewport.addEventListener('scroll', handleScroll);
     return () => viewport.removeEventListener('scroll', handleScroll);
-  }, [loading, hasMore, cursor]);
+  }, [load, loading, hasMore, cursor]);
 
   const handleAfterAction = () => {
     load(true);
     refreshCounts();
     onAnyAction?.();
+  };
+
+  // Mark all unread notifications as read
+  const handleMarkAllAsRead = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('receiver_id', user.id)
+        .is('read_at', null);
+      if (error) {
+        console.error('Failed fetching unread notifications for mark-all:', error);
+        toast({ title: 'Error', description: 'Unable to mark notifications as read', variant: 'destructive' });
+        return;
+      }
+      const ids = (data || []).map((r: unknown) => (r as { id?: string }).id).filter(Boolean) as string[];
+      if (ids.length === 0) {
+        toast({ title: 'No unread notifications', description: 'You have no unread notifications.' });
+        return;
+      }
+
+      // Optimistic UI: mark local items as read
+      const now = new Date().toISOString();
+      setItems(prev => prev.map(n => ids.includes(n.id) ? ({ ...n, read_at: n.read_at ?? now }) : n));
+
+      await markNotificationsRead(ids);
+      await refreshCounts();
+      // Let parent know unread changed
+      onUnreadChanged?.(0, isOpen);
+      toast({ title: 'All marked as read', description: 'All notifications are now marked as read.' });
+      onAnyAction?.();
+    } catch (e) {
+      console.error('mark all as read error', e);
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' });
+    }
   };
 
   const SegButton: React.FC<{ active: boolean; onClick: () => void; label: string; count?: number; ariaPressed?: boolean }> = ({ active, onClick, label, count, ariaPressed }) => (
@@ -118,15 +165,15 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction 
       onClick={onClick}
       aria-pressed={ariaPressed}
       className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm flex-1 sm:flex-none transition-all duration-300 ease-out ${active
-          ? 'bg-white/80 dark:bg-white/20 text-gray-900 dark:text-white shadow-lg backdrop-blur-md border border-gray-200/60 dark:border-white/25'
-          : 'text-gray-600 dark:text-gray-300 hover:bg-white/40 dark:hover:bg-white/10 hover:backdrop-blur-sm'
+        ? 'bg-white/80 dark:bg-white/20 text-gray-900 dark:text-white shadow-lg backdrop-blur-md border border-gray-200/60 dark:border-white/25'
+        : 'text-gray-600 dark:text-gray-300 hover:bg-white/40 dark:hover:bg-white/10 hover:backdrop-blur-sm'
         } rounded-xl`}
     >
       <span className="font-medium">{label}</span>
       {typeof count === 'number' && (
         <span className={`ml-1.5 inline-flex items-center justify-center text-[10px] rounded-full px-2 py-0.5 font-semibold transition-all duration-200 ${active
-            ? 'bg-primary/20 text-primary shadow-sm backdrop-blur-sm'
-            : 'bg-muted/60 text-foreground/70 backdrop-blur-sm'
+          ? 'bg-primary/20 text-primary shadow-sm backdrop-blur-sm'
+          : 'bg-muted/60 text-foreground/70 backdrop-blur-sm'
           }`}>
           {count}
         </span>
@@ -138,8 +185,15 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction 
     <div className="w-full sm:w-80 md:w-96 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl border border-gray-200/60 dark:border-white/25 shadow-2xl">
       <div className="px-2 sm:px-4 pb-3 text-sm font-semibold sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-10 border-b border-gray-200/60 dark:border-white/25">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 gap-3">
-          <div className="text-lg font-bold text-gray-900 dark:text-white">
-            Notifications
+          <div className="text-lg font-bold text-gray-900 dark:text-white">Notifications</div>
+          <div className="flex items-center ml-0 sm:ml-4">
+            <button
+              onClick={handleMarkAllAsRead}
+              className="text-sm font-semibold text-foreground/90 dark:text-white/90 hover:underline"
+              aria-label="Mark all notifications as read"
+            >
+              Mark all read
+            </button>
           </div>
         </div>
         <div className="inline-flex items-center gap-1 p-1 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-gray-200/60 dark:border-white/25 shadow-lg w-full sm:w-auto justify-center" role="tablist" aria-label="Filter notifications">
@@ -147,6 +201,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction 
           <SegButton active={filter === 'unread'} onClick={() => setFilter('unread')} label="Unread" count={counts.unread} ariaPressed={filter === 'unread'} />
           <SegButton active={filter === 'invites'} onClick={() => setFilter('invites')} label="Invites" count={counts.invites} ariaPressed={filter === 'invites'} />
         </div>
+        
         {/* Smart tip banner with glass effect */}
         {/* {(filter === 'all' && items.length > 6) && (
           <Alert className="mt-3 bg-amber-100/60 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200 border border-amber-200/50 dark:border-amber-800/30 backdrop-blur-md rounded-2xl shadow-lg">

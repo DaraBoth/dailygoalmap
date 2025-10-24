@@ -28,6 +28,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileMenuUnread, setMobileMenuUnread] = useState(0);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -98,7 +99,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             {/* Right Section: System Actions & User */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-xl border border-border/50">
-                <NotificationBell />
+                <NotificationBell onUnreadChange={(count) => setMobileMenuUnread(count)} />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-background/80">
@@ -135,11 +136,11 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           {/* Mobile Header Bar */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">
             {/* Left: Menu Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleMobileMenu}
-              className="h-10 w-10 p-0 hover:bg-muted/80 rounded-xl"
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleMobileMenu}
+                className="h-10 w-10 p-0 hover:bg-muted/80 rounded-xl relative"
               aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={isMobileMenuOpen}
               aria-controls="mobile-menu"
@@ -150,6 +151,12 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               >
                 {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </motion.div>
+              {/* Show red dot on mobile menu toggle when menu is closed but there are unread notifications inside the menu */}
+              {mobileMenuUnread > 0 && !isMobileMenuOpen && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
+                  {mobileMenuUnread}
+                </span>
+              )}
             </Button>
 
             {/* Center: App Branding */}
@@ -289,7 +296,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 {/* User Section */}
                 <div className="pt-4 border-t border-border/50 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <NotificationBell />
+                    <NotificationBell onUnreadChange={(count) => setMobileMenuUnread(count)} />
                     <span className="text-sm text-muted-foreground">Notifications</span>
                   </div>
                   <UserMenu />

@@ -8,14 +8,19 @@ import { getUnreadCount } from "@/services/internalNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-export const NotificationBell: React.FC = () => {
+interface NotificationBellProps {
+  onUnreadChange?: (count: number, open?: boolean) => void;
+}
+
+export const NotificationBell: React.FC<NotificationBellProps> = ({ onUnreadChange }) => {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const isMobile = useIsMobile();
-  const refreshUnread = async () => {
+  const refreshUnread = React.useCallback(async () => {
     const count = await getUnreadCount();
     setUnread(count);
-  };
+    onUnreadChange?.(count, open);
+  }, [open, onUnreadChange]);
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
     const setup = async () => {
@@ -33,7 +38,12 @@ export const NotificationBell: React.FC = () => {
     };
     setup();
     return () => { if (channel) supabase.removeChannel(channel); };
-  }, []);
+  }, [refreshUnread]);
+
+  // Notify parent when open/unread changes
+  useEffect(() => {
+    onUnreadChange?.(unread, open);
+  }, [open, unread, onUnreadChange]);
 
   // On mobile we use a Drawer/Sheet for better UX, on desktop a Popover
   if (isMobile) {
@@ -55,7 +65,7 @@ export const NotificationBell: React.FC = () => {
               </SheetTitle>
             </SheetHeader>
             <div className="p-1 sm:p-2">
-              <NotificationList onAnyAction={refreshUnread} />
+                <NotificationList onAnyAction={refreshUnread} onUnreadChanged={onUnreadChange} isOpen={open} />
             </div>
           </SheetContent>
         </Sheet>
@@ -76,7 +86,7 @@ export const NotificationBell: React.FC = () => {
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="p-0 w-80 sm:w-80 md:w-96 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl shadow-2xl">
-        <NotificationList />
+        <NotificationList onAnyAction={refreshUnread} onUnreadChanged={onUnreadChange} isOpen={open} />
       </PopoverContent>
     </Popover>
   );
