@@ -118,8 +118,13 @@ export async function saveTaskToSupabase(task: Task, goalId: string): Promise<vo
         .single();
 
       if (goalData) {
-        // Build a deep link to the new task so recipients can open it directly
-        const deepLinkNew = `/goal/${goalId}?date=${encodeURIComponent(task.start_date)}&taskId=${encodeURIComponent(task.id)}`;
+  // Build a deep link to the new task so recipients can open it directly
+  const deepLinkNew = `/goal/${goalId}?date=${encodeURIComponent(task.start_date)}&taskId=${encodeURIComponent(task.id)}`;
+
+  // Resolve to an absolute URL using Vite env if provided, otherwise use current origin
+  const viteEnv = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
+  const publicBase = (viteEnv && viteEnv.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
+  const absoluteDeepLinkNew = publicBase ? (String(publicBase).replace(/\/$/, '') + deepLinkNew) : deepLinkNew;
 
         // Send push notification to goal members
         await sendNotificationToGoalMembers(
@@ -131,7 +136,7 @@ export async function saveTaskToSupabase(task: Task, goalId: string): Promise<vo
             type: 'task_created',
             task_id: task.id,
             goal_id: goalId,
-            url: deepLinkNew
+            url: absoluteDeepLinkNew
           }
         );
 
@@ -187,7 +192,10 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
       const { createTaskUpdateNotification } = await import("@/services/internalNotifications");
       
       // Build deep link to the task
-      const deepLinkComplete = `/goal/${task.goal_id}?taskId=${encodeURIComponent(taskId)}&date=${encodeURIComponent(new Date().toISOString())}`;
+  const deepLinkComplete = `/goal/${task.goal_id}?taskId=${encodeURIComponent(taskId)}&date=${encodeURIComponent(new Date().toISOString())}`;
+  const viteEnv2 = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
+  const publicBase2 = (viteEnv2 && viteEnv2.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
+  const absoluteDeepLinkComplete = publicBase2 ? (String(publicBase2).replace(/\/$/, '') + deepLinkComplete) : deepLinkComplete;
 
       await sendNotificationToGoalMembers(
         task.goal_id,
@@ -199,12 +207,12 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
           task_id: taskId,
           goal_id: task.goal_id,
           action: completed ? 'completed' : 'uncompleted',
-          url: deepLinkComplete
+          url: absoluteDeepLinkComplete
         }
       );
 
       // Store internal notification
-      await createTaskUpdateNotification(
+        await createTaskUpdateNotification(
         task.goal_id,
         user.id,
         'task_updated',
@@ -212,7 +220,7 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
           task_title: task.title,
           task_id: taskId,
           action: completed ? 'completed' : 'uncompleted',
-          url: deepLinkComplete
+            url: absoluteDeepLinkComplete
         }
       );
     } catch (notifError) {

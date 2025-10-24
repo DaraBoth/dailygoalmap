@@ -78,6 +78,16 @@ const TaskDetailsDialog = ({
   };
 
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      // Remove task ID from URL when closing
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.delete('taskId');
+      window.history.replaceState({}, '', currentUrl.toString());
+    }
+    onClose();
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (

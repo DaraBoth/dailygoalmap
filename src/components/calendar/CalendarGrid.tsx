@@ -108,7 +108,9 @@ function getDaysInMonth(currentMonth: Date) {
   // Add all days of current month (limit to fit in 5 rows max)
   const maxDaysToShow = Math.min(daysInMonth, totalCells - startingDayOfWeek);
   for (let i = 1; i <= maxDaysToShow; i++) {
-    calendarDays.push(new Date(year, month, i));
+    const date = new Date(year, month, i);
+    date.setHours(0, 0, 0, 0); // Normalize the time to midnight
+    calendarDays.push(date);
   }
 
   // Fill remaining cells with placeholder dates if needed to reach minimum 4 rows

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { parseYMD } from '@/utils/parseYMD';
 import { useLoaderData, useSearch, useParams } from '@tanstack/react-router';
 import { useRouterNavigation } from '@/hooks/useRouterNavigation';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,9 +62,11 @@ const GoalDetail = () => {
   useEffect(() => {
     const dateParam = search?.date;
     if (dateParam) {
-      const targetDate = new Date(dateParam);
-      if (!isNaN(targetDate.getTime())) {
-        setSelectedDate(targetDate);
+      const parsed = parseYMD(dateParam);
+      if (parsed) setSelectedDate(parsed);
+      else {
+        const fallback = new Date(dateParam);
+        if (!isNaN(fallback.getTime())) setSelectedDate(fallback);
       }
     }
   }, [search]);

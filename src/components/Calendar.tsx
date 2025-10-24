@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { parseYMD, formatYMD } from '@/utils/parseYMD';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSearch } from "@tanstack/react-router";
 import AddTaskDialog from "./calendar/AddTaskDialog";
@@ -85,9 +86,13 @@ const Calendar = ({
 
   const handleInternalDateChange = (date: Date) => {
     handleDateChange(date);
-    // When user selects a date, do not auto-open the task details sidebar.
-    // Ensure the details panel is closed so selecting dates only changes calendar selection.
+    // When user selects a date, update URL and state
     setIsTaskDetailsOpen(false);
+    
+    // Update URL with new date (local yyyy-MM-dd)
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('date', formatYMD(date));
+    window.history.replaceState({}, '', currentUrl.toString());
 
     if (externalOnDateChange) {
       externalOnDateChange(date);
@@ -101,19 +106,36 @@ const Calendar = ({
     const taskParam = searchParams?.taskId;
     let parsedDate = new Date();
 
-    if (dateParam && !isNaN(Date.parse(dateParam))) {
-      parsedDate = new Date(dateParam);
+    if (dateParam) {
+      const fromUrl = parseYMD(dateParam);
+      if (fromUrl) parsedDate = fromUrl;
     }
 
+    // Always set the selected date from URL parameter
     if (!selectedDate || parsedDate.getTime() !== selectedDate.getTime()) {
       setSelectedDate(parsedDate);
       handleDateChange(parsedDate);
-      // If a taskId is provided in the URL we will defer auto-opening until tasks are loaded
-      // (see effect that watches `tasks`). Do NOT auto-open details here for normal loads.
+    }
+
+    // If we have a task ID in the URL but no tasks loaded yet,
+    // we'll handle task selection in the tasks useEffect
+    if (taskParam && tasks.length > 0) {
+      const found = tasks.find(t => t.id === taskParam);
+      if (found) {
+        const taskDate = new Date(found.start_date);
+        setSelectedDate(taskDate);
+        handleDateChange(taskDate);
+
+        const tasksForTaskDate = getTasksForDateWrapper(taskDate);
+        const idx = tasksForTaskDate.findIndex(t => t.id === found.id);
+        setSelectedTask(found);
+        setSelectedTaskIndex(idx >= 0 ? idx : 0);
+        setIsTaskDetailsOpen(true);
+      }
     }
 
     hasInitializedDate.current = true;
-  }, [searchParams, selectedDate, handleDateChange, setSelectedDate, setIsTaskDetailsOpen, isMobile]);
+  }, [searchParams, selectedDate, handleDateChange, setSelectedDate, setIsTaskDetailsOpen, tasks, getTasksForDateWrapper, setSelectedTask, setSelectedTaskIndex]);
 
   // If the URL contained a taskId param (for example, coming from a notification),
   // wait until tasks are loaded and then select + open that task automatically.
@@ -141,6 +163,16 @@ const Calendar = ({
       hasHandledUrlTask.current = true;
     }
   }, [searchParams?.taskId, tasks, getTasksForDateWrapper, handleDateChange, setSelectedDate, setSelectedTask, setSelectedTaskIndex, setIsTaskDetailsOpen]);
+
+  // Handle closing the task details and updating URL
+  const handleCloseTaskDetails = () => {
+    setIsTaskDetailsOpen(false);
+    setSelectedTask(null);
+    // Remove taskId from URL when closing
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('taskId');
+    window.history.replaceState({}, '', currentUrl.toString());
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

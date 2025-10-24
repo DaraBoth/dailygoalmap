@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { parseYMD } from '@/utils/parseYMD';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameMonth, addMonths, subMonths, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,9 +14,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { useSearch } from "@tanstack/react-router";
 
-// Utility function to get the default month
+// Utility: parse YYYY-MM-DD URL param as a local Date to avoid UTC offsets
 const getDefaultMonth = (dateParam: string | null): Date => {
-  return dateParam ? new Date(dateParam) : new Date();
+  if (!dateParam) return new Date();
+  const parsed = parseYMD(dateParam);
+  return parsed || new Date(dateParam);
 };
 
 // Calendar component to display all tasks from all goals

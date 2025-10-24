@@ -13,6 +13,27 @@ export async function sendNotificationToUser(
     const { data:userInfo, error } = await supabaseAdmin.auth.admin.getUserById(userId)
     if(userInfo){
        // Send notification using tinynotie-api
+      // Compute a clickable URL to include in the push payload.
+      // Prefer an explicit url provided in `data.url`. If it's relative, convert to absolute.
+      let fullUrl: string | undefined;
+      try {
+        const inputUrl = data?.url ?? window.location.href.replace(window.location.origin, "");
+        if (inputUrl) {
+          if (String(inputUrl).startsWith('http')) {
+            fullUrl = String(inputUrl);
+          } else if (String(inputUrl).startsWith('/')) {
+            fullUrl = window.location.origin + String(inputUrl);
+          } else {
+            fullUrl = window.location.origin + '/' + String(inputUrl);
+          }
+        } else {  
+          fullUrl = window.location.href;
+        }
+      } catch (e) {
+        // Fallback if window is not available or something goes wrong
+        fullUrl = undefined;
+      }
+
       const response = await fetch('https://tinynotie-api.vercel.app/openai/push', {
         method: 'POST',
         headers: {
@@ -24,7 +45,8 @@ export async function sendNotificationToUser(
             title: title || 'DailyGoalMap Notification',
             body: body || 'You have a new update!',
             data: {
-              url: window.location.href.replace(window.location.origin,""),
+              // Provide an absolute, clickable URL when possible. Also include original data for context.
+              url: fullUrl ?? (data?.url ?? window.location.href.replace(window.location.origin, "")),
               timestamp: new Date().toISOString(),
               ...data,
             }

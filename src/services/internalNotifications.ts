@@ -44,6 +44,12 @@ export async function sendInvitation(goalId: string, receiverUserId: string, pay
     return { ok: false, error: "User already has a pending invitation" };
   }
 
+  // compute url if present in payload and normalize to absolute
+  const viteEnv = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
+  const publicBase = (viteEnv && viteEnv.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
+  const rawUrl = payload?.url;
+  const computedUrl = rawUrl ? (String(rawUrl).startsWith('http') ? String(rawUrl) : (publicBase ? String(publicBase).replace(/\/$/, '') + (String(rawUrl).startsWith('/') ? String(rawUrl) : '/' + String(rawUrl)) : String(rawUrl))) : null;
+
   const { error } = await supabase.from("notifications").insert({
     type: "invitation",
     goal_id: goalId,
@@ -51,6 +57,7 @@ export async function sendInvitation(goalId: string, receiverUserId: string, pay
     receiver_id: receiverUserId,
     payload: payload ?? {},
     invitation_status: "pending",
+    url: computedUrl,
   });
   if (error) {
     console.error("Failed to insert invitation notification", error);
@@ -134,12 +141,18 @@ export async function updateInvitationStatus(notificationId: string, decision: I
 export async function createRemovalNotification(goalId: string, removedUserId: string, payload?: Record<string, any>): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
+  const viteEnv = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
+  const publicBase = (viteEnv && viteEnv.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
+  const rawUrl = payload?.url;
+  const computedUrl = rawUrl ? (String(rawUrl).startsWith('http') ? String(rawUrl) : (publicBase ? String(publicBase).replace(/\/$/, '') + (String(rawUrl).startsWith('/') ? String(rawUrl) : '/' + String(rawUrl)) : String(rawUrl))) : null;
+
   const { error } = await supabase.from("notifications").insert({
     type: "removal",
     goal_id: goalId,
     sender_id: user.id,
     receiver_id: removedUserId,
     payload: payload ?? {},
+    url: computedUrl,
   });
   if (error) console.error("createRemovalNotification error", error);
 }
@@ -155,12 +168,18 @@ export async function createMemberLeftNotifications(goalId: string, leaverUserId
     console.error("fetch goal members for member_left notifications error", error);
     return;
   }
+  const rawUrl = payload?.url;
+  const viteEnv = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
+  const publicBase = (viteEnv && viteEnv.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
+  const computedUrl = rawUrl ? (String(rawUrl).startsWith('http') ? String(rawUrl) : (publicBase ? String(publicBase).replace(/\/$/, '') + (String(rawUrl).startsWith('/') ? String(rawUrl) : '/' + String(rawUrl)) : String(rawUrl))) : null;
+
   const inserts = (members || []).map((m) => ({
     type: "member_left",
     goal_id: goalId,
     sender_id: leaverUserId,
     receiver_id: m.user_id,
     payload: payload ?? {},
+    url: computedUrl,
   }));
   if (inserts.length === 0) return;
   const { error: insertErr } = await supabase.from("notifications").insert(inserts);
@@ -202,13 +221,20 @@ export async function createTaskNotification(
       return;
     }
     
+    // compute url from payload if present
+    const viteEnv = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
+    const publicBase = (viteEnv && viteEnv.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
+    const rawUrl = payload?.url;
+    const computedUrl = rawUrl ? (String(rawUrl).startsWith('http') ? String(rawUrl) : (publicBase ? String(publicBase).replace(/\/$/, '') + (String(rawUrl).startsWith('/') ? String(rawUrl) : '/' + String(rawUrl)) : String(rawUrl))) : null;
+
     // Create notifications for all members except sender
     const notifications = members.map(member => ({
       type,
       goal_id: goalId,
       sender_id: senderUserId,
       receiver_id: member.user_id,
-      payload: payload || {}
+      payload: payload || {},
+      url: computedUrl,
     }));
     
     if (notifications.length > 0) {
@@ -244,13 +270,19 @@ export async function createMemberJoinedNotifications(
       return;
     }
     
+    const viteEnv = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
+    const publicBase = (viteEnv && viteEnv.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
+    const rawUrl = payload?.url;
+    const computedUrl = rawUrl ? (String(rawUrl).startsWith('http') ? String(rawUrl) : (publicBase ? String(publicBase).replace(/\/$/, '') + (String(rawUrl).startsWith('/') ? String(rawUrl) : '/' + String(rawUrl)) : String(rawUrl))) : null;
+
     // Create notifications for all existing members
     const notifications = members.map(member => ({
       type: 'member_joined' as const,
       goal_id: goalId,
       sender_id: newMemberUserId,
       receiver_id: member.user_id,
-      payload: payload || {}
+      payload: payload || {},
+      url: computedUrl,
     }));
     
     if (notifications.length > 0) {
@@ -287,13 +319,19 @@ export async function createTaskUpdateNotification(
       return;
     }
     
+    const viteEnv = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
+    const publicBase = (viteEnv && viteEnv.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
+    const rawUrl = payload?.url;
+    const computedUrl = rawUrl ? (String(rawUrl).startsWith('http') ? String(rawUrl) : (publicBase ? String(publicBase).replace(/\/$/, '') + (String(rawUrl).startsWith('/') ? String(rawUrl) : '/' + String(rawUrl)) : String(rawUrl))) : null;
+
     // Create notifications for all members except sender
     const notifications = members.map(member => ({
       type,
       goal_id: goalId,
       sender_id: senderUserId,
       receiver_id: member.user_id,
-      payload: payload || {}
+      payload: payload || {},
+      url: computedUrl,
     }));
     
     if (notifications.length > 0) {

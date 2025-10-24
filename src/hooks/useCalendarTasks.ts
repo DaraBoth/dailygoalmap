@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { formatYMD } from '@/utils/parseYMD';
 import { Task } from "@/components/calendar/types";
 import { useTaskManager } from "@/components/calendar/TaskManager";
 import { supabase } from "@/integrations/supabase/client";
@@ -138,9 +139,27 @@ export const useCalendarTasks = ({
 
   const handleDateChange = useCallback((date: Date | undefined) => {
     setSelectedDate(date);
-    // Don't auto-select task on date change
-    setSelectedTask(null);
-    setSelectedTaskIndex(0);
+    
+    // Update URL when date changes
+    const currentUrl = new URL(window.location.href);
+    const existing = currentUrl.searchParams.get('date');
+    const newVal = date ? formatYMD(date) : null;
+    // Only update history if the date param actually changed to avoid triggering loops
+    if (existing !== newVal) {
+      if (newVal) {
+        currentUrl.searchParams.set('date', newVal);
+      } else {
+        currentUrl.searchParams.delete('date');
+      }
+      window.history.replaceState({}, '', currentUrl.toString());
+    }
+    
+    // Don't auto-select task on date change unless there's a taskId in URL
+    const taskIdParam = new URLSearchParams(window.location.search).get('taskId');
+    if (!taskIdParam) {
+      setSelectedTask(null);
+      setSelectedTaskIndex(0);
+    }
   }, []);
 
   const handleToggleTaskCompletion = async (taskId: string) => {
@@ -218,18 +237,38 @@ export const useCalendarTasks = ({
     // Always derive the tasks list from the currently selected task's day if available
     const tasksForThisDay = getTasksForDateWrapper(baseDate);
 
-    // Helper function to batch state updates with animation frame scheduling
+    // Helper function to batch state updates synchronously
     const updateTaskStates = (date: Date, task: Task | null, index: number) => {
-      // Cancel any pending animation frames to prevent race conditions
-      if (typeof window !== 'undefined') {
-        window.cancelAnimationFrame(window.requestAnimationFrame(() => {}));
+      // Perform state updates synchronously
+      setSelectedDate(date);
+      setSelectedTask(task);
+      setSelectedTaskIndex(index);
+
+      // Update URL params but only if they actually change
+      const currentUrl = new URL(window.location.href);
+      const existingDate = currentUrl.searchParams.get('date');
+      const existingTask = currentUrl.searchParams.get('taskId');
+      const newDate = formatYMD(date);
+      const newTask = task ? task.id : null;
+
+      let changed = false;
+      if (existingDate !== newDate) {
+        currentUrl.searchParams.set('date', newDate);
+        changed = true;
       }
-      // Schedule the update in the next animation frame
-      requestAnimationFrame(() => {
-        setSelectedDate(date);
-        setSelectedTask(task);
-        setSelectedTaskIndex(index);
-      });
+      if (newTask) {
+        if (existingTask !== newTask) {
+          currentUrl.searchParams.set('taskId', newTask);
+          changed = true;
+        }
+      } else if (existingTask) {
+        currentUrl.searchParams.delete('taskId');
+        changed = true;
+      }
+
+      if (changed) {
+        window.history.replaceState({}, '', currentUrl.toString());
+      }
     };
 
     // Handle direct index selection (stay on same date and only update selection)
@@ -300,7 +339,7 @@ export const useCalendarTasks = ({
       const prevDay = getPreviousDay(baseDate);
       updateTaskStates(prevDay, null, 0);
     }
-  }, [selectedDate, selectedTask, selectedTaskIndex, getTasksForDateWrapper, allTasks]);
+  }, [selectedDate, selectedTask, selectedTaskIndex, getTasksForDateWrapper, allTasks, tasks]);
 
   // Keep selectedTaskIndex in sync with the actual selectedTask when dialog reopens or tasks change
   useEffect(() => {
@@ -360,17 +399,27 @@ export const useCalendarTasks = ({
         taskDate.setHours(hours, minutes);
       }
 
-      // Build insert payload using unified fields
-      const payload: any = {
+      // Build insert payload for the `tasks` table
+      const payload: {
+        id: string;
+        goal_id: string;
+        user_id: string;
+        title: string;
+        description?: string | null;
+        completed?: boolean;
+        start_date?: string;
+        end_date?: string;
+        daily_start_time?: string | null;
+        daily_end_time?: string | null;
+      } = {
         id: taskId,
         goal_id: goalId,
         user_id: userData.user.id,
+        title: range?.title ?? description,
         description: description,
         completed: range?.completed ?? false,
-
       };
 
-      if (range?.title) payload.title = range.title;
       // Determine unified fields: prefer provided range values; fallback to selected date/time
       const startForInsert = range?.start_date ? new Date(range.start_date) : taskDate;
       const endForInsert = range?.end_date ? new Date(range.end_date) : startForInsert;
