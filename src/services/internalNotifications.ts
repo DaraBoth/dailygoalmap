@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { AppNotification } from "@/types/notification";
+import { constructNotificationUrl } from "@/utils/urlUtils";
 
 export interface SearchUser {
   id: string;
@@ -26,7 +27,7 @@ export async function searchUsers(query: string, limit = 8): Promise<SearchUser[
   return results.filter((u) => u.id !== user.id).slice(0, limit);
 }
 
-export async function sendInvitation(goalId: string, receiverUserId: string, payload?: Record<string, any>): Promise<{ ok: boolean; error?: string }>{
+export async function sendInvitation(goalId: string, receiverUserId: string, payload?: Record<string, unknown>): Promise<{ ok: boolean; error?: string }>{
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
@@ -44,21 +45,18 @@ export async function sendInvitation(goalId: string, receiverUserId: string, pay
     return { ok: false, error: "User already has a pending invitation" };
   }
 
-  // compute url if present in payload and normalize to absolute
-  const viteEnv = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
-  const publicBase = (viteEnv && viteEnv.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
-  const rawUrl = payload?.url;
-  const computedUrl = rawUrl ? (String(rawUrl).startsWith('http') ? String(rawUrl) : (publicBase ? String(publicBase).replace(/\/$/, '') + (String(rawUrl).startsWith('/') ? String(rawUrl) : '/' + String(rawUrl)) : String(rawUrl))) : null;
+  // Compute URL if present in payload using utility function
+  const computedUrl = constructNotificationUrl(payload?.url as string | undefined);
 
-  const { error } = await supabase.from("notifications").insert({
-    type: "invitation",
-    goal_id: goalId,
-    sender_id: (await supabase.auth.getUser()).data.user!.id,
-    receiver_id: receiverUserId,
-    payload: payload ?? {},
-    invitation_status: "pending",
-    url: computedUrl,
-  });
+    const { error } = await supabase.from("notifications").insert({
+      type: "invitation",
+      goal_id: goalId,
+      sender_id: (await supabase.auth.getUser()).data.user!.id,
+      receiver_id: receiverUserId,
+      payload: payload as import("@/types/notification").Json ?? {},
+      invitation_status: "pending",
+      url: computedUrl,
+    });
   if (error) {
     console.error("Failed to insert invitation notification", error);
     return { ok: false, error: error.message };
@@ -109,8 +107,8 @@ export async function fetchNotifications(opts: FetchNotificationsOptions = {}): 
       .from('user_profiles')
       .select('id, display_name, avatar_url')
       .in('id', senderIds);
-    const byId = new Map((profiles || []).map((p: any) => [p.id, { display_name: p.display_name, avatar_url: p.avatar_url }]));
-    notifications.forEach(n => { (n as any).sender_profile = byId.get(n.sender_id) || undefined; });
+  const byId = new Map((profiles || []).map((p: { id: string; display_name: string; avatar_url: string }) => [p.id, { display_name: p.display_name, avatar_url: p.avatar_url }]));
+  notifications.forEach(n => { (n as unknown as { sender_profile?: unknown; sender_id: string }).sender_profile = byId.get(n.sender_id) || undefined; });
   }
 
   return notifications;
@@ -138,26 +136,23 @@ export async function updateInvitationStatus(notificationId: string, decision: I
   return { ok: true };
 }
 
-export async function createRemovalNotification(goalId: string, removedUserId: string, payload?: Record<string, any>): Promise<void> {
+export async function createRemovalNotification(goalId: string, removedUserId: string, payload?: Record<string, unknown>): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-  const viteEnv = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
-  const publicBase = (viteEnv && viteEnv.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
-  const rawUrl = payload?.url;
-  const computedUrl = rawUrl ? (String(rawUrl).startsWith('http') ? String(rawUrl) : (publicBase ? String(publicBase).replace(/\/$/, '') + (String(rawUrl).startsWith('/') ? String(rawUrl) : '/' + String(rawUrl)) : String(rawUrl))) : null;
+  const computedUrl = constructNotificationUrl(payload?.url as string | undefined);
 
-  const { error } = await supabase.from("notifications").insert({
-    type: "removal",
-    goal_id: goalId,
-    sender_id: user.id,
-    receiver_id: removedUserId,
-    payload: payload ?? {},
-    url: computedUrl,
-  });
+    const { error } = await supabase.from("notifications").insert({
+      type: "removal",
+      goal_id: goalId,
+      sender_id: user.id,
+      receiver_id: removedUserId,
+      payload: payload as import("@/types/notification").Json ?? {},
+      url: computedUrl,
+    });
   if (error) console.error("createRemovalNotification error", error);
 }
 
-export async function createMemberLeftNotifications(goalId: string, leaverUserId: string, payload?: Record<string, any>): Promise<void> {
+export async function createMemberLeftNotifications(goalId: string, leaverUserId: string, payload?: Record<string, unknown>): Promise<void> {
   // Notify all remaining members except the leaver
   const { data: members, error } = await supabase
     .from("goal_members")
@@ -168,17 +163,14 @@ export async function createMemberLeftNotifications(goalId: string, leaverUserId
     console.error("fetch goal members for member_left notifications error", error);
     return;
   }
-  const rawUrl = payload?.url;
-  const viteEnv = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
-  const publicBase = (viteEnv && viteEnv.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
-  const computedUrl = rawUrl ? (String(rawUrl).startsWith('http') ? String(rawUrl) : (publicBase ? String(publicBase).replace(/\/$/, '') + (String(rawUrl).startsWith('/') ? String(rawUrl) : '/' + String(rawUrl)) : String(rawUrl))) : null;
+  const computedUrl = constructNotificationUrl(payload?.url as string | undefined);
 
   const inserts = (members || []).map((m) => ({
     type: "member_left",
     goal_id: goalId,
     sender_id: leaverUserId,
     receiver_id: m.user_id,
-    payload: payload ?? {},
+      payload: payload as import("@/types/notification").Json ?? {},
     url: computedUrl,
   }));
   if (inserts.length === 0) return;
@@ -206,7 +198,7 @@ export async function createTaskNotification(
   goalId: string,
   senderUserId: string,
   type: 'task_created' | 'task_deleted',
-  payload?: Record<string, any>
+  payload?: Record<string, unknown>
 ): Promise<void> {
   try {
     // Get all goal members except the sender
@@ -221,11 +213,7 @@ export async function createTaskNotification(
       return;
     }
     
-    // compute url from payload if present
-    const viteEnv = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
-    const publicBase = (viteEnv && viteEnv.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
-    const rawUrl = payload?.url;
-    const computedUrl = rawUrl ? (String(rawUrl).startsWith('http') ? String(rawUrl) : (publicBase ? String(publicBase).replace(/\/$/, '') + (String(rawUrl).startsWith('/') ? String(rawUrl) : '/' + String(rawUrl)) : String(rawUrl))) : null;
+    const computedUrl = constructNotificationUrl(payload?.url as string | undefined);
 
     // Create notifications for all members except sender
     const notifications = members.map(member => ({
@@ -233,7 +221,7 @@ export async function createTaskNotification(
       goal_id: goalId,
       sender_id: senderUserId,
       receiver_id: member.user_id,
-      payload: payload || {},
+        payload: (payload || {}) as import("@/types/notification").Json,
       url: computedUrl,
     }));
     
@@ -255,7 +243,7 @@ export async function createTaskNotification(
 export async function createMemberJoinedNotifications(
   goalId: string,
   newMemberUserId: string,
-  payload?: Record<string, any>
+  payload?: Record<string, unknown>
 ): Promise<void> {
   try {
     // Get all existing members except the new member
@@ -270,10 +258,7 @@ export async function createMemberJoinedNotifications(
       return;
     }
     
-    const viteEnv = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
-    const publicBase = (viteEnv && viteEnv.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
-    const rawUrl = payload?.url;
-    const computedUrl = rawUrl ? (String(rawUrl).startsWith('http') ? String(rawUrl) : (publicBase ? String(publicBase).replace(/\/$/, '') + (String(rawUrl).startsWith('/') ? String(rawUrl) : '/' + String(rawUrl)) : String(rawUrl))) : null;
+    const computedUrl = constructNotificationUrl(payload?.url as string | undefined);
 
     // Create notifications for all existing members
     const notifications = members.map(member => ({
@@ -281,7 +266,7 @@ export async function createMemberJoinedNotifications(
       goal_id: goalId,
       sender_id: newMemberUserId,
       receiver_id: member.user_id,
-      payload: payload || {},
+      payload: (payload || {}) as import("@/types/notification").Json,
       url: computedUrl,
     }));
     
@@ -304,7 +289,7 @@ export async function createTaskUpdateNotification(
   goalId: string,
   senderUserId: string,
   type: 'task_updated',
-  payload?: Record<string, any>
+  payload?: Record<string, unknown>
 ): Promise<void> {
   try {
     // Get all goal members except the sender
@@ -319,20 +304,22 @@ export async function createTaskUpdateNotification(
       return;
     }
     
-    const viteEnv = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
-    const publicBase = (viteEnv && viteEnv.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
-    const rawUrl = payload?.url;
-    const computedUrl = rawUrl ? (String(rawUrl).startsWith('http') ? String(rawUrl) : (publicBase ? String(publicBase).replace(/\/$/, '') + (String(rawUrl).startsWith('/') ? String(rawUrl) : '/' + String(rawUrl)) : String(rawUrl))) : null;
+    const computedUrl = constructNotificationUrl(payload?.url as string | undefined);
 
     // Create notifications for all members except sender
-    const notifications = members.map(member => ({
-      type,
-      goal_id: goalId,
-      sender_id: senderUserId,
-      receiver_id: member.user_id,
-      payload: payload || {},
-      url: computedUrl,
-    }));
+    const notifications = members.map(member => {
+      // Use the task_date from payload if present, else fallback to today
+    const notificationDate = (payload && (payload as Record<string, unknown>).task_date) ? (payload as Record<string, unknown>).task_date : (new Date().toISOString().split('T')[0]);
+      return {
+        type,
+        goal_id: goalId,
+        sender_id: senderUserId,
+        receiver_id: member.user_id,
+          payload: (payload || {}) as import("@/types/notification").Json,
+        url: computedUrl,
+        date: notificationDate // Store the task's date for notification
+      };
+    });
     
     if (notifications.length > 0) {
       const { error: insertError } = await supabase

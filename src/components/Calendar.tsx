@@ -25,6 +25,8 @@ interface CalendarProps {
   isLoadingAllTasks?: boolean;
   selectedDate?: Date;
   onDateChange?: (newDate: Date) => void;
+  autoOpenTaskId?: string | null;
+  onAutoOpenTaskHandled?: () => void;
 }
 
 const Calendar = ({ 
@@ -34,8 +36,18 @@ const Calendar = ({
   allTasks,
   isLoadingAllTasks = false,
   selectedDate: externalSelectedDate,
-  onDateChange: externalOnDateChange
+  onDateChange: externalOnDateChange,
+  autoOpenTaskId,
+  onAutoOpenTaskHandled
 }: CalendarProps) => {
+
+// ...existing code...
+
+// Place this effect after all state and function declarations it uses
+
+
+// ...existing code...
+
   const calendarRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const searchParams = useSearch({ strict: false }) as { date?: string; taskId?: string };
@@ -137,32 +149,29 @@ const Calendar = ({
     hasInitializedDate.current = true;
   }, [searchParams, selectedDate, handleDateChange, setSelectedDate, setIsTaskDetailsOpen, tasks, getTasksForDateWrapper, setSelectedTask, setSelectedTaskIndex]);
 
-  // If the URL contained a taskId param (for example, coming from a notification),
-  // wait until tasks are loaded and then select + open that task automatically.
-  const hasHandledUrlTask = useRef(false);
-  useEffect(() => {
-    const taskIdParam = searchParams?.taskId;
-    if (!taskIdParam) return;
-    if (hasHandledUrlTask.current) return;
-    if (!tasks || tasks.length === 0) return; // wait until tasks are available
 
-    const found = tasks.find(t => t.id === taskIdParam);
+  // Unified effect: auto-open task detail if autoOpenTaskId (from prop) or taskId param in URL is present
+  const hasHandledAutoOpen = useRef(false);
+  useEffect(() => {
+    const idToOpen = autoOpenTaskId || searchParams?.taskId;
+    if (!idToOpen) return;
+    if (hasHandledAutoOpen.current) return;
+    if (!tasks || tasks.length === 0) return;
+
+    const found = tasks.find(t => t.id === idToOpen);
     if (found) {
-      // Select the date and the task
       const taskDate = new Date(found.start_date);
       setSelectedDate(taskDate);
       handleDateChange(taskDate);
-
       const tasksForTaskDate = getTasksForDateWrapper(taskDate);
       const idx = tasksForTaskDate.findIndex(t => t.id === found.id);
       setSelectedTask(found);
       setSelectedTaskIndex(idx >= 0 ? idx : 0);
-
-      // Open the details panel so the user sees the task immediately
       setIsTaskDetailsOpen(true);
-      hasHandledUrlTask.current = true;
+      hasHandledAutoOpen.current = true;
+      if (autoOpenTaskId && onAutoOpenTaskHandled) onAutoOpenTaskHandled();
     }
-  }, [searchParams?.taskId, tasks, getTasksForDateWrapper, handleDateChange, setSelectedDate, setSelectedTask, setSelectedTaskIndex, setIsTaskDetailsOpen]);
+  }, [autoOpenTaskId, searchParams?.taskId, tasks, getTasksForDateWrapper, handleDateChange, setSelectedDate, setSelectedTask, setSelectedTaskIndex, setIsTaskDetailsOpen, onAutoOpenTaskHandled]);
 
   // Handle closing the task details and updating URL
   const handleCloseTaskDetails = () => {
@@ -462,18 +471,19 @@ const Calendar = ({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-[280px,1fr] lg:grid-cols-[300px,1fr,320px] xl:grid-cols-[320px,1fr,360px] h-full">
           <div className="h-full overflow-hidden">
-            <TaskSidebar
-              tasks={tasks}
-              selectedDate={selectedDate}
-              onToggleTaskCompletion={handleToggleTaskCompletion}
-              goalTitle={allTasks ? "All Goals" : goalTitle}
-              selectedTask={selectedTask}
-              onNavigateTask={handleNavigateTask}
-              renderNavButtons={renderNavButtons}
-              isLoading={isLoading || isLoadingAllTasks}
-              onEditTask={handleEditTask}
-              onDeleteTask={handleDeleteTask}
-              onTaskClick={(task) => {
+          <TaskSidebar
+            tasks={tasks}
+            selectedDate={selectedDate}
+            onToggleTaskCompletion={handleToggleTaskCompletion}
+            goalTitle={allTasks ? "All Goals" : goalTitle}
+            selectedTask={selectedTask}
+            onNavigateTask={handleNavigateTask}
+            renderNavButtons={renderNavButtons}
+            isLoading={isLoading || isLoadingAllTasks}
+            onEditTask={handleEditTask}
+            onDeleteTask={handleDeleteTask}
+            goalId={goalId}
+            onTaskClick={(task) => {
                 setSelectedTask(task);
                 const taskDate = new Date(task.start_date);
                 setSelectedDate(taskDate);

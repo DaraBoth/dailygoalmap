@@ -163,7 +163,6 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
     const { error: subError } = await supabase.from('push_subscriptions').upsert({
       user_id: userData.user.id,
       identifier: userData.user.email,
-      subscription: JSON.stringify(subscription.toJSON()),
     }, { onConflict: 'user_id' });
     if (subError) {
       console.error('Error saving push subscription:', subError);
@@ -176,7 +175,7 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
     }
 
     // Generate a unique device ID based on user ID and timestamp
-    const deviceId = `${userData.user.id}-${Date.now()}`;
+    const deviceId = `${userData.user.id}-${userData.user.email}`;
 
     // Send subscription to tinynotie API
     const tinynotieResponse = await fetch('https://tinynotie-api.vercel.app/openai/subscribe', {

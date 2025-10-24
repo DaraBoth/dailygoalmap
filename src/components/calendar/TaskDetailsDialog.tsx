@@ -6,6 +6,9 @@ import { Task } from "./types";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle, Circle, X, Edit, Trash2, Bell } from "lucide-react";
 import { format } from "date-fns";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { enableRealtimeForTable } from "./taskDatabase";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -26,6 +29,7 @@ interface TaskDetailsDialogProps {
   onEditTask?: (task: Task) => void;
   onDeleteTask?: (taskId: string) => void;
   onDirectDeleteTask?: (taskId: string) => void; // Direct deletion without confirmation
+  goalId: string; // Added for real-time updates
 }
 
 const TaskDetailsDialog = ({
@@ -35,15 +39,68 @@ const TaskDetailsDialog = ({
   selectedDate,
   onToggleTaskCompletion,
   tasksForDate,
-  selectedTaskIndex,
+  selectedTaskIndex: initialTaskIndex,
   handleNavigateTask,
   goalTitle,
   onEditTask,
   onDeleteTask,
-  onDirectDeleteTask
+  onDirectDeleteTask,
+  goalId
 }: TaskDetailsDialogProps) => {
-  const currentIndex = selectedTask ? tasksForDate.findIndex(t => t.id === selectedTask.id) : selectedTaskIndex;
-  const safeIndex = currentIndex >= 0 ? currentIndex : selectedTaskIndex;
+  // Subscribe to real-time task updates
+  useEffect(() => {
+    if (!isOpen || !goalId || !selectedTask) return;
+
+    const setupRealtimeSubscription = async () => {
+      try {
+        // Enable realtime for tasks table
+        await enableRealtimeForTable('tasks');
+
+        // Subscribe to changes for this specific task
+        const channel = supabase
+          .channel(`task-details-${selectedTask.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'tasks',
+              filter: `id=eq.${selectedTask.id}`
+            },
+            async (payload) => {
+              if (payload.eventType === 'UPDATE' && selectedTask && handleNavigateTask) {
+                const updatedTask = payload.new as Task;
+                // Directly fetch the latest task data to ensure consistency
+                const { data: freshTask } = await supabase
+                  .from('tasks')
+                  .select('*')
+                  .eq('id', updatedTask.id)
+                  .single();
+
+                if (freshTask) {
+                  // Force update with latest data
+                  handleNavigateTask('current', initialTaskIndex);
+                }
+              }
+            }
+          )
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
+      } catch (error) {
+        console.error('Error setting up realtime subscription:', error);
+      }
+    };
+
+    const cleanup = setupRealtimeSubscription();
+    return () => {
+      cleanup?.then(cleanupFn => cleanupFn?.());
+    };
+  }, [isOpen, goalId, selectedTask, handleNavigateTask, initialTaskIndex, onToggleTaskCompletion]);
+  const currentIndex = selectedTask ? tasksForDate.findIndex(t => t.id === selectedTask.id) : initialTaskIndex;
+  const safeIndex = currentIndex >= 0 ? currentIndex : initialTaskIndex;
   const { toast } = useToast();
   const [isAddingReminder, setIsAddingReminder] = useState(false);
 

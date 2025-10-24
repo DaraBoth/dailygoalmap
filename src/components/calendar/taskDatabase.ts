@@ -163,6 +163,9 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
+    // Enable realtime subscription for tasks if not already enabled
+    await enableRealtimeForTable('tasks');
+
     // Get task and goal info for notifications
     const { data: task, error: taskError } = await supabase
       .from('tasks')

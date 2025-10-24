@@ -20,6 +20,7 @@ interface TaskSidebarProps {
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
   onTaskClick?: (task: Task) => void;
+  goalId: string;
 }
 
 const TaskSidebar = ({
@@ -33,7 +34,8 @@ const TaskSidebar = ({
   isLoading = false,
   onEditTask,
   onDeleteTask,
-  onTaskClick
+  onTaskClick,
+  goalId
 }: TaskSidebarProps) => {
   const [tasksForDate, setTasksForDate] = useState<Task[]>([]);
   

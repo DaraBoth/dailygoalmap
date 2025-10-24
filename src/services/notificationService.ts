@@ -1,12 +1,13 @@
 
 import { supabase, supabaseAdmin } from "@/integrations/supabase/client";
+import { constructNotificationUrl } from "@/utils/urlUtils";
 
 // Function to send a push notification to a user using tinynotie-api
 export async function sendNotificationToUser(
   userId: string, 
   title: string, 
   body?: string, 
-  data?: Record<string, any>
+  data?: Record<string, unknown>
 ): Promise<boolean> {
   try {
     // Get user's email from the database
@@ -17,18 +18,9 @@ export async function sendNotificationToUser(
       // Prefer an explicit url provided in `data.url`. If it's relative, convert to absolute.
       let fullUrl: string | undefined;
       try {
-        const inputUrl = data?.url ?? window.location.href.replace(window.location.origin, "");
-        if (inputUrl) {
-          if (String(inputUrl).startsWith('http')) {
-            fullUrl = String(inputUrl);
-          } else if (String(inputUrl).startsWith('/')) {
-            fullUrl = window.location.origin + String(inputUrl);
-          } else {
-            fullUrl = window.location.origin + '/' + String(inputUrl);
-          }
-        } else {  
-          fullUrl = window.location.href;
-        }
+        // Get the relative path from data.url or current location
+        const relativePath = (data?.url as string | undefined) ?? window.location.pathname + window.location.search;
+        fullUrl = constructNotificationUrl(relativePath) || window.location.href;
       } catch (e) {
         // Fallback if window is not available or something goes wrong
         fullUrl = undefined;
@@ -47,7 +39,8 @@ export async function sendNotificationToUser(
             data: {
               // Provide an absolute, clickable URL when possible. Also include original data for context.
               url: fullUrl ?? (data?.url ?? window.location.href.replace(window.location.origin, "")),
-              timestamp: new Date().toISOString(),
+              // Use the task_date if present, else fallback to now
+              timestamp: (data && data.task_date) ? `${data.task_date}T00:00:00` : new Date().toISOString(),
               ...data,
             }
           },
@@ -81,7 +74,7 @@ export async function sendNotificationToGoalMembers(
   exceptUserId: string, 
   title: string, 
   body?: string, 
-  data?: Record<string, any>
+  data?: Record<string, unknown>
 ): Promise<boolean> {
   try {
     console.log(`Sending notification to goal ${goalId} members (except ${exceptUserId})`);

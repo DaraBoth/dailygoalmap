@@ -172,7 +172,6 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          subscription: string
           updated_at: string
           user_id: string
           identifier: string
@@ -180,7 +179,6 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          subscription: string
           updated_at?: string
           user_id: string
           identifier: string
@@ -188,7 +186,6 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          subscription?: string
           updated_at?: string
           user_id?: string
           identifier?: string

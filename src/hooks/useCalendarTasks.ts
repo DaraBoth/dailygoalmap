@@ -212,7 +212,8 @@ export const useCalendarTasks = ({
           task_id: taskId,
           action: newCompletedState ? 'completed' : 'reopened',
           datetime: datetimeInfo,
-          url: deepLinkUrl
+          url: deepLinkUrl,
+          task_date: startDate.toISOString().split('T')[0] // Add task date for notification
         }
       );
     } catch (error) {
@@ -472,7 +473,8 @@ export const useCalendarTasks = ({
           task_title: newTask.title || newTask.description,
           task_id: taskId,
           action: 'added',
-          datetime: datetimeInfo
+          datetime: datetimeInfo,
+          task_date: startDate.toISOString().split('T')[0] // Add task date for notification
         }
       );
 

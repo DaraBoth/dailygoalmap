@@ -1,7 +1,10 @@
+
 export type NotificationType = 'invitation' | 'removal' | 'member_left' | 'member_joined' | 'task_created' | 'task_deleted' | 'task_updated';
 
+// A type-safe JSON type for Supabase payloads
+export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
+
 export interface AppNotificationPayload {
-  goal_title?: string;
   message?: string;
   task_id?: string;
   task_title?: string;
