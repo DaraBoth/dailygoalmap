@@ -57,7 +57,6 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
           .eq('goal_id', n.goal_id)
           .eq('user_id', user.id)
           .single();
-
         setIsUserMember(!!membership);
       } catch (error) {
         setIsUserMember(false);
@@ -173,11 +172,11 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
   // Expose a color scheme and accent for read/unread state for the outer wrapper
   const colorScheme = getColorScheme();
   const leftAccentClass = isUnread ? (
-    colorScheme === 'blue' ? 'border-l-4 border-blue-200/70' :
-    colorScheme === 'green' ? 'border-l-4 border-green-200/70' :
-    colorScheme === 'red' ? 'border-l-4 border-red-200/70' :
-    colorScheme === 'orange' ? 'border-l-4 border-orange-200/70' :
-    'border-l-4 border-gray-200/70'
+    colorScheme === 'blue' ? 'border-l-2 border-blue-200/70' :
+      colorScheme === 'green' ? 'border-l-2 border-green-200/70' :
+        colorScheme === 'red' ? 'border-l-2 border-red-200/70' :
+          colorScheme === 'orange' ? 'border-l-2 border-orange-200/70' :
+            'border-l-4 border-gray-200/70'
   ) : '';
 
   const handleNotificationClick = async () => {
@@ -210,20 +209,17 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
     const payload = n.payload as unknown as { goal_title?: string; task_title?: string; task_id?: string; action?: string };
     const goalText = payload.goal_title ? `“${payload.goal_title}”` : "the goal";
 
-    const colorScheme = getColorScheme();
-
     return (
       <div className="flex items-start gap-3">
         {/* Notification Icon */}
-        <div className={`p-2 rounded-xl backdrop-blur-sm border ${
-          colorScheme === 'blue' ? 'bg-blue-100/80 dark:bg-blue-900/50 border-blue-200/70 dark:border-blue-700/60 text-blue-700 dark:text-blue-300' :
+        {avatarUrl ? <Avatar className={leftAccentClass} ><AvatarImage src={avatarUrl} alt={senderName} /></Avatar> : <div className={`p-2 rounded-xl backdrop-blur-sm border ${colorScheme === 'blue' ? 'bg-blue-100/80 dark:bg-blue-900/50 border-blue-200/70 dark:border-blue-700/60 text-blue-700 dark:text-blue-300' :
           colorScheme === 'green' ? 'bg-green-100/80 dark:bg-green-900/50 border-green-200/70 dark:border-green-700/60 text-green-700 dark:text-green-300' :
-          colorScheme === 'red' ? 'bg-red-100/80 dark:bg-red-900/50 border-red-200/70 dark:border-red-700/60 text-red-700 dark:text-red-300' :
-          colorScheme === 'orange' ? 'bg-orange-100/80 dark:bg-orange-900/50 border-orange-200/70 dark:border-orange-700/60 text-orange-700 dark:text-orange-300' :
-          'bg-gray-100/80 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-600/60 text-gray-700 dark:text-gray-300'
-        }`}>
+            colorScheme === 'red' ? 'bg-red-100/80 dark:bg-red-900/50 border-red-200/70 dark:border-red-700/60 text-red-700 dark:text-red-300' :
+              colorScheme === 'orange' ? 'bg-orange-100/80 dark:bg-orange-900/50 border-orange-200/70 dark:border-orange-700/60 text-orange-700 dark:text-orange-300' :
+                'bg-gray-100/80 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-600/60 text-gray-700 dark:text-gray-300'
+          } ${leftAccentClass}`}>
           {getNotificationIcon()}
-        </div>
+        </div>}
 
         <div className="flex-1 space-y-2">
           {/* Invitation Notifications */}
@@ -293,7 +289,6 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
                 <div className={`text-sm font-semibold ${isUnread ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-200'}`}>
                   Removed from Goal
                 </div>
-                {isUnread && <div className="w-2 h-2 bg-red-500 rounded-full"></div>}
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-300">
                 You were removed from {goalText} by the creator
@@ -312,14 +307,9 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
                 <div className={`text-sm font-semibold ${isUnread ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-200'}`}>
                   Member Left Goal
                 </div>
-                {isUnread && <div className="w-2 h-2 bg-orange-500 rounded-full"></div>}
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-300">
+              <div className="text-xs text-gray-600 dark:text-gray-300 text-orange-600 dark:text-orange-400">
                 {senderName || 'A member'} has left {goalText}
-              </div>
-              <div className="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400">
-                <Info className="h-3 w-3" />
-                This is a read-only notification
               </div>
             </div>
           )}
@@ -329,9 +319,9 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <div className={`text-sm font-semibold ${isUnread ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-200'}`}>
-                  {n.type === 'task_created' ? 'New Task Added' : 
-                   n.type === 'task_deleted' ? 'Task Deleted' : 
-                   'Task Updated'}
+                  {n.type === 'task_created' ? 'New Task Added' :
+                    n.type === 'task_deleted' ? 'Task Deleted' :
+                      'Task Updated'}
                 </div>
                 {isUnread && <div className="w-2 h-2 bg-blue-500 rounded-full"></div>}
                 {canViewGoal && (
@@ -341,10 +331,10 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
               <div className="text-xs text-gray-600 dark:text-gray-300">
                 {senderName || 'Someone'} {
                   n.type === 'task_created' ? 'added a new task' :
-                  n.type === 'task_deleted' ? 'deleted a task' :
-                  n.payload?.action === 'completed' ? 'completed a task' :
-                  n.payload?.action === 'uncompleted' ? 'marked a task incomplete' :
-                  'updated a task'
+                    n.type === 'task_deleted' ? 'deleted a task' :
+                      n.payload?.action === 'completed' ? 'completed a task' :
+                        n.payload?.action === 'uncompleted' ? 'marked a task incomplete' :
+                          'updated a task'
                 } in {goalText}
                 {n.payload?.task_title && (
                   <span className="font-medium"> - "{n.payload.task_title}"</span>
@@ -352,8 +342,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
               </div>
               {!isUserMember && (
                 <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                  <AlertCircle className="h-3 w-3" />
-                  You are no longer a member of this goal
+                  <Clock className="h-3 w-3 animate-spin" />
+                  Checking membership...
                 </div>
               )}
             </div>
@@ -374,39 +364,34 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
               <div className="text-xs text-gray-600 dark:text-gray-300">
                 {senderName || 'Someone'} joined {goalText}
               </div>
-              {!isUserMember && (
-                <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                  <AlertCircle className="h-3 w-3" />
-                  You are no longer a member of this goal
-                </div>
-              )}
+              <div></div>
             </div>
           )}
 
           {/* Other Goal-Related Notifications */}
-          {!isInvite && !isRemoval && !isMemberLeft && 
-           !['task_created', 'task_deleted', 'task_updated', 'member_joined'].includes(n.type) && (
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className={`text-sm font-semibold ${isUnread ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-200'}`}>
-                  Goal Activity
+          {!isInvite && !isRemoval && !isMemberLeft &&
+            !['task_created', 'task_deleted', 'task_updated', 'member_joined'].includes(n.type) && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className={`text-sm font-semibold ${isUnread ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-200'}`}>
+                    Goal Activity
+                  </div>
+                  {isUnread && <div className="w-2 h-2 bg-blue-500 rounded-full"></div>}
+                  {canViewGoal && (
+                    <ExternalLink className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                  )}
                 </div>
-                {isUnread && <div className="w-2 h-2 bg-blue-500 rounded-full"></div>}
-                {canViewGoal && (
-                  <ExternalLink className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                <div className="text-xs text-gray-600 dark:text-gray-300">
+                  Activity in {goalText}
+                </div>
+                {!isUserMember && (
+                  <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                    <AlertCircle className="h-3 w-3" />
+                    You are no longer a member of this goal
+                  </div>
                 )}
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-300">
-                Activity in {goalText}
-              </div>
-              {!isUserMember && (
-                <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                  <AlertCircle className="h-3 w-3" />
-                  You are no longer a member of this goal
-                </div>
-              )}
-            </div>
-          )}
+            )}
 
           {/* Timestamp and Actions */}
           <div className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center justify-between gap-2 pt-1">
@@ -418,6 +403,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
                 size="sm"
                 variant="outline"
                 onClick={viewGoal}
+                disabled={!isUserMember}
                 className="h-6 px-2 text-[10px] bg-blue-100/80 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 border-blue-200/70 dark:border-blue-700/60 hover:bg-blue-200/80 dark:hover:bg-blue-900/60 backdrop-blur-sm transition-all duration-200"
               >
                 <ExternalLink className="h-2.5 w-2.5 mr-1" />
@@ -432,17 +418,15 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
 
   return (
     <div
-      className={`p-4 backdrop-blur-md border rounded-2xl shadow-lg transition-all duration-300 ease-out ${
-        isUnread
-          ? 'bg-white/90 dark:bg-white/20 border-gray-200/70 dark:border-white/30 shadow-xl'
-          : 'bg-white/75 dark:bg-white/15 border-gray-200/50 dark:border-white/20'
-      } ${
-        isClickable
+      className={`p-4 backdrop-blur-md border rounded-2xl shadow-lg transition-all duration-300 ease-out ${isUnread
+        ? 'bg-white/90 dark:bg-white/20 border-gray-200/70 dark:border-white/30 shadow-xl'
+        : 'bg-white/75 dark:bg-white/15 border-gray-200/50 dark:border-white/20'
+        } ${isClickable
           ? 'hover:shadow-xl hover:bg-white/95 dark:hover:bg-white/25 cursor-pointer'
           : isReadOnly
             ? 'opacity-80'
             : 'hover:shadow-xl hover:bg-white/85 dark:hover:bg-white/20'
-      }`}
+        }`}
       onClick={isClickable ? handleNotificationClick : undefined}
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
@@ -452,7 +436,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
           handleNotificationClick();
         }
       } : undefined}
-  aria-label={isClickable ? `Navigate to goal` : undefined}
+      aria-label={isClickable ? `Navigate to goal` : undefined}
     >
       {renderContent()}
     </div>

@@ -5,8 +5,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { NotificationItem } from "./NotificationItem";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { X, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface NotificationListProps {
@@ -181,8 +179,8 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
   );
 
   return (
-    <div className="w-full sm:w-80 md:w-96 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl border border-gray-200/60 dark:border-white/25 shadow-2xl">
-      <div className="px-2 sm:px-4 pb-3 text-sm font-semibold sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-10 border-b border-gray-200/60 dark:border-white/25">
+    <div className="w-full sm:w-80 md:w-96 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl border border-gray-200/60 dark:border-white/25 border-r-4 shadow-2xl">
+      <div className="px-2 sm:px-4 pb-3 text-sm font-semibold sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-10 border-b rounded-t-3xl border-gray-200/60 dark:border-white/25">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 gap-3">
           <div className="text-lg font-bold text-gray-900 dark:text-white">Notifications</div>
           <div className="flex items-center ml-0 sm:ml-4">
@@ -200,20 +198,8 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
           <SegButton active={filter === 'unread'} onClick={() => setFilter('unread')} label="Unread" count={counts.unread} ariaPressed={filter === 'unread'} />
           <SegButton active={filter === 'invites'} onClick={() => setFilter('invites')} label="Invites" count={counts.invites} ariaPressed={filter === 'invites'} />
         </div>
-        
-        {/* Smart tip banner with glass effect */}
-        {/* {(filter === 'all' && items.length > 6) && (
-          <Alert className="mt-3 bg-amber-100/60 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200 border border-amber-200/50 dark:border-amber-800/30 backdrop-blur-md rounded-2xl shadow-lg">
-            <AlertDescription className="flex items-start justify-between w-full">
-              <span className="text-sm font-medium">Too many notifications? Try filtering to only see what matters.</span>
-              <button className="ml-2 text-amber-700 dark:text-amber-300 hover:opacity-80 transition-opacity" aria-label="Dismiss">
-                <X className="h-4 w-4" />
-              </button>
-            </AlertDescription>
-          </Alert>
-        )} */}
       </div>
-      <ScrollArea className="h-[75vh] sm:h-80 bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border border-gray-200/60 dark:border-white/25 shadow-xl" ref={viewportRef}>
+      <ScrollArea className="h-[90vh] max-h-[75vh] min-h-[200px] bg-white/85 dark:bg-gray-900/85 shadow-xl" ref={viewportRef}>
         <div className="p-3 space-y-3">
           {items.length === 0 && !loading && (
             <div className="text-sm text-gray-600 dark:text-gray-300 p-8 text-center bg-white/60 dark:bg-white/15 backdrop-blur-sm rounded-xl border border-gray-200/60 dark:border-white/25">
