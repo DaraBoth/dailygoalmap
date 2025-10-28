@@ -47,6 +47,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onUnreadChan
 
   // On mobile we use a Drawer/Sheet for better UX, on desktop a Popover
   if (isMobile) {
+    
     return (
       <>
         <Button variant="ghost" size="icon" className="relative" aria-label="Notifications" onClick={() => setOpen(true)}>

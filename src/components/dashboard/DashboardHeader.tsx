@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Search, UserPlus, Key, Download, MoreHorizontal, Menu, X, Target, Bell, Settings, Home } from "lucide-react";
 import SearchTrigger from "@/components/search/SearchTrigger";
@@ -37,6 +37,13 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
   };
+
+  useEffect(() => {
+    if (isMobile && navigator.setAppBadge) {
+      navigator.setAppBadge(mobileMenuUnread);
+    }
+  }, [mobileMenuUnread, isMobile]);
+  
   return (
     <nav
       className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50 shadow-lg supports-[backdrop-filter]:bg-background/60"

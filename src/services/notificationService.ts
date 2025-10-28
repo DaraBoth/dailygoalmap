@@ -11,8 +11,11 @@ export async function sendNotificationToUser(
 ): Promise<boolean> {
   try {
     // Get user's email from the database
-    const { data:userInfo, error } = await supabaseAdmin.auth.admin.getUserById(userId)
-    if(userInfo){
+    const { data:userInfo, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const { data:userProfile, error:profileError } = await supabase.from('user_profiles').select('display_name, avatar_url').eq('id', userId).single();
+    console.log("userProfile ==== ",userProfile);
+
+    if(userInfo && userProfile){
        // Send notification using tinynotie-api
       // Compute a clickable URL to include in the push payload.
       // Prefer an explicit url provided in `data.url`. If it's relative, convert to absolute.
@@ -42,8 +45,10 @@ export async function sendNotificationToUser(
               // Use the task_date if present, else fallback to now
               timestamp: (data && data.task_date) ? `${data.task_date}T00:00:00` : new Date().toISOString(),
               ...data,
-            }
+            },
+            icon : userProfile.avatar_url
           },
+          name: userProfile.display_name,
           appId: 2
         })
       });

@@ -97,20 +97,6 @@ export function JoinGoalDialog({ isOpen, onClose, onGoalJoined }: JoinGoalDialog
         description: `You've joined "${goalToJoin.title}". It will now appear in your goals list.`,
       });
 
-      // Send notification to goal creator
-      // try {
-      //   const notificationSent = await sendNotificationToUser(
-      //     goalToJoin.user_id, // Goal creator's ID
-      //     "New Member Joined Your Goal!",
-      //     `${userData.user.email} has joined your goal: "${goalToJoin.title}".`
-      //   );
-      //   if (!notificationSent) {
-      //     console.warn("Notification not sent, but goal joined successfully.");
-      //   }
-      // } catch (notifyError) {
-      //   console.error("Failed to send notification:", notifyError);
-      // }
-
       try {
         const { createMemberJoinedNotifications } = await import("@/services/internalNotifications");
         
