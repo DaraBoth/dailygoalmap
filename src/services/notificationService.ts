@@ -90,11 +90,33 @@ export async function sendNotificationToGoalMembers(
       .select('user_id')
       .eq('goal_id', goalId)
       .neq('user_id', exceptUserId);
-    
+
+    // const { data: members, error } = await supabase
+    // .from("goal_members")
+    // .select(`
+    //   user_id,
+    //   goals:goals!goal_members_goal_id_fkey (
+    //     id,
+    //     title,
+    //     status
+    //   ),
+    //   user_profiles:user_profiles!goal_members_user_id_fkey1 (
+    //     display_name,
+    //     avatar_url
+    //   )
+    // `)
+    // .eq("goal_id", goalId)
+    // .neq("user_id", exceptUserId);
+
     if (error) {
       console.error("Error fetching goal members:", error);
       return false;
     }
+
+    // if (errGoal) {
+    //   console.error("Error fetching goal members:", error);
+    //   return false;
+    // }
     
     console.log(`Found ${members?.length || 0} members to notify:`, members);
     
@@ -113,6 +135,7 @@ export async function sendNotificationToGoalMembers(
           {
             goalId, // Include the goal ID in the notification data
             senderId: exceptUserId, // Include the sender ID
+            memberInfo:member,
             ...data,
           }
         );

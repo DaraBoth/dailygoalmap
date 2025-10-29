@@ -341,6 +341,14 @@ self.addEventListener('message', (event) => {
     // Attempt immediate sync when requested
     syncTasksWithServer();
   }
+  if (event.data === 'clear-all-notifications') {
+    // Get all notifications for this registration
+    self.registration.getNotifications().then(notifications => {
+      notifications.forEach(notification => {
+        notification.close();
+      });
+    });
+  }
 });
 
 // Push notification handler for tinynotie-api
