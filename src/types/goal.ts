@@ -55,6 +55,9 @@ export interface Goal {
     completed: number;
     incomplete: number;
   };
+  memberCounts?: {
+    total: number;
+  }
 }
 
 export interface GoalMember {

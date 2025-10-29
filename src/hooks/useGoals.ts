@@ -67,7 +67,8 @@ export const useGoals = () => {
               goal_type: 'general',
               start_date: new Date().toISOString().split('T')[0]
             },
-        taskCounts: { total: 0, completed: 0, incomplete: 0 } // Initialize task counts
+        taskCounts: { total: 0, completed: 0, incomplete: 0 }, // Initialize task counts
+        memberCounts: { total: 0 } // Initialize member counts
       }));
 
       // Sort goals by creation date (newest first) as default
@@ -90,6 +91,23 @@ export const useGoals = () => {
             incomplete: totalTasks - completedTasks
           };
         }
+
+        const { data: goalMember, error: memberError }  = await supabase
+        .from('goal_members')
+        .select('*')
+        .eq('goal_id', goal.id )
+
+        console.log({goalMember});
+        
+
+        if (!memberError && goalMember) {
+          const totalMember = goalMember.length;
+
+          goal.memberCounts = {
+            total: totalMember
+          };
+        }
+
       }
 
       setAllGoals(typedGoals);

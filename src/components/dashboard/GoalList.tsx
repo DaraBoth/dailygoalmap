@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client"; // Import supabase cl
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Goal, SortOption } from "@/types/goal";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarDays, CheckCircle2, Clock, Edit, MoreHorizontal, Trash2, ArrowRight } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, Edit, MoreHorizontal, Trash2, ArrowRight, LucideUsers2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -144,14 +144,14 @@ const GoalList: React.FC<GoalListProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-11">
       {goals.map((goal) => {
         const deadlineInfo = calculateGoalDeadlineInfo(goal);
         const deadlineStyling = getDeadlineStatusStyling(deadlineInfo.status, deadlineInfo.urgencyLevel);
         return (
         <Card
           key={goal.id}
-          className={`bg-white/60 dark:bg-white/10 backdrop-blur-md border rounded-2xl shadow-md hover:shadow-lg transition-all duration-250 ease-out cursor-pointer group overflow-hidden relative ${deadlineStyling.borderColor}`}
+          className={`bg-white/60 dark:bg-hite/10 backdrop-blur-md border rounded-2xl shadow-md hover:shadow-lg transition-all duration-250 ease-out cursor-pointer group overflow-hidden relative ${deadlineStyling.borderColor}`}
           onClick={(e) => {
             // Prevent navigation when clicking on interactive controls inside the card
             const target = e.target as HTMLElement | null;
@@ -232,10 +232,10 @@ const GoalList: React.FC<GoalListProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {goal.taskCounts && (
+                  {goal.memberCounts && (
                     <Badge className="bg-green-100/60 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200/50 dark:border-green-800/50 backdrop-blur-sm rounded-xl flex items-center">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      {goal.taskCounts.completed}/{goal.taskCounts.total}
+                      <LucideUsers2 className="h-3 w-3 mr-1" />
+                      {goal.memberCounts.total}
                     </Badge>
                   )}
                   <Badge className={`backdrop-blur-sm rounded-xl capitalize ${goal.status === 'completed' ? 'bg-emerald-100/60 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200/50 dark:border-emerald-800/50' : 'bg-gray-100/60 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300 border-gray-200/50 dark:border-gray-700/50'}`}>

@@ -88,14 +88,6 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
   }, [filter]);
 
   useEffect(() => {
-    // NOTE: We no longer auto-mark notifications as read on render.
-    // Read state should be driven by explicit user actions (clicking a notification
-    // to view the goal or using "Mark all read"). This prevents accidental
-    // marking unread items as read just by opening the list.
-    return;
-  }, [items]);
-
-  useEffect(() => {
     // Attach scroll listener to the viewport element
     const viewport = viewportRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement;
     if (!viewport) return;
@@ -181,7 +173,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
   return (
     <div className="w-full sm:w-80 md:w-96 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl border border-gray-200/60 dark:border-white/25 border-r-4 shadow-2xl">
       <div className="px-2 sm:px-4 pb-3 text-sm font-semibold sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-10 border-b rounded-t-3xl border-gray-200/60 dark:border-white/25">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 gap-3">
+        <div className="flex sm:flex-row sm:items-center justify-between pt-3 gap-3">
           <div className="text-lg font-bold text-gray-900 dark:text-white">Notifications</div>
           <div className="flex items-center ml-0 sm:ml-4">
             <button
@@ -199,7 +191,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
           <SegButton active={filter === 'invites'} onClick={() => setFilter('invites')} label="Invites" count={counts.invites} ariaPressed={filter === 'invites'} />
         </div>
       </div>
-      <ScrollArea className="h-[90vh] max-h-[75vh] min-h-[200px] bg-white/85 dark:bg-gray-900/85 shadow-xl" ref={viewportRef}>
+      <ScrollArea className="h-[90vh] max-h-[75vh] min-h-[200px] bg-white/85 dark:bg-gray-900/85 md:shadow-xl" ref={viewportRef}>
         <div className="p-3 space-y-3">
           {items.length === 0 && !loading && (
             <div className="text-sm text-gray-600 dark:text-gray-300 p-8 text-center bg-white/60 dark:bg-white/15 backdrop-blur-sm rounded-xl border border-gray-200/60 dark:border-white/25">

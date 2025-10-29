@@ -12,7 +12,6 @@ interface TaskSidebarProps {
   tasks: Task[];
   selectedDate: Date | undefined;
   onToggleTaskCompletion: (taskId: string) => void;
-  goalTitle: string;
   selectedTask: Task | null;
   onNavigateTask: (direction: 'next' | 'prev') => void;
   renderNavButtons: () => React.ReactNode;
@@ -27,7 +26,6 @@ const TaskSidebar = ({
   tasks,
   selectedDate,
   onToggleTaskCompletion,
-  goalTitle,
   selectedTask,
   onNavigateTask,
   renderNavButtons,
@@ -99,9 +97,6 @@ const TaskSidebar = ({
           </div>
           {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "Today's Tasks"}
         </h2>
-        <p className="text-sm text-muted-foreground/80 font-medium mt-1">
-          {goalTitle}
-        </p>
       </div>
 
       {tasksForDate.length > 0 && renderNavButtons()}

@@ -29,6 +29,7 @@ const TaskDetailsSidebar = ({
   onEditTask,
   onDeleteTask,
 }: TaskDetailsSidebarProps) => {
+
   const { toast } = useToast();
   const [isAddingReminder, setIsAddingReminder] = useState(false);
 

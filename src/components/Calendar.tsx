@@ -29,9 +29,9 @@ interface CalendarProps {
   onAutoOpenTaskHandled?: () => void;
 }
 
-const Calendar = ({ 
-  goalId, 
-  goalTitle, 
+const Calendar = ({
+  goalId,
+  goalTitle,
   goalDescription,
   allTasks,
   isLoadingAllTasks = false,
@@ -40,13 +40,6 @@ const Calendar = ({
   autoOpenTaskId,
   onAutoOpenTaskHandled
 }: CalendarProps) => {
-
-// ...existing code...
-
-// Place this effect after all state and function declarations it uses
-
-
-// ...existing code...
 
   const calendarRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
@@ -100,7 +93,7 @@ const Calendar = ({
     handleDateChange(date);
     // When user selects a date, update URL and state
     setIsTaskDetailsOpen(false);
-    
+
     // Update URL with new date (local yyyy-MM-dd)
     const currentUrl = new URL(window.location.href);
     currentUrl.searchParams.set('date', formatYMD(date));
@@ -185,11 +178,11 @@ const Calendar = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (document.activeElement?.tagName === 'INPUT' || 
-          document.activeElement?.tagName === 'TEXTAREA') {
+      if (document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA') {
         return;
       }
-      
+
       if (e.key === 'ArrowLeft') {
         handleNavigateTask('prev');
       } else if (e.key === 'ArrowRight') {
@@ -198,7 +191,7 @@ const Calendar = ({
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
@@ -274,26 +267,26 @@ const Calendar = ({
 
       // Now update the backend FIRST
       await updateTask(taskId, updates);
-      
+
       // Update local state AFTER successful backend update for immediate UI feedback
       setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? updatedTask : t));
-      
+
       // Update selectedTask if it's the one being edited
       if (selectedTask && selectedTask.id === taskId) {
         setSelectedTask(updatedTask);
       }
-      
+
       // Format datetime for notification
       const startDate = new Date(updatedTask.start_date);
       const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      const timeStr = updatedTask.daily_start_time 
+      const timeStr = updatedTask.daily_start_time
         ? new Date(`2000-01-01T${updatedTask.daily_start_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
         : '';
       const datetimeInfo = timeStr ? `${dateStr} at ${timeStr}` : dateStr;
 
       // Send internal notification only (push notifications handled by database trigger)
       const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
-      
+
       await createTaskUpdateNotification(
         goalId,
         taskToUpdate.user_id,
@@ -305,12 +298,12 @@ const Calendar = ({
           datetime: datetimeInfo
         }
       );
-      
+
       toast({
         title: "Task updated",
         description: "Task has been updated successfully.",
       });
-      
+
       setIsEditTaskOpen(false);
     } catch (error) {
       console.error('Error updating task:', error);
@@ -345,18 +338,12 @@ const Calendar = ({
 
     try {
       await deleteTaskFromDatabase(deletedTaskId);
-      
+
       // Temporarily store the deleted task for undo
       setLastDeletedTask(taskToDelete);
 
       // Remove task from state immediately
       setTasks(prevTasks => prevTasks.filter(t => t.id !== deletedTaskId));
-      
-      // Assuming 'members' is available in the context or passed as a prop
-      // For now, using a placeholder or assuming it's part of the task object
-      // If 'members' is not available, this line will cause an error.
-      // For now, commenting out as 'members' is not defined in the current scope.
-      // const memberName = members.find(m => m.user_id === deletedTaskUserId)?.user_profile?.display_name || 'A team member';
 
       toast({
         title: "Task deleted", // Changed from "Task Removed" to be more concise
@@ -414,11 +401,11 @@ const Calendar = ({
             <path d="M8.84182 3.13514C9.04327 3.32401 9.05348 3.64042 8.86462 3.84188L5.43521 7.49991L8.86462 11.1579C9.05348 11.3594 9.04327 11.6758 8.84182 11.8647C8.64036 12.0535 8.32394 12.0433 8.13508 11.8419L4.38508 7.84188C4.20477 7.64955 4.20477 7.35027 4.38508 7.15794L8.13508 3.15794C8.32394 2.95648 8.64036 2.94628 8.84182 3.13514Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
           </svg>
         </button>
-        
+
         <span className="text-xs text-muted-foreground">
           {selectedTaskIndex + 1} of {getTasksForDateWrapper(selectedDate || new Date()).length}
         </span>
-        
+
         <button
           className="h-8 w-8 p-0 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
           onClick={() => handleNavigateTask('next')}
@@ -433,7 +420,7 @@ const Calendar = ({
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="grid h-full w-full"
       style={{ gridTemplateRows: isMobile ? 'auto 1fr' : 'minmax(0, 1fr)' }}
       initial={{ opacity: 0 }}
@@ -471,19 +458,18 @@ const Calendar = ({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-[280px,1fr] lg:grid-cols-[300px,1fr,320px] xl:grid-cols-[320px,1fr,360px] h-full">
           <div className="h-full overflow-hidden">
-          <TaskSidebar
-            tasks={tasks}
-            selectedDate={selectedDate}
-            onToggleTaskCompletion={handleToggleTaskCompletion}
-            goalTitle={allTasks ? "All Goals" : goalTitle}
-            selectedTask={selectedTask}
-            onNavigateTask={handleNavigateTask}
-            renderNavButtons={renderNavButtons}
-            isLoading={isLoading || isLoadingAllTasks}
-            onEditTask={handleEditTask}
-            onDeleteTask={handleDeleteTask}
-            goalId={goalId}
-            onTaskClick={(task) => {
+            <TaskSidebar
+              tasks={tasks}
+              selectedDate={selectedDate}
+              onToggleTaskCompletion={handleToggleTaskCompletion}
+              selectedTask={selectedTask}
+              onNavigateTask={handleNavigateTask}
+              renderNavButtons={renderNavButtons}
+              isLoading={isLoading || isLoadingAllTasks}
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
+              goalId={goalId}
+              onTaskClick={(task) => {
                 setSelectedTask(task);
                 const taskDate = new Date(task.start_date);
                 setSelectedDate(taskDate);
@@ -527,7 +513,7 @@ const Calendar = ({
         onAddTask={handleAddTask}
         defaultDate={selectedDate || new Date()}
       />
-      
+
       <EditTaskDialog
         isOpen={isEditTaskOpen}
         onClose={() => setIsEditTaskOpen(false)}
@@ -536,16 +522,18 @@ const Calendar = ({
         task={editingTask}
       />
 
-      <TaskDetailsSidebar
-        isOpen={isTaskDetailsOpen}
-        onClose={() => setIsTaskDetailsOpen(false)}
-        selectedTask={selectedTask}
-        selectedDate={selectedDate}
-        onToggleTaskCompletion={handleToggleTaskCompletion}
-        goalTitle={goalTitle}
-        onEditTask={handleEditTask}
-        onDeleteTask={handleDeleteTask}
-      />
+      {isMobile && 
+        <TaskDetailsSidebar
+          isOpen={isTaskDetailsOpen}
+          onClose={() => setIsTaskDetailsOpen(false)}
+          selectedTask={selectedTask}
+          selectedDate={selectedDate}
+          onToggleTaskCompletion={handleToggleTaskCompletion}
+          goalTitle={goalTitle}
+          onEditTask={handleEditTask}
+          onDeleteTask={handleDeleteTask}
+        />
+      }
 
       <DeleteConfirmDialog
         isOpen={isConfirmDeleteOpen}
