@@ -12,7 +12,7 @@ export async function sendNotificationToUser(
   try {
     // Get user's email from the database
     const { data:userInfo, error } = await supabaseAdmin.auth.admin.getUserById(userId);
-    const { data:userProfile, error:profileError } = await supabase.from('user_profiles').select('display_name, avatar_url').eq('id', body?.senderId).single();
+    const { data:userProfile, error:profileError } = await supabase.from('user_profiles').select('display_name, avatar_url').eq('id', data?.senderId as string).single();
     console.log("userProfile ==== ",userProfile);
 
     if(userInfo && userProfile){
