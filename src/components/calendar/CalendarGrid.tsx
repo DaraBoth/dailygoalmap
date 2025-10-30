@@ -24,7 +24,7 @@ const CalendarGrid = ({
   
   return (
     <div className="flex flex-col h-full w-full p-1 sm:p-2">
-      <div className="rounded-2xl sm:rounded-3xl overflow-hidden border border-white/20 dark:border-white/10 shadow-xl h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-md">
+      <div className="rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-200/60 dark:border-white/25 h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-md">
         {/* Compact header for day names */}
         <div className="grid grid-cols-7 text-center bg-gradient-to-r from-blue-100/80 to-teal-100/80 dark:from-blue-900/40 dark:to-teal-900/40 backdrop-blur-sm">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => (

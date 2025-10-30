@@ -127,7 +127,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
 
   const popUpSize = () => {
     let tailwindClass = "max-h-[80vh] max-w-[340px] sm:max-w-[380px] md:max-w-[500px] ";
-    if(isMobile){
+    if (isMobile) {
       tailwindClass = "max-h-[100%] max-w-[100%]"
     }
 
@@ -138,7 +138,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={popUpSize()+" p-0 overflow-hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/60 dark:border-white/25 text-gray-900 dark:text-white rounded-xl sm:rounded-2xl md:rounded-3xl shadow-2xl flex flex-col"}>
+      <DialogContent className={popUpSize() + " p-0 overflow-hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/60 dark:border-white/25 text-gray-900 dark:text-white rounded-xl sm:rounded-2xl md:rounded-3xl shadow-2xl flex flex-col"}>
         <div className="flex flex-col h-full max-h-[80vh]">
           {/* Fixed header */}
           <div className="flex-shrink-0 z-20 bg-inherit">
@@ -175,7 +175,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                 <form id="edit-task-form" onSubmit={handleSubmit} className="space-y-2.5 sm:space-y-4 md:space-y-6">
                   <div className="space-y-3 sm:space-y-5">
                     <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="task-title" className="text-xs sm:text-sm font-medium text-gray-300 flex items-center gap-1.5 sm:gap-2">
+                      <Label htmlFor="task-title" className="text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-1.5 sm:gap-2">
                         Title
                         <div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" />
                       </Label>
@@ -185,11 +185,11 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="Short title"
                         autoFocus
-                        className="bg-slate-800/50 border-slate-700 text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20 transition-all h-8 sm:h-10 text-sm"
+                        className="bg-slate-50/50 dark:bg-slate-800/50 border-slate-700 text-black dark:text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20 transition-all h-8 sm:h-10 text-sm"
                       />
                     </div>
                     <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="task-description" className="text-xs sm:text-sm font-medium text-gray-300 flex items-center gap-1.5 sm:gap-2">
+                      <Label htmlFor="task-description" className="text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-300  flex items-center gap-1.5 sm:gap-2">
                         Task Description
                         <div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" />
                       </Label>
@@ -198,47 +198,47 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                         value={taskDescription}
                         onChange={(v) => setTaskDescription(v)}
                         placeholder="Enter task description"
-                        maxRows={isMobile ? 10:3}
-                        minRows={isMobile ? 5:1}
+                        maxRows={isMobile ? 10 : 3}
+                        minRows={isMobile ? 5 : 1}
                         row={5}
-                        className="bg-slate-800/50 border-slate-700 text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20 transition-all"
+                        className="dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-300 placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20 transition-all"
                       />
                     </div>
 
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-300 flex items-center gap-2"><Calendar className="h-3 w-3" /> Start Date<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
-                          <MobileDatePicker date={startDate} minDate={undefined} maxDate={endDate} setDate={(d) => { if (!d) return; const next = d; setStartDate(next); if (next > endDate) setEndDate(next); setSelectedDate(next); }} className="w-full bg-slate-800/50 border-slate-700 text-white" />
+                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300  flex items-center gap-2"><Calendar className="h-3 w-3" /> Start Date<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
+                          <MobileDatePicker date={startDate} minDate={undefined} maxDate={endDate} setDate={(d) => { if (!d) return; const next = d; setStartDate(next); if (next > endDate) setEndDate(next); setSelectedDate(next); }} className="w-full dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-300" />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-300 flex items-center gap-2"><Calendar className="h-3 w-3" /> End Date<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
-                          <MobileDatePicker date={endDate} minDate={startDate} maxDate={undefined} setDate={(d) => { if (!d) return; setEndDate(d < startDate ? startDate : d); }} className="w-full bg-slate-800/50 border-slate-700 text-white" />
+                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300  flex items-center gap-2"><Calendar className="h-3 w-3" /> End Date<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
+                          <MobileDatePicker date={endDate} minDate={startDate} maxDate={undefined} setDate={(d) => { if (!d) return; setEndDate(d < startDate ? startDate : d); }} className="w-full dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-300" />
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-300 flex items-center gap-2"><Clock className="h-3 w-3" /> Daily Start<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
+                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300  flex items-center gap-2"><Clock className="h-3 w-3" /> Daily Start<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
                           <MobileTimePicker
                             value={dailyStart}
                             onChange={(value) => setDailyStart(value || taskTime)}
                             onBlur={(e) => !e.currentTarget.value && setDailyStart(taskTime)}
-                            className="bg-slate-800/50 border-slate-700 text-white"
+                            className="dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-300"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-300 flex items-center gap-2"><Clock className="h-3 w-3" /> Daily End<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
+                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300  flex items-center gap-2"><Clock className="h-3 w-3" /> Daily End<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
                           <MobileTimePicker
                             value={dailyEnd}
                             onChange={(value) => setDailyEnd(value || dailyStart)}
                             onBlur={(e) => !e.currentTarget.value && setDailyEnd(dailyStart)}
-                            className="bg-slate-800/50 border-slate-700 text-white"
+                            className="dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-300"
                           />
                         </div>
                       </div>
 
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-gray-800 dark:text-gray-400 ">
                         {startDate && endDate && startDate.toDateString() !== endDate.toDateString() ? `Spans ${Math.max(0, differenceInCalendarDays(endDate, startDate)) + 1} days` : 'Single day task'}
                       </div>
                     </div>
@@ -260,15 +260,15 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                               "p-1.5 sm:p-2 rounded-md sm:rounded-lg border transition-all",
                               isPriority
                                 ? "bg-red-500/20 border-red-500/50 text-red-400"
-                                : "bg-slate-800/50 border-slate-700 text-gray-400 hover:border-blue-500/50"
+                                : "bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-400 hover:border-blue-500/50"
                             )}
                           >
                             <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                           </button>
-                          <span className="text-xs sm:text-sm text-gray-400">{isPriority ? 'Priority Task' : 'Mark as Priority'}</span>
+                          <span className="text-xs sm:text-sm text-gray-800 dark:text-gray-400 ">{isPriority ? 'Priority Task' : 'Mark as Priority'}</span>
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2">
-                          <Label className="text-xs sm:text-sm text-gray-300">Completed</Label>
+                          <Label className="text-xs sm:text-sm text-gray-800 dark:text-gray-400 ">Completed</Label>
                           <Switch checked={completed} onCheckedChange={setCompleted} />
                         </div>
                       </div>

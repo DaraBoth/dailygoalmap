@@ -97,7 +97,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   const hasTimeRange = selectedTask.daily_start_time && selectedTask.daily_end_time;
 
   return (
-    <div className="w-full h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border-l border-white/20 dark:border-white/10 overflow-hidden rounded-l-3xl shadow-lg">
+    <div className="w-full h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border border-gray-200/60 dark:border-white/25 overflow-hidden rounded-l-3xl shadow-lg">
       {/* Header */}
       <div className="p-4 lg:p-6 border-b border-white/20 dark:border-white/10 bg-white/40 dark:bg-white/10 backdrop-blur-sm">
         <div className="flex items-center justify-between">
