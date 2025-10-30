@@ -338,12 +338,7 @@ const Dashboard = () => {
             {/* Today's Tasks - Smaller column (4/12 width) */}
             <div className="lg:col-span-4 overflow-hidden">
               <div className="sticky top-24">
-                <TodaysTasks
-                  tasks={[]}
-                  isLoading={false}
-                  onTaskClick={() => { }}
-                  onToggleTaskCompletion={() => { }}
-                />
+                <TodaysTasks/>
               </div>
             </div>
           </div>

@@ -82,7 +82,7 @@ const CalendarDay = ({
           ${!isCurrentMonth ? 'text-gray-400 dark:text-gray-500' : ''}
           ${isWeekend && isCurrentMonth && date.getDay() === 0 ? 'text-red-600 dark:text-red-400' : ''}
           ${isWeekend && isCurrentMonth && date.getDay() === 6 ? 'text-blue-600 dark:text-blue-400' : ''}
-          ${isSelected ? 'bg-blue-500 dark:bg-blue-400 text-white' : ''}
+          ${isSelected ? 'bg-blue-500 dark:bg-blue-400 text-white dark:text-white' : ''}
           ${_isToday && !isSelected ? 'bg-gradient-to-br from-emerald-100/80 to-teal-100/80 dark:from-emerald-900/40 dark:to-teal-900/40 text-emerald-800 dark:text-emerald-200 border border-emerald-200/50 dark:border-emerald-800/50 backdrop-blur-sm' : ''}
           ${isCurrentMonth && !isWeekend && !isSelected && !_isToday ? 'text-gray-700 dark:text-gray-300' : ''}
           transition-all duration-300

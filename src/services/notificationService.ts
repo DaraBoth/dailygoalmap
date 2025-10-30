@@ -12,7 +12,7 @@ export async function sendNotificationToUser(
   try {
     // Get user's email from the database
     const { data:userInfo, error } = await supabaseAdmin.auth.admin.getUserById(userId);
-    const { data:userProfile, error:profileError } = await supabase.from('user_profiles').select('display_name, avatar_url').eq('id', userId).single();
+    const { data:userProfile, error:profileError } = await supabase.from('user_profiles').select('display_name, avatar_url').eq('id', body?.senderId).single();
     console.log("userProfile ==== ",userProfile);
 
     if(userInfo && userProfile){
@@ -37,7 +37,7 @@ export async function sendNotificationToUser(
         body: JSON.stringify({
           identifier: userInfo.user.email, // Use email as identifier
           payload: {
-            title: title || 'DailyGoalMap Notification',
+            title: title+` by ${userProfile.display_name}` || 'DailyGoalMap Notification',
             body: body || 'You have a new update!',
             data: {
               // Provide an absolute, clickable URL when possible. Also include original data for context.

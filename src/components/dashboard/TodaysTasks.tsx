@@ -30,12 +30,7 @@ export interface TodaysTasksProps {
 //   return <div ref={ref} {...props} />;
 // });
 
-const TodaysTasks: React.FC<TodaysTasksProps> = ({
-  tasks,
-  isLoading,
-  onTaskClick,
-  onToggleTaskCompletion
-}) => {
+const TodaysTasks: React.FC<TodaysTasksProps> = () => {
   const [tasksForToday, setTasksForToday] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [availableGoals, setAvailableGoals] = useState<Array<{ id: string; title: string }>>([]);
@@ -259,7 +254,7 @@ const TodaysTasks: React.FC<TodaysTasksProps> = ({
 
       if (undoTimeout) clearTimeout(undoTimeout);
       const timeout = setTimeout(() => {
-        setPreviousTasksState([]);
+        setPreviousTasksState(incompleteTasks);
       }, 5000);
       setUndoTimeout(timeout);
     } catch (error) {
