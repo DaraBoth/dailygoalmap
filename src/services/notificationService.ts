@@ -12,10 +12,8 @@ export async function sendNotificationToUser(
   try {
     // Get user's email from the database
     const { data:userInfo, error } = await supabaseAdmin.auth.admin.getUserById(userId);
-    const { data:userProfile, error:profileError } = await supabase.from('user_profiles').select('display_name, avatar_url').eq('id', data?.senderId as string).single();
-    console.log("userProfile ==== ",userProfile);
 
-    if(userInfo && userProfile){
+    if(userInfo){
        // Send notification using tinynotie-api
       // Compute a clickable URL to include in the push payload.
       // Prefer an explicit url provided in `data.url`. If it's relative, convert to absolute.
@@ -37,7 +35,7 @@ export async function sendNotificationToUser(
         body: JSON.stringify({
           identifier: userInfo.user.email, // Use email as identifier
           payload: {
-            title: title+` by ${userProfile.display_name}` || 'DailyGoalMap Notification',
+            title: title+` by ${data.userProfile['display_name'] as string}` || 'DailyGoalMap Notification',
             body: body || 'You have a new update!',
             data: {
               // Provide an absolute, clickable URL when possible. Also include original data for context.
@@ -46,9 +44,9 @@ export async function sendNotificationToUser(
               timestamp: (data && data.task_date) ? `${data.task_date}T00:00:00` : new Date().toISOString(),
               ...data,
             },
-            icon : userProfile.avatar_url
+            icon : data.userProfile['avatar_url']
           },
-          name: userProfile.display_name,
+          name: data.userProfile['display_name'],
           appId: 2
         })
       });
@@ -91,6 +89,8 @@ export async function sendNotificationToGoalMembers(
       .eq('goal_id', goalId)
       .neq('user_id', exceptUserId);
 
+    const { data:userProfile } = await supabase.from('user_profiles').select('display_name, avatar_url').eq('id', exceptUserId).single();
+
     // const { data: members, error } = await supabase
     // .from("goal_members")
     // .select(`
@@ -112,11 +112,6 @@ export async function sendNotificationToGoalMembers(
       console.error("Error fetching goal members:", error);
       return false;
     }
-
-    // if (errGoal) {
-    //   console.error("Error fetching goal members:", error);
-    //   return false;
-    // }
     
     console.log(`Found ${members?.length || 0} members to notify:`, members);
     
@@ -136,6 +131,7 @@ export async function sendNotificationToGoalMembers(
             goalId, // Include the goal ID in the notification data
             senderId: exceptUserId, // Include the sender ID
             memberInfo:member,
+            userProfile,
             ...data,
           }
         );
