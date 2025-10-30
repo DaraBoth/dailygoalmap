@@ -121,7 +121,7 @@ const AddTaskDialog = ({ isOpen, onClose, onAddTask, defaultDate = new Date() }:
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[80vh] max-w-[340px] sm:max-w-[380px] md:max-w-[500px] lg:max-w-2xl p-0 overflow-hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/60 dark:border-white/25 text-gray-900 dark:text-white rounded-xl sm:rounded-2xl md:rounded-3xl shadow-2xl flex flex-col">
+      <DialogContent className="max-h-[80vh] max-w-[380px] sm:max-w-[380px] md:max-w-[500px] lg:max-w-2xl p-0 overflow-hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/60 dark:border-white/25 text-gray-900 dark:text-white rounded-xl sm:rounded-2xl md:rounded-3xl shadow-2xl flex flex-col">
         <div className="flex flex-col h-full max-h-[80vh]">
           {/* Fixed header */}
           <div className="flex-shrink-0 z-20 bg-inherit">
@@ -180,7 +180,7 @@ const AddTaskDialog = ({ isOpen, onClose, onAddTask, defaultDate = new Date() }:
                     </div>
                     {/* Date and Time Pickers */}
                     <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2"><Calendar className="h-3 w-3" /> Start Date<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
                           <MobileDatePicker date={startDate} minDate={undefined} maxDate={endDate} setDate={(d) => { if (!d) return; const next = d; setStartDate(next); if (next > endDate) setEndDate(next); setSelectedDate(next); }} className="w-full dark:bg-slate-800/50 border-slate-700 dark:text-white" />
@@ -190,7 +190,7 @@ const AddTaskDialog = ({ isOpen, onClose, onAddTask, defaultDate = new Date() }:
                           <MobileDatePicker date={endDate} minDate={startDate} maxDate={undefined} setDate={(d) => { if (!d) return; setEndDate(d < startDate ? startDate : d); }} className="w-full dark:bg-slate-800/50 border-slate-700 dark:text-white" />
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2"><Clock className="h-3 w-3" /> Daily Start<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
                           <MobileTimePicker

@@ -206,7 +206,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                     </div>
 
                     <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-800 dark:text-gray-300  flex items-center gap-2"><Calendar className="h-3 w-3" /> Start Date<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
                           <MobileDatePicker date={startDate} minDate={undefined} maxDate={endDate} setDate={(d) => { if (!d) return; const next = d; setStartDate(next); if (next > endDate) setEndDate(next); setSelectedDate(next); }} className="w-full dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-300" />
@@ -217,7 +217,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-800 dark:text-gray-300  flex items-center gap-2"><Clock className="h-3 w-3" /> Daily Start<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
                           <MobileTimePicker
@@ -260,7 +260,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                               "p-1.5 sm:p-2 rounded-md sm:rounded-lg border transition-all",
                               isPriority
                                 ? "bg-red-500/20 border-red-500/50 text-red-400"
-                                : "bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-400 hover:border-blue-500/50"
+                                : "dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-400 hover:border-blue-500/50"
                             )}
                           >
                             <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5" />
