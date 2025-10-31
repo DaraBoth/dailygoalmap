@@ -136,7 +136,7 @@ export const UserMenu = () => {
   };
   
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 ">
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -153,7 +153,7 @@ export const UserMenu = () => {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuContent className="w-56x" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">{getDisplayName()}</p>
@@ -187,9 +187,6 @@ export const UserMenu = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </TooltipTrigger>
-          <TooltipContent>
-            <span>Open user menu</span>
-          </TooltipContent>
         </Tooltip>
       </TooltipProvider>
     </div>

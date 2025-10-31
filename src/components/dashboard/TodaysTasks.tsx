@@ -11,26 +11,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast"; // Update toast import
+import glassStyle from "../ui/liquidStyle";
 
-export interface TodaysTasksProps {
-  tasks: Array<{
-    id: string;
-    description: string;
-    completed: boolean;
-    goal_id?: string;
-    date: string;
-  }>;
-  isLoading: boolean;
-  onTaskClick: (taskId: string) => void;
-  onToggleTaskCompletion: (taskId: string, completed: boolean) => void;
-}
-
-// Remove the unused forwardRef component
-// const CustomComponent = forwardRef((props, ref) => {
-//   return <div ref={ref} {...props} />;
-// });
-
-const TodaysTasks: React.FC<TodaysTasksProps> = () => {
+const TodaysTasks: React.FC = () => {
   const [tasksForToday, setTasksForToday] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [availableGoals, setAvailableGoals] = useState<Array<{ id: string; title: string }>>([]);
@@ -43,6 +26,8 @@ const TodaysTasks: React.FC<TodaysTasksProps> = () => {
   const { toast } = useToast(); // Initialize toast
   const { goToGoal } = useRouterNavigation();
   const filterRef = useRef<HTMLDivElement | null>(null);
+
+
 
   useEffect(() => {
     fetchTodaysTasks();
@@ -444,13 +429,12 @@ const TodaysTasks: React.FC<TodaysTasksProps> = () => {
       )}
 
       {isMobile && !isTasksVisible && (
-        <Button
-          variant="outline"
-          className="fixed inset-x-0 bottom-0 bg-blue-500 hover:bg-blue-600 text-white shadow-lg rounded-t-lg p-4 z-50"
+        <button
+          className={`glass-style fixed inset-x-0 bottom-0 rounded-t-lg p-2 z-50 `}
           onClick={() => setIsTasksVisible(true)}
         >
           View Today's Tasks
-        </Button>
+        </button>
       )}
 
       {!isMobile && (

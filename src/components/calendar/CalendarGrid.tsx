@@ -42,7 +42,7 @@ const CalendarGrid = ({
 
         {/* Full-width calendar grid with no gaps */}
         <div className="flex-1 min-h-0">
-          <div className="grid grid-cols-7 h-full bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm" style={{
+          <div className="grid grid-cols-7 h-full glass-style" style={{
             gridTemplateRows: `repeat(${getOptimalRowCount(currentMonth)}, minmax(0, 1fr))`
           }}>
             {getDaysInMonth(currentMonth).map((date, index) => (

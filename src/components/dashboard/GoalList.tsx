@@ -144,14 +144,14 @@ const GoalList: React.FC<GoalListProps> = ({
   }
 
   return (
-    <div className="space-y-6 pb-11">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2">
       {goals.map((goal) => {
         const deadlineInfo = calculateGoalDeadlineInfo(goal);
         const deadlineStyling = getDeadlineStatusStyling(deadlineInfo.status, deadlineInfo.urgencyLevel);
         return (
         <Card
           key={goal.id}
-          className={`bg-white/60 dark:bg-hite/10 backdrop-blur-md border rounded-2xl shadow-md hover:shadow-lg transition-all duration-250 ease-out cursor-pointer group overflow-hidden relative ${deadlineStyling.borderColor}`}
+          className={`glass-style border rounded-2xl shadow-md hover:shadow-lg transition-all duration-250 ease-out cursor-pointer group overflow-hidden relative ${deadlineStyling.borderColor}`}
           onClick={(e) => {
             // Prevent navigation when clicking on interactive controls inside the card
             const target = e.target as HTMLElement | null;
@@ -169,7 +169,7 @@ const GoalList: React.FC<GoalListProps> = ({
             goToGoal(goal.id);
           }}
         >
-          <div className="relative bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl m-0.5 p-4">
+          <div className="glass-style relative rounded-2xl m-0.5 p-4">
             <CardHeader className="p-0">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 flex-1">

@@ -54,7 +54,7 @@ const CalendarDisplay = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white dark:bg-slate-900">
+    <div className="w-full h-full flex flex-col">
       {isLoading ? (
         <LoadingState />
       ) : (

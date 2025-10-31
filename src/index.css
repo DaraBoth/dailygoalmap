@@ -64,15 +64,94 @@
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings: "rlig"1, "calt"1;
   }
+
+   /* Liquid Glass Global Theme */
+  button,
+  input,
+  select,
+  textarea,
+  .card {
+    position: relative;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+    color: inherit;
+    overflow: hidden; /* contain glossy overlay */
+  }
+
+  .dark button,
+  .dark input,
+  .dark select,
+  .dark textarea,
+  .dark .card {
+    background: rgba(20, 20, 20, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.05);
+  }
+
+  button:hover,
+  .card:hover,
+  input:focus,
+  select:focus,
+  textarea:focus {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 6px 25px rgba(255, 255, 255, 0.1);
+  }
+
+  button:active {
+    transform: scale(0.97);
+  }
+
+  /* Glossy reflection effect */
+  button::before,
+  .card::before,
+  input::before,
+  select::before,
+  textarea::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      circle at var(--x, 50%) var(--y, 50%),
+      rgba(255, 255, 255, 0.35),
+      rgba(255, 255, 255, 0.05) 70%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  button:hover::before,
+  .card:hover::before,
+  input:focus::before,
+  select:focus::before,
+  textarea:focus::before {
+    opacity: 1;
+  }
+
+  button > *,
+  .card > *,
+  input > *,
+  select > *,
+  textarea > * {
+    position: relative;
+    z-index: 1;
+  }
+  
 }
 
 @layer utilities {
   .font-heading {
-    @apply text-4xl md:text-5xl lg:text-6xl font-bold;
+    @apply text-4xl md: text-5xl lg:text-6xl font-bold;
   }
-  
+
   .animation-delay-2000 {
     animation-delay: 2s;
   }
@@ -91,6 +170,7 @@
       opacity: 0;
       transform: translateY(20px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -101,21 +181,23 @@
   .task-complete {
     @apply transition-all duration-300 ease-out;
   }
-  
+
   .task-complete-animation {
     animation: taskComplete 0.6s ease-out forwards;
   }
-  
+
   @keyframes taskComplete {
     0% {
       transform: scale(1);
       opacity: 1;
     }
+
     50% {
       transform: scale(1.05);
       background-color: hsl(var(--success));
       color: hsl(var(--success-foreground));
     }
+
     100% {
       transform: scale(1);
       opacity: 0.7;
@@ -129,14 +211,16 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: var(--primary); /* Use theme primary color */
+    background: var(--primary);
+    /* Use theme primary color */
     border-radius: 6px;
     border: 3px solid transparent;
     background-clip: padding-box;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-foreground); /* Use theme primary foreground color */
+    background: var(--primary-foreground);
+    /* Use theme primary foreground color */
   }
 
   ::-webkit-scrollbar-track {
@@ -147,7 +231,49 @@
   .dark ::-webkit-scrollbar-track {
     background: hsl(220, 13%, 18%);
   }
+
+  .glass-style {
+    background: rgba(245, 245, 245, 0.08);
+    color: inherit;
+    backdrop-filter: blur(12px) saturate(140%) brightness(1.05);
+    -webkit-backdrop-filter: blur(12px) saturate(140%) brightness(1.05);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+    isolation: isolate;
+  }
+
+  .dark .glass-style {
+    background: rgba(230, 230, 230, 0.04);
+    backdrop-filter: blur(12px) saturate(130%) brightness(0.9);
+    -webkit-backdrop-filter: blur(12px) saturate(130%) brightness(0.9);
+  }
+
+  .glass-style::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--x, 50%) var(--y, 50%),
+        rgba(255, 255, 255, 0.35),
+        rgba(255, 255, 255, 0.05) 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease, background 0.3s ease;
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 0;
+  }
+
+  .glass-style:hover::before {
+    opacity: 1;
+  }
+
+  /* prevent glass layer from blocking dropdowns */
+  .glass-style>* {
+    position: relative;
+    z-index: 1;
+  }
+
 }
+
+
 
 /* Disable zooming on mobile input focus */
 @media screen and (max-width: 768px) {
@@ -178,6 +304,7 @@ html {
 
 /* Mobile dialog improvements */
 @media (max-width: 640px) {
+
   /* Improve touch scrolling on mobile */
   .touch-pan-y {
     -webkit-overflow-scrolling: touch;
@@ -197,15 +324,15 @@ html {
   .pt-safe-top {
     padding-top: max(1rem, env(safe-area-inset-top));
   }
-  
+
   .pb-safe-bottom {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
-  
+
   .pl-safe-left {
     padding-left: max(1rem, env(safe-area-inset-left));
   }
-  
+
   .pr-safe-right {
     padding-right: max(1rem, env(safe-area-inset-right));
   }
@@ -270,12 +397,13 @@ html {
 
 /* Extra small screens (320px and up) - Custom responsive utilities */
 @media (min-width: 320px) {
+
   /* Custom xs breakpoint utilities for components that need them */
   .xs-max-w-380 {
     max-width: 380px;
   }
 
-  .xs-space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  .xs-space-y-4> :not([hidden])~ :not([hidden]) {
     margin-top: 1rem;
   }
 
@@ -296,5 +424,6 @@ html {
 input[type="date"],
 input[type="time"] {
   -webkit-appearance: none;
-  appearance: none; /* For cross-browser compatibility */
+  appearance: none;
+  /* For cross-browser compatibility */
 }

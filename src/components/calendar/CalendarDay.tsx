@@ -66,17 +66,17 @@ const CalendarDay = ({
         ${isCurrentMonth ? 'bg-white/20 dark:bg-white/5' : 'bg-white/5 dark:bg-white/2 opacity-30'}
         ${isSelected ? 'bg-blue-50/80 dark:bg-blue-950/60 backdrop-blur-sm border-2 border-blue-400/70 dark:border-blue-500/70' : ''}
         ${isCurrentMonth ? 'cursor-pointer' : 'cursor-default'} overflow-hidden flex flex-col
-        ${isCurrentMonth ? 'hover:bg-white/40 dark:hover:bg-white/10 hover:backdrop-blur-sm hover:shadow-md' : ''} transition-all duration-300
+        ${isCurrentMonth ? '' : ''} transition-all duration-300
         h-full p-1 sm:p-2
         min-h-[80px] sm:min-h-[90px] md:min-h-[100px] lg:min-h-[110px]
         max-h-[80px] sm:max-h-[90px] md:max-h-[100px] lg:max-h-[110px]
+        
       `}
       onClick={() => isCurrentMonth && onDateChange(date)}
-      whileHover={{ scale: 1.005 }}
       transition={{ duration: 0.2 }}
     >
       {/* Compact date display */}
-      <div className="flex justify-center mb-0.5">
+      <div className="flex justify-center mb-0.5 ">
         <span className={`
           w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 flex items-center justify-center rounded-lg text-xs sm:text-sm font-semibold
           ${!isCurrentMonth ? 'text-gray-400 dark:text-gray-500' : ''}

@@ -147,32 +147,29 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
     }
   };
 
-  const SegButton: React.FC<{ active: boolean; onClick: () => void; label: string; count?: number; ariaPressed?: boolean }> = ({ active, onClick, label, count, ariaPressed }) => (
-    <Button
-      size="sm"
-      variant="ghost"
+  const SegButton: React.FC<{ 
+    active: boolean; 
+    onClick: () => void; 
+    className?: string; 
+    label: string; 
+    count?: number; 
+    ariaPressed?: boolean 
+  }> = ({ active, onClick, className, label, count, ariaPressed }) => (
+    <button
       onClick={onClick}
       aria-pressed={ariaPressed}
-      className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm flex-1 sm:flex-none transition-all duration-300 ease-out ${active
-        ? 'bg-white/80 dark:bg-white/20 text-gray-900 dark:text-white shadow-lg backdrop-blur-md border border-gray-200/60 dark:border-white/25'
-        : 'text-gray-600 dark:text-gray-300 hover:bg-white/40 dark:hover:bg-white/10 hover:backdrop-blur-sm'
-        } rounded-xl`}
+      className={`text-sm font-semibold text-foreground/90 dark:text-white/90 hover:underline transition-all duration-300 ease-out bg-inherit py-0 ${active
+        ? 'text-gray-900 dark:text-white '
+        : 'text-gray-600 dark:text-gray-300 '
+        } ${className}`}
     >
       <span className="font-medium">{label}</span>
-      {typeof count === 'number' && (
-        <span className={`ml-1.5 inline-flex items-center justify-center text-[10px] rounded-full px-2 py-0.5 font-semibold transition-all duration-200 ${active
-          ? 'bg-primary/20 text-primary shadow-sm backdrop-blur-sm'
-          : 'bg-muted/60 text-foreground/70 backdrop-blur-sm'
-          }`}>
-          {count}
-        </span>
-      )}
-    </Button>
+    </button>
   );
 
   return (
     <div className="w-full sm:w-80 md:w-96 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl border border-gray-200/60 dark:border-white/25 border-r-4 shadow-2xl">
-      <div className="px-2 sm:px-4 pb-3 text-sm font-semibold sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-10 border-b rounded-t-3xl border-gray-200/60 dark:border-white/25">
+      <div className="sm:px-4 text-sm font-semibold sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-10 border-b rounded-t-3xl border-gray-200/60 dark:border-white/25">
         <div className="flex sm:flex-row sm:items-center justify-between pt-3 gap-3">
           <div className="text-lg font-bold text-gray-900 dark:text-white">Notifications</div>
           <div className="flex items-center ml-0 sm:ml-4">
@@ -185,13 +182,13 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
             </button>
           </div>
         </div>
-        <div className="inline-flex items-center gap-1 p-1 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-gray-200/60 dark:border-white/25 shadow-lg w-full sm:w-auto justify-center" role="tablist" aria-label="Filter notifications">
-          <SegButton active={filter === 'all'} onClick={() => setFilter('all')} label="All" count={counts.all} ariaPressed={filter === 'all'} />
-          <SegButton active={filter === 'unread'} onClick={() => setFilter('unread')} label="Unread" count={counts.unread} ariaPressed={filter === 'unread'} />
-          <SegButton active={filter === 'invites'} onClick={() => setFilter('invites')} label="Invites" count={counts.invites} ariaPressed={filter === 'invites'} />
+        <div className="inline-flex items-center gap-6 rounded-lg bg-white/60 dark:bg-gray-800/60 backdrop-blur-md shadow-lg w-full sm:w-auto justify-center" role="tablist" aria-label="Filter notifications">
+          <SegButton  active={filter === 'all'} onClick={() => setFilter('all')} label="All" count={counts.all} ariaPressed={filter === 'all'} />
+          <SegButton  active={filter === 'unread'} onClick={() => setFilter('unread')} label="Unread" count={counts.unread} ariaPressed={filter === 'unread'} />
+          <SegButton  active={filter === 'invites'} onClick={() => setFilter('invites')} label="Invites" count={counts.invites} ariaPressed={filter === 'invites'} />
         </div>
       </div>
-      <ScrollArea className="h-[90vh] max-h-[75vh] min-h-[200px] bg-white/85 dark:bg-gray-900/85 md:shadow-xl" ref={viewportRef}>
+      <ScrollArea className="md:h-[90vh] max-h-[75vh] min-h-[200px] bg-white/85 dark:bg-gray-900/85 md:shadow-xl" ref={viewportRef}>
         <div className="p-3 space-y-3">
           {items.length === 0 && !loading && (
             <div className="text-sm text-gray-600 dark:text-gray-300 p-8 text-center bg-white/60 dark:bg-white/15 backdrop-blur-sm rounded-xl border border-gray-200/60 dark:border-white/25">

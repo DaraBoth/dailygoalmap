@@ -108,13 +108,13 @@ const Dashboard = () => {
     // Handle page leave confirmation
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
-      setShowLeaveConfirm(true);
+      // setShowLeaveConfirm(true);
       return (event.returnValue = "Are you sure you want to leave? Any unsaved changes will be lost.");
     };
 
     window.addEventListener("keydown", handleKeyPress);
     window.addEventListener("beforeunload", handleBeforeUnload);
-    
+
     return () => {
       window.removeEventListener("keydown", handleKeyPress);
       window.removeEventListener("beforeunload", handleBeforeUnload);
@@ -249,7 +249,7 @@ const Dashboard = () => {
         <link rel="manifest" href="/manifest.json" />
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-white to-purple-50/50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/20">
+      <div className="min-h-screen no-scrollbar [&::-webkit-scrollbar]:hidden bg-gradient-to-br from-blue-500/50 via-slate-400 to-purple-500/50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/20">
         {/* Sticky Navbar */}
         <DashboardHeader
           onOpenSearch={() => setShowSearch(true)}
@@ -261,11 +261,11 @@ const Dashboard = () => {
         />
 
         {/* Main Content with top padding to account for sticky navbar */}
-        <div className="w-full min-h-screen px-2 sm:px-4 lg:px-6 xl:px-8 pt-8 pb-8">
+        <div className="w-full h-[calc(100vh-90px)] px-2 sm:px-4 lg:px-6 xl:px-8 ">
           {/* Desktop Layout: Two-column with Goal List (left) and Today's Tasks (right) */}
           <div className="hidden lg:grid lg:grid-cols-12 gap-4 xl:gap-6 h-full">
             {/* Goal List - Larger column (8/12 width) */}
-            <div className="lg:col-span-8 overflow-auto">
+            <div className="lg:col-span-8 overflow-y-auto pt-8 pb-8  no-scrollbar [&::-webkit-scrollbar]:hidden">
               <div className="mb-6">
 
                 {/* Deadline Notifications */}
@@ -337,30 +337,20 @@ const Dashboard = () => {
 
             {/* Today's Tasks - Smaller column (4/12 width) */}
             <div className="lg:col-span-4 overflow-hidden">
-              <div className="sticky top-24">
-                <TodaysTasks/>
+              <div className="sticky top-8">
+                <TodaysTasks />
               </div>
             </div>
           </div>
 
           {/* Mobile Layout: Vertical stack with Today's Tasks first */}
           <div className="lg:hidden space-y-6">
-            {/* Today's Tasks at top for mobile */}
             <div>
-              <TodaysTasks
-                tasks={[]}
-                isLoading={false}
-                onTaskClick={() => { }}
-                onToggleTaskCompletion={() => { }}
-              />
+              <TodaysTasks/>
             </div>
 
             {/* Goal List below for mobile */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Your Goals</h2>
-                <GoalSorter sortOption={sortOption} onSortChange={handleSortChange} />
-              </div>
               <GoalList
                 goals={goals}
                 isLoading={isLoading}
@@ -372,7 +362,7 @@ const Dashboard = () => {
 
               {/* Mobile Pagination */}
               {totalPages > 1 && (
-                <div className="mt-8 flex justify-center">
+                <div className="my-8 flex justify-center">
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>

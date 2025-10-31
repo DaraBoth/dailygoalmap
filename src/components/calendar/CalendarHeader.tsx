@@ -30,7 +30,7 @@ const CalendarHeader = ({
 
   return (
     <nav
-      className="relative mt-3 sm:mt-4 mx-2 mb-3 sm:mb-4 bg-white/60 dark:bg-white/10 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-gray-200/60 dark:border-white/25"
+      className="relative mt-3 sm:mt-4 mx-2 mb-3 sm:mb-4 glass-style backdrop-blur-md rounded-2xl sm:rounded-3xl border border-gray-200/60 dark:border-white/25"
       role="navigation"
       aria-label="Calendar navigation"
     >

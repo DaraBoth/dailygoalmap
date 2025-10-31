@@ -46,7 +46,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   
   return (
     <nav
-      className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50 shadow-lg supports-[backdrop-filter]:bg-background/60"
+      className=" glass-style sticky top-0 z-50 backdrop-blur-xl border-b border-border/50 shadow-lg supports-[backdrop-filter]:bg-background/60"
       role="navigation"
       aria-label="Dashboard navigation"
     >
@@ -113,7 +113,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                       <Settings className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 bg-background/95 backdrop-blur-xl border border-border/50 rounded-xl shadow-2xl">
+                  <DropdownMenuContent align="end" className="w-56  border border-border/50 rounded-xl shadow-2xl">
                     <DropdownMenuItem onClick={onOpenApiKeyGuide} className="gap-2 font-medium">
                       <Key className="h-4 w-4" />
                       API Configuration
@@ -137,9 +137,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       </div>
 
       {/* Mobile Header */}
-      <div className="lg:hidden">
+      <div className="lg:hidden ">
         {/* Status Bar Safe Area */}
-        <div className="bg-background/95 pt-safe-top">
+        <div className=" glass-style pt-safe-top">
           {/* Mobile Header Bar */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">
             {/* Left: Menu Toggle */}
@@ -207,7 +207,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           {isMobileMenuOpen && (
             <motion.div
               id="mobile-menu"
-              className="absolute left-0 right-0 top-full bg-background/100 backdrop-blur-2xl border-b border-border/50 shadow-xl"
+              className="absolute left-0 right-0 top-full border-b border-border/50 shadow-xl glass-style "
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}

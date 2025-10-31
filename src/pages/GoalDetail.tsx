@@ -120,7 +120,7 @@ const GoalDetail: React.FC = () => {
         <link rel="manifest" href="/manifest.json" />
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-white to-purple-50/50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/20">
+      <div className="min-h-screen bg-gradient-to-br from-blue-400/50 via-gray-500 to-purple-500/50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/20">
         <div className="grid grid-rows-[auto,1fr] h-screen overflow-hidden">
           <GoalDetailHeader
             goalId={goalId}
