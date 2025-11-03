@@ -180,88 +180,6 @@ const StructureStep: React.FC<StructureStepProps> = ({ form, onPrevStep, onNextS
         )}
       </div>
 
-      {/* Milestones */}
-      <div className="space-y-3">
-        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-200">
-          Milestones (Optional)
-        </FormLabel>
-        
-        {/* Existing Milestones */}
-        {milestones.length > 0 && (
-          <div className="space-y-2">
-            {milestones.map((milestone, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 bg-white/60 dark:bg-white/10 rounded-lg border border-gray-200/60 dark:border-white/25"
-              >
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                    {milestone.title}
-                  </p>
-                  {milestone.due_date && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Due: {format(milestone.due_date, "MMM d, yyyy")}
-                    </p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeMilestone(index)}
-                  className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full transition-colors"
-                >
-                  <X className="h-4 w-4 text-red-500" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Add New Milestone */}
-        <div className="space-y-2 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200/60 dark:border-white/25">
-          <Input
-            placeholder="Milestone title"
-            value={newMilestone.title}
-            onChange={(e) => setNewMilestone({ ...newMilestone, title: e.target.value })}
-            className="bg-white/80 dark:bg-white/15 border-gray-200/60 dark:border-white/25"
-          />
-          
-          <div className="flex gap-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={cn(
-                    "flex-1 justify-start text-left font-normal",
-                    !newMilestone.due_date && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {newMilestone.due_date ? format(newMilestone.due_date, "MMM d, yyyy") : "Due date (optional)"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={newMilestone.due_date}
-                  onSelect={(date) => setNewMilestone({ ...newMilestone, due_date: date })}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            
-            <Button
-              type="button"
-              onClick={addMilestone}
-              disabled={!newMilestone.title.trim()}
-              size="sm"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
       {/* Navigation Buttons */}
       <div className="flex justify-between pt-4">
         <Button
@@ -277,7 +195,7 @@ const StructureStep: React.FC<StructureStepProps> = ({ form, onPrevStep, onNextS
         <Button
           type="button"
           onClick={onNextStep}
-          className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-foreground"
         >
           Continue
           <ChevronRight className="h-4 w-4" />

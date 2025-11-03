@@ -74,7 +74,18 @@ function RootComponent() {
             <div className="min-h-screen bg-background">
               <Outlet />
             </div>
-            <Toaster position={isMobile ? "bottom-center" : "bottom-right"} richColors closeButton />
+            <Toaster 
+              position={isMobile ? "bottom-center" : "bottom-right"} 
+              richColors 
+              closeButton 
+              toastOptions={{
+                // style: {
+                //   backgroundColor: 'lightblue',
+                //   color: 'white',
+                // },
+                className: 'liquid-glass-container', // for Tailwind or custom CSS class
+              }} 
+            />
             {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools />}
           </QueryClientProvider>
         </HelmetProvider>

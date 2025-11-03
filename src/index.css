@@ -169,7 +169,7 @@
   }
 
   /* Liquid Glass Utility Classes */
-  .liquid-glass {
+  .liquid-glass  {
     /* position: relative; */
     background: var(--liquid-glass-bg-light);
     backdrop-filter: blur(12px);
@@ -281,6 +281,27 @@
                 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 
+  div[role="menu"] div[role="menuitem"] {
+    @apply liquid-glass;
+    @apply liquid-glass-hover;
+  }
+
+    /* Make sure the Radix ScrollArea viewport has the correct scroll behavior */
+  [data-radix-scroll-area-viewport] {
+    height: 100%;
+    width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch; /* smooth touch scrolling on iOS */
+    overscroll-behavior: contain; /* prevent scroll chaining to the page */
+    touch-action: pan-y; /* allow vertical pan */
+  }
+
+  /* If you rely on a custom ScrollArea implementation, also ensure the root has height 100% */
+  [data-radix-scroll-area] {
+    height: 100%;
+  }
+ 
 }
 
 
@@ -436,4 +457,9 @@ input[type="time"] {
   -webkit-appearance: none;
   appearance: none;
   /* For cross-browser compatibility */
+}
+
+[data-radix-popper-content-wrapper] {
+  overflow: visible !important;
+  z-index: 9999;
 }

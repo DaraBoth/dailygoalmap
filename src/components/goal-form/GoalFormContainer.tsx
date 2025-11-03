@@ -10,6 +10,7 @@ import StructureStep from "./StructureStep";
 import AdvancedStep from "./AdvancedStep";
 import { useCreateGoal, CreateGoalPayload, GoalMetadata } from "@/hooks/useCreateGoal";
 import { useUpdateGoal, UpdateGoalPayload } from "@/hooks/useUpdateGoal";
+import { ScrollArea } from "../ui";
 
 const GoalFormContainer = ({ onSuccess, initialData, compact = false, onClose, refetchGoals, isEdit = false, goalId }: GoalFormProps) => {
   const { createGoal, isLoading: isCreating } = useCreateGoal();
@@ -78,10 +79,10 @@ const GoalFormContainer = ({ onSuccess, initialData, compact = false, onClose, r
       start_date: values.start_date?.toISOString(),
       milestones: values.milestones?.map(m => ({ title: m.title || '', due_date: m.due_date?.toISOString() })) || [],
       template_id: values.template_id,
-      recurrence: values.recurrence ? { 
+      recurrence: values.recurrence ? {
         type: values.recurrence.type || 'daily',
         timeRange: values.recurrence.timeRange as [string, string] || undefined,
-        daysOfWeek: values.recurrence.daysOfWeek 
+        daysOfWeek: values.recurrence.daysOfWeek
       } : undefined,
     };
 
@@ -167,79 +168,78 @@ const GoalFormContainer = ({ onSuccess, initialData, compact = false, onClose, r
 
   return (
     <div className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-center justify-center">
-      <div className="relative w-full max-w-4xl bg-card rounded-lg shadow-lg overflow-hidden">
+      <div className="relative w-full h-full max-w-4xl bg-card rounded-lg shadow-lg overflow-hidden">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-red-600 focus:text-red-600 transition-colors duration-200"
+          className="absolute z-20 top-4 right-4 text-foreground transition-colors duration-200"
         >
           <X className="h-6 w-6" />
         </button>
 
         {/* Header with step indicator */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4 text-white">
+        <div className="liquid-glass bg-gradient-to-r from-blue-500 to-purple-600 p-4 text-foreground">
           <h1 className={`${compact ? "text-xl" : "text-2xl"} font-bold flex items-center gap-2`}>
             <Sparkles className="h-5 w-5" /> {isEdit ? "Edit Goal" : "Set a New Goal"}
           </h1>
           {!compact && (
-            <p className="opacity-90 text-white/80">
+            <p className="opacity-90 text-foreground/80">
               {isEdit ? "Update your goal with structured planning" : "Create your goal with structured planning and optional AI assistance"}
             </p>
           )}
 
           {/* Step Indicator */}
           <div className="flex items-center gap-2 mt-3">
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${
-              step === 'basics' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
-            }`}>
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${step === 'basics' ? 'liquid-glass text-foreground' : 'bg-white/10 text-foreground/60'
+              }`}>
               1. Basics
             </div>
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${
-              step === 'structure' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
-            }`}>
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${step === 'structure' ? 'liquid-glass text-foreground' : 'bg-white/10 text-foreground/60'
+              }`}>
               2. Structure
             </div>
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${
-              step === 'advanced' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
-            }`}>
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${step === 'advanced' ? 'liquid-glass text-foreground' : 'bg-white/10 text-foreground/60'
+              }`}>
               3. Advanced
             </div>
           </div>
         </div>
 
-        <div className="p-6 bg-card text-card-foreground">
-          <Form {...form}>
-            <form className="space-y-4">
-              {step === 'basics' ? (
-                <BasicInfoStep
-                  form={form}
-                  onNextStep={handleNextStep}
-                  selectedGoalType={selectedGoalType}
-                />
-              ) : step === 'structure' ? (
-                <StructureStep
-                  form={form}
-                  onPrevStep={handlePrevStep}
-                  onNextStep={handleNextStep}
-                />
-              ) : step === 'advanced' && selectedGoalType === 'travel' ? (
-                <TravelDetailsStep
-                  form={form}
-                  onPrevStep={handlePrevStep}
-                  onNextStep={() => setStep('advanced')}
-                  selectedActivities={selectedActivities}
-                  toggleActivity={toggleActivity}
-                />
-              ) : (
-                <AdvancedStep
-                  form={form}
-                  onPrevStep={handlePrevStep}
-                  onSubmit={handleSubmit}
-                  isSubmitting={isLoading}
-                  isEdit={isEdit}
-                />
-              )}
-            </form>
-          </Form>
+        <div className="p-6 backdrop-blur-sm text-card-foreground ">
+          <ScrollArea className="h-full">
+            <Form {...form}>
+              <form className="space-y-4">
+                {step === 'basics' ? (
+                  <BasicInfoStep
+                    form={form}
+                    onNextStep={handleNextStep}
+                    selectedGoalType={selectedGoalType}
+                  />
+                ) : step === 'structure' ? (
+                  <StructureStep
+                    form={form}
+                    onPrevStep={handlePrevStep}
+                    onNextStep={handleNextStep}
+                  />
+                ) : step === 'advanced' && selectedGoalType === 'travel' ? (
+                  <TravelDetailsStep
+                    form={form}
+                    onPrevStep={handlePrevStep}
+                    onNextStep={() => setStep('advanced')}
+                    selectedActivities={selectedActivities}
+                    toggleActivity={toggleActivity}
+                  />
+                ) : (
+                  <AdvancedStep
+                    form={form}
+                    onPrevStep={handlePrevStep}
+                    onSubmit={handleSubmit}
+                    isSubmitting={isLoading}
+                    isEdit={isEdit}
+                  />
+                )}
+              </form>
+            </Form>
+          </ScrollArea>
         </div>
       </div>
     </div>

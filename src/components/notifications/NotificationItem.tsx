@@ -212,14 +212,17 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
     return (
       <div className="flex items-start gap-3">
         {/* Notification Icon */}
-        {avatarUrl ? <Avatar className={leftAccentClass} ><AvatarImage src={avatarUrl} alt={senderName} /></Avatar> : <div className={`p-2 rounded-xl backdrop-blur-sm border ${colorScheme === 'blue' ? 'bg-blue-100/80 dark:bg-blue-900/50 border-blue-200/70 dark:border-blue-700/60 text-blue-700 dark:text-blue-300' :
-          colorScheme === 'green' ? 'bg-green-100/80 dark:bg-green-900/50 border-green-200/70 dark:border-green-700/60 text-green-700 dark:text-green-300' :
-            colorScheme === 'red' ? 'bg-red-100/80 dark:bg-red-900/50 border-red-200/70 dark:border-red-700/60 text-red-700 dark:text-red-300' :
-              colorScheme === 'orange' ? 'bg-orange-100/80 dark:bg-orange-900/50 border-orange-200/70 dark:border-orange-700/60 text-orange-700 dark:text-orange-300' :
-                'bg-gray-100/80 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-600/60 text-gray-700 dark:text-gray-300'
-          } ${leftAccentClass}`}>
-          {getNotificationIcon()}
-        </div>}
+        {avatarUrl ?
+          <Avatar className={leftAccentClass} ><AvatarImage src={avatarUrl} alt={senderName} /></Avatar>
+          :
+          <div className={`p-2 rounded-xl backdrop-blur-sm border ${colorScheme === 'blue' ? 'bg-blue-100/80 dark:bg-blue-900/50 border-blue-200/70 dark:border-blue-700/60 text-blue-700 dark:text-blue-300' :
+            colorScheme === 'green' ? 'bg-green-100/80 dark:bg-green-900/50 border-green-200/70 dark:border-green-700/60 text-green-700 dark:text-green-300' :
+              colorScheme === 'red' ? 'bg-red-100/80 dark:bg-red-900/50 border-red-200/70 dark:border-red-700/60 text-red-700 dark:text-red-300' :
+                colorScheme === 'orange' ? 'bg-orange-100/80 dark:bg-orange-900/50 border-orange-200/70 dark:border-orange-700/60 text-orange-700 dark:text-orange-300' :
+                  'bg-gray-100/80 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-600/60 text-gray-700 dark:text-gray-300'
+            } ${leftAccentClass}`}>
+            {getNotificationIcon()}
+          </div>}
 
         <div className="flex-1 space-y-2">
           {/* Invitation Notifications */}

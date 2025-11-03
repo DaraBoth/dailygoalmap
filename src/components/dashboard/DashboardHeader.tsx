@@ -194,7 +194,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                   onAddGoal();
                   closeMobileMenu();
                 }}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg h-10 w-10 p-0 rounded-xl border-0"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-foreground shadow-lg h-10 w-10 p-0 rounded-xl border-0"
               >
                 <PlusCircle className="h-5 w-5" />
               </Button>

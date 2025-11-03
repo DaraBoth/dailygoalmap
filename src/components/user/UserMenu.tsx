@@ -136,7 +136,7 @@ export const UserMenu = () => {
   };
   
   return (
-    <div className="flex items-center gap-2 ">
+    <div className="flex items-center gap-2">
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -164,11 +164,11 @@ export const UserMenu = () => {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => goToProfile()}>
+                  <DropdownMenuItem className='liquid-glass-button' onClick={() => goToProfile()}>
                     <UserIcon className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem className='liquid-glass-button pt-2' >
                     <div className="flex items-center justify-between w-full">
                       <span>Dark Mode</span>
                       <Switch

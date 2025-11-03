@@ -23,15 +23,15 @@ const BasicInfoStep = ({
   compact = false
 }: BasicInfoStepProps) => {
   return (
-    <div className="rounded-xl bg-background shadow-xl p-6">
+    <div className="rounded-xl ">
       <FormField
         control={form.control}
         name="goal_type"
         render={({ field }) => (
-          <FormItem className="mb-4">
+          <FormItem className="mb-4 shadow-none">
             <FormLabel className="text-base font-semibold text-foreground">Goal Type</FormLabel>
             <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <SelectTrigger className="w-full border border-muted rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-background text-foreground">
+              <SelectTrigger className="w-full border border-muted rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 liquid-glass text-foreground">
                 <SelectValue placeholder="Select goal type" />
               </SelectTrigger>
               <SelectContent>
@@ -156,7 +156,7 @@ const BasicInfoStep = ({
         <Button
           type="button"
           onClick={onNextStep}
-          className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg px-6 py-2 shadow"
+          className="rounded-lg px-6 py-2"
         >
           Next: Structure
           <ArrowRight className="ml-2 h-4 w-4" />

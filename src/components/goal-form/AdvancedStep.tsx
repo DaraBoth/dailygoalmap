@@ -226,7 +226,7 @@ const AdvancedStep: React.FC<AdvancedStepProps> = ({ form, onPrevStep, onSubmit,
           type="button"
           onClick={onSubmit}
           disabled={isSubmitting}
-          className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-foreground"
         >
           {isSubmitting ? (
             <>

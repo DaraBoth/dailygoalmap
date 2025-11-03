@@ -28,7 +28,7 @@ const TaskList = ({
 
   return (
     <div className="space-y-2 p-4">
-      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+      <h3 className="text-sm font-medium text-gray-800 dark:text-gray-400 mb-2">
         Tasks for {format(selectedDate, "MMMM d, yyyy")}
       </h3>
       {tasks.map((task, index) => (
