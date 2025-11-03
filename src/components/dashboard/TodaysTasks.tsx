@@ -429,16 +429,16 @@ const TodaysTasks: React.FC = () => {
       )}
 
       {isMobile && !isTasksVisible && (
-        <button
-          className={`glass-style fixed inset-x-0 bottom-0 rounded-t-lg p-2 z-50 `}
+        <Button
+          className={`glass-style text-foreground fixed inset-x-0 bottom-0 rounded-t-lg p-2 z-50 `}
           onClick={() => setIsTasksVisible(true)}
         >
           View Today's Tasks
-        </button>
+        </Button>
       )}
 
       {!isMobile && (
-        <Card className="bg-white/60 dark:bg-white/10 backdrop-blur-md border border-blue/20 dark:border-white/10 rounded-3xl shadow-lg">
+        <Card className="border border-blue/20 dark:border-white/10 rounded-3xl liquid-glass-no-hover">
           <CardHeader className="pb-4">
             <div className="flex items-center space-x-3 mb-3 flex-row">
               <div className="p-2 bg-blue-100/60 dark:bg-blue-900/30 backdrop-blur-sm rounded-xl">
@@ -447,7 +447,6 @@ const TodaysTasks: React.FC = () => {
               <CardTitle className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                 Today's Tasks
               </CardTitle>
-
             </div>
 
             <CardDescription className="text-foreground/70 font-medium">
@@ -554,7 +553,7 @@ const TodaysTasks: React.FC = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="flex items-start space-x-3 p-4 bg-white/50 dark:bg-white/10 backdrop-blur-sm border border-blue/20 dark:border-white/10 rounded-2xl hover:bg-white/70 dark:hover:bg-white/15 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                    className="liquid-glass flex items-start space-x-3 p-4 bg-white/50 dark:bg-white/10 backdrop-blur-sm border border-blue/20 dark:border-white/10 rounded-2xl hover:bg-white/70 dark:hover:bg-white/15 hover:shadow-lg transition-all duration-300 cursor-pointer group"
                     onClick={() => handleTaskClick(task)}
                   >
                     <Checkbox

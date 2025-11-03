@@ -96,7 +96,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               
               <Button
                 onClick={onAddGoal}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl border-0 px-6 py-2.5 h-auto font-semibold transition-all duration-200"
+                className="px-6 py-2.5 text-muted-foreground hover:text-foreground h-auto font-semibold "
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 New Goal
@@ -207,13 +207,13 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           {isMobileMenuOpen && (
             <motion.div
               id="mobile-menu"
-              className="absolute left-0 right-0 top-full border-b border-border/50 shadow-xl glass-style "
+              className="absolute left-0 right-0 top-full backdrop-blur-md bg-gradient-to-r from-blue-400/25 via-white to-purple-500/25 dark:bg-gradient-to-tr dark:from-blue-950/10 dark:via-blue-950 dark:to-blue-900/10"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
             >
-              <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+              <div className="liquid-glass-container no-border-radius p-6 space-y-6 max-h-[70vh] overflow-y-auto">
                 {/* Quick Actions */}
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">

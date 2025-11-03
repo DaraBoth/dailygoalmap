@@ -72,7 +72,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   };
   if (!selectedTask) {
     return (
-      <div className="w-full h-full flex flex-col liquid-glass-card overflow-hidden rounded-l-3xl">
+      <div className="w-full h-full flex flex-col liquid-glass-container overflow-hidden rounded-l-3xl">
         <div className="p-4 lg:p-6 border-b border-white/20 liquid-glass">
           <h2 className="text-lg font-semibold text-foreground">Task Details</h2>
           <p className="text-sm text-muted-foreground mt-1">Select a task to view details</p>
@@ -97,7 +97,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   const hasTimeRange = selectedTask.daily_start_time && selectedTask.daily_end_time;
 
   return (
-    <div className="w-full h-full flex flex-col liquid-glass-card overflow-hidden rounded-l-3xl">
+    <div className="w-full h-full flex flex-col liquid-glass-container overflow-hidden rounded-l-3xl">
       {/* Header */}
       <div className="p-4 lg:p-6 border-b border-white/20 liquid-glass">
         <div className="flex items-center justify-between">

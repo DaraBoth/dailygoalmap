@@ -43,15 +43,15 @@ const CalendarDay = ({
 
   const getTaskColor = (date: Date) => {
     const colors = [
-      "bg-blue-400 dark:bg-blue-500", 
-      "bg-pink-400 dark:bg-pink-500", 
-      "bg-teal-400 dark:bg-teal-500", 
-      "bg-orange-400 dark:bg-orange-500", 
-      "bg-purple-400 dark:bg-purple-500", 
-      "bg-green-400 dark:bg-green-500",
-      "bg-red-400 dark:bg-red-500", 
-      "bg-indigo-400 dark:bg-indigo-500", 
-      "bg-yellow-400 dark:bg-yellow-500"
+      "bg-blue-500 dark:bg-blue-500", 
+      "bg-pink-500 dark:bg-pink-500", 
+      "bg-teal-500 dark:bg-teal-500", 
+      "bg-orange-500 dark:bg-orange-500", 
+      "bg-purple-500 dark:bg-purple-500", 
+      "bg-green-500 dark:bg-green-500",
+      "bg-red-500 dark:bg-red-500", 
+      "bg-indigo-500 dark:bg-indigo-500", 
+      "bg-yellow-500 dark:bg-yellow-500"
     ];
     const colorIndex = date.getDate() % colors.length;
     return colors[colorIndex];
@@ -70,7 +70,6 @@ const CalendarDay = ({
         h-full p-1 sm:p-2
         min-h-[80px] sm:min-h-[90px] md:min-h-[100px] lg:min-h-[110px]
         max-h-[80px] sm:max-h-[90px] md:max-h-[100px] lg:max-h-[110px]
-        
       `}
       onClick={() => isCurrentMonth && onDateChange(date)}
       transition={{ duration: 0.2 }}
@@ -112,8 +111,8 @@ const CalendarDay = ({
                         <motion.div
                           key={task.id}
                           className={`
-                            text-xs py-0.5 px-1.5 leading-tight ${rounded}
-                            ${getTaskColor(date)} text-primary-foreground truncate liquid-glass shadow-sm
+                            text-xs py-0.5 px-1.5 liquid-glass leading-tight ${rounded}
+                            ${getTaskColor(date)} truncate shadow-sm
                             ${task.completed ? 'opacity-70' : ''}
                             hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer
                           `}

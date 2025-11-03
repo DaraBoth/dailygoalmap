@@ -32,6 +32,13 @@
     --info-foreground: 355.7 100% 97.3%;
     --card-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.05);
     --sidebar-width: 280px;
+        /* David UI Liquid Glass Theme */
+    --liquid-glass-bg-light: rgba(255, 255, 255, 0.5);
+    --liquid-glass-bg-dark: rgba(0, 0, 0, 0.2);
+    --liquid-glass-border-light: rgba(255, 255, 255, 0.3);
+    --liquid-glass-border-dark: rgba(255, 255, 255, 0.5);
+    --liquid-glass-hover-light: rgba(255, 255, 255, 0.3);
+    --liquid-glass-hover-dark: rgba(255, 255, 255, 0.3);
   }
 
   .dark {
@@ -56,6 +63,13 @@
     --ring: 224.3 76.3% 48%;
     --success: 142.1 70.6% 45.3%;
     --card-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.2);
+    /* David UI Liquid Glass Theme */
+    --liquid-glass-bg-light: rgba(0, 0, 0, 0.3);
+    --liquid-glass-bg-dark: rgba(0, 0, 0, 0.2);
+    --liquid-glass-border-light: rgba(255, 255, 255, 0.2);
+    --liquid-glass-border-dark: rgba(255, 255, 255, 0.5);
+    --liquid-glass-hover-light: rgba(255, 255, 255, 0.2);
+    --liquid-glass-hover-dark: rgba(255, 255, 255, 0.3);
   }
 
   * {
@@ -65,23 +79,6 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig"1, "calt"1;
-  }
-
-  /* David UI Liquid Glass Theme */
-  --liquid-glass-bg-light: rgba(255, 255, 255, 0.5);
-  --liquid-glass-bg-dark: rgba(0, 0, 0, 0.2);
-  --liquid-glass-border-light: rgba(255, 255, 255, 0.3);
-  --liquid-glass-border-dark: rgba(255, 255, 255, 0.5);
-  --liquid-glass-hover-light: rgba(255, 255, 255, 0.3);
-  --liquid-glass-hover-dark: rgba(255, 255, 255, 0.3);
-  
-  .dark {
-    --liquid-glass-bg-light: rgba(0, 0, 0, 0.3);
-    --liquid-glass-bg-dark: rgba(0, 0, 0, 0.2);
-    --liquid-glass-border-light: rgba(255, 255, 255, 0.2);
-    --liquid-glass-border-dark: rgba(255, 255, 255, 0.5);
-    --liquid-glass-hover-light: rgba(255, 255, 255, 0.2);
-    --liquid-glass-hover-dark: rgba(255, 255, 255, 0.3);
   }
   
 }
@@ -173,7 +170,7 @@
 
   /* Liquid Glass Utility Classes */
   .liquid-glass {
-    position: relative;
+    /* position: relative; */
     background: var(--liquid-glass-bg-light);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -181,8 +178,8 @@
     box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.75),
                 0 0 9px rgba(0, 0, 0, 0.2),
                 0 3px 8px rgba(0, 0, 0, 0.15);
-    transition: all 0.3s ease;
-    overflow: hidden;
+    /* transition: all 0.3s ease; */
+    /* overflow: hidden; */
   }
 
   .dark .liquid-glass {
@@ -215,24 +212,32 @@
     z-index: 0;
   }
 
-  .liquid-glass:hover {
+  .liquid-glass-hover:hover {
     background: var(--liquid-glass-hover-light);
     box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.75),
                 0 0 12px rgba(0, 0, 0, 0.25),
                 0 4px 10px rgba(0, 0, 0, 0.2);
   }
 
-  .dark .liquid-glass:hover {
+  .dark .liquid-glass-hover:hover {
     background: var(--liquid-glass-hover-dark);
   }
 
-  .liquid-glass > * {
-    position: relative;
-    z-index: 1;
+  .liquid-glass-no-hover:hover {
+    background: var(--liquid-glass-light) !important;
+  }
+
+  .dark .liquid-glass-no-hover:hover {
+    background: var(--liquid-glass-dark) !important;
+  }
+   
+  ::-webkit-scrollbar-track {
+    @apply liquid-glass;
   }
 
   .liquid-glass-button {
     @apply liquid-glass;
+    @apply liquid-glass-hover;
     padding: 0.5rem;
     font-weight: 500;
     transition: all 0.3s ease;
@@ -244,11 +249,27 @@
 
   .liquid-glass-card {
     @apply liquid-glass;
+    @apply liquid-glass-hover;
     border-radius: 1rem;
+  }
+
+  .liquid-glass-container {
+    @apply liquid-glass;
+    border-radius: 1rem;
+  }
+
+  .liquid-glass-container {
+    @apply liquid-glass;
+    border-radius: 1rem;
+  }
+
+  .no-border-radius {
+    border-radius: 0 !important;
   }
 
   .liquid-glass-input {
     @apply liquid-glass;
+    @apply liquid-glass-hover;
     border-radius: 0.75rem;
     padding: 0.75rem 1rem;
   }

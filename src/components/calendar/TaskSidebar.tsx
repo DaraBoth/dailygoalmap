@@ -116,7 +116,7 @@ const TaskSidebar = ({
 
   // Main render
   return (
-    <div className="w-full h-full flex flex-col liquid-glass-card overflow-hidden rounded-r-3xl">
+    <div className="w-full h-full flex flex-col liquid-glass-container overflow-hidden rounded-r-3xl">
       <div className="p-4 border-b border-white/20 liquid-glass">
         <h2 className="text-lg font-semibold flex items-center text-foreground">
           <div className="p-2 liquid-glass rounded-xl mr-3">
@@ -130,7 +130,7 @@ const TaskSidebar = ({
 
       {tasksForDate.length > 0 && renderNavButtons()}
 
-      <ScrollArea className="flex-1 p-2 lg:p-4">
+      <ScrollArea className="flex-1 p-2 lg:p-4 z-0">
         <LayoutGroup>
           <AnimatePresence mode="popLayout">
             {tasksForDate.length > 0 ? (
@@ -143,7 +143,7 @@ const TaskSidebar = ({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.25 }}
-                    className={`p-4 lg:p-5 rounded-2xl liquid-glass transition-all cursor-pointer ${
+                    className={`p-4 lg:p-5 rounded-2xl transition-all cursor-pointer ${
                       selectedTask?.id === task.id
                         ? "border-2 border-primary"
                         : task.completed
@@ -156,18 +156,18 @@ const TaskSidebar = ({
                       <Button
                         size="sm"
                         variant="ghost"
-                        className={`w-5 h-5 p-0 rounded-full ${
+                        className={`w-5 h-5 rounded-full ${
                           task.completed
                             ? "text-green-500 dark:text-green-400"
                             : "text-gray-400 dark:text-gray-500"
-                        }`}
+                        } p-0`}
                         onClick={(e) => {
                           e.stopPropagation();
                           onToggleTaskCompletion(task.id);
                         }}
                       >
                         {task.completed ? (
-                          <CheckCircle2 className="h-4 w-4" />
+                          <CheckCircle2 className="h-5 w-5" />
                         ) : (
                           <div className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-600" />
                         )}
