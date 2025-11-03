@@ -110,7 +110,16 @@ export default {
 				slideUp: 'slideUp 0.5s ease-out',
 				slideInFromLeft: 'slideInFromLeft 0.5s ease-out',
 				pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-			}
+			},
+			zIndex: {
+				60: '60',
+				70: '70',
+				80: '80',
+				90: '90',
+				100: '100',
+				999: '999',
+				9999: '9999',
+			},
 		}
 	},
 	plugins: [require("tailwindcss-animate")],
