@@ -24,16 +24,16 @@ const CalendarGrid = ({
   
   return (
     <div className="flex flex-col h-full w-full p-1 sm:p-2">
-      <div className="rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-200/60 dark:border-white/25 h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-md">
+      <div className="rounded-2xl sm:rounded-3xl overflow-hidden liquid-glass-card h-full flex flex-col">
         {/* Compact header for day names */}
-        <div className="grid grid-cols-7 text-center bg-gradient-to-r from-blue-100/80 to-teal-100/80 dark:from-blue-900/40 dark:to-teal-900/40 backdrop-blur-sm">
+        <div className="grid grid-cols-7 text-center liquid-glass">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => (
             <div key={day} className={`
               py-1.5 sm:py-2 md:py-3 font-semibold text-xs sm:text-sm transition-colors duration-200
               border-r border-white/20 dark:border-white/10 last:border-r-0
-              ${index === 0 ? 'text-red-600 dark:text-red-400' :
-                index === 6 ? 'text-blue-600 dark:text-blue-400' :
-                'text-gray-700 dark:text-gray-300'}
+              ${index === 0 ? 'text-destructive' :
+                index === 6 ? 'text-primary' :
+                'text-foreground'}
             `}>
               {isMobile ? day.charAt(0) : day}
             </div>

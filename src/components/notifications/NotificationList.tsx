@@ -168,10 +168,10 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
   );
 
   return (
-    <div className="w-full sm:w-80 md:w-96 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl border border-gray-200/60 dark:border-white/25 border-r-4 shadow-2xl">
-      <div className="sm:px-4 text-sm font-semibold sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-10 border-b rounded-t-3xl border-gray-200/60 dark:border-white/25">
+    <div className="w-full sm:w-80 md:w-96 liquid-glass-card rounded-3xl shadow-2xl">
+      <div className="sm:px-4 text-sm font-semibold sticky top-0 liquid-glass z-10 border-b rounded-t-3xl border-white/20">
         <div className="flex sm:flex-row sm:items-center justify-between pt-3 gap-3">
-          <div className="text-lg font-bold text-gray-900 dark:text-white">Notifications</div>
+          <div className="text-lg font-bold text-foreground">Notifications</div>
           <div className="flex items-center ml-0 sm:ml-4">
             <button
               onClick={handleMarkAllAsRead}
@@ -182,16 +182,16 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
             </button>
           </div>
         </div>
-        <div className="inline-flex items-center gap-6 rounded-lg bg-white/60 dark:bg-gray-800/60 backdrop-blur-md shadow-lg w-full sm:w-auto justify-center" role="tablist" aria-label="Filter notifications">
+        <div className="inline-flex items-center gap-6 rounded-lg liquid-glass shadow-lg w-full sm:w-auto justify-center" role="tablist" aria-label="Filter notifications">
           <SegButton  active={filter === 'all'} onClick={() => setFilter('all')} label="All" count={counts.all} ariaPressed={filter === 'all'} />
           <SegButton  active={filter === 'unread'} onClick={() => setFilter('unread')} label="Unread" count={counts.unread} ariaPressed={filter === 'unread'} />
           <SegButton  active={filter === 'invites'} onClick={() => setFilter('invites')} label="Invites" count={counts.invites} ariaPressed={filter === 'invites'} />
         </div>
       </div>
-      <ScrollArea className="md:h-[90vh] max-h-[75vh] min-h-[200px] bg-white/85 dark:bg-gray-900/85 md:shadow-xl" ref={viewportRef}>
+      <ScrollArea className="md:h-[90vh] max-h-[75vh] min-h-[200px] liquid-glass md:shadow-xl" ref={viewportRef}>
         <div className="p-3 space-y-3">
           {items.length === 0 && !loading && (
-            <div className="text-sm text-gray-600 dark:text-gray-300 p-8 text-center bg-white/60 dark:bg-white/15 backdrop-blur-sm rounded-xl border border-gray-200/60 dark:border-white/25">
+            <div className="text-sm text-muted-foreground p-8 text-center liquid-glass-card">
               No notifications
             </div>
           )}
@@ -199,12 +199,12 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
             <NotificationItem key={n.id} n={n} onAfterAction={handleAfterAction} />
           ))}
           {loading && (
-            <div className="text-sm text-muted-foreground p-4 text-center bg-white/20 dark:bg-white/5 backdrop-blur-sm rounded-xl animate-pulse">
+            <div className="text-sm text-muted-foreground p-4 text-center liquid-glass rounded-xl animate-pulse">
               Loading...
             </div>
           )}
           {!hasMore && items.length > 0 && (
-            <div className="text-xs text-muted-foreground p-3 text-center bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-xl">
+            <div className="text-xs text-muted-foreground p-3 text-center liquid-glass rounded-xl">
               No more notifications
             </div>
           )}

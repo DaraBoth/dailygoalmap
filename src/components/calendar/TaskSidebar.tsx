@@ -116,10 +116,10 @@ const TaskSidebar = ({
 
   // Main render
   return (
-    <div className="w-full h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border border-gray-200/60 dark:border-white/25 overflow-hidden rounded-r-3xl shadow-lg">
-      <div className="p-4 border-b border-white/20 dark:border-white/10 bg-white/40 dark:bg-white/10 backdrop-blur-sm">
-        <h2 className="text-lg font-semibold flex items-center bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-          <div className="p-2 bg-blue-100/60 dark:bg-blue-900/30 backdrop-blur-sm rounded-xl mr-3">
+    <div className="w-full h-full flex flex-col liquid-glass-card overflow-hidden rounded-r-3xl">
+      <div className="p-4 border-b border-white/20 liquid-glass">
+        <h2 className="text-lg font-semibold flex items-center text-foreground">
+          <div className="p-2 liquid-glass rounded-xl mr-3">
             <CalendarIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           </div>
           {selectedDate
@@ -143,12 +143,12 @@ const TaskSidebar = ({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.25 }}
-                    className={`p-4 lg:p-5 rounded-2xl border backdrop-blur-sm transition-all cursor-pointer ${
+                    className={`p-4 lg:p-5 rounded-2xl liquid-glass transition-all cursor-pointer ${
                       selectedTask?.id === task.id
-                        ? "border-2 border-blue-700/70 dark:border-blue-500/70 bg-blue-200/60 dark:bg-blue-950/40"
+                        ? "border-2 border-primary"
                         : task.completed
-                        ? "bg-blue-200/60 dark:bg-blue-950/40 border-white/20 dark:border-white/10"
-                        : "bg-blue-200/20 dark:bg-blue-950/40 border-white/30 dark:border-white/20"
+                        ? "opacity-70"
+                        : ""
                     }`}
                     onClick={() => onTaskClick && onTaskClick(task)}
                   >
@@ -175,15 +175,15 @@ const TaskSidebar = ({
 
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-xs lg:text-sm break-words line-clamp-2 ${
+                          className={`text-xs lg:text-sm break-words line-clamp-2 text-foreground ${
                             task.completed
-                              ? "line-through text-gray-500 dark:text-gray-400"
-                              : "text-gray-700 dark:text-gray-300"
+                              ? "line-through opacity-60"
+                              : ""
                           }`}
                         >
                           {task.title || task.description}
                         </p>
-                        <div className="flex items-center mt-1 text-[10px] lg:text-xs text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center mt-1 text-[10px] lg:text-xs text-muted-foreground">
                           <Clock className="w-3 h-3 mr-0.5" />
                           {formatTaskTime(task)}
                         </div>

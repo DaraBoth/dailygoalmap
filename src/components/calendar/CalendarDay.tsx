@@ -63,8 +63,8 @@ const CalendarDay = ({
         relative border-r border-b border-white/10 dark:border-white/5
         ${index % 7 === 0 ? 'border-l' : ''}
         ${Math.floor(index / 7) === 0 ? 'border-t' : ''}
-        ${isCurrentMonth ? 'bg-white/20 dark:bg-white/5' : 'bg-white/5 dark:bg-white/2 opacity-30'}
-        ${isSelected ? 'bg-blue-50/80 dark:bg-blue-950/60 backdrop-blur-sm border-2 border-blue-400/70 dark:border-blue-500/70' : ''}
+        ${isCurrentMonth ? 'liquid-glass' : 'liquid-glass opacity-30'}
+        ${isSelected ? 'border-2 border-primary' : ''}
         ${isCurrentMonth ? 'cursor-pointer' : 'cursor-default'} overflow-hidden flex flex-col
         ${isCurrentMonth ? '' : ''} transition-all duration-300
         h-full p-1 sm:p-2
@@ -79,12 +79,12 @@ const CalendarDay = ({
       <div className="flex justify-center mb-0.5 ">
         <span className={`
           w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 flex items-center justify-center rounded-lg text-xs sm:text-sm font-semibold
-          ${!isCurrentMonth ? 'text-gray-400 dark:text-gray-500' : ''}
-          ${isWeekend && isCurrentMonth && date.getDay() === 0 ? 'text-red-600 dark:text-red-400' : ''}
-          ${isWeekend && isCurrentMonth && date.getDay() === 6 ? 'text-blue-600 dark:text-blue-400' : ''}
-          ${isSelected ? 'bg-blue-500 dark:bg-blue-400 text-white dark:text-white' : ''}
-          ${_isToday && !isSelected ? 'bg-gradient-to-br from-emerald-100/80 to-teal-100/80 dark:from-emerald-900/40 dark:to-teal-900/40 text-emerald-800 dark:text-emerald-200 border border-emerald-200/50 dark:border-emerald-800/50 backdrop-blur-sm' : ''}
-          ${isCurrentMonth && !isWeekend && !isSelected && !_isToday ? 'text-gray-700 dark:text-gray-300' : ''}
+          ${!isCurrentMonth ? 'text-muted-foreground opacity-50' : ''}
+          ${isWeekend && isCurrentMonth && date.getDay() === 0 ? 'text-destructive' : ''}
+          ${isWeekend && isCurrentMonth && date.getDay() === 6 ? 'text-primary' : ''}
+          ${isSelected ? 'bg-primary text-primary-foreground' : ''}
+          ${_isToday && !isSelected ? 'liquid-glass text-success border border-success/30' : ''}
+          ${isCurrentMonth && !isWeekend && !isSelected && !_isToday ? 'text-foreground' : ''}
           transition-all duration-300
         `}>
           {date.getDate()}
@@ -113,7 +113,7 @@ const CalendarDay = ({
                           key={task.id}
                           className={`
                             text-xs py-0.5 px-1.5 leading-tight ${rounded}
-                            ${getTaskColor(date)} text-white truncate backdrop-blur-sm shadow-sm border border-white/20
+                            ${getTaskColor(date)} text-primary-foreground truncate liquid-glass shadow-sm
                             ${task.completed ? 'opacity-70' : ''}
                             hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer
                           `}
@@ -133,7 +133,7 @@ const CalendarDay = ({
                       );
                     })}
                     {dayTasks.length > 2 && (
-                      <div className="text-[9px] text-center text-blue-500 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-900/30 backdrop-blur-sm rounded-full py-0.5 mt-0.5 font-medium">
+                      <div className="text-[9px] text-center text-primary liquid-glass rounded-full py-0.5 mt-0.5 font-medium">
                         +{dayTasks.length - 2}
                       </div>
                     )}
