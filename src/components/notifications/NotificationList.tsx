@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { fetchNotifications, markNotificationsRead, getUnreadCount } from "@/services/internalNotifications";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { fetchNotificationsWithCache, markNotificationsRead, getUnreadCount, clearNotificationCache } from "@/services/internalNotifications";
 import { AppNotification } from "@/types/notification";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { NotificationItem } from "./NotificationItem";
@@ -44,7 +44,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
     onUnreadChanged?.(unreadCount || 0, isOpen);
   };
 
-  const load = React.useCallback(async (reset = false) => {
+  const load = useCallback(async (reset = false) => {
     if (loading) return;
     if (reset) {
       setItems([]);
@@ -53,17 +53,25 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
     }
     if (!hasMore && !reset) return;
     setLoading(true);
-    const page = await fetchNotifications({
-      limit: 15,
-      before: reset ? undefined : cursor,
-      onlyUnread: filter === 'unread',
-      onlyInvites: filter === 'invites'
-    });
-    setItems((prev) => reset ? page : [...prev, ...page]);
-    if (page.length < 15) setHasMore(false);
-    const last = page[page.length - 1];
-    if (last) setCursor(last.created_at);
-    setLoading(false);
+    
+    try {
+      // Use cache-first strategy for first page
+      const { notifications: page, fromCache } = await fetchNotificationsWithCache({
+        limit: 15,
+        before: reset ? undefined : cursor,
+        onlyUnread: filter === 'unread',
+        onlyInvites: filter === 'invites'
+      });
+      
+      setItems((prev) => reset ? page : [...prev, ...page]);
+      if (page.length < 15) setHasMore(false);
+      const last = page[page.length - 1];
+      if (last) setCursor(last.created_at);
+    } catch (error) {
+      console.error('Failed to load notifications', error);
+    } finally {
+      setLoading(false);
+    }
   }, [loading, hasMore, cursor, filter]);
 
   useEffect(() => {
@@ -79,6 +87,8 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
         .on('postgres_changes', {
           event: '*', schema: 'public', table: 'notifications', filter: `receiver_id=eq.${user.id}`
         }, () => {
+          // Clear cache when there are changes
+          clearNotificationCache();
           load(true);
           refreshCounts();
         })

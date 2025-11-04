@@ -77,6 +77,13 @@ export type Database = {
             referencedRelation: "goals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "goal_members_user_id_fkey1"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       goals: {
@@ -127,6 +134,7 @@ export type Database = {
       notifications: {
         Row: {
           created_at: string
+          date: string | null
           goal_id: string | null
           id: string
           invitation_status: string | null
@@ -135,9 +143,11 @@ export type Database = {
           receiver_id: string
           sender_id: string
           type: string
+          url: string | null
         }
         Insert: {
           created_at?: string
+          date?: string | null
           goal_id?: string | null
           id?: string
           invitation_status?: string | null
@@ -146,9 +156,11 @@ export type Database = {
           receiver_id: string
           sender_id: string
           type: string
+          url?: string | null
         }
         Update: {
           created_at?: string
+          date?: string | null
           goal_id?: string | null
           id?: string
           invitation_status?: string | null
@@ -157,6 +169,7 @@ export type Database = {
           receiver_id?: string
           sender_id?: string
           type?: string
+          url?: string | null
         }
         Relationships: [
           {
@@ -172,23 +185,23 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          identifier: string
           updated_at: string
           user_id: string
-          identifier: string
         }
         Insert: {
           created_at?: string
           id?: string
+          identifier: string
           updated_at?: string
           user_id: string
-          identifier: string
         }
         Update: {
           created_at?: string
           id?: string
+          identifier?: string
           updated_at?: string
           user_id?: string
-          identifier?: string
         }
         Relationships: []
       }
@@ -203,10 +216,10 @@ export type Database = {
           goal_id: string
           id: string
           start_date: string | null
+          tags: string[] | null
           title: string
           updated_at: string
           user_id: string
-          tags: string[] | null
         }
         Insert: {
           completed?: boolean
@@ -218,6 +231,7 @@ export type Database = {
           goal_id: string
           id?: string
           start_date?: string | null
+          tags?: string[] | null
           title: string
           updated_at?: string
           user_id: string
@@ -232,6 +246,7 @@ export type Database = {
           goal_id?: string
           id?: string
           start_date?: string | null
+          tags?: string[] | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -289,9 +304,32 @@ export type Database = {
         Args: { user_id_param: string }
         Returns: undefined
       }
-      generate_public_slug: {
-        Args: { p_goal_id: string }
-        Returns: string
+      generate_public_slug: { Args: { p_goal_id: string }; Returns: string }
+      get_enriched_notifications: {
+        Args: {
+          p_before?: string
+          p_limit?: number
+          p_only_invites?: boolean
+          p_only_unread?: boolean
+          p_user_id: string
+        }
+        Returns: {
+          created_at: string
+          goal_id: string
+          goal_status: string
+          goal_title: string
+          id: string
+          invitation_status: string
+          is_member: boolean
+          payload: Json
+          read_at: string
+          receiver_id: string
+          sender_avatar_url: string
+          sender_display_name: string
+          sender_id: string
+          type: string
+          url: string
+        }[]
       }
       get_goal_members: {
         Args: { p_goal_id: string }
@@ -305,22 +343,15 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_user_device_id: {
-        Args: { user_id_param: string }
-        Returns: string
-      }
+      get_user_device_id: { Args: { user_id_param: string }; Returns: string }
       get_user_push_subscription: {
         Args: { user_id_param: string }
         Returns: string
       }
-      has_device_id: {
-        Args: { user_id_param: string }
-        Returns: boolean
-      }
-      is_goal_creator: {
-        Args: { p_goal_id: string } | { p_goal_id: string; p_user_id: string }
-        Returns: boolean
-      }
+      has_device_id: { Args: { user_id_param: string }; Returns: boolean }
+      is_goal_creator:
+        | { Args: { p_goal_id: string; p_user_id: string }; Returns: boolean }
+        | { Args: { p_goal_id: string }; Returns: boolean }
       join_goal: {
         Args: { p_goal_id: string; p_role: string; p_user_id: string }
         Returns: undefined
@@ -329,10 +360,7 @@ export type Database = {
         Args: { p_goal_id: string }
         Returns: string
       }
-      remove_goal_member: {
-        Args: { p_member_id: string }
-        Returns: undefined
-      }
+      remove_goal_member: { Args: { p_member_id: string }; Returns: undefined }
       search_users: {
         Args: { p_limit?: number; p_query: string }
         Returns: {
@@ -363,10 +391,7 @@ export type Database = {
         Args: { subscription_param: string; user_id_param: string }
         Returns: undefined
       }
-      user_is_goal_member: {
-        Args: { p_goal_id: string }
-        Returns: boolean
-      }
+      user_is_goal_member: { Args: { p_goal_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

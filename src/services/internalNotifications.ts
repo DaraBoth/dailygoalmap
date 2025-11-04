@@ -71,47 +71,135 @@ export interface FetchNotificationsOptions {
   onlyInvites?: boolean;
 }
 
+// Notification cache management
+const CACHE_KEY = 'notifications_cache';
+const CACHE_TIMESTAMP_KEY = 'notifications_cache_timestamp';
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+
+interface NotificationCache {
+  notifications: import("@/types/notification").EnrichedNotification[];
+  timestamp: number;
+}
+
+function getCachedNotifications(): import("@/types/notification").EnrichedNotification[] | null {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+    if (!cached || !timestamp) return null;
+    
+    const cacheAge = Date.now() - parseInt(timestamp);
+    if (cacheAge > CACHE_DURATION) {
+      // Cache expired
+      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+      return null;
+    }
+    
+    return JSON.parse(cached) as import("@/types/notification").EnrichedNotification[];
+  } catch (e) {
+    console.error('Failed to read notification cache', e);
+    return null;
+  }
+}
+
+function setCachedNotifications(notifications: import("@/types/notification").EnrichedNotification[]): void {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(notifications));
+    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+  } catch (e) {
+    console.error('Failed to cache notifications', e);
+  }
+}
+
+export function clearNotificationCache(): void {
+  localStorage.removeItem(CACHE_KEY);
+  localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+}
+
 export async function fetchNotifications(opts: FetchNotificationsOptions = {}): Promise<AppNotification[]> {
-  const limit = opts.limit ?? 8;
+  const limit = opts.limit ?? 15;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  let query = supabase
-    .from("notifications")
-    .select("*")
-    .eq("receiver_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  // Use the new enriched RPC function
+  const { data, error } = await supabase.rpc('get_enriched_notifications', {
+    p_user_id: user.id,
+    p_limit: limit,
+    p_before: opts.before || null,
+    p_only_unread: opts.onlyUnread || false,
+    p_only_invites: opts.onlyInvites || false
+  });
 
-  if (opts.before) {
-    query = query.lt("created_at", opts.before);
-  }
-  if (opts.onlyUnread) {
-    query = query.is("read_at", null);
-  }
-  if (opts.onlyInvites) {
-    query = query.eq("type", "invitation");
-  }
-
-  const { data, error } = await query;
   if (error) {
     console.error("fetchNotifications error", error);
     return [];
   }
-  const notifications = (data || []) as unknown as AppNotification[];
 
-  // Enrich with sender profile (best-effort, batched)
-  const senderIds = Array.from(new Set(notifications.map(n => n.sender_id)));
-  if (senderIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from('user_profiles')
-      .select('id, display_name, avatar_url')
-      .in('id', senderIds);
-  const byId = new Map((profiles || []).map((p: { id: string; display_name: string; avatar_url: string }) => [p.id, { display_name: p.display_name, avatar_url: p.avatar_url }]));
-  notifications.forEach(n => { (n as unknown as { sender_profile?: unknown; sender_id: string }).sender_profile = byId.get(n.sender_id) || undefined; });
+  const enrichedNotifications = (data || []) as import("@/types/notification").EnrichedNotification[];
+
+  // Convert enriched notifications to AppNotification format
+  const notifications: AppNotification[] = enrichedNotifications.map(n => ({
+    id: n.id,
+    type: n.type,
+    goal_id: n.goal_id,
+    sender_id: n.sender_id,
+    receiver_id: n.receiver_id,
+    payload: n.payload,
+    invitation_status: n.invitation_status,
+    read_at: n.read_at,
+    created_at: n.created_at,
+    sender_profile: {
+      display_name: n.sender_display_name,
+      avatar_url: n.sender_avatar_url
+    }
+  }));
+
+  // Cache the enriched notifications for first page only
+  if (!opts.before) {
+    setCachedNotifications(enrichedNotifications);
   }
 
   return notifications;
+}
+
+// New function to fetch with cache-first strategy
+export async function fetchNotificationsWithCache(opts: FetchNotificationsOptions = {}): Promise<{
+  notifications: AppNotification[];
+  fromCache: boolean;
+}> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { notifications: [], fromCache: false };
+
+  // If this is the first page and we have cache, return it immediately
+  if (!opts.before) {
+    const cached = getCachedNotifications();
+    if (cached && cached.length > 0) {
+      const notifications: AppNotification[] = cached.map(n => ({
+        id: n.id,
+        type: n.type,
+        goal_id: n.goal_id,
+        sender_id: n.sender_id,
+        receiver_id: n.receiver_id,
+        payload: n.payload,
+        invitation_status: n.invitation_status,
+        read_at: n.read_at,
+        created_at: n.created_at,
+        sender_profile: {
+          display_name: n.sender_display_name,
+          avatar_url: n.sender_avatar_url
+        }
+      }));
+      
+      // Fetch fresh data in background to update cache
+      fetchNotifications(opts).catch(console.error);
+      
+      return { notifications, fromCache: true };
+    }
+  }
+
+  // No cache or pagination request, fetch fresh data
+  const notifications = await fetchNotifications(opts);
+  return { notifications, fromCache: false };
 }
 
 export async function markNotificationsRead(notificationIds: string[]): Promise<void> {
@@ -309,7 +397,10 @@ export async function createTaskUpdateNotification(
     // Create notifications for all members except sender
     const notifications = members.map(member => {
       // Use the task_date from payload if present, else fallback to today
-    const notificationDate = (payload && (payload as Record<string, unknown>).task_date) ? (payload as Record<string, unknown>).task_date : (new Date().toISOString().split('T')[0]);
+      const payloadTyped = payload as Record<string, unknown> | undefined;
+      const notificationDate = (payloadTyped && typeof payloadTyped.task_date === 'string') 
+        ? payloadTyped.task_date 
+        : new Date().toISOString().split('T')[0];
       return {
         type,
         goal_id: goalId,

@@ -16,6 +16,25 @@ export interface UserProfileLite {
   avatar_url?: string | null;
 }
 
+export interface EnrichedNotification {
+  id: string;
+  type: NotificationType;
+  goal_id: string | null;
+  sender_id: string;
+  receiver_id: string;
+  payload?: AppNotificationPayload;
+  invitation_status?: 'pending' | 'accepted' | 'declined' | null;
+  read_at?: string | null;
+  created_at: string;
+  url?: string | null;
+  // Enriched from database
+  sender_display_name?: string | null;
+  sender_avatar_url?: string | null;
+  goal_title?: string | null;
+  goal_status?: string | null;
+  is_member?: boolean;
+}
+
 export interface AppNotification {
   id: string;
   type: NotificationType;

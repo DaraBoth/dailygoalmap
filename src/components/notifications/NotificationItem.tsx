@@ -40,31 +40,21 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
   }, [n]);
 
   // Check if user is still a member of the goal
+  // Now using enriched data from the database function
   useEffect(() => {
-    const checkMembership = async () => {
-      if (!n.goal_id || n.type === 'invitation') {
-        setIsUserMember(null);
-        return;
-      }
-
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data: membership } = await supabase
-          .from('goal_members')
-          .select('id')
-          .eq('goal_id', n.goal_id)
-          .eq('user_id', user.id)
-          .single();
-        setIsUserMember(!!membership);
-      } catch (error) {
-        setIsUserMember(false);
-      }
-    };
-
-    checkMembership();
-  }, [n.goal_id, n.type]);
+    if (!n.goal_id || n.type === 'invitation') {
+      setIsUserMember(null);
+      return;
+    }
+    
+    // Use the is_member field from enriched notification if available
+    const enrichedN = n as unknown as { is_member?: boolean };
+    if (enrichedN.is_member !== undefined) {
+      setIsUserMember(enrichedN.is_member);
+    } else {
+      setIsUserMember(null);
+    }
+  }, [n]);
 
   // Notification type and state logic
   const isInvite = n.type === 'invitation';
