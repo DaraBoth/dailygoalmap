@@ -31,9 +31,9 @@ function Calendar({
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse space-y-2",
-        head_row: "flex mb-2",
+        head_row: "flex mb-2 gap-1",
         head_cell:
-          "text-blue-700 dark:text-blue-300 rounded-xl w-10 font-semibold text-sm bg-white/40 dark:bg-white/10 backdrop-blur-sm border border-white/20 dark:border-white/10 py-2",
+          "liquid-glass text-blue-700 dark:text-blue-300 rounded-xl w-10 font-semibold text-sm bg-white/40 dark:bg-white/10 backdrop-blur-sm border border-white/20 dark:border-white/10 py-2",
         row: "flex w-full mt-1",
         cell: "relative p-0.5 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-blue-100/60 dark:[&:has([aria-selected])]:bg-blue-800/60 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl",
         day: cn(
@@ -42,7 +42,7 @@ function Calendar({
         ),
         day_range_end: "day-range-end",
         day_selected:
-          "bg-blue-500 dark:bg-blue-400 text-white dark:text-white hover:bg-blue-600 dark:hover:bg-blue-500 hover:text-white focus:bg-blue-600 dark:focus:bg-blue-500 focus:text-white border-2 border-blue-400 dark:border-blue-300",
+          "focus:bg-blue-600 dark:focus:bg-blue-500 focus:text-white border-2 border-blue-400 dark:border-blue-300 text-green-800",
         day_today: "bg-gradient-to-br from-emerald-100/80 to-teal-100/80 dark:from-emerald-900/40 dark:to-teal-900/40 text-emerald-800 dark:text-emerald-200 font-bold backdrop-blur-sm border border-emerald-200/50 dark:border-emerald-800/50",
         day_outside:
           "day-outside text-gray-400 dark:text-gray-500 opacity-50",

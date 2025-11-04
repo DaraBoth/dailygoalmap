@@ -234,7 +234,7 @@ const AddTaskDialog = ({ isOpen, onClose, onAddTask, defaultDate = new Date() }:
           {/* Fixed button area at bottom */}
           <div className="flex-shrink-0 sticky bottom-0 z-20 p-4 border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <Button type="submit" form="add-task-form" disabled={!title.trim() || isSubmitting} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white h-9 sm:h-10 md:h-11 text-sm">
+              <Button type="submit" form="add-task-form" disabled={!title.trim() || isSubmitting} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 h-9 sm:h-10 md:h-11 text-sm">
                 {isSubmitting ? (<><Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin mr-1.5 sm:mr-2" />Adding Task...</>) : (<><Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />Add Task</>)}
               </Button>
               <Button type="button" variant="outline" onClick={() => { resetForm(); onClose(); }} className="w-full transition-all duration-200 h-9 sm:h-10 md:h-11 text-sm">Cancel</Button>

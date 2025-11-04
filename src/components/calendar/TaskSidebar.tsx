@@ -143,7 +143,7 @@ const TaskSidebar = ({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.25 }}
-                    className={`p-4 lg:p-5 rounded-2xl transition-all cursor-pointer ${
+                    className={`p-4 lg:p-5 rounded-2xl transition-all cursor-pointer liquid-glass ${
                       selectedTask?.id === task.id
                         ? "border-2 border-primary"
                         : task.completed
@@ -169,7 +169,7 @@ const TaskSidebar = ({
                         {task.completed ? (
                           <CheckCircle2 className="h-5 w-5" />
                         ) : (
-                          <div className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-600" />
+                          <div className="relative" ><div  className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 " /></div>
                         )}
                       </Button>
 

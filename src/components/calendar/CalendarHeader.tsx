@@ -112,7 +112,8 @@ const CalendarHeader = ({
         {/* Right Section: Add Task Button */}
         <Button
           onClick={onOpenAddTaskDialog}
-          className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 px-4 py-2 h-auto rounded-xl"
+          variant="outline"
+          className="px-4 py-2 h-auto rounded-xl"
         >
           <CalendarIcon className="w-4 h-4 mr-2" />
           Add Task

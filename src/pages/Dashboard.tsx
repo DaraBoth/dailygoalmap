@@ -5,25 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet-async";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import GoalList from "@/components/dashboard/GoalList";
-import GoalSorter from "@/components/dashboard/GoalSorter";
 import TodaysTasks from "@/components/dashboard/TodaysTasks";
 import ApiKeyGuide from "@/components/dashboard/ApiKeyGuide";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 import EditGoalSlidePanel from "@/components/dashboard/EditGoalSlidePanel";
 import { DeadlineNotifications } from "@/components/dashboard/DeadlineNotifications";
 import { useGoals } from "@/hooks/useGoals";
-import { Goal, SortOption } from "@/types/goal";
+import { Goal } from "@/types/goal";
 import GoalForm from "@/components/goal-form/GoalFormContainer";
 import { Modal } from "@/components/ui/modal";
 import { JoinGoalDialog } from "@/components/dashboard/JoinGoalDialog";
-import { supabase } from "@/integrations/supabase/client";
-import SearchCommandPalette from "@/components/search/SearchCommandPalette";
 import { useToast } from "@/hooks/use-toast";
 import { useGoalStatus } from "@/hooks/useGoalStatus";
 import InstallButton from "@/components/pwa/InstallButton";
 import NotificationSettings from "@/components/pwa/NotificationSettings";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import SearchTrigger from "@/components/search/SearchTrigger";
+import CustomSearchModal from "@/components/search/CustomSearchModal";
 
 interface ModalContentProps {
   children: React.ReactNode;
@@ -129,10 +128,6 @@ const Dashboard = () => {
     if (goalToDelete) {
       await deleteGoal(goalToDelete.id);
     }
-  };
-
-  const handleSortChange = (newSortOption: SortOption) => {
-    updateSort(newSortOption);
   };
 
   const handleOpenJoinGoal = () => {
@@ -346,7 +341,7 @@ const Dashboard = () => {
           {/* Mobile Layout: Vertical stack with Today's Tasks first */}
           <div className="lg:hidden space-y-6 pb-16">
             <div>
-              <TodaysTasks/>
+              <TodaysTasks />
             </div>
 
             {/* Goal List below for mobile */}
@@ -469,12 +464,10 @@ const Dashboard = () => {
             </ModalContent>
           )}
 
-          {showSearch && (
-            <SearchCommandPalette
-              open={showSearch}
-              onOpenChange={() => setShowSearch(false)}
-            />
-          )}
+          <CustomSearchModal
+            open={showSearch}
+            onOpenChange={setShowSearch}
+          />
 
           <JoinGoalDialog
             isOpen={showJoinGoalDialog}
