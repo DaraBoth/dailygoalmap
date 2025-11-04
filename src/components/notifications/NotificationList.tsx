@@ -44,68 +44,40 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
     onUnreadChanged?.(unreadCount || 0, isOpen);
   };
 
-  const load = useCallback(async (reset = false, showLoadingState = true) => {
+  const load = useCallback(async (reset = false) => {
     if (loading) return;
     if (reset) {
+      setItems([]);
       setCursor(undefined);
       setHasMore(true);
     }
     if (!hasMore && !reset) return;
-    if (showLoadingState) setLoading(true);
+    setLoading(true);
     
     try {
       // Use cache-first strategy for first page
       const { notifications: page, fromCache } = await fetchNotificationsWithCache({
-        limit: 15,
+        limit: 10,
         before: reset ? undefined : cursor,
         onlyUnread: filter === 'unread',
         onlyInvites: filter === 'invites'
       });
       
-      // If from cache and it's a reset, show immediately without clearing
-      if (fromCache && reset) {
-        setItems(page);
-      } else {
-        setItems((prev) => reset ? page : [...prev, ...page]);
-      }
-      
+      setItems((prev) => reset ? page : [...prev, ...page]);
       if (page.length < 15) setHasMore(false);
       const last = page[page.length - 1];
       if (last) setCursor(last.created_at);
     } catch (error) {
       console.error('Failed to load notifications', error);
     } finally {
-      if (showLoadingState) setLoading(false);
+      setLoading(false);
     }
   }, [loading, hasMore, cursor, filter]);
 
   useEffect(() => {
-    // Load cache first (instant), then fetch fresh data in background
-    const loadInitial = async () => {
-      // Try to load from cache first without loading state
-      const { notifications: cached } = await fetchNotificationsWithCache({
-        limit: 15,
-        onlyUnread: filter === 'unread',
-        onlyInvites: filter === 'invites'
-      });
-      
-      if (cached.length > 0) {
-        // Show cached data immediately
-        setItems(cached);
-        const last = cached[cached.length - 1];
-        if (last) setCursor(last.created_at);
-        if (cached.length < 15) setHasMore(false);
-        // Fetch fresh data in background without showing loading
-        load(true, false);
-      } else {
-        // No cache, show loading and fetch
-        load(true, true);
-      }
-    };
-    
-    loadInitial();
+    // initial load and realtime
+    load(true);
     refreshCounts();
-    
     let channel: ReturnType<typeof supabase.channel> | null = null;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -117,7 +89,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
         }, () => {
           // Clear cache when there are changes
           clearNotificationCache();
-          load(true, false); // Refresh without loading state
+          load(true);
           refreshCounts();
         })
         .subscribe();

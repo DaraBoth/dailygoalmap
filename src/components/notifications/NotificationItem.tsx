@@ -32,13 +32,6 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
   const [working, setWorking] = useState(false);
   const [isUserMember, setIsUserMember] = useState<boolean | null>(null);
   const { goToGoal } = useRouterNavigation();
-
-  const senderInitials = useMemo(() => {
-    const senderProfile = n as unknown as { sender_profile?: { display_name?: string }; sender_email?: string };
-    const name = senderProfile.sender_profile?.display_name || senderProfile.sender_email || "U";
-    return name.split(' ').map((p: string) => p[0]).join('').toUpperCase().slice(0, 2);
-  }, [n]);
-
   // Check if user is still a member of the goal
   // Now using enriched data from the database function
   useEffect(() => {
