@@ -474,3 +474,14 @@ input[type="time"] {
   overflow: visible !important;
   z-index: 9999;
 }
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important; /* Or set to a very small value like 0px */
+  height: 0 !important; /* For horizontal scrollbars */
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
+}

@@ -15,9 +15,10 @@ interface NotificationListProps {
   onUnreadChanged?: (count: number, isOpen?: boolean) => void;
   /** Whether the notifications dropdown/list is currently open. Parent should pass this. */
   isOpen?: boolean;
+  isMobile?: boolean;
 }
 
-export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction, onUnreadChanged, isOpen }) => {
+export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction, onUnreadChanged, isOpen, isMobile }) => {
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -177,8 +178,8 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
 
   return (
     <div className="w-full sm:w-80 md:w-96 rounded-3xl shadow-2xl flex flex-col max-h-[600px]">
-      <div className="sm:px-4 text-sm font-semibold sticky top-0 border-b rounded-t-3xl border-white/20 flex-shrink-0">
-        <div className="flex sm:flex-row sm:items-center justify-between pt-3 gap-3">
+      <div className="text-sm font-semibold sticky top-0 border-b rounded-t-3xl border-white/20 flex-shrink-0">
+        <div className="px-4 flex sm:flex-row sm:items-center justify-between pt-3 gap-3">
           <div className="text-lg font-bold text-foreground">Notifications</div>
           <div className="flex items-center ml-0 sm:ml-4">
             <button
@@ -197,30 +198,33 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
         </div>
       </div>
       {/* Scrollable area */}
-      <div className="flex-1 overflow-hidden min-h-0">
-        <ScrollArea className="h-full" ref={viewportRef}>
-          <div className="p-3 space-y-3">
-            {items.length === 0 && !loading && (
-              <div className="text-sm text-muted-foreground p-8 text-center">
-                No notifications
-              </div>
-            )}
-            {items.map((n) => (
-              <NotificationItem key={n.id} n={n} onAfterAction={handleAfterAction} />
-            ))}
-            {loading && (
-              <div className="text-sm text-muted-foreground p-4 text-center liquid-glass rounded-xl animate-pulse">
-                Loading...
-              </div>
-            )}
-            {!hasMore && items.length > 0 && (
-              <div className="text-xs text-muted-foreground p-3 text-center liquid-glass rounded-xl">
-                No more notifications
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
+      <ScrollArea 
+      className={isMobile? `h-[100vh] max-h-[100vh] min-h-[calc(100vh-145px)]` :
+          `h-[90vh] max-h-[75vh] min-h-[200px] backdrop-blur-lg shadow-xl hide-scrollbar`
+        } 
+        ref={viewportRef}
+      >
+        <div className="p-3 space-y-3">
+          {items.length === 0 && !loading && (
+            <div className="text-sm text-muted-foreground p-8 text-center">
+              No notifications
+            </div>
+          )}
+          {items.map((n) => (
+            <NotificationItem key={n.id} n={n} onAfterAction={handleAfterAction} />
+          ))}
+          {loading && (
+            <div className="text-sm text-muted-foreground p-4 text-center liquid-glass rounded-xl animate-pulse">
+              Loading...
+            </div>
+          )}
+          {!hasMore && items.length > 0 && (
+            <div className="text-xs text-muted-foreground p-3 text-center liquid-glass rounded-xl">
+              No more notifications
+            </div>
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 };

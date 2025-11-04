@@ -210,7 +210,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
     const goalText = payload.goal_title ? `“${payload.goal_title}”` : "the goal";
 
     return (
-      <div className="flex items-start gap-3">
+      <div className="flex items-start">
         {/* Notification Icon */}
         {avatarUrl ?
           <Avatar className={leftAccentClass} ><AvatarImage src={avatarUrl} alt={senderName} /></Avatar>
@@ -421,9 +421,9 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
 
   return (
     <div
-      className={`p-4 backdrop-blur-md border rounded-2xl shadow-lg transition-all duration-300 ease-out ${isUnread
-        ? 'bg-white/90 dark:bg-white/20 border-gray-200/70 dark:border-white/30 shadow-xl'
-        : 'bg-white/75 dark:bg-white/15 border-gray-200/50 dark:border-white/20'
+      className={`liquid-glass-card p-4 backdrop-blur-md border rounded-2xl shadow-lg transition-all duration-300 ease-out ${isUnread
+        ? 'backdrop-blur-sm border-gray-200/70 dark:border-white/30 shadow-xl'
+        : 'backdrop-blur-lg border-gray-200/50 dark:border-white/20'
         } ${isClickable
           ? 'hover:shadow-xl hover:bg-white/95 dark:hover:bg-white/25 cursor-pointer'
           : isReadOnly
