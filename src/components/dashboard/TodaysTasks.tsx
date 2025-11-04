@@ -369,7 +369,7 @@ const TodaysTasks: React.FC = () => {
                 </div>
 
                 <Card>
-                  <CardContent className="max-h-[400px] overflow-y-auto liquid-glass-no-hover">
+                  <CardContent className="max-h-[400px] overflow-y-auto">
                     {loading ? (
                       <div className="space-y-4">
                         <Skeleton className="h-10 w-full" />

@@ -11,6 +11,9 @@ export default {
 	],
 	prefix: "",
 	theme: {
+		future: {
+			hoverOnlyWhenSupported: true, // 👈 enable hover only when supported
+		},
 		container: {
 			center: true,
 			padding: '2rem',
@@ -120,6 +123,7 @@ export default {
 				999: '999',
 				9999: '9999',
 			},
+			
 		}
 	},
 	plugins: [require("tailwindcss-animate")],
