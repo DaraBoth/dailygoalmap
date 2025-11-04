@@ -261,11 +261,11 @@ const Dashboard = () => {
         />
 
         {/* Main Content with top padding to account for sticky navbar */}
-        <div className="w-full h-full pt-24 px-2 sm:px-4 lg:px-6 xl:px-8">
+        <div className="w-full h-full px-2 sm:px-4 lg:px-6 xl:px-8">
           {/* Desktop Layout: Two-column with Goal List (left) and Today's Tasks (right) */}
           <div className="hidden lg:grid lg:grid-cols-12 gap-4 xl:gap-6 h-full">
             {/* Goal List - Larger column (8/12 width) */}
-            <div className="lg:col-span-8 overflow-y-auto pt-8 pb-8  no-scrollbar [&::-webkit-scrollbar]:hidden">
+            <div className="lg:col-span-8 overflow-y-auto pt-8 pb-8 no-scrollbar [&::-webkit-scrollbar]:hidden">
               <div className="mb-6">
 
                 {/* Deadline Notifications */}
@@ -336,15 +336,15 @@ const Dashboard = () => {
             </div>
 
             {/* Today's Tasks - Smaller column (4/12 width) */}
-            <div className="lg:col-span-4 overflow-hidden">
-              <div className="sticky top-8">
+            <div className="lg:col-span-4 pt-8 pb-8">
+              <div className="sticky top-10">
                 <TodaysTasks />
               </div>
             </div>
           </div>
 
           {/* Mobile Layout: Vertical stack with Today's Tasks first */}
-          <div className="lg:hidden space-y-6 pb-12">
+          <div className="lg:hidden space-y-6 pb-16">
             <div>
               <TodaysTasks/>
             </div>

@@ -177,7 +177,7 @@ const GoalList: React.FC<GoalListProps> = ({
         return (
         <Card
           key={goal.id}
-          className={`glass-style border rounded-2xl shadow-md hover:shadow-lg transition-all duration-250 ease-out cursor-pointer group overflow-hidden relative ${deadlineStyling.borderColor}`}
+          className={`cursor-pointer group relative ${deadlineStyling.borderColor}`}
           onClick={(e) => {
             // Prevent navigation when clicking on interactive controls inside the card
             const target = e.target as HTMLElement | null;
@@ -195,11 +195,11 @@ const GoalList: React.FC<GoalListProps> = ({
             goToGoal(goal.id);
           }}
         >
-          <div className="glass-style relative rounded-2xl m-0.5 p-4">
+          <div className=" relative rounded-2xl m-0.5 p-4">
             <CardHeader className="p-0">
               <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="h-12 w-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-200 to-purple-200 dark:from-blue-900 dark:to-purple-900 text-blue-700 dark:text-blue-200 font-bold text-lg">
+                <div className=" flex items-center gap-3 flex-1">
+                  <div className="liquid-glass-button h-12 w-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-200 to-purple-200 dark:from-blue-900 dark:to-purple-900 text-blue-700 dark:text-blue-200 font-bold text-lg">
                     {goal.title ? goal.title.charAt(0).toUpperCase() : 'G'}
                   </div>
                   <div className="flex-1">

@@ -224,10 +224,12 @@
   }
 
   .liquid-glass-no-hover:hover {
+    @layer liquid-glass;
     background: var(--liquid-glass-light) !important;
   }
 
   .dark .liquid-glass-no-hover:hover {
+    @layer liquid-glass;
     background: var(--liquid-glass-dark) !important;
   }
    

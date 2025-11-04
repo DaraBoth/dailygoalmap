@@ -11,7 +11,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast"; // Update toast import
-import glassStyle from "../ui/liquidStyle";
 
 const TodaysTasks: React.FC = () => {
   const [tasksForToday, setTasksForToday] = useState<any[]>([]);
@@ -286,7 +285,7 @@ const TodaysTasks: React.FC = () => {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed inset-x-0 bottom-0 bg-white dark:bg-gray-800 shadow-lg rounded-t-lg max-h-[80vh] overflow-hidden z-50"
+              className="fixed inset-x-0 bottom-0 backdrop-blur-md shadow-lg rounded-t-lg max-h-[80vh] overflow-hidden z-50"
             >
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 sticky top-0 z-10">
                 <h2 className="text-lg font-semibold">Today's Tasks</h2>
@@ -430,7 +429,7 @@ const TodaysTasks: React.FC = () => {
 
       {isMobile && !isTasksVisible && (
         <Button
-          className={`glass-style text-foreground fixed inset-x-0 bottom-0 rounded-t-lg p-2 z-50 `}
+          className={`text-foreground fixed inset-x-0 bottom-0 rounded-t-lg p-2 z-50 `}
           onClick={() => setIsTasksVisible(true)}
         >
           View Today's Tasks
