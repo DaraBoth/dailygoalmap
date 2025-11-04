@@ -89,20 +89,28 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
 
   useEffect(() => {
     // Attach scroll listener to the viewport element
-    const viewport = viewportRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement;
-    if (!viewport) return;
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = viewport;
-      // Trigger load when user scrolls near the bottom (within 100px)
-      if (scrollTop + clientHeight >= scrollHeight - 100 && !loading && hasMore) {
-        load();
+    const timer = setTimeout(() => {
+      const viewport = viewportRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement;
+      if (!viewport) {
+        console.log('Viewport not found');
+        return;
       }
-    };
 
-    viewport.addEventListener('scroll', handleScroll);
-    return () => viewport.removeEventListener('scroll', handleScroll);
-  }, [load, loading, hasMore, cursor]);
+      const handleScroll = () => {
+        const { scrollTop, scrollHeight, clientHeight } = viewport;
+        // Trigger load when user scrolls near the bottom (within 100px)
+        if (scrollTop + clientHeight >= scrollHeight - 100 && !loading && hasMore) {
+          console.log('Loading more notifications...');
+          load();
+        }
+      };
+
+      viewport.addEventListener('scroll', handleScroll);
+      return () => viewport.removeEventListener('scroll', handleScroll);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [load, loading, hasMore]);
 
   const handleAfterAction = () => {
     load(true);
@@ -168,8 +176,8 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
   );
 
   return (
-    <div className="w-full sm:w-80 md:w-96 rounded-3xl shadow-2xl">
-      <div className="sm:px-4 text-sm font-semibold sticky top-0 border-b rounded-t-3xl border-white/20">
+    <div className="w-full sm:w-80 md:w-96 rounded-3xl shadow-2xl flex flex-col max-h-[600px]">
+      <div className="sm:px-4 text-sm font-semibold sticky top-0 border-b rounded-t-3xl border-white/20 flex-shrink-0">
         <div className="flex sm:flex-row sm:items-center justify-between pt-3 gap-3">
           <div className="text-lg font-bold text-foreground">Notifications</div>
           <div className="flex items-center ml-0 sm:ml-4">
@@ -189,7 +197,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
         </div>
       </div>
       {/* Scrollable area */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden min-h-0">
         <ScrollArea className="h-full" ref={viewportRef}>
           <div className="p-3 space-y-3">
             {items.length === 0 && !loading && (
