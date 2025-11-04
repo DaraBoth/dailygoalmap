@@ -46,7 +46,7 @@ const TaskList = ({
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                  {task.description}
+                  {task.description.length==0 ? task.title:task.description}
                 </p>
                 {task.daily_start_time && (
                   <p className="text-xs text-gray-500 dark:text-gray-400">

@@ -60,7 +60,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
 
   // Goal access logic
   const canViewGoal = Boolean(n.goal_id) && (
-    (!isInvite && !isRemoval && isUserMember) ||
+    (!isInvite && !isRemoval) ||
     (isInvite && inviteAccepted)
   );
 
@@ -326,12 +326,12 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
                   <span className="font-medium"> - "{n.payload.task_title}"</span>
                 )}
               </div>
-              {!isUserMember && (
+              {/* {!isUserMember && (
                 <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                   <Clock className="h-3 w-3 animate-spin" />
                   Checking membership...
                 </div>
-              )}
+              )} */}
             </div>
           )}
 
@@ -389,7 +389,6 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
                 size="sm"
                 variant="outline"
                 onClick={viewGoal}
-                disabled={!isUserMember}
                 className="h-6 px-2 text-[10px] bg-blue-100/80 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 border-blue-200/70 dark:border-blue-700/60 hover:bg-blue-200/80 dark:hover:bg-blue-900/60 backdrop-blur-sm transition-all duration-200"
               >
                 <ExternalLink className="h-2.5 w-2.5 mr-1" />
