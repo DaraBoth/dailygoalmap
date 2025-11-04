@@ -261,7 +261,7 @@ const Dashboard = () => {
         />
 
         {/* Main Content with top padding to account for sticky navbar */}
-        <div className="w-full h-[calc(100vh-90px)] px-2 sm:px-4 lg:px-6 xl:px-8 pb-6">
+        <div className="w-full h-[calc(100vh-90px)] px-2 sm:px-4 lg:px-6 xl:px-8 pb-10">
           {/* Desktop Layout: Two-column with Goal List (left) and Today's Tasks (right) */}
           <div className="hidden lg:grid lg:grid-cols-12 gap-4 xl:gap-6 h-full">
             {/* Goal List - Larger column (8/12 width) */}
