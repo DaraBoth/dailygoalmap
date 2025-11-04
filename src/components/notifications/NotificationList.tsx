@@ -159,7 +159,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
       onClick={onClick}
       aria-pressed={ariaPressed}
       className={`text-sm font-semibold text-foreground/90 dark:text-white/90 hover:underline transition-all duration-300 ease-out bg-inherit py-0 ${active
-        ? 'text-gray-900 dark:text-white '
+        ? 'text-gray-900 dark:text-white underline'
         : 'text-gray-600 dark:text-gray-300 '
         } ${className}`}
     >
