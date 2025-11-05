@@ -50,6 +50,7 @@ export interface Goal {
   share_code?: string;
   is_public?: boolean;
   public_slug?: string;
+  theme_id?: string;
   taskCounts?: {
     total: number;
     completed: number;

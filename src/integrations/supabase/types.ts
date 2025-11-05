@@ -86,6 +86,42 @@ export type Database = {
           },
         ]
       }
+      goal_themes: {
+        Row: {
+          card_background_image: string | null
+          created_at: string | null
+          goal_profile_image: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          page_background_image: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          card_background_image?: string | null
+          created_at?: string | null
+          goal_profile_image?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          page_background_image?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          card_background_image?: string | null
+          created_at?: string | null
+          goal_profile_image?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          page_background_image?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           created_at: string
@@ -97,6 +133,7 @@ export type Database = {
           share_code: string | null
           status: string | null
           target_date: string | null
+          theme_id: string | null
           title: string
           updated_at: string
           user_id: string
@@ -111,6 +148,7 @@ export type Database = {
           share_code?: string | null
           status?: string | null
           target_date?: string | null
+          theme_id?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -125,11 +163,20 @@ export type Database = {
           share_code?: string | null
           status?: string | null
           target_date?: string | null
+          theme_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "goals_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "goal_themes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {

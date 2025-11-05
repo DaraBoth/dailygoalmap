@@ -8,6 +8,7 @@ import { GoalMember } from '@/types/goal'; // Import GoalMember type
 import GoalProgress from './GoalProgress';
 import { GoalSharingButton } from './sharing/GoalSharingButton';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ThemeSelector } from './ThemeSelector';
 
 interface GoalDetailHeaderProps {
   goalId?: string;
@@ -20,6 +21,9 @@ interface GoalDetailHeaderProps {
   status?: string;
   showAnalytics?: boolean;
   onToggleAnalytics?: () => void;
+  userId?: string;
+  currentThemeId?: string;
+  onThemeChange?: (themeId: string) => void;
 }
 
 const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({ 
@@ -32,7 +36,10 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
   targetDate = '',
   status = 'active',
   showAnalytics = false,
-  onToggleAnalytics
+  onToggleAnalytics,
+  userId,
+  currentThemeId,
+  onThemeChange
 }) => {
   const { goToDashboard } = useRouterNavigation();
   const isMobile = useIsMobile();
@@ -62,6 +69,14 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
           </div>
           
           <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+            {userId && onThemeChange && (
+              <ThemeSelector
+                userId={userId}
+                currentThemeId={currentThemeId}
+                onThemeSelect={onThemeChange}
+              />
+            )}
+
             {goalId && goalTitle && (
               <GoalSharingButton goalId={goalId} goalTitle={goalTitle} />
             )}

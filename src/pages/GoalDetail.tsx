@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLoaderData, useSearch, useParams } from '@tanstack/react-router';
 import { useRouterNavigation } from '@/hooks/useRouterNavigation';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +10,8 @@ import { enableRealtimeForTable } from '@/components/calendar/taskDatabase';
 import { useToast } from '@/hooks/use-toast';
 import { Task } from '@/components/calendar/types';
 import { Helmet } from 'react-helmet-async';
+import { GoalTheme } from '@/types/theme';
+import { useAuth } from '@/hooks/useAuth';
 
 const GoalDetail: React.FC = () => {
   const { id: goalId } = useParams({ from: '/goal/$id' });
@@ -30,6 +32,8 @@ const GoalDetail: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [showAnalytics, setShowAnalytics] = useState<boolean>(false);
   const [autoOpenTaskId, setAutoOpenTaskId] = useState<string | null>(null);
+  const [currentTheme, setCurrentTheme] = useState<GoalTheme | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     const taskParam = search?.task || search?.taskId;
@@ -37,6 +41,59 @@ const GoalDetail: React.FC = () => {
   }, [search]);
 
   useEffect(() => { enableRealtimeForTable?.('tasks').catch(() => {}); }, []);
+
+  // Fetch theme when goal data changes
+  useEffect(() => {
+    const fetchTheme = async () => {
+      if (!goalData?.theme_id) {
+        setCurrentTheme(null);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('goal_themes')
+        .select('*')
+        .eq('id', goalData.theme_id)
+        .single();
+
+      if (!error && data) {
+        setCurrentTheme(data as GoalTheme);
+      }
+    };
+
+    fetchTheme();
+  }, [goalData?.theme_id]);
+
+  const handleThemeChange = async (themeId: string) => {
+    if (!goalId) return;
+
+    const { error } = await supabase
+      .from('goals')
+      .update({ theme_id: themeId })
+      .eq('id', goalId);
+
+    if (!error) {
+      const { data } = await supabase
+        .from('goal_themes')
+        .select('*')
+        .eq('id', themeId)
+        .single();
+
+      if (data) {
+        setCurrentTheme(data as GoalTheme);
+        toast({
+          title: 'Success',
+          description: 'Theme updated successfully',
+        });
+      }
+    } else {
+      toast({
+        title: 'Error',
+        description: 'Failed to update theme',
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Function to refresh tasks from database
   const refreshTasks = React.useCallback(async () => {
@@ -112,6 +169,16 @@ const GoalDetail: React.FC = () => {
 
   const completedTasks = tasks.filter(t => t.completed).length;
 
+  // Background style with theme or default gradient
+  const backgroundStyle = currentTheme?.page_background_image
+    ? {
+        backgroundImage: `url(${currentTheme.page_background_image})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }
+    : {};
+
   return (
     <>
       <Helmet>
@@ -120,8 +187,11 @@ const GoalDetail: React.FC = () => {
         <link rel="manifest" href="/manifest.json" />
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-400/50 via-gray-500 to-purple-500/50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/20">
-        <div className="grid grid-rows-[auto,1fr] h-screen overflow-hidden">
+      <div 
+        className="min-h-screen bg-gradient-to-br from-blue-400/50 via-gray-500 to-purple-500/50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/20"
+        style={backgroundStyle}
+      >
+        <div className="grid grid-rows-[auto,1fr] h-screen overflow-hidden backdrop-blur-[2px]">
           <GoalDetailHeader
             goalId={goalId}
             members={members}
@@ -133,6 +203,9 @@ const GoalDetail: React.FC = () => {
             status={goalData?.status}
             showAnalytics={showAnalytics}
             onToggleAnalytics={() => setShowAnalytics(!showAnalytics)}
+            userId={user?.id}
+            currentThemeId={currentTheme?.id}
+            onThemeChange={handleThemeChange}
           />
 
           <div className="w-full max-w-screen overflow-hidden">
