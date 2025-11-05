@@ -162,8 +162,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                         <div className="flex-1">
                           <h4 className="font-medium">{theme.name}</h4>
                           <p className="text-xs text-muted-foreground">
-                            {currentThemeId == theme.id ? "asa" : "kuku"} 
-                            {theme.is_default && 'Default • '}
+                            {currentThemeId === theme.id && 'Selected • '}
                             {new Date(theme.created_at).toLocaleDateString()}
                           </p>
                         </div>
