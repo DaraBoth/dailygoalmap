@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Palette, Upload, Trash2, X } from 'lucide-react';
-import { useGoalThemes } from '@/hooks/useGoalThemes';
-import { Card } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useIsMobile } from '@/hooks/use-mobile';
+import React, { useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Palette, Upload, Trash2, X } from "lucide-react";
+import { useGoalThemes } from "@/hooks/useGoalThemes";
+import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ThemeSelectorProps {
   userId: string;
@@ -20,23 +26,30 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   currentThemeId,
   onThemeSelect,
 }) => {
-  const { themes, loading, createTheme, deleteTheme, uploadThemeImage } = useGoalThemes(userId);
+  const { themes, loading, createTheme, deleteTheme, uploadThemeImage } =
+    useGoalThemes(userId);
   const [open, setOpen] = useState(false);
-  const [newThemeName, setNewThemeName] = useState('');
+  const [newThemeName, setNewThemeName] = useState("");
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [cardImage, setCardImage] = useState<File | null>(null);
   const [pageImage, setPageImage] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
-  const isMobile = useIsMobile()
+  const isMobile = useIsMobile();
 
   const handleCreateTheme = async () => {
     if (!newThemeName.trim()) return;
 
     setCreating(true);
     try {
-      const profileUrl = profileImage ? await uploadThemeImage(profileImage, 'profile') : undefined;
-      const cardUrl = cardImage ? await uploadThemeImage(cardImage, 'card') : undefined;
-      const pageUrl = pageImage ? await uploadThemeImage(pageImage, 'page') : undefined;
+      const profileUrl = profileImage
+        ? await uploadThemeImage(profileImage, "profile")
+        : undefined;
+      const cardUrl = cardImage
+        ? await uploadThemeImage(cardImage, "card")
+        : undefined;
+      const pageUrl = pageImage
+        ? await uploadThemeImage(pageImage, "page")
+        : undefined;
 
       const theme = await createTheme({
         name: newThemeName,
@@ -46,7 +59,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
       });
 
       if (theme) {
-        setNewThemeName('');
+        setNewThemeName("");
         setProfileImage(null);
         setCardImage(null);
         setPageImage(null);
@@ -56,28 +69,104 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
     }
   };
 
+  // 🔮 Reusable Liquid Glass Upload Component
+  const LiquidGlassUpload = ({
+    label,
+    file,
+    onChange,
+  }: {
+    label: string;
+    file: File | null;
+    onChange: (file: File | null) => void;
+  }) => {
+    const inputRef = useRef<HTMLInputElement | null>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newFile = e.target.files?.[0] || null;
+      onChange(newFile);
+    };
+
+    const handleClick = () => {
+      inputRef.current?.click();
+    };
+
+    return (
+      <div className="space-y-1">
+        <Label className="text-xs">{label}</Label>
+        <div
+          onClick={handleClick}
+          className={`relative group cursor-pointer aspect-square w-full rounded-2xl overflow-hidden 
+            border border-white/20 backdrop-blur-xl bg-white/10
+            shadow-[0_0_20px_rgba(255,255,255,0.1)]
+            transition-all duration-500 hover:scale-[1.02]
+            hover:shadow-[0_0_30px_rgba(255,255,255,0.25)]
+          `}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/30 via-pink-500/20 to-purple-500/20 blur-2xl opacity-30 group-hover:opacity-60 transition-all"></div>
+
+          {file ? (
+            <img
+              src={URL.createObjectURL(file)}
+              alt="preview"
+              className="w-full h-full object-cover rounded-2xl"
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center w-full h-full text-white/80 z-10">
+              <Upload className="h-8 w-8 mb-1 text-white/70 group-hover:scale-110 transition-transform" />
+              <p className="text-[11px] text-foreground font-light">Click to upload</p>
+            </div>
+          )}
+
+          {file && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange(null);
+              }}
+              className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition"
+            >
+              <X size={14} />
+            </button>
+          )}
+
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          <Palette className={`h-4 w-4 ${!isMobile && "mr-2" }`  } />
+          <Palette className={`h-4 w-4 ${!isMobile && "mr-2"}`} />
           {!isMobile && "Theme"}
         </Button>
       </DialogTrigger>
+
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            <div className='flex flex-row justify-between align-middle w-full'>
-              <div className='font-semibold'>
-                Goal Themes
-              </div>
-              <button className='text-red-500/50 liquid-glass rounded-md p-1' onClick={()=>setOpen(false)}><X/></button>
+            <div className="flex flex-row justify-between items-center w-full">
+              <div className="font-semibold">Goal Themes</div>
+              <button
+                className="text-red-500/50 rounded-md p-1 hover:bg-white/10"
+                onClick={() => setOpen(false)}
+              >
+                <X />
+              </button>
             </div>
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Create New Theme */}
+          {/* Create New Theme Section */}
           <div className="space-y-4 p-4 border rounded-lg">
             <h3 className="font-semibold">Create New Theme</h3>
             <div className="space-y-3">
@@ -90,43 +179,23 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                 />
               </div>
 
+              {/* 🌈 Image Uploads */}
               <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-xs">Profile Image</Label>
-                  <div className="mt-1">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setProfileImage(e.target.files?.[0] || null)}
-                      className="text-xs"
-                      placeholder=''
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-xs">Card Background</Label>
-                  <div className="mt-1">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setCardImage(e.target.files?.[0] || null)}
-                      className="text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-xs">Page Background</Label>
-                  <div className="mt-1">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setPageImage(e.target.files?.[0] || null)}
-                      className="text-xs"
-                    />
-                  </div>
-                </div>
+                <LiquidGlassUpload
+                  label="Goal Profile"
+                  file={profileImage}
+                  onChange={setProfileImage}
+                />
+                <LiquidGlassUpload
+                  label="Card Background"
+                  file={cardImage}
+                  onChange={setCardImage}
+                />
+                <LiquidGlassUpload
+                  label="Page Background"
+                  file={pageImage}
+                  onChange={setPageImage}
+                />
               </div>
 
               <Button
@@ -135,26 +204,32 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                 className="w-full"
               >
                 <Upload className="h-4 w-4 mr-2" />
-                {creating ? 'Creating...' : 'Create Theme'}
+                {creating ? "Creating..." : "Create Theme"}
               </Button>
             </div>
           </div>
 
-          {/* Theme List */}
+          {/* Existing Themes */}
           <div className="space-y-3">
             <h3 className="font-semibold">Your Themes</h3>
             <ScrollArea className="h-[300px]">
               <div className="space-y-2 pr-4">
                 {loading ? (
-                  <p className="text-sm text-muted-foreground">Loading themes...</p>
+                  <p className="text-sm text-muted-foreground">
+                    Loading themes...
+                  </p>
                 ) : themes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No themes yet. Create your first one!</p>
+                  <p className="text-sm text-muted-foreground">
+                    No themes yet. Create your first one!
+                  </p>
                 ) : (
                   themes.map((theme) => (
                     <Card
                       key={theme.id}
                       className={`p-3 cursor-pointer transition-all ${
-                        currentThemeId === theme.id ? 'ring-2 ring-primary shadow-orange-900'  : ''
+                        currentThemeId === theme.id
+                          ? "ring-2 ring-primary shadow-orange-900"
+                          : ""
                       }`}
                       onClick={() => onThemeSelect(theme.id)}
                     >
@@ -162,11 +237,11 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                         <div className="flex-1">
                           <h4 className="font-medium">{theme.name}</h4>
                           <p className="text-xs text-muted-foreground">
-                            {currentThemeId === theme.id && 'Selected • '}
+                            {currentThemeId === theme.id && "Selected • "}
                             {new Date(theme.created_at).toLocaleDateString()}
                           </p>
                         </div>
-                        {currentThemeId != theme.id && (
+                        {currentThemeId !== theme.id && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -180,35 +255,23 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                         )}
                       </div>
 
-                      {/* Preview */}
                       <div className="mt-2 grid grid-cols-3 gap-2">
-                        <div className="aspect-square rounded bg-muted overflow-hidden">
-                          {theme.goal_profile_image && (
-                            <img
-                              src={theme.goal_profile_image}
-                              alt="Profile"
-                              className="w-full h-full object-cover"
-                            />
-                          )}
-                        </div>
-                        <div className="aspect-square rounded bg-muted overflow-hidden">
-                          {theme.card_background_image && (
-                            <img
-                              src={theme.card_background_image}
-                              alt="Card"
-                              className="w-full h-full object-cover"
-                            />
-                          )}
-                        </div>
-                        <div className="aspect-square rounded bg-muted overflow-hidden">
-                          {theme.page_background_image && (
-                            <img
-                              src={theme.page_background_image}
-                              alt="Page"
-                              className="w-full h-full object-cover"
-                            />
-                          )}
-                        </div>
+                        {["goal_profile_image", "card_background_image", "page_background_image"].map(
+                          (key) => (
+                            <div
+                              key={key}
+                              className="aspect-square rounded bg-muted overflow-hidden"
+                            >
+                              {theme[key as keyof typeof theme] && (
+                                <img
+                                  src={theme[key as keyof typeof theme] as string}
+                                  alt={key}
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                            </div>
+                          )
+                        )}
                       </div>
                     </Card>
                   ))
