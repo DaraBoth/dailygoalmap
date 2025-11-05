@@ -8,6 +8,7 @@ import { GoalMember } from '@/types/goal'; // Import GoalMember type
 import { GoalSharingButton } from './sharing/GoalSharingButton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeSelector } from './ThemeSelector';
+import { boolean } from 'zod';
 
 interface GoalDetailHeaderProps {
   goalId?: string;
@@ -22,7 +23,7 @@ interface GoalDetailHeaderProps {
   onToggleAnalytics?: () => void;
   userId?: string;
   currentThemeId?: string;
-  onThemeChange?: (themeId: string) => void;
+  onThemeChange?: (themeId: string,isRemove?: boolean) => void;
 }
 
 const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({ 

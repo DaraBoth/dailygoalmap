@@ -56,7 +56,7 @@ const GoalDetail: React.FC = () => {
         .eq('id', goalId)
         .single();
       
-      if (!error && data.goal_themes) {
+      if (!error) {
         setCurrentTheme(data.goal_themes as GoalTheme);
       }
     };
@@ -64,9 +64,8 @@ const GoalDetail: React.FC = () => {
     fetchTheme();
   }, [goalId, goalData?.theme_id]);
 
-  const handleThemeChange = async (themeId: string) => {
+  const handleThemeChange = async (themeId="",isRemove=false) => {
     if (!goalId) return;
-    console.log(themeId);
     
     const { data: updatedGoal, error: updateError } = await supabase
       .from('goals')
@@ -76,21 +75,28 @@ const GoalDetail: React.FC = () => {
       .single();
       
     if (updatedGoal) {
-      const { data } = await supabase
-        .from('goal_themes')
-        .select('*')
-        .eq('id', themeId)
-        .single();
+      if(!isRemove){
+        const { data } = await supabase
+          .from('goal_themes')
+          .select('*')
+          .eq('id', themeId)
+          .single();
 
-      if (data) {
-        console.log(data);
-        
-        setCurrentTheme(data as GoalTheme);
+        if (data) {
+          setCurrentTheme(data as GoalTheme);
+          toast({
+            title: 'Success',
+            description: 'Theme updated successfully',
+          });
+        }
+      } else {
+        setCurrentTheme(null);
         toast({
           title: 'Success',
-          description: 'Theme updated successfully',
+          description: 'Theme remove successfully',
         });
       }
+      
     } else {
       toast({
         title: 'Error',

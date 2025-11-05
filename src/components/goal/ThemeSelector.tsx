@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Palette, Upload, Trash2, X } from "lucide-react";
+import { Palette, Upload, Trash2, X, MinusCircle } from "lucide-react";
 import { useGoalThemes } from "@/hooks/useGoalThemes";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,7 +18,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface ThemeSelectorProps {
   userId: string;
   currentThemeId?: string;
-  onThemeSelect: (themeId: string) => void;
+  onThemeSelect: (themeId: string | null, remove?: boolean) => void;
 }
 
 export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
@@ -36,6 +36,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   const [creating, setCreating] = useState(false);
   const isMobile = useIsMobile();
 
+  // 🔧 Create new theme
   const handleCreateTheme = async () => {
     if (!newThemeName.trim()) return;
 
@@ -69,7 +70,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
     }
   };
 
-  // 🔮 Reusable Liquid Glass Upload Component
+  // 🌊 Liquid Glass Upload Component
   const LiquidGlassUpload = ({
     label,
     file,
@@ -86,15 +87,11 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
       onChange(newFile);
     };
 
-    const handleClick = () => {
-      inputRef.current?.click();
-    };
-
     return (
       <div className="space-y-1">
         <Label className="text-xs">{label}</Label>
         <div
-          onClick={handleClick}
+          onClick={() => inputRef.current?.click()}
           className={`relative group cursor-pointer aspect-square w-full rounded-2xl overflow-hidden 
             border border-white/20 backdrop-blur-xl bg-white/10
             shadow-[0_0_20px_rgba(255,255,255,0.1)]
@@ -113,7 +110,9 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
           ) : (
             <div className="flex flex-col items-center justify-center w-full h-full text-white/80 z-10">
               <Upload className="h-8 w-8 mb-1 text-white/70 group-hover:scale-110 transition-transform" />
-              <p className="text-[11px] text-foreground font-light">Click to upload</p>
+              <p className="text-[11px] text-foreground font-light">
+                Click to upload
+              </p>
             </div>
           )}
 
@@ -166,7 +165,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Create New Theme Section */}
+          {/* 🌈 Create New Theme */}
           <div className="space-y-4 p-4 border rounded-lg">
             <h3 className="font-semibold">Create New Theme</h3>
             <div className="space-y-3">
@@ -179,7 +178,6 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                 />
               </div>
 
-              {/* 🌈 Image Uploads */}
               <div className="grid grid-cols-3 gap-3">
                 <LiquidGlassUpload
                   label="Goal Profile"
@@ -209,9 +207,21 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
             </div>
           </div>
 
-          {/* Existing Themes */}
+          {/* 🎨 Existing Themes */}
           <div className="space-y-3">
-            <h3 className="font-semibold">Your Themes</h3>
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold">Your Themes</h3>
+              {currentThemeId && (
+                <button
+                  onClick={() => onThemeSelect(null, true)}
+                  className="flex items-center gap-1 text-red-600 underline"
+                >
+                  {/* <MinusCircle className="h-4 w-4" /> */}
+                  Remove current theme
+                </button>
+              )}
+            </div>
+
             <ScrollArea className="h-[300px]">
               <div className="space-y-2 pr-4">
                 {loading ? (
@@ -226,18 +236,18 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                   themes.map((theme) => (
                     <Card
                       key={theme.id}
-                      className={`p-3 cursor-pointer transition-all ${
+                      className={`liquid-glass-container p-3 cursor-pointer  ${
                         currentThemeId === theme.id
-                          ? "ring-2 ring-primary shadow-orange-900"
+                          ? "liquid-glass-container "
                           : ""
                       }`}
                       onClick={() => onThemeSelect(theme.id)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <h4 className="font-medium">{theme.name}</h4>
+                          <h4 className="font-medium">{theme.name} {currentThemeId === theme.id && " • Selected"}</h4>
                           <p className="text-xs text-muted-foreground">
-                            {currentThemeId === theme.id && "Selected • "}
+                            
                             {new Date(theme.created_at).toLocaleDateString()}
                           </p>
                         </div>
@@ -256,22 +266,24 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                       </div>
 
                       <div className="mt-2 grid grid-cols-3 gap-2">
-                        {["goal_profile_image", "card_background_image", "page_background_image"].map(
-                          (key) => (
-                            <div
-                              key={key}
-                              className="aspect-square rounded bg-muted overflow-hidden"
-                            >
-                              {theme[key as keyof typeof theme] && (
-                                <img
-                                  src={theme[key as keyof typeof theme] as string}
-                                  alt={key}
-                                  className="w-full h-full object-cover"
-                                />
-                              )}
-                            </div>
-                          )
-                        )}
+                        {[
+                          "goal_profile_image",
+                          "card_background_image",
+                          "page_background_image",
+                        ].map((key) => (
+                          <div
+                            key={key}
+                            className="aspect-square rounded bg-muted overflow-hidden"
+                          >
+                            {theme[key as keyof typeof theme] && (
+                              <img
+                                src={theme[key as keyof typeof theme] as string}
+                                alt={key}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </Card>
                   ))
