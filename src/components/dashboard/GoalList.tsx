@@ -225,10 +225,10 @@ const GoalList: React.FC<GoalListProps> = ({
                   <div className="flex-1">
                     <CardTitle className="text-lg font-semibold text-foreground/90 ">{goal.title}</CardTitle>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge className=" bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-blue-500 dark:text-blue-300 border border-transparent rounded-full px-2 py-0.5 text-xs">
+                      <Badge className=" bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-blue-200 dark:text-blue-200 border border-transparent rounded-full px-2 py-0.5 text-xs">
                         {goal.metadata?.goal_type || 'General'}
                       </Badge>
-                      <DeadlineStatusBadge deadlineInfo={deadlineInfo} size="sm" />
+                      <DeadlineStatusBadge className="hover:text-blue-200" deadlineInfo={deadlineInfo} size="sm" />
                     </div>
                   </div>
                 </div>

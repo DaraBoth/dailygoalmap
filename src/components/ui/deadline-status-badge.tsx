@@ -58,13 +58,13 @@ export const DeadlineStatusBadge: React.FC<DeadlineStatusBadgeProps> = ({
     <div className={cn("flex flex-col gap-1", className)}>
       <Badge 
         className={cn(
-          "flex items-center gap-1.5 rounded-full backdrop-blur-sm transition-all duration-200",
+          "flex items-center gap-1.5 rounded-full backdrop-blur-sm transition-all duration-200 hover:text-blue-200 ",
           styling.badgeColor,
           sizeClasses[size]
         )}
       >
-        <IconComponent className={cn(iconSizes[size], styling.iconColor)} />
-        <span className="font-medium">{deadlineInfo.statusMessage}</span>
+        <IconComponent className={" hover:text-blue-200 "+ cn(iconSizes[size], styling.iconColor)} />
+        <span className="font-medium ">{deadlineInfo.statusMessage}</span>
       </Badge>
       
       {showProgress && deadlineInfo.status !== "completed" && (
