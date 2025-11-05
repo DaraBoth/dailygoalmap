@@ -30,12 +30,12 @@ const CalendarHeader = ({
 
   return (
     <nav
-      className="relative mt-3 sm:mt-4 mx-2 mb-3 sm:mb-4 glass-style backdrop-blur-md rounded-2xl sm:rounded-3xl border border-gray-200/60 dark:border-white/25"
+      className="liquid-glass-container relative mt-3 sm:mt-4 mx-2 mb-3 sm:mb-4 rounded-2xl sm:rounded-3xl border border-gray-200/60 dark:border-white/25"
       role="navigation"
       aria-label="Calendar navigation"
     >
       {/* Desktop Navbar */}
-      <div className="hidden lg:flex items-center justify-between p-3 sm:p-4 liquid-glass-container" >
+      <div className="hidden lg:flex items-center justify-between p-3 sm:p-4" >
         {/* Left Section: Month Navigation */}
         <div className="flex items-center gap-3">
           <Button

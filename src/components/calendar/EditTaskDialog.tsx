@@ -280,7 +280,6 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
           </div>
         </div>
 
-        {/* Fixed button area at bottom */}
         <div className="flex-shrink-0 sticky bottom-0 z-20 p-4 border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -292,18 +291,16 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
               type="submit"
               form="edit-task-form"
               disabled={!title.trim()}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white h-9 sm:h-10 md:h-11 text-sm"
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 h-9 sm:h-10 md:h-11 text-sm"
             >
               Update Task
             </Button>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
 
-              {/* Delete button with confirmation */}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     type="button"
-                    variant="destructive"
                     className="flex-1 h-9 sm:h-10 md:h-11 text-sm"
                   >
                     <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />

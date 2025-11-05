@@ -161,7 +161,7 @@ const TaskDetailsSidebar = ({
                 {/* Sticky action footer */}
                 <div className="pt-4 sticky bottom-0 liquid-glass -mx-4 px-4 pb-4">
                   <div className="space-y-2">
-                    <Button variant="outline" className="w-full flex items-center justify-center gap-2" onClick={() => onToggleTaskCompletion(selectedTask.id)}>
+                    <Button variant="outline" className={`w-full flex items-center justify-center gap-2 ${selectedTask.completed && "text-green-600"}`} onClick={() => onToggleTaskCompletion(selectedTask.id)}>
                       {selectedTask.completed ? (
                         <>
                           <CheckCircle2 className="h-4 w-4" />
@@ -190,7 +190,7 @@ const TaskDetailsSidebar = ({
                     </div>
 
                     {onDeleteTask && (
-                      <Button variant="destructive" className="w-full flex items-center justify-center gap-2" onClick={() => onDeleteTask(selectedTask.id)}>
+                      <Button className="w-full flex items-center justify-center gap-2 " onClick={() => onDeleteTask(selectedTask.id)}>
                         <Trash2 className="h-4 w-4" />
                         Delete Task
                       </Button>
