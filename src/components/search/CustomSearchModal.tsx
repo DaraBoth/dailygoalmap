@@ -137,14 +137,12 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
           type: 'task' as const,
           id: task.id,
           title: task.title || task.description,
-          path: `/goal/${task.goal_id}?date=${dateOnly}`,
+          path: `/goal/${task.goal_id}?task=${task.id}&date=${dateOnly}`,
           date: new Date(dateIso).toLocaleDateString(),
           goalId: task.goal_id,
           completed: !!task.completed,
         };
       }) || [];
-      
-      console.log("Search results:", { goalResults, taskResults, totalResults: goalResults.length + taskResults.length });
       
       setResults([...goalResults, ...taskResults]);
     } catch (error) {
@@ -199,7 +197,6 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
         
         {/* Search Header */}
         <div className="flex items-center border-b px-4 py-3">
-          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
           <Input
             placeholder="Search goals and tasks..."
             value={query}
