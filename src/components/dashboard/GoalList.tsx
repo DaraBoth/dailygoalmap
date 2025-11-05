@@ -189,8 +189,7 @@ const GoalList: React.FC<GoalListProps> = ({
         return (
         <Card
           key={goal.id}
-          className={`cursor-pointer group relative ${deadlineStyling.borderColor}`}
-          style={backgroundStyle}
+          className={`cursor-pointer group relative ${deadlineStyling.borderColor} overflow-hidden `}
           onClick={(e) => {
             // Prevent navigation when clicking on interactive controls inside the card
             const target = e.target as HTMLElement | null;
@@ -208,7 +207,7 @@ const GoalList: React.FC<GoalListProps> = ({
             goToGoal(goal.id);
           }}
         >
-          <div className=" relative rounded-2xl m-0.5 p-4 backdrop-blur-sm" >
+          <div className=" relative rounded-2xl m-0.5 p-4 "  style={backgroundStyle} >
             <CardHeader className="p-0">
               <div className="flex items-center justify-between gap-4">
                 <div className=" flex items-center gap-3 flex-1">
@@ -224,9 +223,9 @@ const GoalList: React.FC<GoalListProps> = ({
                     </div>
                   }
                   <div className="flex-1">
-                    <CardTitle className="text-lg font-semibold text-foreground/90 line-clamp-1">{goal.title}</CardTitle>
+                    <CardTitle className="text-lg font-semibold text-foreground/90 ">{goal.title}</CardTitle>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-blue-500 dark:text-blue-300 border border-transparent rounded-full px-2 py-0.5 text-xs">
+                      <Badge className=" bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-blue-500 dark:text-blue-300 border border-transparent rounded-full px-2 py-0.5 text-xs">
                         {goal.metadata?.goal_type || 'General'}
                       </Badge>
                       <DeadlineStatusBadge deadlineInfo={deadlineInfo} size="sm" />
