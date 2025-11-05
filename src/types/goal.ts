@@ -59,6 +59,17 @@ export interface Goal {
   memberCounts?: {
     total: number;
   }
+  goal_themes?: {
+    card_background_image?: string
+    created_at?: string
+    goal_profile_image?: string
+    id?: string
+    is_default?: string
+    name?: string
+    page_background_image?: string
+    updated_at?: string
+    user_id?: string
+  };
 }
 
 export interface GoalMember {

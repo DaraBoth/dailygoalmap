@@ -35,7 +35,7 @@ const CalendarHeader = ({
       aria-label="Calendar navigation"
     >
       {/* Desktop Navbar */}
-      <div className="hidden lg:flex items-center justify-between p-3 sm:p-4">
+      <div className="hidden lg:flex items-center justify-between p-3 sm:p-4 liquid-glass-container" >
         {/* Left Section: Month Navigation */}
         <div className="flex items-center gap-3">
           <Button

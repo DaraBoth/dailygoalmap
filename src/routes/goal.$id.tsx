@@ -86,7 +86,7 @@ export const Route = createFileRoute('/goal/$id')({
       if (!goalData) {
         const { data, error: goalError } = await supabase
           .from('goals')
-          .select('*')
+          .select('*, goal_themes(*)')
           .eq('id', goalId)
           .single()
 

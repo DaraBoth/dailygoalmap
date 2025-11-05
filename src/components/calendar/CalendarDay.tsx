@@ -43,15 +43,15 @@ const CalendarDay = ({
 
   const getTaskColor = (date: Date) => {
     const colors = [
-      "bg-blue-500 dark:bg-blue-500", 
-      "bg-pink-500 dark:bg-pink-500", 
-      "bg-teal-500 dark:bg-teal-500", 
-      "bg-orange-500 dark:bg-orange-500", 
-      "bg-purple-500 dark:bg-purple-500", 
-      "bg-green-500 dark:bg-green-500",
-      "bg-red-500 dark:bg-red-500", 
-      "bg-indigo-500 dark:bg-indigo-500", 
-      "bg-yellow-500 dark:bg-yellow-500"
+      " bg-blue-800 dark:bg-blue-500", 
+      " bg-pink-800 dark:bg-pink-500", 
+      " bg-teal-800 dark:bg-teal-500", 
+      " bg-orange-800 dark:bg-orange-500", 
+      " bg-purple-800 dark:bg-purple-500", 
+      " bg-green-800 dark:bg-green-500",
+      " bg-red-800 dark:bg-red-500", 
+      " bg-indigo-800 dark:bg-indigo-500", 
+      " bg-yellow-800 dark:bg-yellow-500"
     ];
     const colorIndex = date.getDate() % colors.length;
     return colors[colorIndex];

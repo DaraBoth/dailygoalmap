@@ -31,7 +31,10 @@ export const useGoals = () => {
       // Fetch goals created by the user
       const { data: createdGoals, error: createdGoalsError } = await supabase
         .from('goals')
-        .select('*')
+        .select(`
+          *,
+          goal_themes(*)
+        `)
         .eq('user_id', userId);
 
       if (createdGoalsError) throw createdGoalsError;
@@ -39,7 +42,7 @@ export const useGoals = () => {
       // Fetch goals the user has joined
       const { data: joinedGoals, error: joinedGoalsError } = await supabase
         .from('goal_members')
-        .select('goal_id, goals(*)')
+        .select('goal_id, goals(*,goal_themes(*))')
         .eq('user_id', userId);
 
       if (joinedGoalsError) throw joinedGoalsError;
@@ -57,7 +60,8 @@ export const useGoals = () => {
         ...createdGoalsList,
         ...uniqueJoinedGoals,
       ];
-
+      
+      console.log({allGoals});
       // Convert the Supabase data to Goal objects with proper metadata typing
       const typedGoals: Goal[] = (allGoals || []).map(goal => ({
         ...goal,
@@ -96,9 +100,6 @@ export const useGoals = () => {
         .from('goal_members')
         .select('*')
         .eq('goal_id', goal.id )
-
-        console.log({goalMember});
-        
 
         if (!memberError && goalMember) {
           const totalMember = goalMember.length;

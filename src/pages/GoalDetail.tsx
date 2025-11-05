@@ -20,19 +20,19 @@ const GoalDetail: React.FC = () => {
   const loaderData = useLoaderData({ from: '/goal/$id' }) as any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const search = useSearch({ strict: false }) as any;
-  const { goToLogin } = useRouterNavigation();
   const { toast } = useToast();
 
   const goalData = loaderData?.goal || null;
   const goalTitle = goalData?.title || '';
   const goalDescription = goalData?.description || '';
+  const goalTheme = goalData?.goal_themes || null
 
   const [members, setMembers] = useState<GoalMember[]>(loaderData?.members || []);
   const [tasks, setTasks] = useState<Task[]>(loaderData?.tasks || []);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [showAnalytics, setShowAnalytics] = useState<boolean>(false);
   const [autoOpenTaskId, setAutoOpenTaskId] = useState<string | null>(null);
-  const [currentTheme, setCurrentTheme] = useState<GoalTheme | null>(null);
+  const [currentTheme, setCurrentTheme] = useState<GoalTheme | null>(goalTheme);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -51,28 +51,31 @@ const GoalDetail: React.FC = () => {
       }
 
       const { data, error } = await supabase
-        .from('goal_themes')
-        .select('*')
-        .eq('id', goalData.theme_id)
+        .from('goals')
+        .select('*,goal_themes(*)')
+        .eq('id', goalId)
         .single();
-
-      if (!error && data) {
-        setCurrentTheme(data as GoalTheme);
+      
+      if (!error && data.goal_themes) {
+        setCurrentTheme(data.goal_themes as GoalTheme);
       }
     };
 
     fetchTheme();
-  }, [goalData?.theme_id]);
+  }, [goalId, goalData?.theme_id]);
 
   const handleThemeChange = async (themeId: string) => {
     if (!goalId) return;
-
-    const { error } = await supabase
+    console.log(themeId);
+    
+    const { data: updatedGoal, error: updateError } = await supabase
       .from('goals')
       .update({ theme_id: themeId })
-      .eq('id', goalId);
-
-    if (!error) {
+      .eq('id', goalId)
+      .select() 
+      .single();
+      
+    if (updatedGoal) {
       const { data } = await supabase
         .from('goal_themes')
         .select('*')
@@ -80,6 +83,8 @@ const GoalDetail: React.FC = () => {
         .single();
 
       if (data) {
+        console.log(data);
+        
         setCurrentTheme(data as GoalTheme);
         toast({
           title: 'Success',

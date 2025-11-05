@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Palette, Upload, Trash2 } from 'lucide-react';
+import { Palette, Upload, Trash2, X } from 'lucide-react';
 import { useGoalThemes } from '@/hooks/useGoalThemes';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ThemeSelectorProps {
   userId: string;
@@ -26,6 +27,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   const [cardImage, setCardImage] = useState<File | null>(null);
   const [pageImage, setPageImage] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
+  const isMobile = useIsMobile()
 
   const handleCreateTheme = async () => {
     if (!newThemeName.trim()) return;
@@ -58,13 +60,20 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          <Palette className="h-4 w-4 mr-2" />
-          Theme
+          <Palette className={`h-4 w-4 ${!isMobile && "mr-2" }`  } />
+          {!isMobile && "Theme"}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Goal Themes</DialogTitle>
+          <DialogTitle>
+            <div className='flex flex-row justify-between align-middle w-full'>
+              <div className='font-semibold'>
+                Goal Themes
+              </div>
+              <button className='text-red-500/50 liquid-glass rounded-md p-1' onClick={()=>setOpen(false)}><X/></button>
+            </div>
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -90,6 +99,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                       accept="image/*"
                       onChange={(e) => setProfileImage(e.target.files?.[0] || null)}
                       className="text-xs"
+                      placeholder=''
                     />
                   </div>
                 </div>
@@ -144,7 +154,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                     <Card
                       key={theme.id}
                       className={`p-3 cursor-pointer transition-all ${
-                        currentThemeId === theme.id ? 'ring-2 ring-primary' : ''
+                        currentThemeId === theme.id ? 'ring-2 ring-primary shadow-orange-900'  : ''
                       }`}
                       onClick={() => onThemeSelect(theme.id)}
                     >
@@ -152,11 +162,12 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                         <div className="flex-1">
                           <h4 className="font-medium">{theme.name}</h4>
                           <p className="text-xs text-muted-foreground">
+                            {currentThemeId == theme.id ? "asa" : "kuku"} 
                             {theme.is_default && 'Default • '}
                             {new Date(theme.created_at).toLocaleDateString()}
                           </p>
                         </div>
-                        {!theme.is_default && (
+                        {currentThemeId != theme.id && (
                           <Button
                             variant="ghost"
                             size="sm"

@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import { createMemberLeftNotifications } from "@/services/internalNotifications";
+import { Avatar, AvatarImage } from "../ui";
 
 export interface GoalListProps {
   goals: Goal[];
@@ -55,6 +56,9 @@ const GoalList: React.FC<GoalListProps> = ({
 
     getCurrentUser();
   }, []);
+
+  console.log({goals});
+  
 
   const handleLeaveGoal = async (goalId: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -174,10 +178,19 @@ const GoalList: React.FC<GoalListProps> = ({
       {goals.map((goal) => {
         const deadlineInfo = calculateGoalDeadlineInfo(goal);
         const deadlineStyling = getDeadlineStatusStyling(deadlineInfo.status, deadlineInfo.urgencyLevel);
+        const backgroundStyle = goal.goal_themes?.card_background_image
+        ? {
+            backgroundImage: `url(${goal.goal_themes.card_background_image})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }
+        : {};
         return (
         <Card
           key={goal.id}
           className={`cursor-pointer group relative ${deadlineStyling.borderColor}`}
+          style={backgroundStyle}
           onClick={(e) => {
             // Prevent navigation when clicking on interactive controls inside the card
             const target = e.target as HTMLElement | null;
@@ -195,13 +208,21 @@ const GoalList: React.FC<GoalListProps> = ({
             goToGoal(goal.id);
           }}
         >
-          <div className=" relative rounded-2xl m-0.5 p-4">
+          <div className=" relative rounded-2xl m-0.5 p-4 backdrop-blur-sm" >
             <CardHeader className="p-0">
               <div className="flex items-center justify-between gap-4">
                 <div className=" flex items-center gap-3 flex-1">
-                  <div className="liquid-glass-button h-12 w-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-200 to-purple-200 dark:from-blue-900 dark:to-purple-900 text-blue-700 dark:text-blue-200 font-bold text-lg">
-                    {goal.title ? goal.title.charAt(0).toUpperCase() : 'G'}
-                  </div>
+                  {
+                    goal?.goal_themes && goal?.goal_themes?.goal_profile_image != null ?
+                    <img
+                      src={goal?.goal_themes?.goal_profile_image}
+                      alt="avatar"
+                      className="liquid-glass relative inline-block object-cover object-center w-12 h-12 rounded-xl"
+                    /> :
+                    <div className="liquid-glass-button h-12 w-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-200 to-purple-200 dark:from-blue-900 dark:to-purple-900 text-blue-700 dark:text-blue-200 font-bold text-lg">
+                      {goal.title ? goal.title.charAt(0).toUpperCase() : 'G'}
+                    </div>
+                  }
                   <div className="flex-1">
                     <CardTitle className="text-lg font-semibold text-foreground/90 line-clamp-1">{goal.title}</CardTitle>
                     <div className="flex items-center gap-2 mt-1">

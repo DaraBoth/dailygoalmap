@@ -5,7 +5,6 @@ import { ArrowLeft, CalendarIcon, CheckCircle, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user/UserMenu';
 import { GoalMember } from '@/types/goal'; // Import GoalMember type
-import GoalProgress from './GoalProgress';
 import { GoalSharingButton } from './sharing/GoalSharingButton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeSelector } from './ThemeSelector';
@@ -49,7 +48,7 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200/60 dark:border-white/25 w-full">
+    <header className="sticky top-0 z-50 border-b border-gray-200/60 dark:border-white/25 w-full liquid-glass-container">
       <div className="w-full px-2 sm:px-4 py-3 sm:py-4">
         <div className="flex items-center justify-between max-w-[2000px] mx-auto gap-2">
           <div className="flex items-center space-x-2 flex-1 min-w-0 ">
