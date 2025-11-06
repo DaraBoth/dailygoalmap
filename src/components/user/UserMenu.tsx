@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTheme } from "@/hooks/use-theme";
+import { ThemeSegmentSwitch } from '../theme/ThemeSwitcher';
 
 export const UserMenu = () => {
   const { goToLogin, goToProfile } = useRouterNavigation();
@@ -138,7 +139,7 @@ export const UserMenu = () => {
   return (
     <div className="flex items-center gap-2">
       <TooltipProvider>
-        <Tooltip>
+        <Tooltip disableHoverableContent>
           <TooltipTrigger asChild>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -168,15 +169,8 @@ export const UserMenu = () => {
                     <UserIcon className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className='liquid-glass-button pt-2' >
-                    <div className="flex items-center justify-between w-full">
-                      <span>Dark Mode</span>
-                      <Switch
-                        checked={theme === "dark"}
-                        onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-                        aria-label="Toggle dark mode"
-                      />
-                    </div>
+                  <DropdownMenuItem className='p-0'>
+                    <ThemeSegmentSwitch/>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />

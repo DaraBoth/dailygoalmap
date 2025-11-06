@@ -3638,11 +3638,6 @@ lines-and-columns@^1.1.6:
   resolved "https://registry.npmjs.org/lines-and-columns/-/lines-and-columns-1.2.4.tgz"
   integrity sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==
 
-liquid-glass-react@^1.1.1:
-  version "1.1.1"
-  resolved "https://registry.npmjs.org/liquid-glass-react/-/liquid-glass-react-1.1.1.tgz#d510517b5fda7785890e28a7885881abff887421"
-  integrity sha512-pKzaktaMAEztd93wpWcz2Z5Z9qdLJUNJdMX+n00Ca4XsnrLTQ5xJzm/+GQXZUeuFXe/PQ8ziVMZO6531PyaFJw==
-
 locate-path@^6.0.0:
   version "6.0.0"
   resolved "https://registry.npmjs.org/locate-path/-/locate-path-6.0.0.tgz"
@@ -5376,7 +5371,7 @@ vite@^5.4.1:
     tailwindcss-animate "^1.0.7"
     uuid "^9.0.1"
     vaul "^0.9.3"
-    vite_react_shadcn_ts "file:../../../../AppData/Local/Yarn/Cache/v6/npm-vite-react-shadcn-ts-0.0.0-403f4743-b99e-4493-9b7c-0e35b087cc41-1762399570926/node_modules/vite_react_shadcn_ts"
+    vite_react_shadcn_ts "file:../../../../AppData/Local/Yarn/Cache/v6/npm-vite-react-shadcn-ts-0.0.0-f0b03384-4bcb-4f4a-98ab-f9a8f3d64b06-1762401033757/node_modules/vite_react_shadcn_ts"
     zod "^3.23.8"
 
 web-vitals@^4.2.4:

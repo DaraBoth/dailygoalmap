@@ -21,7 +21,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import { createMemberLeftNotifications } from "@/services/internalNotifications";
 import { Avatar, AvatarImage } from "../ui";
-import LiquidGlass from "liquid-glass-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 export interface GoalListProps {
