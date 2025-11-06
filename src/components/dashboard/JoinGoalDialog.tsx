@@ -160,7 +160,7 @@ export function JoinGoalDialog({ isOpen, onClose, onGoalJoined }: JoinGoalDialog
           <Button variant="outline" onClick={onClose} disabled={isJoining}>
             Cancel
           </Button>
-          <Button onClick={handleJoinGoal} disabled={isJoining} className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white border-0">
+          <Button onClick={handleJoinGoal} disabled={isJoining} className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0">
 
             {isJoining ? (
               <>
