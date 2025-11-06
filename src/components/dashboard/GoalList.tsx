@@ -57,9 +57,6 @@ const GoalList: React.FC<GoalListProps> = ({
     getCurrentUser();
   }, []);
 
-  console.log({goals});
-  
-
   const handleLeaveGoal = async (goalId: string, event: React.MouseEvent) => {
     event.stopPropagation();
     setIsLeaving(goalId);
