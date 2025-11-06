@@ -23,65 +23,65 @@ export const UserMenu = () => {
   const { goToLogin, goToProfile } = useRouterNavigation();
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
-  
+
   useEffect(() => {
     const getUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
     };
-    
+
     getUser();
-    
+
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
     });
-    
+
     return () => {
       authListener.subscription.unsubscribe();
     };
   }, []);
   const { theme, setTheme } = useTheme(); // Use the global theme hook
   const [profileData, setProfileData] = useState<{ avatar_url: string | null, display_name: string | null } | null>(null);
-  
+
   useEffect(() => {
     const fetchProfileData = async () => {
       if (!user) return;
-      
+
       try {
         const { data, error } = await supabase
           .from('user_profiles')
           .select('avatar_url, display_name')
           .eq('id', user.id)
           .single();
-          
+
         if (error) {
           console.error('Error fetching profile:', error);
           return;
         }
-        
+
         setProfileData(data);
       } catch (error) {
         console.error('Error fetching profile:', error);
       }
     };
-    
+
     fetchProfileData();
   }, [user]);
-  
+
   // Handle logout
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-      
+
       if (error) {
         throw error;
       }
-      
+
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
       });
-      
+
       // Navigate to login page
       await goToLogin();
     } catch (error) {
@@ -93,7 +93,7 @@ export const UserMenu = () => {
       });
     }
   };
-  
+
   // If no user is logged in, show login button
   if (!user) {
     return (
@@ -104,7 +104,7 @@ export const UserMenu = () => {
       </div>
     );
   }
-  
+
   // Get initials for avatar fallback
   const getInitials = () => {
     if (profileData?.display_name) {
@@ -118,7 +118,7 @@ export const UserMenu = () => {
     }
     return 'U';
   };
-  
+
   // Get the avatar URL - prioritize profile data over user metadata
   const getAvatarUrl = () => {
     if (profileData?.avatar_url) {
@@ -126,7 +126,7 @@ export const UserMenu = () => {
     }
     return user.user_metadata?.avatar_url || undefined;
   };
-  
+
   // Get the display name - prioritize profile data over user metadata
   const getDisplayName = () => {
     if (profileData?.display_name) {
@@ -134,7 +134,7 @@ export const UserMenu = () => {
     }
     return user.user_metadata?.name || 'User';
   };
-  
+
   return (
     <div className="flex items-center gap-2">
       <TooltipProvider>

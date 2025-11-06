@@ -61,7 +61,6 @@ export const useGoals = () => {
         ...uniqueJoinedGoals,
       ];
       
-      console.log({allGoals});
       // Convert the Supabase data to Goal objects with proper metadata typing
       const typedGoals: Goal[] = (allGoals || []).map(goal => ({
         ...goal,
