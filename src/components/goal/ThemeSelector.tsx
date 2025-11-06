@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -252,15 +253,21 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden flex flex-col">
+        <DialogHeader className="px-6 pt-6 pb-0 flex-shrink-0">
           <DialogTitle className="flex items-center justify-between">
             <span>{editingTheme ? 'Edit Theme' : 'Goal Themes'}</span>
+            <DialogClose asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogClose>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* 🌈 Create/Edit Theme */}
+        <ScrollArea className="flex-1 px-6 pb-6">
+          <div className="space-y-6 pt-4">
+            {/* 🌈 Create/Edit Theme */}
           <div className="space-y-4 p-4 md:p-6 border rounded-lg bg-card">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-lg">
@@ -443,7 +450,8 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
               </div>
             </ScrollArea>
           </div>
-        </div>
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
