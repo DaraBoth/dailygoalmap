@@ -378,7 +378,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
               </div>
 
               <ScrollArea className="h-[60vh] md:h-[65vh] rounded-md border bg-background/40 backdrop-blur-sm">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-3 pr-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 p-3 pr-5">
                   {loading ? (
                     <p className="text-sm text-muted-foreground col-span-full text-center py-10">
                       Loading themes...
@@ -413,7 +413,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                         </div>
 
                         {/* Image grid preview */}
-                        <div className="grid grid-cols-3 gap-1.5 p-3 mt-6">
+                        <div className={`grid grid-cols-3 gap-1.5 p-3 mt-6 `}>
                           {[
                             { key: "goal_profile_image", label: "Profile" },
                             { key: "card_background_image", label: "Card" },
@@ -427,7 +427,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                                 <img
                                   src={theme[key as keyof typeof theme] as string}
                                   alt={label}
-                                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                  className="w-full h-full object-fit transition-transform duration-300 group-hover:scale-105"
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">
