@@ -10,12 +10,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Palette, Upload, Trash2, X, Edit2, Check } from "lucide-react";
+import { Palette, Upload, Trash2, X, Edit2, Check, Globe } from "lucide-react";
 import { useGoalThemes } from "@/hooks/useGoalThemes";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { GoalTheme } from "@/types/theme";
+import { Switch } from "../ui/switch";
 
 interface ThemeSelectorProps {
   userId: string;
@@ -32,6 +33,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
     useGoalThemes(userId);
   const [open, setOpen] = useState(false);
   const [newThemeName, setNewThemeName] = useState("");
+  const [isPublic, setIsPublic] = useState(false); // ⚡ New state for visibility
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [cardImage, setCardImage] = useState<File | null>(null);
   const [pageImage, setPageImage] = useState<File | null>(null);
@@ -62,6 +64,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
           goal_profile_image: profileUrl,
           card_background_image: cardUrl,
           page_background_image: pageUrl,
+          is_public: isPublic, // ⚡ Include visibility
         });
         setEditingTheme(null);
       } else {
@@ -71,6 +74,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
           goal_profile_image: profileUrl,
           card_background_image: cardUrl,
           page_background_image: pageUrl,
+          is_public: isPublic, // ⚡ Include visibility
         });
       }
 
@@ -79,6 +83,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
       setProfileImage(null);
       setCardImage(null);
       setPageImage(null);
+      setIsPublic(false); // ⚡ Reset visibility toggle
     } finally {
       setCreating(false);
     }
@@ -88,6 +93,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   const handleEditTheme = (theme: GoalTheme) => {
     setEditingTheme(theme);
     setNewThemeName(theme.name);
+    setIsPublic(!!theme.is_public); // ⚡ Load current visibility
     setProfileImage(null);
     setCardImage(null);
     setPageImage(null);
@@ -100,6 +106,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
     setProfileImage(null);
     setCardImage(null);
     setPageImage(null);
+    setIsPublic(false);
   };
 
   // 🗑️ Remove image from theme
@@ -184,20 +191,20 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
 
   // 🎨 Preview Component
   const ThemePreview = () => {
-    const previewProfileUrl = profileImage 
-      ? URL.createObjectURL(profileImage) 
+    const previewProfileUrl = profileImage
+      ? URL.createObjectURL(profileImage)
       : editingTheme?.goal_profile_image;
-    const previewCardUrl = cardImage 
-      ? URL.createObjectURL(cardImage) 
+    const previewCardUrl = cardImage
+      ? URL.createObjectURL(cardImage)
       : editingTheme?.card_background_image;
-    const previewPageUrl = pageImage 
-      ? URL.createObjectURL(pageImage) 
+    const previewPageUrl = pageImage
+      ? URL.createObjectURL(pageImage)
       : editingTheme?.page_background_image;
 
     return (
       <div className="space-y-2">
         <Label className="text-xs font-medium">Preview</Label>
-        <div 
+        <div
           className="relative rounded-xl overflow-hidden border-2 border-border p-4"
           style={{
             backgroundImage: previewPageUrl ? `url(${previewPageUrl})` : undefined,
@@ -208,7 +215,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
           {!previewPageUrl && (
             <div className="absolute inset-0 bg-gradient-to-br from-background to-muted" />
           )}
-          <div 
+          <div
             className="relative rounded-lg p-4 backdrop-blur-sm border border-border/50"
             style={{
               backgroundImage: previewCardUrl ? `url(${previewCardUrl})` : undefined,
@@ -221,9 +228,9 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
             )}
             <div className="relative flex items-center gap-3">
               {previewProfileUrl ? (
-                <img 
-                  src={previewProfileUrl} 
-                  alt="Goal preview" 
+                <img
+                  src={previewProfileUrl}
+                  alt="Goal preview"
                   className="h-12 w-12 rounded-xl object-cover"
                 />
               ) : (
@@ -253,7 +260,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[600px] w-full h-[100%] overflow-y-auto rounded-2xl bg-background/60 backdrop-blur-lg p-0">
         <DialogHeader className="px-6 pt-6 pb-0 flex-shrink-0">
           <DialogTitle className="flex items-center justify-between">
             <span>{editingTheme ? 'Edit Theme' : 'Goal Themes'}</span>
@@ -266,190 +273,207 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
         </DialogHeader>
 
         <ScrollArea className="flex-1 px-6 pb-6">
-          <div className="space-y-6 pt-4">
+          <div className="space-y-6 pt-4 ">
             {/* 🌈 Create/Edit Theme */}
-          <div className="space-y-4 p-4 md:p-6 border rounded-lg bg-card">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-lg">
-                {editingTheme ? 'Edit Theme' : 'Create New Theme'}
-              </h3>
-              {editingTheme && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCancelEdit}
-                >
-                  Cancel
-                </Button>
-              )}
+            <div className="space-y-4 p-4 md:p-6 border rounded-lg bg-card">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-lg">
+                  {editingTheme ? 'Edit Theme' : 'Create New Theme'}
+                </h3>
+                {editingTheme && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCancelEdit}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Left: Form */}
+                <div className="space-y-4">
+                  <div>
+                    <Label>Theme Name</Label>
+                    <Input
+                      value={newThemeName}
+                      onChange={(e) => setNewThemeName(e.target.value)}
+                      placeholder="e.g., Ocean Blue"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <LiquidGlassUpload
+                      label="Profile"
+                      file={profileImage}
+                      existingUrl={editingTheme?.goal_profile_image}
+                      onChange={setProfileImage}
+                      onRemove={editingTheme ? () => handleRemoveThemeImage('goal_profile_image') : undefined}
+                    />
+                    <LiquidGlassUpload
+                      label="Card BG"
+                      file={cardImage}
+                      existingUrl={editingTheme?.card_background_image}
+                      onChange={setCardImage}
+                      onRemove={editingTheme ? () => handleRemoveThemeImage('card_background_image') : undefined}
+                    />
+                    <LiquidGlassUpload
+                      label="Page BG"
+                      file={pageImage}
+                      existingUrl={editingTheme?.page_background_image}
+                      onChange={setPageImage}
+                      onRemove={editingTheme ? () => handleRemoveThemeImage('page_background_image') : undefined}
+                    />
+                  </div>
+
+                  {/* ⚡ Add this inside the form section */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <Label className="text-sm font-medium">Make Public</Label>
+                    <Switch
+                      checked={isPublic}
+                      onCheckedChange={setIsPublic}
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleSaveTheme}
+                    disabled={!newThemeName.trim() || creating}
+                    className="w-full"
+                  >
+                    {editingTheme ? (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        {creating ? "Updating..." : "Update Theme"}
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        {creating ? "Creating..." : "Create Theme"}
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Right: Preview */}
+                <div className="order-first md:order-last">
+                  <ThemePreview />
+                </div>
+              </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Left: Form */}
-              <div className="space-y-4">
-                <div>
-                  <Label>Theme Name</Label>
-                  <Input
-                    value={newThemeName}
-                    onChange={(e) => setNewThemeName(e.target.value)}
-                    placeholder="e.g., Ocean Blue"
-                  />
-                </div>
+            {/* 🎨 Existing Themes */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <h3 className="font-semibold">Your Themes</h3>
+                {currentThemeId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onThemeSelect(null, true)}
+                  >
+                    Remove Theme
+                  </Button>
+                )}
+              </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  <LiquidGlassUpload
-                    label="Profile"
-                    file={profileImage}
-                    existingUrl={editingTheme?.goal_profile_image}
-                    onChange={setProfileImage}
-                    onRemove={editingTheme ? () => handleRemoveThemeImage('goal_profile_image') : undefined}
-                  />
-                  <LiquidGlassUpload
-                    label="Card BG"
-                    file={cardImage}
-                    existingUrl={editingTheme?.card_background_image}
-                    onChange={setCardImage}
-                    onRemove={editingTheme ? () => handleRemoveThemeImage('card_background_image') : undefined}
-                  />
-                  <LiquidGlassUpload
-                    label="Page BG"
-                    file={pageImage}
-                    existingUrl={editingTheme?.page_background_image}
-                    onChange={setPageImage}
-                    onRemove={editingTheme ? () => handleRemoveThemeImage('page_background_image') : undefined}
-                  />
-                </div>
-
-                <Button
-                  onClick={handleSaveTheme}
-                  disabled={!newThemeName.trim() || creating}
-                  className="w-full"
-                >
-                  {editingTheme ? (
-                    <>
-                      <Check className="h-4 w-4 mr-2" />
-                      {creating ? "Updating..." : "Update Theme"}
-                    </>
+              <ScrollArea className="h-[60vh] md:h-[65vh] rounded-md border bg-background/40 backdrop-blur-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-3 pr-5">
+                  {loading ? (
+                    <p className="text-sm text-muted-foreground col-span-full text-center py-10">
+                      Loading themes...
+                    </p>
+                  ) : themes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground col-span-full text-center py-10">
+                      No themes yet. Create your first one!
+                    </p>
                   ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      {creating ? "Creating..." : "Create Theme"}
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* Right: Preview */}
-              <div className="order-first md:order-last">
-                <ThemePreview />
-              </div>
-            </div>
-          </div>
-
-          {/* 🎨 Existing Themes */}
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <h3 className="font-semibold">Your Themes</h3>
-              {currentThemeId && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onThemeSelect(null, true)}
-                >
-                  Remove Theme
-                </Button>
-              )}
-            </div>
-
-            <ScrollArea className="h-[300px] md:h-[400px]">
-              <div className="space-y-2 pr-4">
-                {loading ? (
-                  <p className="text-sm text-muted-foreground">
-                    Loading themes...
-                  </p>
-                ) : themes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No themes yet. Create your first one!
-                  </p>
-                ) : (
-                  themes.map((theme) => (
-                    <Card
-                      key={theme.id}
-                      className={`p-3 cursor-pointer transition-all hover:shadow-md ${
-                        currentThemeId === theme.id
-                          ? "ring-2 ring-primary"
-                          : ""
-                      }`}
-                      onClick={() => onThemeSelect(theme.id)}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm">
+                    themes.map((theme) => (
+                      <Card
+                        key={theme.id}
+                        onClick={() => onThemeSelect(theme.id)}
+                        className={`group relative overflow-hidden cursor-pointer rounded-xl border bg-card/60 backdrop-blur-lg shadow-sm transition-all duration-300 hover:shadow-lg hover:scale-[1.02] ${currentThemeId === theme.id
+                            ? "ring-2 ring-primary shadow-primary/20"
+                            : ""
+                          }`}
+                      >
+                        {/* Top bar with name + actions */}
+                        <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10">
+                          <div className="flex items-center gap-1.5 bg-background/70 backdrop-blur-sm px-2 py-0.5 rounded-md text-xs font-medium text-foreground">
                             {theme.name}
-                            {currentThemeId === theme.id && (
-                              <span className="ml-2 text-xs text-primary">• Selected</span>
+                            {theme.is_public && (
+                              <Globe className="h-3.5 w-3.5 text-blue-500" />
                             )}
-                          </h4>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(theme.created_at).toLocaleDateString()}
-                          </p>
+                          </div>
+                          {currentThemeId === theme.id && (
+                            <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                              Active
+                            </span>
+                          )}
                         </div>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditTheme(theme);
-                            }}
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
-                          {currentThemeId !== theme.id && (
+
+                        {/* Image grid preview */}
+                        <div className="grid grid-cols-3 gap-1.5 p-3 mt-6">
+                          {[
+                            { key: "goal_profile_image", label: "Profile" },
+                            { key: "card_background_image", label: "Card" },
+                            { key: "page_background_image", label: "Page" },
+                          ].map(({ key, label }) => (
+                            <div
+                              key={key}
+                              className="aspect-square overflow-hidden rounded-md border bg-muted relative"
+                            >
+                              {theme[key as keyof typeof theme] ? (
+                                <img
+                                  src={theme[key as keyof typeof theme] as string}
+                                  alt={label}
+                                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">
+                                  {label}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Edit/Delete buttons */}
+                        {userId == theme.user_id && (
+                          <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                deleteTheme(theme.id);
+                                handleEditTheme(theme);
                               }}
+                              className="h-7 w-7 p-0"
                             >
-                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                              <Edit2 className="h-3.5 w-3.5" />
                             </Button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {[
-                          { key: "goal_profile_image", label: "Profile" },
-                          { key: "card_background_image", label: "Card" },
-                          { key: "page_background_image", label: "Page" },
-                        ].map(({ key, label }) => (
-                          <div
-                            key={key}
-                            className="aspect-square rounded-md bg-muted overflow-hidden border"
-                          >
-                            {theme[key as keyof typeof theme] ? (
-                              <img
-                                src={theme[key as keyof typeof theme] as string}
-                                alt={label}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">
-                                {label}
-                              </div>
+                            {currentThemeId !== theme.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteTheme(theme.id);
+                                }}
+                                className="h-7 w-7 p-0 text-destructive"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
                             )}
                           </div>
-                        ))}
-                      </div>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-          </div>
+                        )}
+                      </Card>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+
+            </div>
           </div>
         </ScrollArea>
       </DialogContent>

@@ -16,8 +16,7 @@ export const useGoalThemes = (userId?: string) => {
       const { data, error } = await supabase
         .from('goal_themes')
         .select('*')
-        .eq('user_id', userId)
-        .order('is_default', { ascending: false })
+        .or('is_public.eq.true,user_id.eq.'+userId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

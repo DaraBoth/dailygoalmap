@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS public.goal_themes (
   goal_profile_image TEXT,
   card_background_image TEXT,
   page_background_image TEXT,
-  is_default BOOLEAN DEFAULT false,
+  is_public BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );

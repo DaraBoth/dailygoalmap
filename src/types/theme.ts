@@ -5,7 +5,7 @@ export interface GoalTheme {
   goal_profile_image?: string;
   card_background_image?: string;
   page_background_image?: string;
-  is_default: boolean;
+  is_public: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -15,5 +15,5 @@ export interface CreateThemePayload {
   goal_profile_image?: string;
   card_background_image?: string;
   page_background_image?: string;
-  is_default?: boolean;
+  is_public?: boolean;
 }

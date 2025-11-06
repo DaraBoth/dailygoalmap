@@ -64,7 +64,6 @@ export interface Goal {
     created_at?: string
     goal_profile_image?: string
     id?: string
-    is_default?: boolean
     name?: string
     page_background_image?: string
     updated_at?: string

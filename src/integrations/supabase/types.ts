@@ -92,7 +92,7 @@ export type Database = {
           created_at: string | null
           goal_profile_image: string | null
           id: string
-          is_default: boolean | null
+          is_public: boolean | null
           name: string
           page_background_image: string | null
           updated_at: string | null
@@ -103,7 +103,7 @@ export type Database = {
           created_at?: string | null
           goal_profile_image?: string | null
           id?: string
-          is_default?: boolean | null
+          is_public?: boolean | null
           name: string
           page_background_image?: string | null
           updated_at?: string | null
@@ -114,7 +114,7 @@ export type Database = {
           created_at?: string | null
           goal_profile_image?: string | null
           id?: string
-          is_default?: boolean | null
+          is_public?: boolean | null
           name?: string
           page_background_image?: string | null
           updated_at?: string | null
