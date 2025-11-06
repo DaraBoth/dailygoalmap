@@ -285,6 +285,7 @@
 
   div[role="menu"] div[role="menuitem"] {
     @apply liquid-glass;
+    cursor: pointer;
     margin-top: 5px;
     margin-bottom: 5px;
   }
