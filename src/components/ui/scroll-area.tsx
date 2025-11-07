@@ -13,7 +13,7 @@ const ScrollArea = React.forwardRef<
     {...props}
   >
     <ScrollAreaPrimitive.Viewport 
-      className="h-full w-full rounded-[inherit] pb-6" // Add padding-bottom
+      className="h-full w-full rounded-[inherit] pb-2" // Add padding-bottom
     >
       {children}
     </ScrollAreaPrimitive.Viewport>

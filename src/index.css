@@ -4,9 +4,9 @@
 
 @layer base {
   :root {
-    --background: 0 0% 99%;
+    --background: 0 15% 20%;
     --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
+    --card: 0 0% 50%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
@@ -32,7 +32,7 @@
     --info-foreground: 355.7 100% 97.3%;
     --card-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.05);
     --sidebar-width: 280px;
-        /* David UI Liquid Glass Theme */
+    /* David UI Liquid Glass Theme */
     --liquid-glass-bg-light: rgba(255, 255, 255, 0.5);
     --liquid-glass-bg-dark: rgba(0, 0, 0, 0.2);
     --liquid-glass-border-light: rgba(255, 255, 255, 0.3);
@@ -80,7 +80,7 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig"1, "calt"1;
   }
-  
+
 }
 
 @layer utilities {
@@ -175,27 +175,33 @@
     -webkit-backdrop-filter: blur(16px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.6),
-                0 0 12px rgba(0, 0, 0, 0.1),
-                0 4px 16px rgba(0, 0, 0, 0.1);
+      0 0 12px rgba(0, 0, 0, 0.1),
+      0 4px 16px rgba(0, 0, 0, 0.1);
+    filter: drop-shadow(-8px -10px 46px #0000005f);
+    backdrop-filter: brightness(1.1) blur(2px) url(#displacementFilter);
   }
 
   .dark .liquid-glass {
     background: rgba(0, 0, 0, 0.25);
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.4),
-                0 0 12px rgba(0, 0, 0, 0.3),
-                0 4px 16px rgba(0, 0, 0, 0.2);
+      0 0 12px rgba(0, 0, 0, 0.3),
+      0 4px 16px rgba(0, 0, 0, 0.2);
   }
 
   .liquid-glass-card {
     @apply liquid-glass rounded-2xl;
     transition: all 0.3s ease;
+    backdrop-filter: brightness(1.1) blur(2px) url(#displacementFilter);
   }
 
   .liquid-glass-card:hover {
-    box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.7),
-                0 0 20px rgba(0, 0, 0, 0.15),
-                0 6px 20px rgba(0, 0, 0, 0.15);
+      box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.6),
+      0 0 12px rgba(0, 0, 0, 0.1),
+      0 4px 16px rgba(0, 0, 0, 0.1);
+    /* box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.7),
+      0 0 20px rgba(0, 0, 0, 0.15),
+      0 6px 20px rgba(0, 0, 0, 0.15); */
   }
 
   .liquid-glass-container {
@@ -210,8 +216,8 @@
   .liquid-glass-button:hover {
     background: rgba(255, 255, 255, 0.25);
     box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.75),
-                0 0 15px rgba(0, 0, 0, 0.2),
-                0 5px 18px rgba(0, 0, 0, 0.15);
+      0 0 15px rgba(0, 0, 0, 0.2),
+      0 5px 18px rgba(0, 0, 0, 0.15);
   }
 
   .dark .liquid-glass-button:hover {
@@ -232,8 +238,8 @@
     outline: none;
     background: rgba(255, 255, 255, 0.2);
     box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.75),
-                0 0 20px rgba(59, 130, 246, 0.4),
-                0 4px 16px rgba(0, 0, 0, 0.2);
+      0 0 20px rgba(59, 130, 246, 0.4),
+      0 4px 16px rgba(0, 0, 0, 0.2);
   }
 
   .dark .liquid-glass-input:focus {
@@ -260,22 +266,25 @@
     border-radius: 0 !important;
   }
 
-    /* Make sure the Radix ScrollArea viewport has the correct scroll behavior */
+  /* Make sure the Radix ScrollArea viewport has the correct scroll behavior */
   [data-radix-scroll-area-viewport] {
     height: 100%;
     width: 100%;
     overflow-y: auto;
     overflow-x: hidden;
-    -webkit-overflow-scrolling: touch; /* smooth touch scrolling on iOS */
-    overscroll-behavior: contain; /* prevent scroll chaining to the page */
-    touch-action: pan-y; /* allow vertical pan */
+    -webkit-overflow-scrolling: touch;
+    /* smooth touch scrolling on iOS */
+    overscroll-behavior: contain;
+    /* prevent scroll chaining to the page */
+    touch-action: pan-y;
+    /* allow vertical pan */
   }
 
   /* If you rely on a custom ScrollArea implementation, also ensure the root has height 100% */
   [data-radix-scroll-area] {
     height: 100%;
   }
- 
+
 }
 
 
@@ -439,14 +448,76 @@ input[type="time"] {
 
 .hide-scrollbar::-webkit-scrollbar {
   display: none !important;
-  width: 0 !important; /* Or set to a very small value like 0px */
-  height: 0 !important; /* For horizontal scrollbars */
+  width: 0 !important;
+  /* Or set to a very small value like 0px */
+  height: 0 !important;
+  /* For horizontal scrollbars */
 }
 
 .hide-scrollbar {
-  -ms-overflow-style: none !important; /* IE and Edge */
-  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important;
+  /* IE and Edge */
+  scrollbar-width: none !important;
+  /* Firefox */
 }
 
-  /* Liquid Glass animation styles handled by liquid-glass-react library */
+/* Liquid Glass animation styles handled by liquid-glass-react library */
+.liquid-glass-switch {
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.25) 0%,
+      rgba(255, 255, 255, 0.05) 100%);
+  backdrop-filter: blur(20px) saturate(160%);
+  box-shadow:
+    inset 0 0 25px rgba(0, 0, 0, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  animation: liquidFlow 3s ease-in-out infinite alternate;
+  pointer-events: none;
+}
 
+.dark .liquid-glass-switch {
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.25) 0%,
+      rgba(255, 255, 255, 0.05) 100%);
+  backdrop-filter: blur(25px) saturate(180%);
+  box-shadow:
+    inset 0 0 30px rgba(255, 255, 255, 0.15),
+    0 4px 20px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.liquid-glass-switch::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  /* border-radius: 1rem; */
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      rgba(255, 255, 255, 0.05) 100%);
+  backdrop-filter: blur(15px) saturate(200%);
+  box-shadow:
+    inset 0 0 30px rgba(255, 255, 255, 0.25),
+    0 0 15px rgba(255, 255, 255, 0.2);
+  animation: liquidMove 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes liquidMove {
+  0% {
+    background-position: 0% 0%;
+  }
+
+  100% {
+    background-position: 100% 100%;
+  }
+}
+
+/* Base liquid-glass animation */
+@keyframes liquidFlow {
+  0% {
+    background-position: 0% 0%;
+  }
+
+  100% {
+    background-position: 100% 100%;
+  }
+}

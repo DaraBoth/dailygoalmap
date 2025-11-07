@@ -130,7 +130,7 @@ const TaskSidebar = ({
 
       {tasksForDate.length > 0 && renderNavButtons()}
 
-      <ScrollArea className="flex-1 p-2 lg:p-4 z-0">
+      <ScrollArea className="flex-1 p-2 lg:p-4 z-0 ">
         <LayoutGroup>
           <AnimatePresence mode="popLayout">
             {tasksForDate.length > 0 ? (
@@ -239,10 +239,10 @@ const TaskSidebar = ({
                 <div className="w-16 h-16 mb-4 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
                   <CalendarIcon className="h-8 w-8 text-blue-500 dark:text-blue-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">
+                <h3 className="text-lg font-medium text-accent-foreground">
                   No tasks for this day
                 </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                <p className="text-sm text-secondary-foreground mt-2">
                   Select another date or generate new tasks
                 </p>
               </motion.div>

@@ -72,19 +72,19 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   };
   if (!selectedTask) {
     return (
-      <div className="w-full h-full flex flex-col liquid-glass-container overflow-hidden rounded-l-3xl">
+      <div className="w-full h-full flex flex-col 78 overflow-hidden rounded-l-3xl">
         <div className="p-4 lg:p-6 border-b border-white/20 liquid-glass">
           <h2 className="text-lg font-semibold text-foreground">Task Details</h2>
-          <p className="text-sm text-muted-foreground mt-1">Select a task to view details</p>
+          <p className="text-sm text-foreground mt-1">Select a task to view details</p>
         </div>
 
-        <div className="flex-1 flex items-center justify-center p-6">
+        <div className="flex-1 flex items-center  justify-center p-6 liquid-glass">
           <div className="text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full liquid-glass flex items-center justify-center">
               <Calendar className="h-8 w-8 text-primary" />
             </div>
             <h3 className="text-lg font-medium text-foreground mb-2">No Task Selected</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-foreground">
               Click on a task in the calendar to view its details
             </p>
           </div>

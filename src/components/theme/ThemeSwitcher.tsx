@@ -34,8 +34,8 @@ export const ThemeSegmentSwitch = () => {
 
     return (
         <div
-            className="relative flex rounded-lg overflow-hidden"
-            style={{ width: "270px", height: "60px" }}
+            className="relative flex rounded-lg overflow-hidden mt-1 liquid-glass-button"
+            style={{ width: "100%", height: "35px" }}
         >
 
             {/* 🟦 Animated “liquid glass” layer */}
@@ -43,7 +43,7 @@ export const ThemeSegmentSwitch = () => {
                 layout
                 animate={{ left: leftPosition }}
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                className="absolute top-0 bottom-0 w-1/3 liquid-glass-switch  pointer-events-none"
+                className="absolute top-0 bottom-0 w-1/3 liquid-glass-switch pointer-events-none"
             />
 
             {/* Buttons */}
@@ -59,13 +59,13 @@ export const ThemeSegmentSwitch = () => {
                             e.stopPropagation();
                             setTheme(mode.id as any);
                         }}
-                        className={`relative z-10 flex flex-col items-center justify-center flex-1 
-              transition-all duration-300 ease-out text-foreground 
+                        className={`relative z-10 p-2 flex flex-col items-center justify-center flex-1 
+              transition-all duration-300 ease-out text-foreground h-8
               ${isActive ? "" : ""}
             `}
                     >
                         {mode.icon}
-                        <span className="text-xs mt-1">{mode.label}</span>
+                        {/* <span className="text-xs font-semibold  mt-1">{mode.label}</span> */}
                     </button>
                 );
             })}

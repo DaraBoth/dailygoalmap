@@ -94,11 +94,11 @@ const CalendarDay = ({
         <>
           {/* Desktop view with fixed height */}
           <div className="flex-1 min-h-0 hidden sm:block">
-            <ScrollArea className="h-full max-h-[50px] sm:max-h-[55px] md:max-h-[65px] lg:max-h-[75px] scrollbar-thin">
-              <div className="space-y-0.5 pr-1 min-h-[50px] sm:min-h-[55px] md:min-h-[65px] lg:min-h-[75px]">
+            <ScrollArea className="h-full max-h-[50px] sm:max-h-[55px] md:max-h-[65px] lg:max-h-[75px] scrollbar-thin" style={{paddingBottom:"0"}}>
+              <div className="space-y-0.5 pr-1 min-h-[50px] sm:min-h-[55px] md:min-h-[30px] lg:min-h-[30px]" style={{paddingBottom:"0"}}>
                 {dayTasks.length > 0 ? (
                   <>
-                    {dayTasks.slice(0, 2).map((task, taskIndex) => {
+                    {dayTasks.slice(0, 4).map((task, taskIndex) => {
                       const isRange = task.start_date && task.end_date && new Date(task.start_date).toDateString() !== new Date(task.end_date).toDateString();
                       const isFirstDay = isRange && isSameDay(new Date(task.start_date!), date);
                       const isLastDay = isRange && isSameDay(new Date(task.end_date!), date);
@@ -111,11 +111,12 @@ const CalendarDay = ({
                         <motion.div
                           key={task.id}
                           className={`
-                            text-xs py-0.5 px-1.5 liquid-glass leading-tight ${rounded}
-                            ${getTaskColor(date)} truncate shadow-sm
+                            text-xs py-0.5 px-1.5 leading-tight ${rounded}
+                            ${getTaskColor(date)} truncate shadow-sm text-white dark:text-foreground
                             ${task.completed ? 'opacity-70' : ''}
-                            hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer
+                            hover:shadow-md hover:scale-105 p-0 transition-all duration-200 cursor-pointer
                           `}
+                          style={{paddingBottom:"0"}}
                           title={task.title || task.description}
                           initial={{ x: -5, opacity: 0 }}
                           animate={{ x: 0, opacity: 1 }}
@@ -131,9 +132,9 @@ const CalendarDay = ({
                         </motion.div>
                       );
                     })}
-                    {dayTasks.length > 2 && (
-                      <div className="text-[9px] text-center text-primary liquid-glass rounded-full py-0.5 mt-0.5 font-medium">
-                        +{dayTasks.length - 2}
+                    {dayTasks.length > 4 && (
+                      <div className="text-[9px] text-center text-primary liquid-glass rounded-full py-0.5 mt-0.5 font-medium" style={{paddingBottom:"0"}}>
+                        +{dayTasks.length - 4}
                       </div>
                     )}
                   </>
