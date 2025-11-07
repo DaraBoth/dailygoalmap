@@ -46,7 +46,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   
   return (
     <nav
-      className=" glass-style sticky top-0 z-50 backdrop-blur-xl border-b border-border/50 shadow-lg supports-[backdrop-filter]:bg-background/60"
+      className="liquid-glass sticky top-0 z-50 border-b border-border/50"
       role="navigation"
       aria-label="Dashboard navigation"
     >
@@ -137,9 +137,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       </div>
 
       {/* Mobile Header */}
-      <div className="lg:hidden ">
+      <div className="lg:hidden">
         {/* Status Bar Safe Area */}
-        <div className=" glass-style pt-safe-top">
+        <div className="liquid-glass pt-safe-top">
           {/* Mobile Header Bar */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">
             {/* Left: Menu Toggle */}

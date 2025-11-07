@@ -178,7 +178,7 @@
       0 0 12px rgba(0, 0, 0, 0.1),
       0 4px 16px rgba(0, 0, 0, 0.1);
     filter: drop-shadow(-8px -10px 46px #0000005f);
-    backdrop-filter: brightness(1.1) blur(2px) url(#displacementFilter);
+    backdrop-filter: brightness(1.1) blur(2px) url(#liquidGlass);
   }
 
   .dark .liquid-glass {
@@ -192,7 +192,7 @@
   .liquid-glass-card {
     @apply liquid-glass rounded-2xl;
     transition: all 0.3s ease;
-    backdrop-filter: brightness(1.1) blur(2px) url(#displacementFilter);
+    backdrop-filter: brightness(1.1) blur(2px) url(#liquidGlass);
   }
 
   .liquid-glass-card:hover {
@@ -206,11 +206,13 @@
 
   .liquid-glass-container {
     @apply liquid-glass rounded-2xl;
+    backdrop-filter: brightness(1.1) blur(2px) url(#liquidGlass);
   }
 
   .liquid-glass-button {
     @apply liquid-glass rounded-lg;
     transition: all 0.3s ease;
+    backdrop-filter: brightness(1.1) blur(2px) url(#liquidGlass);
   }
 
   .liquid-glass-button:hover {
@@ -232,6 +234,7 @@
     @apply liquid-glass rounded-xl;
     padding: 0.75rem 1rem;
     transition: all 0.3s ease;
+    backdrop-filter: brightness(1.1) blur(2px) url(#liquidGlass);
   }
 
   .liquid-glass-input:focus {
