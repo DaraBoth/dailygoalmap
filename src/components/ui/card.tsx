@@ -1,22 +1,18 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import LiquidGlass from "liquid-glass-react"
 
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <LiquidGlass
-    displacementScale={100}
-    blurAmount={0.08}
-    saturation={180}
-    elasticity={0.2}
-    mode="prominent"
-    cornerRadius={16}
-    className={cn("text-card-foreground", className)}
-  >
-    <div ref={ref} {...props} />
-  </LiquidGlass>
+  <div
+    ref={ref}
+    className={cn(
+      "liquid-glass-card text-card-foreground shadow-lg",
+      className
+    )}
+    {...props}
+  />
 ))
 Card.displayName = "Card"
 

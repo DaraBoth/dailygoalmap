@@ -170,19 +170,32 @@
 
   /* Basic glass morphism utilities for simple elements */
   .liquid-glass {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.6),
+                0 0 12px rgba(0, 0, 0, 0.1),
+                0 4px 16px rgba(0, 0, 0, 0.1);
   }
 
   .dark .liquid-glass {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.4),
+                0 0 12px rgba(0, 0, 0, 0.3),
+                0 4px 16px rgba(0, 0, 0, 0.2);
   }
 
   .liquid-glass-card {
     @apply liquid-glass rounded-2xl;
+    transition: all 0.3s ease;
+  }
+
+  .liquid-glass-card:hover {
+    box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.7),
+                0 0 20px rgba(0, 0, 0, 0.15),
+                0 6px 20px rgba(0, 0, 0, 0.15);
   }
 
   .liquid-glass-container {
@@ -195,10 +208,35 @@
   }
 
   .liquid-glass-button:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.25);
+    box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.75),
+                0 0 15px rgba(0, 0, 0, 0.2),
+                0 5px 18px rgba(0, 0, 0, 0.15);
   }
 
   .dark .liquid-glass-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .liquid-glass-button:active {
+    transform: scale(0.98);
+  }
+
+  .liquid-glass-input {
+    @apply liquid-glass rounded-xl;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+  }
+
+  .liquid-glass-input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.75),
+                0 0 20px rgba(59, 130, 246, 0.4),
+                0 4px 16px rgba(0, 0, 0, 0.2);
+  }
+
+  .dark .liquid-glass-input:focus {
     background: rgba(255, 255, 255, 0.15);
   }
 
@@ -211,11 +249,11 @@
   }
 
   .liquid-glass-no-hover:hover {
-    background: rgba(255, 255, 255, 0.1) !important;
+    background: rgba(255, 255, 255, 0.15) !important;
   }
 
   .dark .liquid-glass-no-hover:hover {
-    background: rgba(0, 0, 0, 0.2) !important;
+    background: rgba(0, 0, 0, 0.25) !important;
   }
 
   .no-border-radius {
