@@ -54,9 +54,8 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
         <div className="flex items-center justify-between max-w-[2000px] mx-auto gap-2">
           <div className="flex items-center space-x-2 flex-1 min-w-0 ">
             <button
-            
-              className="p-2 liquid-glass-button w-8 h-8 sm:w-9 sm:h-9 backdrop-blur-sm  transition-all duration-200 rounded-full"
-              style={{ borderRadius: "100%"}}
+              className="p-2 liquid-glass-button w-8 h-8 sm:w-9 sm:h-9 backdrop-blur-sm  transition-all duration-200 rounded-xl"
+              // style={{ borderRadius: "100%"}}
               onClick={handleGoBack}
             >
               <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
