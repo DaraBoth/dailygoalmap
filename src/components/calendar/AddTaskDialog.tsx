@@ -1,14 +1,26 @@
-
 import React, { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import moment from "moment";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { MobileDatePicker } from "@/components/ui/mobile-date-picker";
 import { MobileTimePicker } from "@/components/ui/mobile-time-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CalendarClock, Clock, Calendar, X, Check, AlertCircle, Loader2, ChevronDown, ChevronUp, ArrowDown } from "lucide-react";
-import { format, differenceInCalendarDays } from "date-fns";
+import {
+  CalendarClock,
+  Clock,
+  Calendar,
+  X,
+  Check,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -33,18 +45,30 @@ interface AddTaskDialogProps {
   defaultDate?: Date;
 }
 
-const AddTaskDialog = ({ isOpen, onClose, onAddTask, defaultDate = new Date() }: AddTaskDialogProps) => {
+const AddTaskDialog = ({
+  isOpen,
+  onClose,
+  onAddTask,
+  defaultDate = new Date(),
+}: AddTaskDialogProps) => {
   const [title, setTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
-  const [selectedDate, setSelectedDate] = useState<Date>(defaultDate); // kept internal for anchoring but hidden in UI
-  const [taskTime, setTaskTime] = useState(format(new Date(), "HH:mm"));
+  const [selectedDate, setSelectedDate] = useState<Date>(defaultDate);
+
   const [isPriority, setIsPriority] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [startDate, setStartDate] = useState<Date>(defaultDate);
   const [endDate, setEndDate] = useState<Date>(defaultDate);
-  const [dailyStart, setDailyStart] = useState<string>(taskTime);
-  const [dailyEnd, setDailyEnd] = useState<string>(format(new Date(Date.now() + 60 * 60 * 1000), "HH:mm"));
+
+  // daily start/end: default to now / +1 hour (HH:mm)
+  const now = moment();
+  const defaultDailyStart = now.format("HH:mm");
+  const defaultDailyEnd = now.add(1, "hour").format("HH:mm");
+
+  const [dailyStart, setDailyStart] = useState<string>(defaultDailyStart);
+  const [dailyEnd, setDailyEnd] = useState<string>(defaultDailyEnd);
+
   const [completed, setCompleted] = useState<boolean>(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isScrollable, setIsScrollable] = useState(false);
@@ -65,7 +89,9 @@ const AddTaskDialog = ({ isOpen, onClose, onAddTask, defaultDate = new Date() }:
     const checkScrollable = () => {
       if (contentRef.current && scrollAreaRef.current) {
         const content = contentRef.current;
-        const scrollArea = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        const scrollArea = scrollAreaRef.current.querySelector(
+          '[data-radix-scroll-area-viewport]'
+        ) as HTMLElement | null;
         if (scrollArea) {
           const isContentScrollable = content.scrollHeight > scrollArea.clientHeight;
           setIsScrollable(isContentScrollable);
@@ -74,49 +100,64 @@ const AddTaskDialog = ({ isOpen, onClose, onAddTask, defaultDate = new Date() }:
     };
 
     if (isOpen) {
-      // Check after dialog opens and content renders
       const timer = setTimeout(checkScrollable, 100);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, title, taskDescription, startDate, endDate]);
+  }, [isOpen, title, taskDescription, startDate, endDate, dailyStart, dailyEnd]);
+
+  const clampTimes = (s: string, e: string) => {
+    // Ensure format HH:mm
+    const start = moment(s, "HH:mm");
+    const end = moment(e, "HH:mm");
+    if (end.isBefore(start)) {
+      // If end is before start, set end = start (the rule)
+      return { s: start.format("HH:mm"), e: start.format("HH:mm") };
+    }
+    return { s: start.format("HH:mm"), e: end.format("HH:mm") };
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (title.trim()) {
-      setIsSubmitting(true);
-      try {
-        const rawDesc = taskDescription.trim();
-        const description = rawDesc ? (isPriority ? `🔴 ${rawDesc}` : rawDesc) : '';
-        // Determine range automatically: multi-date if start and end differ
-        const isMulti = startDate.toDateString() !== endDate.toDateString();
-        const range = {
-          title: title || undefined,
-          start_date: startDate,
-          end_date: endDate,
-          daily_start_time: isMulti ? dailyStart : taskTime,
-          daily_end_time: isMulti ? dailyEnd : taskTime,
-          completed,
-        };
-        await onAddTask(description, selectedDate, taskTime, range);
-        resetForm();
-        onClose();
-      } catch (error) {
-        console.error("Failed to add task:", error);
-      } finally {
-        setIsSubmitting(false);
-      }
+    if (!title.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      const rawDesc = taskDescription.trim();
+      const description = rawDesc ? (isPriority ? `🔴 ${rawDesc}` : rawDesc) : "";
+
+      const { s: finalStart, e: finalEnd } = clampTimes(dailyStart, dailyEnd);
+
+      const range = {
+        title: title || undefined,
+        start_date: startDate,
+        end_date: endDate,
+        daily_start_time: finalStart,
+        daily_end_time: finalEnd,
+        completed,
+      };
+
+      // You asked to remove taskTime — pass `finalStart` for the time arg.
+      await onAddTask(description, selectedDate, finalStart, range);
+
+      resetForm();
+      onClose();
+    } catch (error) {
+      console.error("Failed to add task:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const resetForm = () => {
+    const nowReset = moment();
     setTitle("");
     setTaskDescription("");
     setIsPriority(false);
     setCompleted(false);
     setStartDate(defaultDate);
     setEndDate(defaultDate);
-    setDailyStart(taskTime);
-    setDailyEnd(format(new Date(Date.now() + 60 * 60 * 1000), "HH:mm"));
+    setDailyStart(nowReset.format("HH:mm"));
+    setDailyEnd(nowReset.add(1, "hour").format("HH:mm"));
   };
 
   return (
@@ -145,7 +186,11 @@ const AddTaskDialog = ({ isOpen, onClose, onAddTask, defaultDate = new Date() }:
 
           {/* Scrollable content area with enhanced UX */}
           <div className="flex-1 overflow-y-auto">
-            <div ref={scrollAreaRef} className="px-4" style={{ minHeight: 'calc(100% + 8rem)', paddingBottom: 'min(0.1rem, max(20vh, 6rem))' }}>
+            <div
+              ref={scrollAreaRef}
+              className="px-4"
+              style={{ minHeight: "calc(100% + 8rem)", paddingBottom: "min(0.1rem, max(20vh, 6rem))" }}
+            >
               <div ref={contentRef} className="py-4 space-y-4">
                 <form id="add-task-form" onSubmit={handleSubmit} className="space-y-2.5 sm:space-y-4 md:space-y-6">
                   <div className="space-y-3 sm:space-y-5">
@@ -164,6 +209,7 @@ const AddTaskDialog = ({ isOpen, onClose, onAddTask, defaultDate = new Date() }:
                         className="dark:bg-slate-800/50 border-slate-700 dark:text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20 transition-all h-8 sm:h-10 text-sm"
                       />
                     </div>
+
                     {/* Description */}
                     <div className="space-y-1.5 sm:space-y-2">
                       <Label htmlFor="task-description" className="text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-1.5 sm:gap-2">
@@ -178,43 +224,97 @@ const AddTaskDialog = ({ isOpen, onClose, onAddTask, defaultDate = new Date() }:
                         className="dark:bg-slate-800/50 border-slate-700 dark:text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20 transition-all"
                       />
                     </div>
+
                     {/* Date and Time Pickers */}
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2"><Calendar className="h-3 w-3" /> Start Date<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
-                          <MobileDatePicker date={startDate} minDate={undefined} maxDate={endDate} setDate={(d) => { if (!d) return; const next = d; setStartDate(next); if (next > endDate) setEndDate(next); setSelectedDate(next); }} className="w-full dark:bg-slate-800/50 border-slate-700 dark:text-white" />
+                          <MobileDatePicker
+                            date={startDate}
+                            minDate={undefined}
+                            maxDate={endDate}
+                            setDate={(d) => {
+                              if (!d) return;
+                              const next = d;
+                              setStartDate(next);
+                              if (moment(next).isAfter(endDate)) setEndDate(next);
+                              setSelectedDate(next);
+                            }}
+                            className="w-full dark:bg-slate-800/50 border-slate-700 dark:text-white"
+                          />
                         </div>
+
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2"><Calendar className="h-3 w-3" /> End Date<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
-                          <MobileDatePicker date={endDate} minDate={startDate} maxDate={undefined} setDate={(d) => { if (!d) return; setEndDate(d < startDate ? startDate : d); }} className="w-full dark:bg-slate-800/50 border-slate-700 dark:text-white" />
+                          <MobileDatePicker
+                            date={endDate}
+                            minDate={startDate}
+                            maxDate={undefined}
+                            setDate={(d) => {
+                              if (!d) return;
+                              setEndDate(moment(d).isBefore(startDate) ? startDate : d);
+                            }}
+                            className="w-full dark:bg-slate-800/50 border-slate-700 dark:text-white"
+                          />
                         </div>
                       </div>
+
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2"><Clock className="h-3 w-3" /> Daily Start<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
                           <MobileTimePicker
                             value={dailyStart}
-                            onChange={(value) => { setDailyStart(value || taskTime); setTaskTime(value || taskTime); }}
-                            onBlur={(e) => { if (!e.currentTarget.value) { setDailyStart(taskTime); } }}
+                            onChange={(value) => {
+                              const newStart = value || dailyStart;
+                              // If start > end, set end = start (enforce rule)
+                              if (moment(newStart, "HH:mm").isAfter(moment(dailyEnd, "HH:mm"))) {
+                                setDailyStart(moment(newStart, "HH:mm").format("HH:mm"));
+                                setDailyEnd(moment(newStart, "HH:mm").format("HH:mm"));
+                              } else {
+                                setDailyStart(moment(newStart, "HH:mm").format("HH:mm"));
+                              }
+                            }}
+                            onBlur={(e) => {
+                              if (!e.currentTarget.value) {
+                                setDailyStart(defaultDailyStart);
+                              }
+                            }}
                             className="dark:bg-slate-800/50 border-slate-700 dark:text-white"
                           />
                         </div>
+
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2"><Clock className="h-3 w-3" /> Daily End<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
                           <MobileTimePicker
                             value={dailyEnd}
-                            onChange={(value) => setDailyEnd(value || dailyStart)}
-                            onBlur={(e) => !e.currentTarget.value && setDailyEnd(dailyStart)}
+                            onChange={(value) => {
+                              const newEnd = value || dailyEnd;
+                              // If end < start, set start = end (enforce rule)
+                              if (moment(newEnd, "HH:mm").isBefore(moment(dailyStart, "HH:mm"))) {
+                                setDailyStart(moment(newEnd, "HH:mm").format("HH:mm"));
+                                setDailyEnd(moment(newEnd, "HH:mm").format("HH:mm"));
+                              } else {
+                                setDailyEnd(moment(newEnd, "HH:mm").format("HH:mm"));
+                              }
+                            }}
+                            onBlur={(e) => {
+                              if (!e.currentTarget.value) setDailyEnd(dailyStart);
+                            }}
                             className="dark:bg-slate-800/50 border-slate-700 dark:text-white"
                           />
                         </div>
                       </div>
+
                       <div className="text-xs text-gray-800 dark:text-gray-400">
-                        {startDate && endDate && startDate.toDateString() !== endDate.toDateString() ? `Spans ${Math.max(0, differenceInCalendarDays(endDate, startDate)) + 1} days` : 'Single day task'}
+                        {/* Keep day-span info the same */}
+                        {moment(startDate).isSame(endDate, "day")
+                          ? "Single day task"
+                          : `Spans ${moment(endDate).diff(moment(startDate), "days") + 1} days`}
                       </div>
                     </div>
                   </div>
+
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="flex flex-row items-center justify-between gap-2 flex-wrap py-1 sm:py-2 w-full">
                     <div className="flex items-center gap-2 sm:gap-3">
                       <button type="button" onClick={() => setIsPriority(!isPriority)} className={cn("p-1.5 sm:p-2 rounded-md sm:rounded-lg border transition-all", isPriority ? "bg-red-500/20 border-red-500/50 text-red-400" : "dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-400 hover:border-blue-500/50") }>
@@ -231,6 +331,7 @@ const AddTaskDialog = ({ isOpen, onClose, onAddTask, defaultDate = new Date() }:
               </div>
             </div>
           </div>
+
           {/* Fixed button area at bottom */}
           <div className="flex-shrink-0 sticky bottom-0 z-20 p-4 border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="flex flex-col sm:flex-row gap-2 sm:gap-3">
