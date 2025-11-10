@@ -136,7 +136,7 @@ const AddTaskDialog = ({
         completed,
       };
 
-      // You asked to remove taskTime — pass `finalStart` for the time arg.
+      // remove taskTime — pass `finalStart` for the time arg.
       await onAddTask(description, selectedDate, finalStart, range);
 
       resetForm();
