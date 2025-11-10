@@ -21,10 +21,16 @@ interface NotificationListProps {
 export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction, onUnreadChanged, isOpen, isMobile }) => {
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [filter, setFilter] = useState<'all' | 'unread' | 'invites'>("all");
   const [counts, setCounts] = useState<{ all: number; unread: number; invites: number }>({ all: 0, unread: 0, invites: 0 });
+  
+  // Keep separate pagination state for each filter to prevent cross-contamination
+  const [paginationState, setPaginationState] = useState<Record<'all' | 'unread' | 'invites', { cursor?: string; hasMore: boolean }>>({
+    all: { hasMore: true },
+    unread: { hasMore: true },
+    invites: { hasMore: true }
+  });
+  
   const viewportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -46,35 +52,61 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
 
   const load = useCallback(async (reset = false) => {
     if (loading) return;
+    
+    const currentState = paginationState[filter];
+    
     if (reset) {
       setItems([]);
-      setCursor(undefined);
-      setHasMore(true);
+      setPaginationState(prev => ({
+        ...prev,
+        [filter]: { cursor: undefined, hasMore: true }
+      }));
     }
-    if (!hasMore && !reset) return;
+    
+    if (!currentState.hasMore && !reset) {
+      console.log(`No more ${filter} notifications to load`);
+      return;
+    }
+    
     setLoading(true);
     
     try {
       const pageLimit = 15;
+      const beforeCursor = reset ? undefined : currentState.cursor;
+      
+      console.log(`Loading ${filter} notifications, reset=${reset}, cursor=${beforeCursor}`);
+      
       // Use cache-first strategy for first page
       const { notifications: page, fromCache } = await fetchNotificationsWithCache({
         limit: pageLimit,
-        before: reset ? undefined : cursor,
+        before: beforeCursor,
         onlyUnread: filter === 'unread',
         onlyInvites: filter === 'invites'
       });
       
+      console.log(`Loaded ${page.length} ${filter} notifications (fromCache=${fromCache})`);
+      
       setItems((prev) => reset ? page : [...prev, ...page]);
-      // If we got less than the limit, there's no more data
-      if (page.length < pageLimit) setHasMore(false);
-      const last = page[page.length - 1];
-      if (last) setCursor(last.created_at);
+      
+      // Update pagination state for this specific filter
+      const hasMoreData = page.length >= pageLimit;
+      const lastItem = page[page.length - 1];
+      
+      setPaginationState(prev => ({
+        ...prev,
+        [filter]: {
+          cursor: lastItem?.created_at,
+          hasMore: hasMoreData
+        }
+      }));
+      
+      console.log(`${filter} hasMore=${hasMoreData}`);
     } catch (error) {
       console.error('Failed to load notifications', error);
     } finally {
       setLoading(false);
     }
-  }, [loading, hasMore, cursor, filter]);
+  }, [loading, paginationState, filter]);
 
   useEffect(() => {
     // initial load and realtime
@@ -111,9 +143,10 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
 
       const handleScroll = () => {
         const { scrollTop, scrollHeight, clientHeight } = viewport;
+        const currentState = paginationState[filter];
         // Trigger load when user scrolls near the bottom (within 100px)
-        if (scrollTop + clientHeight >= scrollHeight - 100 && !loading && hasMore) {
-          console.log('Loading more notifications...');
+        if (scrollTop + clientHeight >= scrollHeight - 100 && !loading && currentState.hasMore) {
+          console.log(`Loading more ${filter} notifications...`);
           load();
         }
       };
@@ -123,7 +156,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [load, loading, hasMore]);
+  }, [load, loading, paginationState, filter]);
 
   const handleAfterAction = () => {
     load(true);
@@ -230,7 +263,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
               Loading...
             </div>
           )}
-          {!hasMore && items.length > 0 && (
+          {!paginationState[filter].hasMore && items.length > 0 && (
             <div className="text-xs text-muted-foreground p-3 text-center liquid-glass rounded-xl">
               No more notifications
             </div>
