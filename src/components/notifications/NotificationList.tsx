@@ -55,16 +55,18 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
     setLoading(true);
     
     try {
+      const pageLimit = 15;
       // Use cache-first strategy for first page
       const { notifications: page, fromCache } = await fetchNotificationsWithCache({
-        limit: 10,
+        limit: pageLimit,
         before: reset ? undefined : cursor,
         onlyUnread: filter === 'unread',
         onlyInvites: filter === 'invites'
       });
       
       setItems((prev) => reset ? page : [...prev, ...page]);
-      if (page.length < 15) setHasMore(false);
+      // If we got less than the limit, there's no more data
+      if (page.length < pageLimit) setHasMore(false);
       const last = page[page.length - 1];
       if (last) setCursor(last.created_at);
     } catch (error) {

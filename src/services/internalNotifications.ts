@@ -71,9 +71,7 @@ export interface FetchNotificationsOptions {
   onlyInvites?: boolean;
 }
 
-// Notification cache management
-const CACHE_KEY = 'notifications_cache';
-const CACHE_TIMESTAMP_KEY = 'notifications_cache_timestamp';
+// Notification cache management - now supports separate caches per filter
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
 interface NotificationCache {
@@ -81,17 +79,26 @@ interface NotificationCache {
   timestamp: number;
 }
 
-function getCachedNotifications(): import("@/types/notification").EnrichedNotification[] | null {
+function getCacheKey(onlyUnread?: boolean, onlyInvites?: boolean): string {
+  if (onlyInvites) return 'notifications_cache_invites';
+  if (onlyUnread) return 'notifications_cache_unread';
+  return 'notifications_cache_all';
+}
+
+function getCachedNotifications(onlyUnread?: boolean, onlyInvites?: boolean): import("@/types/notification").EnrichedNotification[] | null {
   try {
-    const cached = localStorage.getItem(CACHE_KEY);
-    const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+    const cacheKey = getCacheKey(onlyUnread, onlyInvites);
+    const timestampKey = `${cacheKey}_timestamp`;
+    
+    const cached = localStorage.getItem(cacheKey);
+    const timestamp = localStorage.getItem(timestampKey);
     if (!cached || !timestamp) return null;
     
     const cacheAge = Date.now() - parseInt(timestamp);
     if (cacheAge > CACHE_DURATION) {
       // Cache expired
-      localStorage.removeItem(CACHE_KEY);
-      localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+      localStorage.removeItem(cacheKey);
+      localStorage.removeItem(timestampKey);
       return null;
     }
     
@@ -102,18 +109,24 @@ function getCachedNotifications(): import("@/types/notification").EnrichedNotifi
   }
 }
 
-function setCachedNotifications(notifications: import("@/types/notification").EnrichedNotification[]): void {
+function setCachedNotifications(notifications: import("@/types/notification").EnrichedNotification[], onlyUnread?: boolean, onlyInvites?: boolean): void {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(notifications));
-    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+    const cacheKey = getCacheKey(onlyUnread, onlyInvites);
+    const timestampKey = `${cacheKey}_timestamp`;
+    
+    localStorage.setItem(cacheKey, JSON.stringify(notifications));
+    localStorage.setItem(timestampKey, Date.now().toString());
   } catch (e) {
     console.error('Failed to cache notifications', e);
   }
 }
 
 export function clearNotificationCache(): void {
-  localStorage.removeItem(CACHE_KEY);
-  localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+  // Clear all cache variants
+  ['notifications_cache_all', 'notifications_cache_unread', 'notifications_cache_invites'].forEach(key => {
+    localStorage.removeItem(key);
+    localStorage.removeItem(`${key}_timestamp`);
+  });
 }
 
 export async function fetchNotifications(opts: FetchNotificationsOptions = {}): Promise<AppNotification[]> {
@@ -156,7 +169,7 @@ export async function fetchNotifications(opts: FetchNotificationsOptions = {}): 
 
   // Cache the enriched notifications for first page only
   if (!opts.before) {
-    setCachedNotifications(enrichedNotifications);
+    setCachedNotifications(enrichedNotifications, opts.onlyUnread, opts.onlyInvites);
   }
 
   return notifications;
@@ -172,7 +185,7 @@ export async function fetchNotificationsWithCache(opts: FetchNotificationsOption
 
   // If this is the first page and we have cache, return it immediately
   if (!opts.before) {
-    const cached = getCachedNotifications();
+    const cached = getCachedNotifications(opts.onlyUnread, opts.onlyInvites);
     if (cached && cached.length > 0) {
       const notifications: AppNotification[] = cached.map(n => ({
         id: n.id,
