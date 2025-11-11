@@ -182,7 +182,7 @@
       0 0 12px rgba(0, 0, 0, 0.1),
       0 4px 16px rgba(0, 0, 0, 0.1);
     filter: drop-shadow(-8px -10px 46px #0000005f);
-    backdrop-filter: brightness(1.1) blur(2px) url(#liquidGlass);
+    backdrop-filter: brightness(1.1) blur(2px) url(#liquidGlassEdges);
   }
 
   .dark .liquid-glass {

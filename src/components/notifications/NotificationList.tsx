@@ -245,7 +245,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
       {/* Scrollable area */}
       <ScrollArea 
       className={isMobile? `h-[100vh] max-h-[100vh] min-h-[calc(100vh-145px)]` :
-          `h-[90vh] max-h-[75vh] min-h-[200px] backdrop-blur-lg shadow-xl hide-scrollbar`
+          `h-[90vh] max-h-[75vh] min-h-[200px] shadow-xl hide-scrollbar`
         } 
         ref={viewportRef}
       >
