@@ -12,6 +12,7 @@ import { Task } from '@/components/calendar/types';
 import { Helmet } from 'react-helmet-async';
 import { GoalTheme } from '@/types/theme';
 import { useAuth } from '@/hooks/useAuth';
+import { GoalChatWidget } from '@/components/goal/GoalChatWidget';
 
 const GoalDetail: React.FC = () => {
   const { id: goalId } = useParams({ from: '/goal/$id' });
@@ -244,6 +245,9 @@ const GoalDetail: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Goal Chat Widget */}
+      <GoalChatWidget goalId={goalId} />
     </>
   );
 };
