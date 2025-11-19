@@ -1,26 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from '@/components/ui/use-toast';
 import ReactMarkdown from 'react-markdown';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
+  isStreaming?: boolean;
 }
 
 interface GoalChatWidgetProps {
   goalId: string;
+  userInfo: any;
 }
 
-const WEBHOOK_URL = 'https://n8n.tonlaysab.com/webhook/755b224a-5183-4f95-bf28-35b0519af8f3/chat';
-const MIN_MESSAGE_INTERVAL = 3000; // 3 seconds between messages
+const WEBHOOK_URL = 'https://n8n.tonlaysab.com/webhook/142e0e30-4fce-4baa-ac7e-6ead0b16a3a9/chat';
+const MIN_MESSAGE_INTERVAL = 3000;
 
-export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId }) => {
+export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -28,6 +31,10 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId }) => {
   const [lastMessageTime, setLastMessageTime] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const currentStreamBufferRef = useRef<string>('');
+  const lastChunkTimeRef = useRef<number>(0);
+  const isMobile = useIsMobile();
 
   // Load chat history from localStorage on mount
   useEffect(() => {
@@ -46,7 +53,8 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId }) => {
   useEffect(() => {
     if (messages.length > 0) {
       const storageKey = `goal_chat_${goalId}`;
-      localStorage.setItem(storageKey, JSON.stringify(messages));
+      const filteredMessages = messages.filter(m => !m.isStreaming);
+      localStorage.setItem(storageKey, JSON.stringify(filteredMessages));
     }
   }, [messages, goalId]);
 
@@ -63,6 +71,93 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId }) => {
       inputRef.current.focus();
     }
   }, [isOpen]);
+
+  const stopStreaming = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      
+      setMessages(prev => {
+        const newMessages = [...prev];
+        
+        // Remove any empty "Thinking..." messages
+        const filteredMessages = newMessages.filter(m => {
+          if (m.isStreaming && !m.content.trim()) {
+            return false; // Remove empty streaming messages
+          }
+          return true;
+        });
+        
+        // Finalize the last streaming message if it has content
+        const lastMsg = filteredMessages[filteredMessages.length - 1];
+        if (lastMsg && lastMsg.isStreaming && lastMsg.content.trim()) {
+          lastMsg.isStreaming = false;
+        }
+        
+        // Add a system message indicating the response was stopped
+        return [
+          ...filteredMessages,
+          {
+            role: 'assistant',
+            content: '_[Response stopped by user]_',
+            timestamp: Date.now(),
+            isStreaming: false,
+          }
+        ];
+      });
+      
+      setIsLoading(false);
+      currentStreamBufferRef.current = '';
+      
+      toast({
+        title: 'Stopped',
+        description: 'AI response has been stopped.',
+      });
+    }
+  };
+
+  const addNewMessageChunk = (content: string) => {
+    setMessages(prev => [
+      ...prev.filter(m => !m.isStreaming), // Remove any existing streaming messages
+      {
+        role: 'assistant',
+        content: content,
+        timestamp: Date.now(),
+        isStreaming: false,
+      },
+      {
+        role: 'assistant',
+        content: '',
+        timestamp: Date.now(),
+        isStreaming: true, // New loading message
+      }
+    ]);
+    currentStreamBufferRef.current = '';
+  };
+
+  const updateCurrentMessage = (content: string) => {
+    currentStreamBufferRef.current = content;
+    setMessages(prev => {
+      const newMessages = [...prev];
+      const lastMsg = newMessages[newMessages.length - 1];
+      if (lastMsg && lastMsg.isStreaming) {
+        lastMsg.content = content;
+      }
+      return newMessages;
+    });
+  };
+
+  const finalizeCurrentMessage = () => {
+    setMessages(prev => {
+      const newMessages = [...prev];
+      const lastMsg = newMessages[newMessages.length - 1];
+      if (lastMsg && lastMsg.isStreaming) {
+        lastMsg.isStreaming = false;
+      }
+      return newMessages.filter(m => m.content.trim() !== ''); // Remove empty messages
+    });
+    currentStreamBufferRef.current = '';
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -85,37 +180,133 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId }) => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const messageInput = inputValue.trim();
     setInputValue('');
     setIsLoading(true);
     setLastMessageTime(now);
+    lastChunkTimeRef.current = now;
+
+    // Add initial loading message
+    setMessages(prev => [
+      ...prev,
+      {
+        role: 'assistant',
+        content: '',
+        timestamp: Date.now(),
+        isStreaming: true,
+      },
+    ]);
 
     try {
+      // Create abort controller for cancellation
+      abortControllerRef.current = new AbortController();
+
       const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: userMessage.content,
+          action: 'sendMessage',
+          sessionId: `goal_chat_${goalId}_v2`,
+          chatInput: messageInput,
           goalId: goalId,
-          chatHistory: messages.slice(-10), // Send last 10 messages for context
+          userId: userInfo.id,
         }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
         throw new Error('Failed to get response from AI');
       }
 
-      const data = await response.json();
-      const assistantMessage: ChatMessage = {
-        role: 'assistant',
-        content: data.output || data.message || 'No response received',
-        timestamp: Date.now(),
-      };
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
 
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
+      if (!reader) {
+        throw new Error('No reader available');
+      }
+
+      let buffer = '';
+      const CHUNK_DELAY_THRESHOLD = 2000; // 2 seconds pause = new message
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+
+        // Decode chunk
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+
+        // Split by newlines to get individual JSON objects
+        const lines = buffer.split('\n');
+        
+        // Keep the last potentially incomplete line in buffer
+        buffer = lines.pop() || '';
+        
+        // Process each complete line
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (!trimmedLine) continue;
+          
+          try {
+            const parsed = JSON.parse(trimmedLine);
+            
+            // Only process 'item' type chunks with content
+            if (parsed.type === 'item' && parsed.content) {
+              const currentTime = Date.now();
+              const timeSinceLastChunk = currentTime - lastChunkTimeRef.current;
+              
+              // If there's a significant pause, treat it as a new message chunk
+              if (timeSinceLastChunk > CHUNK_DELAY_THRESHOLD && currentStreamBufferRef.current.trim()) {
+                addNewMessageChunk(currentStreamBufferRef.current);
+              }
+              
+              // Update current message with new content
+              const newContent = currentStreamBufferRef.current + parsed.content;
+              updateCurrentMessage(newContent);
+              
+              lastChunkTimeRef.current = currentTime;
+            } else if (parsed.type === 'end') {
+              // Finalize the last message when stream ends
+              finalizeCurrentMessage();
+            }
+          } catch (e) {
+            // Ignore parse errors for incomplete chunks
+            console.debug('Skipping incomplete chunk:', trimmedLine.substring(0, 50));
+          }
+        }
+      }
+
+      // Process any remaining buffer
+      if (buffer.trim()) {
+        try {
+          const parsed = JSON.parse(buffer.trim());
+          if (parsed.type === 'item' && parsed.content) {
+            const newContent = currentStreamBufferRef.current + parsed.content;
+            updateCurrentMessage(newContent);
+          }
+        } catch (e) {
+          console.debug('Could not parse final buffer');
+        }
+      }
+
+      // Final cleanup
+      finalizeCurrentMessage();
+
+    } catch (error: any) {
       console.error('Chat error:', error);
+      
+      // Don't show error toast if request was aborted (user clicked stop)
+      if (error.name === 'AbortError') {
+        console.log('Request aborted by user');
+        return;
+      }
+      
+      // Remove the streaming message and show error
+      setMessages(prev => prev.filter(m => !m.isStreaming));
+      
       toast({
         title: 'Error',
         description: 'Failed to send message. Please try again.',
@@ -123,13 +314,19 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId }) => {
       });
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
+      currentStreamBufferRef.current = '';
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      if (isLoading) {
+        stopStreaming();
+      } else {
+        handleSendMessage();
+      }
     }
   };
 
@@ -147,7 +344,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId }) => {
     <>
       {/* Floating Button */}
       <motion.button
-        className="fixed bottom-6 right-6 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-full p-4 shadow-lg z-50 hover:shadow-xl transition-all duration-300"
+        className={`fixed bottom-6 ${isMobile ? " left-6":"right-6"} liquid-glass-button rounded-full p-3 z-50 hover:shadow-xl transition-all duration-300`}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(true)}
@@ -164,13 +361,13 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-24 right-6 w-96 h-[500px] bg-card border border-border rounded-lg shadow-2xl z-50 flex flex-col"
+            className="fixed bottom-24 right-6 left-6 w-[calc(100vw-45px)] h-[calc(100vh-120px)] liquid-glass-container z-50 flex flex-col max-h-[calc(100vh-25px)]"
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-border bg-muted/50 rounded-t-lg">
               <div className="flex items-center gap-2">
                 <MessageCircle className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-foreground">Goal Assistant</h3>
+                <h3 className="font-semibold text-foreground">GuoErr AI</h3>
               </div>
               <div className="flex items-center gap-2">
                 {messages.length > 0 && (
@@ -195,7 +392,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId }) => {
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-4 overflow-scroll hide-scrollbar">
               <div className="space-y-4">
                 {messages.length === 0 && (
                   <div className="text-center text-muted-foreground py-8">
@@ -206,9 +403,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId }) => {
                 {messages.map((message, index) => (
                   <div
                     key={index}
-                    className={`flex ${
-                      message.role === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
+                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
                       className={`max-w-[80%] rounded-lg p-3 ${
@@ -219,7 +414,19 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId }) => {
                     >
                       {message.role === 'assistant' ? (
                         <div className="prose prose-sm dark:prose-invert max-w-none">
-                          <ReactMarkdown>{message.content}</ReactMarkdown>
+                          {message.content ? (
+                            <>
+                              <ReactMarkdown>{message.content}</ReactMarkdown>
+                              {message.isStreaming && (
+                                <span className="inline-block w-1 h-4 bg-foreground/70 animate-pulse ml-1 align-middle" />
+                              )}
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span className="text-sm">Thinking...</span>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -227,13 +434,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId }) => {
                     </div>
                   </div>
                 ))}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-muted rounded-lg p-3">
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    </div>
-                  </div>
-                )}
                 <div ref={scrollRef} />
               </div>
             </ScrollArea>
@@ -251,20 +451,21 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId }) => {
                   className="flex-1"
                 />
                 <Button
-                  onClick={handleSendMessage}
-                  disabled={!inputValue.trim() || isLoading}
+                  onClick={isLoading ? stopStreaming : handleSendMessage}
+                  disabled={!isLoading && !inputValue.trim()}
                   size="icon"
                   className="shrink-0"
+                  variant={isLoading ? "destructive" : "default"}
                 >
                   {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Square className="h-4 w-4" />
                   ) : (
                     <Send className="h-4 w-4" />
                   )}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                {isLoading ? 'AI is thinking...' : 'Press Enter to send'}
+                {isLoading ? 'Press Enter or click to stop' : 'Press Enter to send'}
               </p>
             </div>
           </motion.div>
