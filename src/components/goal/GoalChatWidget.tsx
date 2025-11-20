@@ -349,7 +349,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                 <div ref={scrollRef} />
               </div>
             </ScrollArea>
-
+  
             {/* Input */}
             <div className="p-4 border-t bg-muted/30">
               <div className="flex gap-2">
