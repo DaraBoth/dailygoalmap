@@ -58,7 +58,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     if (savedMessages) {
       try {
         setMessages(JSON.parse(savedMessages));
-      } catch {}
+      } catch { }
     }
   }, [goalId, userInfo?.id]);
 
@@ -139,6 +139,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   };
 
   // === SEND MESSAGE ===
+  // === SEND MESSAGE ===
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
@@ -156,11 +157,51 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     setLastMessageTime(now);
 
     // Add loading placeholder
-    setMessages((prev) => [...prev, { role: 'assistant', content: '', timestamp: now, isStreaming: true }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: 'assistant', content: '', timestamp: now, isStreaming: true }
+    ]);
 
     abortControllerRef.current = new AbortController();
 
     try {
+      // ============================
+      // 📌 If mobile → use NON-streaming request
+      // ============================
+      if (isMobile) {
+        const res = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'sendMessage',
+            sessionId,
+            chatInput: text,
+            goalId,
+            userId: userInfo?.id,
+          }),
+        });
+
+        const data = await res.json();
+
+        // Remove streaming placeholder
+        finalizeCurrentMessage();
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: data?.content || 'No response.',
+            timestamp: Date.now(),
+          },
+        ]);
+
+        setIsLoading(false);
+        return;
+      }
+
+      // ============================
+      // 📌 Desktop → use streaming as before
+      // ============================
       const res = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -209,30 +250,27 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                 addNewMessageChunk(currentStreamBufferRef.current);
               }
 
-              updateCurrentMessage(currentStreamBufferRef.current + parsed.content);
+              updateCurrentMessage(
+                currentStreamBufferRef.current + parsed.content
+              );
               lastChunkTimeRef.current = now;
             }
 
             if (parsed.type === 'end') {
               finalizeCurrentMessage();
             }
-          } catch {}
+          } catch { }
         }
-      }
-
-      if (buffer.trim()) {
-        try {
-          const parsed = JSON.parse(buffer);
-          if (parsed.type === 'item' && parsed.content) {
-            updateCurrentMessage(currentStreamBufferRef.current + parsed.content);
-          }
-        } catch {}
       }
 
       finalizeCurrentMessage();
     } catch (err: any) {
       if (err.name !== 'AbortError') {
-        toast({ title: 'Error', description: 'Something went wrong.', variant: 'destructive' });
+        toast({
+          title: 'Error',
+          description: 'Something went wrong.',
+          variant: 'destructive',
+        });
       }
     } finally {
       setIsLoading(false);
@@ -306,11 +344,10 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                 {messages.map((message, idx) => (
                   <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div
-                      className={`relative group max-w-[80%] rounded-lg p-3 ${
-                        message.role === 'user'
+                      className={`relative group max-w-[80%] rounded-lg p-3 ${message.role === 'user'
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-muted text-foreground'
-                      }`}
+                        }`}
                     >
                       {/* COPY BUTTON */}
                       <button
@@ -349,7 +386,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                 <div ref={scrollRef} />
               </div>
             </ScrollArea>
-  
+
             {/* Input */}
             <div className="p-4 border-t bg-muted/30">
               <div className="flex gap-2">
