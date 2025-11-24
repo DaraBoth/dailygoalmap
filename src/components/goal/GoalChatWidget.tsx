@@ -171,19 +171,42 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
       if (isMobile) {
         const res = await fetch(WEBHOOK_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          mode: 'cors',
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
           body: JSON.stringify({
             action: 'sendMessage',
             sessionId,
             chatInput: text,
             goalId,
             userId: userInfo?.id,
+            mobile: true, // helpful for server debugging
           }),
+        }).catch((err) => {
+          console.error('Mobile fetch error:', err);
+          toast({
+            title: 'Network Error',
+            description: 'Safari blocked the request. Try again.',
+            variant: 'destructive',
+          });
         });
 
-        const data = await res.json();
+        if (!res) {
+          setIsLoading(false);
+          finalizeCurrentMessage();
+          return;
+        }
 
-        // Remove streaming placeholder
+        let data = null;
+        try {
+          data = await res.json();
+        } catch (err) {
+          console.error('JSON parse error:', err);
+        }
+
         finalizeCurrentMessage();
 
         setMessages((prev) => [
@@ -198,6 +221,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
         setIsLoading(false);
         return;
       }
+
 
       // ============================
       // 📌 Desktop → use streaming as before
@@ -345,8 +369,8 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                   <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div
                       className={`relative group max-w-[80%] rounded-lg p-3 ${message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-foreground'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-foreground'
                         }`}
                     >
                       {/* COPY BUTTON */}
