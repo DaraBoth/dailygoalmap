@@ -187,18 +187,19 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             }),
           });
 
-          if (!res) throw new Error("No response");
-
           const raw = await res.text();
 
           const lines = raw.trim().split("\n");
-          let lastValid = null;
+
+          let fullMessage = "";
 
           for (const line of lines) {
             try {
               const parsed = JSON.parse(line);
+
+              // collect ALL item chunks
               if (parsed.type === "item" && parsed.content) {
-                lastValid = parsed.content;
+                fullMessage += parsed.content;
               }
             } catch { }
           }
@@ -209,10 +210,11 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             ...prev,
             {
               role: "assistant",
-              content: lastValid || "No response.",
+              content: fullMessage.trim(),
               timestamp: Date.now(),
             },
           ]);
+
         } catch (err) {
           console.error("Mobile fetch error:", err);
 
