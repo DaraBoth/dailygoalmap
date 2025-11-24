@@ -169,13 +169,10 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
       // ============================
       if (isMobile) {
         try {
-          const res = await fetch(WEBHOOK_URL, {
+          fetch(WEBHOOK_URL, {
             method: "POST",
-            mode: "cors",
-            cache: "no-store",
             headers: {
               "Content-Type": "application/json",
-              Accept: "text/plain",
             },
             body: JSON.stringify({
               action: "sendMessage",
@@ -217,7 +214,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
         } catch (err) {
           // console.error("Mobile fetch error:", err);
-          alert("Mobile fetch error:"+err)
+          alert("Mobile fetch error:" + err)
 
           finalizeCurrentMessage();
           setMessages((prev) => [
