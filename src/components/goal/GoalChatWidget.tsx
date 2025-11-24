@@ -216,7 +216,8 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
           ]);
 
         } catch (err) {
-          console.error("Mobile fetch error:", err);
+          // console.error("Mobile fetch error:", err);
+          alert("Mobile fetch error:"+err)
 
           finalizeCurrentMessage();
           setMessages((prev) => [
