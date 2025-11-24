@@ -168,59 +168,75 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
       // 📌 If mobile → use NON-streaming request
       // ============================
       if (isMobile) {
-        const res = await fetch(WEBHOOK_URL, {
-          method: 'POST',
-          mode: 'cors',
-          cache: 'no-store',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify({
-            action: 'sendMessage',
-            sessionId,
-            chatInput: text,
-            goalId,
-            userId: userInfo?.id,
-            mobile: true, // helpful for server debugging
-          }),
-        }).catch((err) => {
-          console.error('Mobile fetch error:', err);
-          toast({
-            title: 'Network Error',
-            description: 'Safari blocked the request. Try again.',
-            variant: 'destructive',
-          });
-          alert(err)
-        });
-
-        if (!res) {
-          setIsLoading(false);
-          finalizeCurrentMessage();
-          return;
-        }
-
-        let data = null;
         try {
-          data = await res.json();
+          const res = await fetch(WEBHOOK_URL, {
+            method: "POST",
+            mode: "cors",
+            cache: "no-store",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "text/plain",
+            },
+            body: JSON.stringify({
+              action: "sendMessage",
+              sessionId,
+              chatInput: text,
+              goalId,
+              userId: userInfo?.id,
+              mobile: true,
+            }),
+          });
+
+          if (!res) throw new Error("No response");
+
+          const raw = await res.text();
+
+          const lines = raw.trim().split("\n");
+          let lastValid = null;
+
+          for (const line of lines) {
+            try {
+              const parsed = JSON.parse(line);
+              if (parsed.type === "item" && parsed.content) {
+                lastValid = parsed.content;
+              }
+            } catch { }
+          }
+
+          finalizeCurrentMessage();
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: lastValid || "No response.",
+              timestamp: Date.now(),
+            },
+          ]);
         } catch (err) {
-          console.error('JSON parse error:', err);
+          console.error("Mobile fetch error:", err);
+
+          finalizeCurrentMessage();
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: "⚠️ Network error. Please try again.",
+              timestamp: Date.now(),
+            },
+          ]);
+
+          toast({
+            title: "Error",
+            description: err?.message || "Something went wrong.",
+            variant: "destructive",
+          });
         }
-
-        finalizeCurrentMessage();
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: data?.content || 'No response.',
-            timestamp: Date.now(),
-          },
-        ]);
 
         setIsLoading(false);
         return;
       }
+
 
 
       // ============================
@@ -283,7 +299,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             if (parsed.type === 'end') {
               finalizeCurrentMessage();
             }
-          } catch { 
+          } catch {
             setIsLoading(false);
           }
         }
