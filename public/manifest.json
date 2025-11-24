@@ -6,6 +6,11 @@
   "background_color": "#F3F4F6",
   "display": "standalone",
   "orientation": "portrait",
+  "permissions": [
+    "clipboard-write",
+    "clipboard-read"
+  ],
+  "unlimited-storage": true,
   "scope": "/",
   "start_url": "/",
   "id": "/",
@@ -64,14 +69,24 @@
       "short_name": "Add Goal",
       "description": "Create a new goal",
       "url": "/dashboard?action=add-goal",
-      "icons": [{ "src": "/icon/maskable_icon_x96.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "/icon/maskable_icon_x96.png",
+          "sizes": "96x96"
+        }
+      ]
     },
     {
       "name": "Join Goal",
       "short_name": "Join Goal",
       "description": "Join an existing goal with a share code",
       "url": "/dashboard?action=join-goal",
-      "icons": [{ "src": "/icon/maskable_icon_x96.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "/icon/maskable_icon_x96.png",
+          "sizes": "96x96"
+        }
+      ]
     }
   ],
   "screenshots": [
