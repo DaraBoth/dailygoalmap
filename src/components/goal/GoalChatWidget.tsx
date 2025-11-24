@@ -139,7 +139,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   };
 
   // === SEND MESSAGE ===
-  // === SEND MESSAGE ===
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
@@ -192,6 +191,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             description: 'Safari blocked the request. Try again.',
             variant: 'destructive',
           });
+          alert(JSON.stringify(err))
         });
 
         if (!res) {
@@ -283,7 +283,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             if (parsed.type === 'end') {
               finalizeCurrentMessage();
             }
-          } catch { }
+          } catch { 
+            setIsLoading(false);
+          }
         }
       }
 
