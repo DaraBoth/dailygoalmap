@@ -191,7 +191,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             description: 'Safari blocked the request. Try again.',
             variant: 'destructive',
           });
-          alert(JSON.stringify(err))
+          alert(err)
         });
 
         if (!res) {
