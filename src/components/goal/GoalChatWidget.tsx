@@ -44,9 +44,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   const SESSION_KEY = `goal_chat_session_${goalId}_${userInfo?.id}`;
   const CHAT_KEY = `goal_chat_${goalId}`;
 
-  useEffect(() => {
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  }, [])
 
   // Load sessionId and messages
   useEffect(() => {
@@ -75,6 +75,20 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
       localStorage.setItem(CHAT_KEY, JSON.stringify(filtered));
     }
   }, [messages]);
+
+
+  useEffect(() => {
+    if (!chatContainerRef.current) return;
+
+    // only autoscroll when user is NOT manually scrolling up
+    const el = chatContainerRef.current;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+
+    if (atBottom) {
+      scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
 
   // Autoscroll
   useEffect(() => {
@@ -292,7 +306,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
       if (!reader) throw new Error('No stream reader');
 
       let buffer = '';
-      const gap = 2000;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -311,30 +324,29 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
           try {
             const parsed = JSON.parse(trimmed);
 
+            // STREAMING CHUNK
             if (parsed.type === 'item' && parsed.content) {
-              const now = Date.now();
-              const diff = now - lastChunkTimeRef.current;
 
-              if (diff > gap && currentStreamBufferRef.current.trim()) {
-                addNewMessageChunk(currentStreamBufferRef.current);
-              }
+              // 🟢 Append chunk to buffer
+              currentStreamBufferRef.current += parsed.content;
 
-              updateCurrentMessage(
-                currentStreamBufferRef.current + parsed.content
-              );
-              lastChunkTimeRef.current = now;
+              // Update UI showing real-time text
+              updateCurrentMessage(currentStreamBufferRef.current);
             }
 
+            // STREAM END
             if (parsed.type === 'end') {
               finalizeCurrentMessage();
             }
-          } catch {
-            setIsLoading(false);
+
+          } catch (e) {
+            console.error("JSON parse error:", e);
           }
         }
       }
 
       finalizeCurrentMessage();
+
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         toast({
@@ -412,53 +424,67 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {messages.map((message, idx) => (
-                  <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div
-                      className={`relative group max-w-[80%] rounded-lg p-3 ${message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-foreground'
-                        }`}
-                    >
-                      {/* COPY BUTTON */}
-                      <button
-                        onClick={() => copyMessage(message.content)}
-                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition"
-                      >
-                        <Clipboard className="h-3 w-3" />
-                      </button>
+            <div
+              className="flex-1 overflow-y-auto p-4"
+              ref={chatContainerRef}
+              onScroll={() => {
+                if (!chatContainerRef.current) return;
+                const el = chatContainerRef.current;
+                const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
 
-                      {message.role === 'assistant' ? (
-                        <div className="prose dark:prose-invert">
-                          <ReactMarkdown>{message.content}</ReactMarkdown>
-                          {/* {message.isStreaming && (
-                            <span className="inline-block w-1 h-4 bg-foreground/70 animate-pulse ml-1" />
-                          )} */}
-                          {message.content ? (
-                            <>
-                              <ReactMarkdown>{message.content}</ReactMarkdown>
-                              {message.isStreaming && (
-                                <span className="inline-block w-1 h-4 bg-foreground/70 animate-pulse ml-1" />
-                              )}
-                            </>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              <span className="text-sm">Thinking...</span>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="whitespace-pre-wrap text-sm">{message.content}</p>
-                      )}
+                setShowScrollButton(!atBottom);
+              }}
+            >
+
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-4">
+                  {messages.map((message, idx) => (
+                    <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div
+                        className={`relative group max-w-[80%] rounded-lg p-3 ${message.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-foreground'
+                          }`}
+                      >
+                        {/* COPY BUTTON */}
+                        <button
+                          onClick={() => copyMessage(message.content)}
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition"
+                        >
+                          <Clipboard className="h-3 w-3" />
+                        </button>
+
+                        {message.role === "assistant" ? (
+                          <div className="prose dark:prose-invert">
+                            <ReactMarkdown>{message.content}</ReactMarkdown>
+
+                            {message.isStreaming && (
+                              <span className="inline-block w-1 h-4 bg-foreground/70 animate-pulse ml-1" />
+                            )}
+                          </div>
+                        ) : (
+                          <span>{message.content}</span>
+                        )}
+
+                      </div>
                     </div>
-                  </div>
-                ))}
-                <div ref={scrollRef} />
-              </div>
-            </ScrollArea>
+                  ))}
+                  <div ref={scrollRef} />
+                </div>
+              </ScrollArea>
+            </div>  {/* end wrapper */}
+            {showScrollButton && (
+              <button
+                className="absolute bottom-28 right-6 bg-primary text-white px-3 py-2 rounded-full shadow-lg"
+                onClick={() => {
+                  scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+                  setShowScrollButton(false);
+                }}
+              >
+                ↓ New Messages
+              </button>
+            )}
+
 
             {/* Input */}
             <div className="p-4 border-t bg-muted/30">
@@ -483,6 +509,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
               </div>
             </div>
           </motion.div>
+
         )}
       </AnimatePresence>
     </>
