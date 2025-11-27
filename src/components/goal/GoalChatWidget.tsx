@@ -7,6 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from '@/components/ui/use-toast';
 import ReactMarkdown from 'react-markdown';
 import { useIsMobile } from '@/hooks/use-mobile';
+import chatAIGif from '@/assets/images/image.png'
+import robot from '@/assets/images/robot.png'
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -41,6 +43,10 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
   const SESSION_KEY = `goal_chat_session_${goalId}_${userInfo?.id}`;
   const CHAT_KEY = `goal_chat_${goalId}`;
+
+  useEffect(()=>{
+
+  },[])
 
   // Load sessionId and messages
   useEffect(() => {
@@ -344,12 +350,13 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   return (
     <>
       <motion.button
-        className={`fixed bottom-6 ${isMobile ? 'left-6' : 'right-6'} liquid-glass-button rounded-full p-3 z-50`}
+        className={`fixed bottom-6 ${isMobile ? 'left-6' : 'right-6'} liquid-glass p-2 rounded-xl z-50`}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(true)}
       >
-        <MessageCircle className="h-6 w-6" />
+        <img className='h-8 w-8' src={chatAIGif} alt="Chat AI Image" />
+        {/* <MessageCircle className="h-6 w-6" /> */}
       </motion.button>
 
       <AnimatePresence>
@@ -364,8 +371,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b bg-muted/50">
               <div className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5 text-primary" />
+                {/* <MessageCircle className="h-5 w-5 text-primary" /> */}
                 <h3 className="font-semibold">GuoErr AI</h3>
+                <img className='h-6 w-6' src={robot} alt="Chat AI Image" />
               </div>
 
               <div className="flex items-center gap-2">
