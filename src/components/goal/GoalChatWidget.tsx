@@ -44,9 +44,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   const SESSION_KEY = `goal_chat_session_${goalId}_${userInfo?.id}`;
   const CHAT_KEY = `goal_chat_${goalId}`;
 
-  useEffect(()=>{
+  useEffect(() => {
 
-  },[])
+  }, [])
 
   // Load sessionId and messages
   useEffect(() => {
@@ -115,39 +115,55 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     }
   };
 
-  const addNewMessageChunk = (content: string) => {
-    setMessages((prev) => [
-      ...prev.filter((m) => !m.isStreaming),
-      { role: 'assistant', content, timestamp: Date.now() },
-      { role: 'assistant', content: '', timestamp: Date.now(), isStreaming: true },
-    ]);
-    currentStreamBufferRef.current = '';
+  const addNewMessageChunk = (chunk: string) => {
+    setMessages(prev => {
+      const updated = [...prev];
+      const lastIndex = updated.length - 1;
+
+      if (updated[lastIndex]?.role === "assistant") {
+        updated[lastIndex] = {
+          ...updated[lastIndex],
+          content: updated[lastIndex].content + chunk,
+        };
+      }
+
+      return updated;
+    });
   };
 
-const updateCurrentMessage = (newContent: string) => {
-  setMessages(prev => {
-    const updated = [...prev];
-    const lastIndex = updated.length - 1;
 
-    // Must be assistant + streaming placeholder
-    if (updated[lastIndex]?.role === "assistant") {
-      updated[lastIndex] = {
-        ...updated[lastIndex],
-        content: newContent,
-      };
-    }
+  const updateCurrentMessage = (newContent: string) => {
+    setMessages(prev => {
+      const updated = [...prev];
+      const lastIndex = updated.length - 1;
 
-    return updated;
-  });
-};
+      // Must be assistant + streaming placeholder
+      if (updated[lastIndex]?.role === "assistant") {
+        updated[lastIndex] = {
+          ...updated[lastIndex],
+          content: newContent,
+        };
+      }
+
+      return updated;
+    });
+  };
 
 
   const finalizeCurrentMessage = () => {
-    setMessages((prev) =>
-      prev
-        .map((m) => (m.isStreaming ? { ...m, isStreaming: false } : m))
-        .filter((m) => m.content.trim() !== '')
-    );
+    setMessages(prev => {
+      const updated = [...prev];
+      const lastIndex = updated.length - 1;
+
+      if (updated[lastIndex]?.role === "assistant") {
+        updated[lastIndex] = {
+          ...updated[lastIndex],
+          isStreaming: false,
+        };
+      }
+
+      return updated;
+    });
     currentStreamBufferRef.current = '';
   };
 
@@ -227,7 +243,7 @@ const updateCurrentMessage = (newContent: string) => {
 
         } catch (err) {
           // console.error("Mobile fetch error:", err);
-          alert("Mobile fetch error:"+err)
+          alert("Mobile fetch error:" + err)
 
           finalizeCurrentMessage();
           setMessages((prev) => [
