@@ -124,16 +124,23 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     currentStreamBufferRef.current = '';
   };
 
-  const updateCurrentMessage = (content: string) => {
-    currentStreamBufferRef.current = content;
+const updateCurrentMessage = (newContent: string) => {
+  setMessages(prev => {
+    const updated = [...prev];
+    const lastIndex = updated.length - 1;
 
-    setMessages((prev) => {
-      const updated = [...prev];
-      const last = updated[updated.length - 1];
-      if (last?.isStreaming) last.content = content;
-      return updated;
-    });
-  };
+    // Must be assistant + streaming placeholder
+    if (updated[lastIndex]?.role === "assistant") {
+      updated[lastIndex] = {
+        ...updated[lastIndex],
+        content: newContent,
+      };
+    }
+
+    return updated;
+  });
+};
+
 
   const finalizeCurrentMessage = () => {
     setMessages((prev) =>
