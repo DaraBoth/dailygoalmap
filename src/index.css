@@ -5,9 +5,12 @@
 @layer base {
   :root {
     /* ---------- Light theme (defaults) ---------- */
-    --background: 0 0% 99%;            /* warm near-white background */
-    --foreground: 222.2 84% 4.9%;     /* dark text */
-    --card: 0 0% 100%;                /* card bg (white) */
+    --background: 0 0% 99%;
+    /* warm near-white background */
+    --foreground: 222.2 84% 4.9%;
+    /* dark text */
+    --card: 0 0% 100%;
+    /* card bg (white) */
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
@@ -35,17 +38,23 @@
     --sidebar-width: 280px;
 
     /* David UI Liquid Glass Theme (light) */
-    --liquid-glass-bg: rgba(255, 255, 255, 0.65);        /* main glass panel bg (light) */
-    --liquid-glass-bg-subtle: rgba(255, 255, 255, 0.45); /* secondary, for hover layers */
-    --liquid-glass-border: rgba(255, 255, 255, 0.45);    /* subtle highlight border */
-    --liquid-glass-gloss: rgba(255, 255, 255, 0.85);     /* glossy reflection */
+    --liquid-glass-bg: rgba(255, 255, 255, 0.65);
+    /* main glass panel bg (light) */
+    --liquid-glass-bg-subtle: rgba(255, 255, 255, 0.45);
+    /* secondary, for hover layers */
+    --liquid-glass-border: rgba(255, 255, 255, 0.45);
+    /* subtle highlight border */
+    --liquid-glass-gloss: rgba(255, 255, 255, 0.85);
+    /* glossy reflection */
     --liquid-glass-hover: rgba(255, 255, 255, 0.30);
-    --liquid-glass-contrast: rgba(0,0,0,0.06);           /* inner subtle shadow for depth */
+    --liquid-glass-contrast: rgba(0, 0, 0, 0.06);
+    /* inner subtle shadow for depth */
   }
 
   /* ---------- Dark mode overrides ---------- */
   .dark {
-    --background: 222.2 84% 4.9%;       /* dark background (kept similar to your existing dark) */
+    --background: 222.2 84% 4.9%;
+    /* dark background (kept similar to your existing dark) */
     --foreground: 210 40% 98%;
     --card: 222.2 84% 8.4%;
     --card-foreground: 210 40% 98%;
@@ -68,12 +77,13 @@
     --card-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.2);
 
     /* David UI Liquid Glass Theme (dark) */
-    --liquid-glass-bg: rgba(255, 255, 255, 0.04);       /* subtle light on dark to create frosted look */
+    --liquid-glass-bg: rgba(255, 255, 255, 0.04);
+    /* subtle light on dark to create frosted look */
     --liquid-glass-bg-subtle: rgba(255, 255, 255, 0.03);
     --liquid-glass-border: rgba(255, 255, 255, 0.08);
     --liquid-glass-gloss: rgba(255, 255, 255, 0.08);
     --liquid-glass-hover: rgba(255, 255, 255, 0.06);
-    --liquid-glass-contrast: rgba(0,0,0,0.35);
+    --liquid-glass-contrast: rgba(0, 0, 0, 0.35);
   }
 
   * {
@@ -196,12 +206,12 @@
   /* Text visibility on glass backgrounds */
   .liquid-glass-text {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3),
-                 0 2px 4px rgba(0, 0, 0, 0.2);
+      0 2px 4px rgba(0, 0, 0, 0.2);
   }
 
   .dark .liquid-glass-text {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5),
-                 0 2px 4px rgba(0, 0, 0, 0.3);
+      0 2px 4px rgba(0, 0, 0, 0.3);
   }
 
   .liquid-glass-card {
@@ -210,16 +220,16 @@
     backdrop-filter: brightness(1.1) blur(2px) url(#liquidGlass);
   }
 
-  .liquid-glass-card > * {
+  .liquid-glass-card>* {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   }
 
-  .dark .liquid-glass-card > * {
+  .dark .liquid-glass-card>* {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   }
 
   .liquid-glass-card:hover {
-      box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.6),
+    box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.6),
       0 0 12px rgba(0, 0, 0, 0.1),
       0 4px 16px rgba(0, 0, 0, 0.1);
   }
@@ -542,5 +552,11 @@ input[type="time"] {
 
   100% {
     background-position: 100% 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .mobile\:opacity-100 {
+    opacity: 1 !important;
   }
 }

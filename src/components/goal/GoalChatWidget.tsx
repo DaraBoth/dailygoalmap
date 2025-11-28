@@ -415,7 +415,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b bg-muted/50">
               <div className="flex items-center gap-2">
-                {/* <MessageCircle className="h-5 w-5 text-primary" /> */}
                 <h3 className="font-semibold">GuoErr AI</h3>
                 <img className='h-6 w-6' src={robot} alt="Chat AI Image" />
               </div>
@@ -434,7 +433,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
             {/* Messages */}
             <div
-              className="flex-1 overflow-y-auto px-2 md:p-4 "
+              className="flex-1 overflow-y-auto px-2 md:p-4 backdrop-blur-3xl  bg-muted p-4 shadow-sm border"
               ref={chatContainerRef}
               onScroll={() => {
                 if (!chatContainerRef.current) return;
@@ -450,24 +449,42 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                   {messages.map((msg, i) => (
                     <div
                       key={i}
-                      className={`w-full mb-4 ${msg.role === "assistant" ? "flex" : "flex justify-end"
+                      className={`w-full mb-4  ${msg.role === "assistant" ? "flex" : "flex justify-end"
                         }`}
                     >
-                      {/* Assistant */}
+                      {/* Assistant Bubble */}
                       {msg.role === "assistant" && (
-                        <div className="w-full bg-muted p-4 rounded-xl prose dark:prose-invert">
+                        <div className="group relative w-full rounded-xl">
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
+
+                          {/* COPY BUTTON (appears on hover or always visible on mobile) */}
+                          <button
+                            onClick={() => copyMessage(msg.content)}
+                            className="
+                              absolute top-2 right-2
+                              opacity-0 group-hover:opacity-100
+                              transition-opacity duration-200
+                              text-xs px-2 py-1 rounded-md
+                              bg-gray-200 hover:bg-gray-300
+                              dark:bg-gray-700 dark:hover:bg-gray-600
+                              md:opacity-0
+                              mobile:opacity-100
+                            "
+                          >
+                            Copy
+                          </button>
                         </div>
                       )}
 
-                      {/* User */}
+                      {/* User Bubble */}
                       {msg.role === "user" && (
-                        <div className="max-w-[80%] bg-blue-600 text-white p-3 rounded-xl">
+                        <div className="max-w-[80%] bg-blue-600 text-white p-3 rounded-xl shadow">
                           {msg.content}
                         </div>
                       )}
                     </div>
                   ))}
+
                 </div>
                 <div ref={scrollRef} />
               </ScrollArea>
