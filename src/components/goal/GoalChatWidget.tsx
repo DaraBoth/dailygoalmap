@@ -47,6 +47,15 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   const [showScrollButton, setShowScrollButton] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoResizeInput = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+
+    el.style.height = "auto"; // reset
+    el.style.height = el.scrollHeight + "px";
+  };
 
   // Load sessionId and messages
   useEffect(() => {
@@ -401,7 +410,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-24 right-6 left-6 w-[calc(100vw-45px)] h-[calc(100vh-120px)] liquid-glass-container z-50 flex flex-col"
+            className="fixed bottom-0 md:bottom-24 right-0 left-0 md:left-6 w-full h-full md:w-[calc(100vw-45px)] md:h-[calc(100vh-120px)] liquid-glass-container z-50 flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b bg-muted/50">
@@ -417,15 +426,15 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                     Clear
                   </Button>
                 )}
-                <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
-                  <X className="h-4 w-4" />
+                <Button variant="ghost" className='z-999' size="icon" onClick={() => setIsOpen(false)}>
+                  <X className="h-6 w-6" />
                 </Button>
               </div>
             </div>
 
             {/* Messages */}
             <div
-              className="flex-1 overflow-y-auto p-4"
+              className="flex-1 overflow-y-auto px-2 md:p-4 "
               ref={chatContainerRef}
               onScroll={() => {
                 if (!chatContainerRef.current) return;
@@ -436,41 +445,31 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
               }}
             >
 
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
-                  {messages.map((message, idx) => (
-                    <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div
-                        className={`relative group max-w-[80%] rounded-lg p-3 ${message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-foreground'
-                          }`}
-                      >
-                        {/* COPY BUTTON */}
-                        <button
-                          onClick={() => copyMessage(message.content)}
-                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition"
-                        >
-                          <Clipboard className="h-3 w-3" />
-                        </button>
+              <ScrollArea className="flex-1 px-1 md:p-4 ">
+                <div className="w-full px-1 md:px-4 ">
+                  {messages.map((msg, i) => (
+                    <div
+                      key={i}
+                      className={`w-full mb-4 ${msg.role === "assistant" ? "flex" : "flex justify-end"
+                        }`}
+                    >
+                      {/* Assistant */}
+                      {msg.role === "assistant" && (
+                        <div className="w-full bg-muted p-4 rounded-xl prose dark:prose-invert">
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        </div>
+                      )}
 
-                        {message.role === "assistant" ? (
-                          <div className="prose dark:prose-invert">
-                            <ReactMarkdown>{message.content}</ReactMarkdown>
-
-                            {message.isStreaming && (
-                              <span className="inline-block w-1 h-4 bg-foreground/70 animate-pulse ml-1" />
-                            )}
-                          </div>
-                        ) : (
-                          <span>{message.content}</span>
-                        )}
-
-                      </div>
+                      {/* User */}
+                      {msg.role === "user" && (
+                        <div className="max-w-[80%] bg-blue-600 text-white p-3 rounded-xl">
+                          {msg.content}
+                        </div>
+                      )}
                     </div>
                   ))}
-                  <div ref={scrollRef} />
                 </div>
+                <div ref={scrollRef} />
               </ScrollArea>
             </div>  {/* end wrapper */}
             {showScrollButton && (
@@ -481,28 +480,38 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                   setShowScrollButton(false);
                 }}
               >
-                ↓ New Messages
+                ↓ scroll down
               </button>
             )}
 
-
             {/* Input */}
             <div className="p-4 border-t bg-muted/30">
-              <div className="flex gap-2">
-                <Input
-                  ref={inputRef}
-                  placeholder="Type..."
+              <div className="flex items-end gap-2">
+
+                <textarea
+                  ref={textareaRef}
                   value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
+                  onChange={(e) => {
+                    setInputValue(e.target.value);
+                    autoResizeInput();
+                  }}
+                  placeholder="Type your message..."
+                  rows={1}
                   disabled={isLoading}
-                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  className="flex-1 resize-none overflow-hidden p-3 rounded-xl border bg-background max-h-40"
                 />
+
                 <Button
                   size="icon"
                   onClick={isLoading ? stopStreaming : handleSendMessage}
                   disabled={!isLoading && !inputValue.trim()}
-                  variant={isLoading ? 'destructive' : 'default'}
+                  variant={isLoading ? "destructive" : "default"}
                 >
                   {isLoading ? <Square className="h-4 w-4" /> : <Send className="h-4 w-4" />}
                 </Button>
