@@ -9,6 +9,7 @@ import ReactMarkdown from 'react-markdown';
 import { useIsMobile } from '@/hooks/use-mobile';
 import chatAIGif from '@/assets/images/image.png'
 import robot from '@/assets/images/robot.png'
+import axios from 'axios'
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -217,47 +218,59 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
       // ============================
       if (isMobile) {
         try {
-          const res = await fetch(WEBHOOK_URL_MB, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
+          console.log("📱 Mobile request starting...");
+          console.log("Payload:", {
+            action: "sendMessage",
+            sessionId,
+            chatInput: text,
+            goalId,
+            userId: userInfo?.id,
+            mobile: true,
+          });
+
+          const res = await axios.post(
+            WEBHOOK_URL_MB,
+            {
               action: "sendMessage",
               sessionId,
               chatInput: text,
               goalId,
               userId: userInfo?.id,
               mobile: true,
-            }),
-          });
+            },
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
 
-          const raw = await res.text();
-          console.log("raw = ",raw);
-          console.log("res = ",res);
+          console.log("📥 AXIOS RESPONSE:", res);
+          console.log("Status:", res.status);
+          console.log("Headers:", res.headers);
+          console.log("Data:", res.data);
 
           let fullMessage = "";
 
           try {
-            const parsed = JSON.parse(raw);
+            const data = res.data;
 
-            // CASE 1: n8n returns array like: [{ "output": "text" }]
-            if (Array.isArray(parsed)) {
-              fullMessage = parsed[0]?.output || raw;
+            if (Array.isArray(data)) {
+              console.log("Parsed as ARRAY");
+              fullMessage = data[0]?.output || JSON.stringify(data);
+            } else if (data?.output) {
+              console.log("Parsed as OBJECT with output");
+              fullMessage = data.output;
+            } else {
+              console.log("Parsed as RAW fallback:", data);
+              fullMessage = typeof data === "string" ? data : JSON.stringify(data);
             }
-            // CASE 2: n8n returns object like: { "output": "text" }
-            else if (parsed.output) {
-              fullMessage = parsed.output;
-            }
-            else {
-              fullMessage = raw;
-            }
-
-          } catch (e) {
-            // fallback: show raw content
-            fullMessage = raw;
+          } catch (parseErr) {
+            console.log("❌ PARSE ERROR:", parseErr);
+            fullMessage = res.data;
           }
 
+          console.log("💬 Final message to push:", fullMessage);
 
           finalizeCurrentMessage();
 
@@ -271,6 +284,10 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
           ]);
 
         } catch (err) {
+          console.log("❌ AXIOS ERROR:", err);
+          console.log("Error response:", err?.response);
+          console.log("Error request:", err?.request);
+          console.log("Error message:", err?.message);
 
           finalizeCurrentMessage();
 
