@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, Loader2, Square, Clipboard } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Square, Clipboard, Copy, Pointer, ArrowUp, Pause } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,8 @@ interface GoalChatWidgetProps {
   userInfo: any;
 }
 
-const WEBHOOK_URL = 'https://n8n.tonlaysab.com/webhook/142e0e30-4fce-4baa-ac7e-6ead0b16a3a9/chat';
+let WEBHOOK_URL = 'https://n8n.tonlaysab.com/webhook/142e0e30-4fce-4baa-ac7e-6ead0b16a3a9/chat';
+const WEBHOOK_URL_MB = 'https://n8n.tonlaysab.com/webhook/4a558f06-2c2a-40ef-9a14-43d035c0ba8b/chat';
 const MIN_MESSAGE_INTERVAL = 3000;
 
 export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo }) => {
@@ -40,6 +41,8 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   const lastChunkTimeRef = useRef<number>(0);
 
   const isMobile = useIsMobile();
+
+  WEBHOOK_URL = !isMobile ? WEBHOOK_URL : WEBHOOK_URL_MB
 
   const SESSION_KEY = `goal_chat_session_${goalId}_${userInfo?.id}`;
   const CHAT_KEY = `goal_chat_${goalId}`;
@@ -238,20 +241,28 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
           const raw = await res.text();
 
-          const lines = raw.trim().split("\n");
-
           let fullMessage = "";
 
-          for (const line of lines) {
-            try {
-              const parsed = JSON.parse(line);
+          try {
+            const parsed = JSON.parse(raw);
 
-              // collect ALL item chunks
-              if (parsed.type === "item" && parsed.content) {
-                fullMessage += parsed.content;
-              }
-            } catch { }
+            // CASE 1: n8n returns array like: [{ "output": "text" }]
+            if (Array.isArray(parsed)) {
+              fullMessage = parsed[0]?.output || raw;
+            }
+            // CASE 2: n8n returns object like: { "output": "text" }
+            else if (parsed.output) {
+              fullMessage = parsed.output;
+            }
+            else {
+              fullMessage = raw;
+            }
+
+          } catch (e) {
+            // fallback: show raw content
+            fullMessage = raw;
           }
+
 
           finalizeCurrentMessage();
 
@@ -265,10 +276,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
           ]);
 
         } catch (err) {
-          // console.error("Mobile fetch error:", err);
-          alert("Mobile fetch error:" + err)
 
           finalizeCurrentMessage();
+
           setMessages((prev) => [
             ...prev,
             {
@@ -288,8 +298,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
         setIsLoading(false);
         return;
       }
-
-
 
       // ============================
       // 📌 Desktop → use streaming as before
@@ -413,7 +421,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             className="fixed bottom-0 md:bottom-24 right-0 left-0 md:left-6 w-full h-full md:w-[calc(100vw-45px)] md:h-[calc(100vh-120px)] liquid-glass-container z-50 flex flex-col"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b bg-muted/50">
+            <div className="flex items-center justify-between p-4 border-b bg-muted/80">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold">GuoErr AI</h3>
                 <img className='h-6 w-6' src={robot} alt="Chat AI Image" />
@@ -433,7 +441,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
             {/* Messages */}
             <div
-              className="flex-1 overflow-y-auto px-2 md:p-4 backdrop-blur-3xl  bg-muted p-4 shadow-sm border"
+              className="flex-1 overflow-y-auto px-2 md:p-4 backdrop-blur-3xl bg-muted/80 p-4 shadow-sm border"
               ref={chatContainerRef}
               onScroll={() => {
                 if (!chatContainerRef.current) return;
@@ -454,27 +462,38 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                     >
                       {/* Assistant Bubble */}
                       {msg.role === "assistant" && (
-                        <div className="group relative w-full rounded-xl">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        <div className="group relative w-full rounded-xl prose dark:prose-invert max-w-none break-words">
 
-                          {/* COPY BUTTON (appears on hover or always visible on mobile) */}
-                          <button
-                            onClick={() => copyMessage(msg.content)}
-                            className="
-                              absolute top-2 right-2
-                              opacity-0 group-hover:opacity-100
-                              transition-opacity duration-200
-                              text-xs px-2 py-1 rounded-md
-                              bg-gray-200 hover:bg-gray-300
-                              dark:bg-gray-700 dark:hover:bg-gray-600
-                              md:opacity-0
-                              mobile:opacity-100
-                            "
-                          >
-                            Copy
-                          </button>
+                          {/* Markdown container */}
+                          <div className="prose dark:prose-invert max-w-none break-words prose-pre:whitespace-pre-wrap">
+                            <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          </div>
+
+                          {/* Typing loader when AI is streaming */}
+                          {msg.isStreaming && (
+                            <TypingLoader />
+                          )}
+
+                          {/* COPY BUTTON */}
+                          {!isLoading && !msg.isStreaming && (
+                            <button
+                              onClick={() => copyMessage(msg.content)}
+                              className="
+                                opacity-0 group-hover:opacity-100
+                                transition-opacity duration-200
+                                text-xs px-2 py-1 rounded-md
+                                bg-gray-200 hover:bg-gray-300
+                                dark:bg-gray-700 dark:hover:bg-gray-600
+                                md:opacity-0
+                                mobile:opacity-100
+                              "
+                            >
+                              <Copy className='w-5 h-5' />
+                            </button>
+                          )}
                         </div>
                       )}
+
 
                       {/* User Bubble */}
                       {msg.role === "user" && (
@@ -502,8 +521,8 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             )}
 
             {/* Input */}
-            <div className="p-4 border-t bg-muted/30">
-              <div className="flex items-end gap-2">
+            <div className="p-4 border-t bg-muted/80">
+              <div className="relative w-full">
 
                 <textarea
                   ref={textareaRef}
@@ -521,17 +540,22 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                       handleSendMessage();
                     }
                   }}
-                  className="flex-1 resize-none overflow-hidden p-3 rounded-xl border bg-background max-h-40"
+                  className="w-full resize-none overflow-hidden p-4 pr-14 rounded-2xl border bg-background max-h-40 outline-none"
                 />
 
-                <Button
-                  size="icon"
-                  onClick={isLoading ? stopStreaming : handleSendMessage}
-                  disabled={!isLoading && !inputValue.trim()}
-                  variant={isLoading ? "destructive" : "default"}
+                <motion.div
+                  className="absolute bottom-3 right-3"
                 >
-                  {isLoading ? <Square className="h-4 w-4" /> : <Send className="h-4 w-4" />}
-                </Button>
+                  <Button
+                    size="icon"
+                    onClick={isLoading ? stopStreaming : handleSendMessage}
+                    disabled={!isLoading && !inputValue.trim()}
+                    className="rounded-full h-10 w-10 shadow-md"
+                  >
+                    {isLoading ? <Pause className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
+                  </Button>
+                </motion.div>
+
               </div>
             </div>
           </motion.div>
@@ -543,3 +567,12 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 };
 
 export default GoalChatWidget;
+
+
+const TypingLoader = () => (
+  <div className="flex items-center gap-1 mt-1">
+    <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></span>
+    <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-150"></span>
+    <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-300"></span>
+  </div>
+);
