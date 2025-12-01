@@ -86,6 +86,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     }
   }, [messages]);
 
+  console.log(messages);
 
   useEffect(() => {
     if (!chatContainerRef.current) return;
@@ -208,12 +209,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     setIsLoading(true);
     setLastMessageTime(now);
 
-    // Add loading placeholder
-    setMessages((prev) => [
-      ...prev,
-      { role: 'assistant', content: '', timestamp: now, isStreaming: true }
-    ]);
-
     abortControllerRef.current = new AbortController();
 
     try {
@@ -238,6 +233,8 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
           });
 
           const raw = await res.text();
+          console.log("raw = ",raw);
+          console.log("res = ",res);
 
           let fullMessage = "";
 
@@ -427,7 +424,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
               <div className="flex items-center gap-2">
                 {messages.length > 0 && (
-                  <Button variant="ghost" size="sm" onClick={clearChat}>
+                  <Button className='z-999' variant="ghost" size="sm" onClick={clearChat}>
                     Clear
                   </Button>
                 )}
