@@ -22,7 +22,7 @@ interface GoalChatWidgetProps {
   userInfo: any;
 }
 
-let WEBHOOK_URL = 'https://n8n.tonlaysab.com/webhook/142e0e30-4fce-4baa-ac7e-6ead0b16a3a9/chat';
+const WEBHOOK_URL = 'https://n8n.tonlaysab.com/webhook/142e0e30-4fce-4baa-ac7e-6ead0b16a3a9/chat';
 const WEBHOOK_URL_MB = 'https://n8n.tonlaysab.com/webhook/4a558f06-2c2a-40ef-9a14-43d035c0ba8b/chat';
 const MIN_MESSAGE_INTERVAL = 3000;
 
@@ -41,8 +41,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   const lastChunkTimeRef = useRef<number>(0);
 
   const isMobile = useIsMobile();
-
-  WEBHOOK_URL = !isMobile ? WEBHOOK_URL : WEBHOOK_URL_MB
 
   const SESSION_KEY = `goal_chat_session_${goalId}_${userInfo?.id}`;
   const CHAT_KEY = `goal_chat_${goalId}`;
@@ -224,7 +222,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
       // ============================
       if (isMobile) {
         try {
-          const res = await fetch(WEBHOOK_URL, {
+          const res = await fetch(WEBHOOK_URL_MB, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
