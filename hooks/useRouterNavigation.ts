@@ -1,14 +1,15 @@
-import { useNavigate, useRouter } from '@tanstack/react-router'
+import { useRouter, usePathname } from 'next/navigation'
 import { routePreloader } from '@/services/routePreloader'
 import { performanceMonitor } from '@/services/performanceMonitor'
 import { useCallback } from 'react'
 
 /**
  * Enhanced navigation hook with preloading and performance tracking
+ * Adapted for Next.js App Router
  */
 export function useRouterNavigation() {
-  const navigate = useNavigate()
   const router = useRouter()
+  const pathname = usePathname()
 
   /**
    * Navigate to a route with optional preloading
@@ -22,22 +23,30 @@ export function useRouterNavigation() {
       state?: any
     }
   ) => {
-    const { preload = false, ...navigateOptions } = options || {}
+    const { preload = false, replace = false, search, ...navigateOptions } = options || {}
+
+    // Build URL with search params if provided
+    let url = to
+    if (search) {
+      const params = new URLSearchParams(search as any)
+      url = `${to}?${params.toString()}`
+    }
 
     // Preload the route if requested
     if (preload) {
-      await routePreloader.preloadRoute(to, 'high')
+      await routePreloader.preloadRoute(url, 'high')
     }
 
     // Start performance tracking
     performanceMonitor.startNavigation(to)
 
     // Navigate
-    await navigate({
-      to: to as any,
-      ...navigateOptions,
-    } as any)
-  }, [navigate])
+    if (replace) {
+      router.replace(url)
+    } else {
+      router.push(url)
+    }
+  }, [router])
 
   /**
    * Preload a route without navigating
@@ -71,10 +80,10 @@ export function useRouterNavigation() {
    * Refresh current route
    */
   const refresh = useCallback(async () => {
-    const currentPath = window.location.pathname
+    const currentPath = pathname || window.location.pathname
     performanceMonitor.startNavigation(currentPath)
-    await router.invalidate()
-  }, [router])
+    router.refresh()
+  }, [router, pathname])
 
   /**
    * Navigate to dashboard with preloading
