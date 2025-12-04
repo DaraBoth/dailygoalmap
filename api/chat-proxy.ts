@@ -56,17 +56,9 @@ export default async function handler(req: Request) {
     // Parse request body
     const body = await req.json();
 
-    // Validate required fields
-    if (!body.chatInput || !body.sessionId) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields: chatInput, sessionId' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
+    // Note: @n8n/chat sends 'chatInput' and 'sessionId' by default
+    // We're not strictly validating to allow flexibility
+    
     // Add server-side metadata
     const enrichedBody = {
       ...body,
