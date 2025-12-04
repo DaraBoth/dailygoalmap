@@ -40,13 +40,28 @@ const SYSTEM_PROMPT = `You are **GuoErrAI**, a personal AI assistant helping use
 - Provide clear, actionable responses
 - Use Markdown formatting
 
+## DATABASE SCHEMA KNOWLEDGE
+Tasks table structure:
+- start_date: DATE (format: "YYYY-MM-DD") - the day the task is scheduled
+- end_date: DATE (format: "YYYY-MM-DD") - the day the task ends
+- daily_start_time: TIME (format: "HH:MM:SS") - time of day the task starts (e.g., "14:30:00" for 2:30 PM)
+- daily_end_time: TIME (format: "HH:MM:SS") - time of day the task ends (e.g., "15:30:00" for 3:30 PM)
+
+CRITICAL TIME FORMAT RULES:
+- NEVER use timestamp format for daily_start_time or daily_end_time
+- Use 24-hour format: "09:00:00" (9 AM), "15:30:00" (3:30 PM), "22:00:00" (10 PM)
+- Always include seconds: "HH:MM:SS"
+- start_date and end_date are just dates: "2024-12-04", NOT timestamps
+
+Examples:
+✅ CORRECT: start_date="2024-12-04", daily_start_time="14:30:00"
+❌ WRONG: start_date="2024-12-04T14:30:00", daily_start_time="2024-12-04T14:30:00"
+
 ## IMPORTANT: HANDLING MULTIPLE TASKS
 When user asks to move/delete/update MULTIPLE tasks:
-1. FIRST use get_tasks_by_start_date to get the list of tasks
-2. Tell user "I found X tasks" and list them
-3. You can only process ONE task per tool call
-4. For batch operations, explain you'll process them one by one
-5. ALWAYS confirm before batch deletes
+1. Use batch operations tools when available (move_tasks_batch, delete_tasks_batch)
+2. For single operations, process one at a time and inform the user
+3. ALWAYS confirm before batch deletes
 
 ## AVAILABLE TOOLS
 You can request tool usage by responding with tool requests in this format:
@@ -56,14 +71,20 @@ PARAMS: {"param": "value"}
 Available tools:
 - get_user_profile: Get user information
 - get_goal_detail: Get goal information  
-- get_tasks_by_start_date: Get tasks in date range (REQUIRED for batch operations)
+- get_tasks_by_start_date: Get tasks in date range
+  * Params: start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), limit (optional)
 - insert_new_task: Create ONE new task
+  * Params: title, description, start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), daily_start_time (HH:MM:SS), daily_end_time (HH:MM:SS)
 - update_task_info: Update ONE task (needs task_id)
-- move_task: Reschedule ONE task (needs task_id, start_date, end_date)
+- move_task: Reschedule ONE task
+  * Params: task_id, start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), daily_start_time (HH:MM:SS), daily_end_time (HH:MM:SS)
+- move_tasks_batch: Move MULTIPLE tasks at once
+  * Params: task_ids (array), new_start_date (YYYY-MM-DD), new_end_date (optional)
 - delete_task: Delete ONE task (needs task_id)
+- delete_tasks_batch: Delete MULTIPLE tasks at once (needs task_ids array)
 - find_by_title: Search tasks by title
 
-Always get tasks data FIRST before attempting batch operations.`;
+For batch operations, use the batch tools to handle multiple items efficiently.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -422,7 +443,7 @@ serve(async (req) => {
 // Tool execution function
 async function executeTool(toolName: string, params: any, context: AgentContext, supabase: any) {
   // Validate goalId for goal-specific operations
-  const requiresGoalId = ['get_tasks_by_start_date', 'insert_new_task', 'move_task', 'delete_task', 'find_by_title'];
+  const requiresGoalId = ['get_tasks_by_start_date', 'insert_new_task', 'move_task', 'move_tasks_batch', 'delete_task', 'delete_tasks_batch', 'find_by_title'];
   if (requiresGoalId.includes(toolName) && !context.goalId) {
     throw new Error('This operation requires a goal context. Please select a goal first.');
   }
@@ -565,6 +586,93 @@ async function executeTool(toolName: string, params: any, context: AgentContext,
         success: true, 
         deleted_task_id: params.task_id,
         deleted_task_title: data[0].title
+      };
+    }
+    
+    case 'move_tasks_batch': {
+      // Batch move multiple tasks to a new date
+      if (!params.task_ids || !Array.isArray(params.task_ids) || params.task_ids.length === 0) {
+        throw new Error('task_ids array is required for batch move');
+      }
+      
+      if (!params.new_start_date) {
+        throw new Error('new_start_date is required for batch move');
+      }
+      
+      const results = [];
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (const taskId of params.task_ids) {
+        try {
+          const { data, error } = await supabase
+            .from('tasks')
+            .update({
+              start_date: params.new_start_date,
+              end_date: params.new_end_date || params.new_start_date,
+            })
+            .eq('id', taskId)
+            .eq('user_id', context.userId)
+            .eq('goal_id', context.goalId)
+            .select()
+            .single();
+          
+          if (error) throw error;
+          
+          if (data) {
+            successCount++;
+            results.push({ 
+              task_id: taskId, 
+              success: true, 
+              title: data.title,
+              moved_to: params.new_start_date
+            });
+          }
+        } catch (error) {
+          errorCount++;
+          results.push({ 
+            task_id: taskId, 
+            success: false, 
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+      
+      return {
+        success: successCount > 0,
+        total_tasks: params.task_ids.length,
+        moved_count: successCount,
+        failed_count: errorCount,
+        results: results,
+        message: `Successfully moved ${successCount} out of ${params.task_ids.length} tasks to ${params.new_start_date}`
+      };
+    }
+    
+    case 'delete_tasks_batch': {
+      // Batch delete multiple tasks
+      if (!params.task_ids || !Array.isArray(params.task_ids) || params.task_ids.length === 0) {
+        throw new Error('task_ids array is required for batch delete');
+      }
+      
+      const { data, error } = await supabase
+        .from('tasks')
+        .delete()
+        .in('id', params.task_ids)
+        .eq('user_id', context.userId)
+        .eq('goal_id', context.goalId)
+        .select();
+      
+      if (error) {
+        console.error('Batch delete error:', error);
+        throw error;
+      }
+      
+      return {
+        success: true,
+        deleted_count: data?.length || 0,
+        requested_count: params.task_ids.length,
+        deleted_tasks: data?.map((t: any) => ({ id: t.id, title: t.title })),
+        message: `Successfully deleted ${data?.length || 0} tasks`
       };
     }
     
