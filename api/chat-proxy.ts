@@ -7,7 +7,7 @@ export const config = {
   runtime: 'edge',
 };
 
-const WEBHOOK_URL = 'https://n8n.tonlaysab.com/webhook/142e0e30-4fce-4baa-ac7e-6ead0b16a3a9/chat';
+const WEBHOOK_URL = 'https://n8n.tonlaysab.com/webhook/4a558f06-2c2a-40ef-9a14-43d035c0ba8b/chat';
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
 const MAX_REQUESTS = 20; // Max 20 requests per minute per IP
 
