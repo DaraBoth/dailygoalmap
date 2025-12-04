@@ -98,6 +98,136 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     return () => clearTimeout(timer);
   }, []);
 
+  // Make floating button draggable
+  useEffect(() => {
+    let isDragging = false;
+    let currentX = 0;
+    let currentY = 0;
+    let initialX = 0;
+    let initialY = 0;
+    let xOffset = 0;
+    let yOffset = 0;
+
+    const dragStart = (e: MouseEvent | TouchEvent) => {
+      try {
+        const button = document.querySelector('.chat-window-toggle') as HTMLElement;
+        if (!button) return;
+
+        const touch = 'touches' in e ? e.touches[0] : e;
+        if (!touch) return;
+        
+        initialX = touch.clientX - xOffset;
+        initialY = touch.clientY - yOffset;
+
+        if (e.target === button || button.contains(e.target as Node)) {
+          isDragging = true;
+          button.style.cursor = 'grabbing';
+        }
+      } catch (err) {
+        console.error('Drag start error:', err);
+      }
+    };
+
+    const dragEnd = () => {
+      try {
+        const button = document.querySelector('.chat-window-toggle') as HTMLElement;
+        if (button) {
+          button.style.cursor = 'grab';
+        }
+        isDragging = false;
+      } catch (err) {
+        console.error('Drag end error:', err);
+      }
+    };
+
+    const drag = (e: MouseEvent | TouchEvent) => {
+      if (!isDragging) return;
+      
+      try {
+        e.preventDefault();
+        
+        const touch = 'touches' in e ? e.touches[0] : e;
+        if (!touch) return;
+        
+        const button = document.querySelector('.chat-window-toggle') as HTMLElement;
+        if (!button) return;
+
+        currentX = touch.clientX - initialX;
+        currentY = touch.clientY - initialY;
+
+        xOffset = currentX;
+        yOffset = currentY;
+
+        // Get button dimensions
+        const rect = button.getBoundingClientRect();
+        if (!rect) return;
+        
+        const buttonWidth = rect.width;
+        const buttonHeight = rect.height;
+
+        // Calculate boundaries
+        const maxX = window.innerWidth - buttonWidth;
+        const maxY = window.innerHeight - buttonHeight;
+
+        // Constrain to screen boundaries
+        const constrainedX = Math.max(0, Math.min(currentX, maxX));
+        const constrainedY = Math.max(0, Math.min(currentY, maxY));
+
+        button.style.position = 'fixed';
+        button.style.left = `${constrainedX}px`;
+        button.style.top = `${constrainedY}px`;
+        button.style.right = 'auto';
+        button.style.bottom = 'auto';
+        button.style.transform = 'none';
+      } catch (err) {
+        console.error('Drag error:', err);
+      }
+    };
+
+    const setupDraggable = () => {
+      try {
+        const button = document.querySelector('.chat-window-toggle') as HTMLElement;
+        if (button && !button.hasAttribute('data-draggable')) {
+          button.setAttribute('data-draggable', 'true');
+          button.style.cursor = 'grab';
+          button.style.transition = 'none';
+
+          // Mouse events
+          button.addEventListener('mousedown', dragStart);
+          document.addEventListener('mousemove', drag);
+          document.addEventListener('mouseup', dragEnd);
+
+          // Touch events
+          button.addEventListener('touchstart', dragStart, { passive: false });
+          document.addEventListener('touchmove', drag, { passive: false });
+          document.addEventListener('touchend', dragEnd);
+        }
+      } catch (err) {
+        console.error('Setup draggable error:', err);
+      }
+    };
+
+    const timer = setTimeout(setupDraggable, 100);
+    setupDraggable();
+
+    return () => {
+      clearTimeout(timer);
+      try {
+        const button = document.querySelector('.chat-window-toggle') as HTMLElement;
+        if (button) {
+          button.removeEventListener('mousedown', dragStart);
+          button.removeEventListener('touchstart', dragStart);
+        }
+        document.removeEventListener('mousemove', drag);
+        document.removeEventListener('mouseup', dragEnd);
+        document.removeEventListener('touchmove', drag);
+        document.removeEventListener('touchend', dragEnd);
+      } catch (err) {
+        console.error('Cleanup error:', err);
+      }
+    };
+  }, []);
+
   // Add clear chat button to the header
   useEffect(() => {
     const SESSION_KEY = `goal_chat_session_${goalId}_${userInfo?.id}`;

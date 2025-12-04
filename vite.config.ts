@@ -10,6 +10,19 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'https://n8n.tonlaysab.com',
+        changeOrigin: true,
+        rewrite: (path) => {
+          // Proxy /api/chat-proxy to the actual n8n webhook
+          if (path === '/api/chat-proxy') {
+            return '/webhook/142e0e30-4fce-4baa-ac7e-6ead0b16a3a9/chat';
+          }
+          return path;
+        },
+      },
+    },
   },
   plugins: [
     TanStackRouterVite(),
