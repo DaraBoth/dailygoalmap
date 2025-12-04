@@ -1,0 +1,116 @@
+/**
+ * Vercel Edge Function - Chat Proxy
+ * Proxies chat requests to n8n webhook with added security and rate limiting
+ */
+
+export const config = {
+  runtime: 'edge',
+};
+
+const WEBHOOK_URL = 'https://n8n.tonlaysab.com/webhook/142e0e30-4fce-4baa-ac7e-6ead0b16a3a9/chat';
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const MAX_REQUESTS = 20; // Max 20 requests per minute per IP
+
+// Simple in-memory rate limiting (resets on edge function cold start)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+export default async function handler(req: Request) {
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Get client IP for rate limiting
+  const ip = req.headers.get('x-forwarded-for') || 'unknown';
+  
+  // Rate limiting check
+  const now = Date.now();
+  const rateLimitData = rateLimitMap.get(ip);
+  
+  if (rateLimitData) {
+    if (now < rateLimitData.resetTime) {
+      if (rateLimitData.count >= MAX_REQUESTS) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+          {
+            status: 429,
+            headers: {
+              'Content-Type': 'application/json',
+              'Retry-After': String(Math.ceil((rateLimitData.resetTime - now) / 1000)),
+            },
+          }
+        );
+      }
+      rateLimitData.count++;
+    } else {
+      rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    }
+  } else {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+  }
+
+  try {
+    // Parse request body
+    const body = await req.json();
+
+    // Validate required fields
+    if (!body.chatInput || !body.sessionId) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: chatInput, sessionId' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Add server-side metadata
+    const enrichedBody = {
+      ...body,
+      metadata: {
+        ...body.metadata,
+        timestamp: new Date().toISOString(),
+        ip: ip,
+      },
+    };
+
+    // Forward to n8n webhook
+    const response = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(enrichedBody),
+    });
+
+    // Handle streaming response
+    if (body.enableStreaming && response.body) {
+      return new Response(response.body, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
+    }
+
+    // Handle regular JSON response
+    const data = await response.json();
+    return new Response(JSON.stringify(data), {
+      status: response.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Chat proxy error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+}
