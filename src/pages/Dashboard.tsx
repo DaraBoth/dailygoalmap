@@ -121,7 +121,8 @@ const Dashboard = () => {
   }, []);
 
   const handleToggleForm = () => {
-    setShowForm(!showForm);
+    // Navigate to template selection page
+    goToGoal('create');
   };
 
   const handleGoalDeleted = async () => {

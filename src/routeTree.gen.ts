@@ -17,7 +17,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as GoalCreateRouteImport } from './routes/goal.create'
 import { Route as GoalIdRouteImport } from './routes/goal.$id'
+import { Route as GoalCreateFromTemplateTemplateIdRouteImport } from './routes/goal.create-from-template.$templateId'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -59,11 +61,22 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GoalCreateRoute = GoalCreateRouteImport.update({
+  id: '/goal/create',
+  path: '/goal/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GoalIdRoute = GoalIdRouteImport.update({
   id: '/goal/$id',
   path: '/goal/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GoalCreateFromTemplateTemplateIdRoute =
+  GoalCreateFromTemplateTemplateIdRouteImport.update({
+    id: '/goal/create-from-template/$templateId',
+    path: '/goal/create-from-template/$templateId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +88,8 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/goal/$id': typeof GoalIdRoute
+  '/goal/create': typeof GoalCreateRoute
+  '/goal/create-from-template/$templateId': typeof GoalCreateFromTemplateTemplateIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +101,8 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/goal/$id': typeof GoalIdRoute
+  '/goal/create': typeof GoalCreateRoute
+  '/goal/create-from-template/$templateId': typeof GoalCreateFromTemplateTemplateIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +115,8 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/goal/$id': typeof GoalIdRoute
+  '/goal/create': typeof GoalCreateRoute
+  '/goal/create-from-template/$templateId': typeof GoalCreateFromTemplateTemplateIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +130,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms'
     | '/goal/$id'
+    | '/goal/create'
+    | '/goal/create-from-template/$templateId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +143,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms'
     | '/goal/$id'
+    | '/goal/create'
+    | '/goal/create-from-template/$templateId'
   id:
     | '__root__'
     | '/'
@@ -133,6 +156,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms'
     | '/goal/$id'
+    | '/goal/create'
+    | '/goal/create-from-template/$templateId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -145,6 +170,8 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   TermsRoute: typeof TermsRoute
   GoalIdRoute: typeof GoalIdRoute
+  GoalCreateRoute: typeof GoalCreateRoute
+  GoalCreateFromTemplateTemplateIdRoute: typeof GoalCreateFromTemplateTemplateIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -205,11 +232,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/goal/create': {
+      id: '/goal/create'
+      path: '/goal/create'
+      fullPath: '/goal/create'
+      preLoaderRoute: typeof GoalCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/goal/$id': {
       id: '/goal/$id'
       path: '/goal/$id'
       fullPath: '/goal/$id'
       preLoaderRoute: typeof GoalIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/goal/create-from-template/$templateId': {
+      id: '/goal/create-from-template/$templateId'
+      path: '/goal/create-from-template/$templateId'
+      fullPath: '/goal/create-from-template/$templateId'
+      preLoaderRoute: typeof GoalCreateFromTemplateTemplateIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -225,6 +266,8 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   TermsRoute: TermsRoute,
   GoalIdRoute: GoalIdRoute,
+  GoalCreateRoute: GoalCreateRoute,
+  GoalCreateFromTemplateTemplateIdRoute: GoalCreateFromTemplateTemplateIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

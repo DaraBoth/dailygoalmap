@@ -107,26 +107,18 @@ message_service_sid = ""
 auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 
 # Use a custom SMS provider that implements the GoTrue SMS provider interface.
-[auth.sms.custom]
-enabled = false
-# DO NOT commit your custom SMS provider URL to git. Use environment variable substitution instead:
-url = "env(SUPABASE_AUTH_SMS_CUSTOM_URL)"
-# DO NOT commit your custom SMS provider API key to git. Use environment variable substitution instead:
-service_role_key = "env(SUPABASE_AUTH_SMS_CUSTOM_SERVICE_ROLE_KEY)"
+# [auth.sms.custom]
+# enabled = false
+# url = "env(SUPABASE_AUTH_SMS_CUSTOM_URL)"
+# service_role_key = "env(SUPABASE_AUTH_SMS_CUSTOM_SERVICE_ROLE_KEY)"
 
 # Use the PostgreSQL database schema migration mechanism by default. If you prefer to disable
 # migrations, make this false, but be careful for schema drift in prod related to missing
 # supabase schema migrations.
-[auto_schema_migration]
-enabled = true
+# Note: auto_schema_migration is now managed internally by Supabase
 
-[functions]
-enabled = true
-
-# Uncomment to customize the Postgres version used by edge functions.
 [edge_runtime]
-postgres_version = 15
+enabled = true
+policy = "oneshot"
+inspector_port = 8083
 
-# Configure your Edge Functions URLs
-[functions.functions]
-port = 54321

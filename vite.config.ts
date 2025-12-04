@@ -12,12 +12,12 @@ export default defineConfig(({ mode }) => ({
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'https://n8n.tonlaysab.com',
+        target: 'https://dailygoalmap.vercel.app',
         changeOrigin: true,
         rewrite: (path) => {
           // Proxy /api/chat-proxy to the actual n8n webhook
           if (path === '/api/chat-proxy') {
-            return '/webhook/142e0e30-4fce-4baa-ac7e-6ead0b16a3a9/chat';
+            // return '/webhook/142e0e30-4fce-4baa-ac7e-6ead0b16a3a9/chat';
           }
           return path;
         },

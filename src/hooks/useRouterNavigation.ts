@@ -84,11 +84,22 @@ export function useRouterNavigation() {
   }, [navigateTo])
 
   /**
-   * Navigate to goal detail with preloading
+   * Navigate to goal detail with preloading, or to create/template pages
    */
-  const goToGoal = useCallback(async (goalId: string, options?: { preload?: boolean; search?: Record<string, any> }) => {
+  const goToGoal = useCallback(async (
+    goalIdOrAction: string, 
+    options?: { preload?: boolean; search?: Record<string, unknown> }
+  ) => {
     const { preload = true, search } = options || {}
-    await navigateTo(`/goal/${goalId}`, { preload, search })
+    
+    // Handle special actions
+    if (goalIdOrAction === 'create') {
+      await navigateTo('/goal/create', { preload, search })
+      return
+    }
+    
+    // Regular goal detail navigation
+    await navigateTo(`/goal/${goalIdOrAction}`, { preload, search })
   }, [navigateTo])
 
   /**
