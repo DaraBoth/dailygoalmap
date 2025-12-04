@@ -9,7 +9,7 @@ interface GoalChatWidgetProps {
   userInfo: { id?: string } | null;
 }
 
-const WEBHOOK_URL = 'https://n8n.tonlaysab.com/webhook/142e0e30-4fce-4baa-ac7e-6ead0b16a3a9/chat';
+const WEBHOOK_URL = '/api/chat-proxy';
 
 export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo }) => {
   const chatInitialized = useRef(false);
