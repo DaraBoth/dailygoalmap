@@ -91,11 +91,43 @@ serve(async (req) => {
       throw new Error('Invalid user message');
     }
 
-    // Get Gemini API key
-    const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
-    if (!geminiApiKey) {
-      throw new Error("Missing Gemini API key");
+    // Get user's Gemini API key from database
+    const { data: apiKeyData, error: apiKeyError } = await supabase
+      .from('api_keys')
+      .select('key_value')
+      .eq('user_id', userId)
+      .eq('key_type', 'gemini')
+      .order('is_default', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (apiKeyError || !apiKeyData) {
+      return new Response(
+        JSON.stringify({ 
+          error: "API_KEY_REQUIRED",
+          message: "🔑 Please add your Gemini API key in Profile > API Key Management to use the AI assistant.\n\nThe AI assistant needs a Gemini API key to help you manage tasks and goals.",
+          setupRequired: true,
+          setupInstructions: {
+            title: "How to get your Gemini API Key:",
+            steps: [
+              "1. Visit https://aistudio.google.com/apikey",
+              "2. Sign in with your Google account",
+              "3. Click 'Create API Key'",
+              "4. Copy the key (starts with 'AIza')",
+              "5. Go to Profile > API Key Management in the app",
+              "6. Add your Gemini API key"
+            ]
+          }
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
     }
+
+    const geminiApiKey = apiKeyData.key_value;
 
     // Prepare messages for AI
     const aiMessages = [
@@ -107,37 +139,77 @@ serve(async (req) => {
       }
     ];
 
-    // Call Gemini API
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: aiMessages,
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 2048,
+    // Call Gemini API with timeout and error handling
+    let geminiData;
+    let aiResponseText;
+    
+    try {
+      const geminiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: aiMessages,
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 2048,
+            }
+          })
+        }
+      );
+
+      if (!geminiResponse.ok) {
+        const errorText = await geminiResponse.text();
+        console.error("Gemini API error:", geminiResponse.status, errorText);
+        
+        // Return user-friendly error instead of throwing
+        return new Response(
+          JSON.stringify({ 
+            error: "AI_SERVICE_ERROR",
+            message: "The AI service is temporarily unavailable. Please try again in a moment."
+          }),
+          { 
+            status: 503,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
           }
-        })
+        );
       }
-    );
 
-    if (!geminiResponse.ok) {
-      const errorData = await geminiResponse.json();
-      console.error("Gemini API error:", errorData);
-      throw new Error(`Gemini API error: ${errorData.error?.message || 'Unknown error'}`);
+      geminiData = await geminiResponse.json();
+      aiResponseText = geminiData.candidates[0]?.content?.parts[0]?.text || "I'm having trouble processing your request. Please try again.";
+    } catch (geminiError) {
+      console.error("Gemini API fetch failed:", geminiError);
+      return new Response(
+        JSON.stringify({ 
+          error: "AI_SERVICE_ERROR",
+          message: "Unable to connect to AI service. Please check your API key and try again."
+        }),
+        { 
+          status: 503,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
     }
-
-    const geminiData = await geminiResponse.json();
-    const aiResponseText = geminiData.candidates[0]?.content?.parts[0]?.text || "I'm having trouble processing your request. Please try again.";
 
     // Check if AI is requesting tool usage
     const toolMatch = aiResponseText.match(/TOOL: (\w+)\nPARAMS: ({.*?})/s);
     
     if (toolMatch) {
       const toolName = toolMatch[1];
-      const params = JSON.parse(toolMatch[2]);
+      let params;
+      
+      try {
+        params = JSON.parse(toolMatch[2]);
+      } catch (parseError) {
+        console.error("Failed to parse tool params:", toolMatch[2]);
+        return new Response(
+          JSON.stringify({ 
+            message: "I understood what you want, but had trouble executing it. Could you rephrase your request?"
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       
       // Execute tool
       let toolResult;
@@ -157,31 +229,55 @@ serve(async (req) => {
         }
       ];
 
-      const followUpResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [...aiMessages, ...followUpMessages],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 2048,
-            }
-          })
+      try {
+        const followUpResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [...aiMessages, ...followUpMessages],
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 2048,
+              }
+            })
+          }
+        );
+
+        if (!followUpResponse.ok) {
+          console.error("Follow-up Gemini call failed:", followUpResponse.status);
+          // Return tool result with basic formatting instead
+          return new Response(
+            JSON.stringify({ 
+              message: `I executed the action, but here's the raw result: ${JSON.stringify(toolResult)}`,
+              toolUsed: toolName
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
         }
-      );
 
-      const followUpData = await followUpResponse.json();
-      const finalResponse = followUpData.candidates[0]?.content?.parts[0]?.text || aiResponseText;
+        const followUpData = await followUpResponse.json();
+        const finalResponse = followUpData.candidates[0]?.content?.parts[0]?.text || aiResponseText;
 
-      return new Response(
-        JSON.stringify({ 
-          message: finalResponse.replace(/TOOL:.*?PARAMS:.*?}/gs, '').trim(),
-          toolUsed: toolName
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+        return new Response(
+          JSON.stringify({ 
+            message: finalResponse.replace(/TOOL:.*?PARAMS:.*?}/gs, '').trim(),
+            toolUsed: toolName
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (followUpError) {
+        console.error("Follow-up Gemini call error:", followUpError);
+        // Return simplified success message
+        return new Response(
+          JSON.stringify({ 
+            message: `Action completed successfully.`,
+            toolUsed: toolName
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Return direct response if no tools needed
@@ -207,6 +303,12 @@ serve(async (req) => {
 
 // Tool execution function
 async function executeTool(toolName: string, params: any, context: AgentContext, supabase: any) {
+  // Validate goalId for goal-specific operations
+  const requiresGoalId = ['get_tasks_by_start_date', 'insert_new_task', 'move_task', 'delete_task', 'find_by_title'];
+  if (requiresGoalId.includes(toolName) && !context.goalId) {
+    throw new Error('This operation requires a goal context. Please select a goal first.');
+  }
+  
   switch (toolName) {
     case 'get_user_profile': {
       const { data, error } = await supabase

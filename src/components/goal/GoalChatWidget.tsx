@@ -188,14 +188,57 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     } catch (err) {
       console.error("❌ Error:", err);
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "⚠️ I'm having trouble connecting. Please try again.",
-          timestamp: Date.now(),
-        },
-      ]);
+      // Check if it's an API key error from the response data
+      let errorData = null;
+      
+      // Try to extract error data from different possible error structures
+      if ((err as any)?.context?.body) {
+        errorData = (err as any).context.body;
+      } else if ((err as any)?.message) {
+        // Try parsing the error message as JSON
+        try {
+          errorData = JSON.parse((err as any).message);
+        } catch {
+          // Not JSON, continue
+        }
+      }
+      
+      if (errorData?.error === "API_KEY_REQUIRED") {
+        const instructions = errorData.setupInstructions;
+        let instructionText = "";
+        
+        if (instructions) {
+          instructionText = "\n\n" + instructions.title + "\n" + instructions.steps.join("\n");
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: errorData.message + instructionText,
+            timestamp: Date.now(),
+          },
+        ]);
+      } else if (errorData?.error === "AI_SERVICE_ERROR") {
+        // Handle AI service errors gracefully
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: errorData.message || "⚠️ The AI service is temporarily unavailable. Please try again.",
+            timestamp: Date.now(),
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "⚠️ I'm having trouble connecting. Please try again.",
+            timestamp: Date.now(),
+          },
+        ]);
+      }
 
       const errorMessage = err instanceof Error ? err.message : "Something went wrong.";
       toast({
