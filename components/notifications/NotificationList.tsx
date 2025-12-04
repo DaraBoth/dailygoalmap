@@ -6,6 +6,7 @@ import { NotificationItem } from "./NotificationItem";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Bell } from "lucide-react";
 
 interface NotificationListProps {
   onAnyAction?: () => void;
@@ -55,6 +56,14 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
     
     const currentState = paginationState[filter];
     
+    if (!currentState.hasMore && !reset) {
+      console.log(`No more ${filter} notifications to load`);
+      return;
+    }
+    
+    setLoading(true);
+    
+    // Clear items immediately if reset
     if (reset) {
       setItems([]);
       setPaginationState(prev => ({
@@ -62,13 +71,6 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
         [filter]: { cursor: undefined, hasMore: true }
       }));
     }
-    
-    if (!currentState.hasMore && !reset) {
-      console.log(`No more ${filter} notifications to load`);
-      return;
-    }
-    
-    setLoading(true);
     
     try {
       const pageLimit = 15;
@@ -86,7 +88,17 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
       
       console.log(`Loaded ${page.length} ${filter} notifications (fromCache=${fromCache})`);
       
-      setItems((prev) => reset ? page : [...prev, ...page]);
+      // When resetting, just set the new page directly
+      // When appending, remove duplicates by ID
+      if (reset) {
+        setItems(page);
+      } else {
+        setItems((prev) => {
+          const existingIds = new Set(prev.map(item => item.id));
+          const newItems = page.filter(item => !existingIds.has(item.id));
+          return [...prev, ...newItems];
+        });
+      }
       
       // Update pagination state for this specific filter
       const hasMoreData = page.length >= pageLimit;
@@ -212,60 +224,86 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
     <button
       onClick={onClick}
       aria-pressed={ariaPressed}
-      className={`text-sm font-semibold text-foreground/90 dark:text-white/90 hover:underline transition-all duration-300 ease-out bg-inherit py-0 ${active
-        ? 'text-gray-900 dark:text-white underline'
-        : 'text-gray-600 dark:text-gray-300 '
+      className={`text-xs sm:text-sm font-semibold transition-all duration-200 relative ${active
+        ? 'bg-primary/10 text-primary shadow-sm'
+        : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
         } ${className}`}
     >
       <span className="font-medium">{label}</span>
+      {count !== undefined && count > 0 && (
+        <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
     </button>
   );
 
+  // Filter items based on current filter to ensure correct display
+  const filteredItems = useMemo(() => {
+    if (filter === 'invites') {
+      // Show all invitation-type notifications, regardless of status
+      return items.filter(item => item.type === 'invitation');
+    }
+    if (filter === 'unread') {
+      return items.filter(item => !item.read_at);
+    }
+    return items;
+  }, [items, filter]);
+
   return (
-    <div className="w-full sm:w-80 md:w-96 rounded-3xl shadow-2xl flex flex-col max-h-[600px]">
-      <div className="text-sm font-semibold sticky top-0 border-b rounded-t-3xl border-white/20 flex-shrink-0">
-        <div className="px-4 flex sm:flex-row sm:items-center justify-between pt-3 gap-3">
-          <div className="text-lg font-bold text-foreground">Notifications</div>
-          <div className="flex items-center ml-0 sm:ml-4">
-            <button
-              onClick={handleMarkAllAsRead}
-              className="text-sm font-semibold text-foreground/90 dark:text-white/90 hover:underline"
-              aria-label="Mark all notifications as read"
-            >
-              Mark all read
-            </button>
-          </div>
+    <div className={`w-full sm:w-80 md:w-96 rounded-2xl overflow-hidden flex flex-col bg-background/95 backdrop-blur-xl ${
+      isMobile ? 'h-full max-h-full' : 'max-h-[600px]'
+    }`}>
+      <div className="text-sm font-semibold sticky top-0 border-b border-border/50 bg-background/98 backdrop-blur-xl flex-shrink-0 z-10">
+        <div className="px-4 sm:px-6 flex sm:flex-row sm:items-center justify-between pt-4 pb-3 gap-3">
+          <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            Notifications
+          </h2>
+          <button
+            onClick={handleMarkAllAsRead}
+            className="text-xs sm:text-sm font-medium text-primary hover:text-primary/80 transition-colors whitespace-nowrap"
+            aria-label="Mark all notifications as read"
+          >
+            Mark all read
+          </button>
         </div>
-        <div className="inline-flex justify-between gap-0 mt-2 shadow-lg w-full" role="tablist" aria-label="Filter notifications">
-          <SegButton className="flex-1 align-middle liquid-glass" active={filter === 'all'} onClick={() => setFilter('all')} label="All" count={counts.all} ariaPressed={filter === 'all'} />
-          <SegButton className="flex-1 align-middle liquid-glass" active={filter === 'unread'} onClick={() => setFilter('unread')} label="Unread" count={counts.unread} ariaPressed={filter === 'unread'} />
-          <SegButton className="flex-1 align-middle liquid-glass" active={filter === 'invites'} onClick={() => setFilter('invites')} label="Invites" count={counts.invites} ariaPressed={filter === 'invites'} />
+        <div className="flex items-center gap-1 px-2 pb-2" role="tablist" aria-label="Filter notifications">
+          <SegButton className="flex-1 text-center py-2 px-3 rounded-lg transition-all" active={filter === 'all'} onClick={() => setFilter('all')} label="All" count={counts.all} ariaPressed={filter === 'all'} />
+          <SegButton className="flex-1 text-center py-2 px-3 rounded-lg transition-all" active={filter === 'unread'} onClick={() => setFilter('unread')} label="Unread" count={counts.unread} ariaPressed={filter === 'unread'} />
+          <SegButton className="flex-1 text-center py-2 px-3 rounded-lg transition-all" active={filter === 'invites'} onClick={() => setFilter('invites')} label="Invites" count={counts.invites} ariaPressed={filter === 'invites'} />
         </div>
       </div>
       {/* Scrollable area */}
       <ScrollArea 
-      className={isMobile? `h-[100vh] max-h-[100vh] min-h-[calc(100vh-145px)]` :
-          `h-[90vh] max-h-[75vh] min-h-[200px] shadow-xl hide-scrollbar`
+        className={isMobile ? `h-[100vh] max-h-[100vh] min-h-[calc(100vh-145px)]` :
+          `h-[90vh] max-h-[75vh] min-h-[200px]`
         } 
         ref={viewportRef}
       >
-        <div className="p-3 space-y-3">
-          {items.length === 0 && !loading && (
-            <div className="text-sm text-muted-foreground p-8 text-center">
-              No notifications
+        <div className="p-2 sm:p-3 space-y-2">
+          {filteredItems.length === 0 && !loading && (
+            <div className="flex flex-col items-center justify-center py-12 px-4">
+              <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                <Bell className="w-8 h-8 text-muted-foreground/50" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">No notifications yet</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">You're all caught up!</p>
             </div>
           )}
-          {items.map((n) => (
-            <NotificationItem key={n.id} n={n} onAfterAction={handleAfterAction} />
+          {filteredItems.map((n, index) => (
+            <NotificationItem key={`${n.id}-${index}`} n={n} onAfterAction={handleAfterAction} />
           ))}
           {loading && (
-            <div className="text-sm text-muted-foreground p-4 text-center liquid-glass rounded-xl animate-pulse">
-              Loading...
+            <div className="flex items-center justify-center p-6">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                <span>Loading...</span>
+              </div>
             </div>
           )}
-          {!paginationState[filter].hasMore && items.length > 0 && (
-            <div className="text-xs text-muted-foreground p-3 text-center liquid-glass rounded-xl">
-              No more notifications
+          {!paginationState[filter].hasMore && filteredItems.length > 0 && (
+            <div className="text-xs text-center text-muted-foreground/70 py-4">
+              You've reached the end
             </div>
           )}
         </div>

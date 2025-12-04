@@ -26,7 +26,9 @@ export function ThemeProvider({
   storageKey = "ui-theme",
   ...props
 }: ThemeProviderProps) {
-  const getDefaultTheme = () => {
+  const getDefaultTheme = (): Theme => {
+    if (typeof window === 'undefined') return defaultTheme; // Server-side: return defaultTheme
+    
     const storedTheme = localStorage.getItem(storageKey) as Theme | null;
     if (storedTheme) return storedTheme;
 

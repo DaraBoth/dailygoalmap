@@ -7,8 +7,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from '@/components/ui/use-toast';
 import ReactMarkdown from 'react-markdown';
 import { useIsMobile } from '@/hooks/use-mobile';
-import chatAIGif from '@/assets/images/image.png'
-import robot from '@/assets/images/robot.png'
 import axios from 'axios'
 
 interface ChatMessage {
@@ -20,7 +18,7 @@ interface ChatMessage {
 
 interface GoalChatWidgetProps {
   goalId: string;
-  userInfo: any;
+  userInfo: { id: string; email: string };
 }
 
 const WEBHOOK_URL = 'https://n8n.tonlaysab.com/webhook/142e0e30-4fce-4baa-ac7e-6ead0b16a3a9/chat';
@@ -419,7 +417,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(true)}
       >
-        <img className='h-8 w-8' src={chatAIGif} alt="Chat AI Image" />
+        <MessageCircle className='h-8 w-8' />
         {/* <MessageCircle className="h-6 w-6" /> */}
       </motion.button>
 
@@ -436,7 +434,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             <div className="flex items-center justify-between p-4 border-b bg-muted/80">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold">GuoErr AI</h3>
-                <img className='h-6 w-6' src={robot} alt="Chat AI Image" />
+                <MessageCircle className='h-6 w-6' />
               </div>
 
               <div className="flex items-center gap-2">

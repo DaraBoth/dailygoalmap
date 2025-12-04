@@ -149,6 +149,13 @@ export const updateGoal = async (goalId: string, goalData: Partial<Goal>): Promi
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) throw new Error("User not authenticated");
 
+    // Get original goal data for comparison
+    const { data: originalGoal } = await supabase
+      .from('goals')
+      .select('*')
+      .eq('id', goalId)
+      .single();
+
     // Prepare the update object
     const goalToUpdate: any = {};
 
@@ -161,8 +168,6 @@ export const updateGoal = async (goalId: string, goalData: Partial<Goal>): Promi
     // Always update the updated_at timestamp
     goalToUpdate.updated_at = new Date().toISOString();
 
-
-
     const { data, error } = await supabase
       .from('goals')
       .update(goalToUpdate)
@@ -171,6 +176,40 @@ export const updateGoal = async (goalId: string, goalData: Partial<Goal>): Promi
       .single();
 
     if (error) throw error;
+
+    // Send notification for goal updates
+    if (originalGoal) {
+      try {
+        const changes: string[] = [];
+        if (goalData.title && goalData.title !== originalGoal.title) changes.push('title');
+        if (goalData.description && goalData.description !== originalGoal.description) changes.push('description');
+        if (goalData.target_date && goalData.target_date !== originalGoal.target_date) changes.push('target date');
+        if (goalData.status && goalData.status !== originalGoal.status) {
+          changes.push('status');
+          // Check if goal was marked as completed
+          if (goalData.status === 'completed') {
+            const { notifyGoalCompleted } = await import('@/services/notificationEvents');
+            await notifyGoalCompleted(
+              goalId,
+              userData.user.id,
+              data.title
+            );
+          }
+        }
+
+        if (changes.length > 0 && goalData.status !== 'completed') {
+          const { notifyGoalUpdated } = await import('@/services/notificationEvents');
+          await notifyGoalUpdated(
+            goalId,
+            userData.user.id,
+            data.title,
+            changes
+          );
+        }
+      } catch (notifError) {
+        console.error('Error sending goal update notification:', notifError);
+      }
+    }
 
     // Transform the response to match Goal type
     const updatedGoal: Goal = {
@@ -289,6 +328,18 @@ export const joinGoalWithShareCode = async (shareCode: string): Promise<Goal> =>
 
     if (joinError) throw joinError;
 
+    // Send notification that user joined the goal
+    try {
+      const { notifyGoalMemberJoined } = await import('@/services/notificationEvents');
+      await notifyGoalMemberJoined(
+        goalData.id,
+        userData.user.id,
+        goalData.title
+      );
+    } catch (notifError) {
+      console.error('Error sending goal member joined notification:', notifError);
+    }
+
     // Transform the response to match Goal type
     const joinedGoal: Goal = {
       ...goalData,
@@ -352,47 +403,60 @@ export const updateTask = async (taskId: string, updates: any) => {
 
     if (error) throw error;
 
-    // Send notifications for task content updates (not just completion)
+    // Send notifications for task updates (excluding completion state)
     try {
       const hasContentChanges = 
         (updates.title && updates.title !== originalTask.title) ||
         (updates.description && updates.description !== originalTask.description) ||
         (updates.start_date && updates.start_date !== originalTask.start_date) ||
-        (updates.end_date && updates.end_date !== originalTask.end_date);
+        (updates.end_date && updates.end_date !== originalTask.end_date) ||
+        (updates.daily_start_time && updates.daily_start_time !== originalTask.daily_start_time) ||
+        (updates.daily_end_time && updates.daily_end_time !== originalTask.daily_end_time);
+
+      // Check if completion state changed
+      const completionChanged = typeof updates.completed !== 'undefined' && 
+                               updates.completed !== originalTask.completed;
 
       if (hasContentChanges) {
-        const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
-        const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
+        // Task content was updated (title, description, dates, etc.)
+        const { notifyTaskUpdated } = await import('@/services/notificationEvents');
+        const taskTitle = updates.title || originalTask.title;
+        const changedFields = [];
+        if (updates.title && updates.title !== originalTask.title) changedFields.push('title');
+        if (updates.description && updates.description !== originalTask.description) changedFields.push('description');
+        if (updates.start_date && updates.start_date !== originalTask.start_date) changedFields.push('date');
+        if (updates.daily_start_time && updates.daily_start_time !== originalTask.daily_start_time) changedFields.push('time');
         
-        // Build a deep link to the specific task so recipients can open it directly
-        const deepLink = `/goal/${originalTask.goal_id}?date=${encodeURIComponent((updates.start_date || originalTask.start_date))}&taskId=${encodeURIComponent(taskId)}`;
-
-        await sendNotificationToGoalMembers(
+        await notifyTaskUpdated(
+          taskId,
           originalTask.goal_id,
           user.id,
-          'Task updated',
-          `${originalTask.title} has been modified`,
-          {
-            type: 'task_updated',
-            task_id: taskId,
-            goal_id: originalTask.goal_id,
-            action: 'edited',
-            url: deepLink
-          }
+          taskTitle,
+          changedFields.join(', ')
         );
+      }
 
-        // Store internal notification
-        await createTaskUpdateNotification(
-          originalTask.goal_id,
-          user.id,
-          'task_updated',
-          {
-            task_title: originalTask.title,
-            task_id: taskId,
-            action: 'edited',
-            url: deepLink
-          }
-        );
+      if (completionChanged) {
+        // Task completion state changed
+        if (updates.completed) {
+          // Task was completed
+          const { notifyTaskCompleted } = await import('@/services/notificationEvents');
+          await notifyTaskCompleted(
+            taskId,
+            originalTask.goal_id,
+            user.id,
+            updates.title || originalTask.title
+          );
+        } else {
+          // Task was marked incomplete
+          const { notifyTaskIncompleted } = await import('@/services/notificationEvents');
+          await notifyTaskIncompleted(
+            taskId,
+            originalTask.goal_id,
+            user.id,
+            updates.title || originalTask.title
+          );
+        }
       }
     } catch (notifError) {
       console.error('Error sending task update notifications:', notifError);
@@ -411,12 +475,31 @@ export const updateTask = async (taskId: string, updates: any) => {
  */
 export const insertTask = async (taskData: any) => {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated");
+
     const { data, error } = await supabase
       .from('tasks')
       .insert([taskData])
       .select();
 
     if (error) throw error;
+
+    // Send notification for new task creation
+    if (data && data[0] && taskData.goal_id) {
+      try {
+        const { notifyTaskCreated } = await import('@/services/notificationEvents');
+        await notifyTaskCreated(
+          data[0].id,
+          taskData.goal_id,
+          user.id,
+          taskData.title || 'New Task'
+        );
+      } catch (notifError) {
+        console.error('Error sending task created notification:', notifError);
+      }
+    }
+
     return data;
   } catch (error) {
     console.error("Error creating task:", error);
@@ -426,12 +509,36 @@ export const insertTask = async (taskData: any) => {
 
 export const deleteTaskFromDatabase = async (taskId: string): Promise<void> => {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated");
+
+    // Get task data before deletion for notification
+    const { data: taskData } = await supabase
+      .from('tasks')
+      .select('title, goal_id')
+      .eq('id', taskId)
+      .single();
+
     const { error } = await supabase
       .from('tasks')
       .delete()
       .eq('id', taskId);
 
     if (error) throw error;
+
+    // Send notification for task deletion
+    if (taskData) {
+      try {
+        const { notifyTaskDeleted } = await import('@/services/notificationEvents');
+        await notifyTaskDeleted(
+          taskData.title || 'Task',
+          taskData.goal_id,
+          user.id
+        );
+      } catch (notifError) {
+        console.error('Error sending task deleted notification:', notifError);
+      }
+    }
   } catch (error) {
     console.error("Error deleting task:", error);
     throw error;

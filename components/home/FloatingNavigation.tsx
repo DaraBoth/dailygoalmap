@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { SmartLink } from "@/components/ui/SmartLink";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -12,6 +12,12 @@ const FloatingNavigation: React.FC = () => {
   const { scrollY } = useScroll();
   const headerOpacity = useTransform(scrollY, [0, 100], [1, 0.8]);
   const { isAuthenticated, user } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <motion.header 
@@ -74,7 +80,7 @@ const FloatingNavigation: React.FC = () => {
           
           <div className="flex gap-3 items-center">
             <ThemeToggle />
-            {isAuthenticated ? (
+            {mounted && isAuthenticated ? (
               // Show user menu for authenticated users
               <motion.div
                 initial={{ x: 20, opacity: 0 }}
@@ -90,7 +96,7 @@ const FloatingNavigation: React.FC = () => {
                 <UserMenu />
               </motion.div>
             ) : (
-              // Show login/signup for unauthenticated users
+              // Show login/signup for unauthenticated users (default/SSR)
               <>
                 <motion.div
                   initial={{ x: 20, opacity: 0 }}

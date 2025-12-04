@@ -137,7 +137,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                 </h3>
                 {selectedTask.title && selectedTask.description && selectedTask.title !== selectedTask.description && (
                   <div className="mt-3 p-4 liquid-glass-card">
-                    <p className="text-sm text-foreground leading-relaxed">
+                    <div className="text-sm text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
@@ -153,7 +153,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                       >
                         {selectedTask.description}
                       </ReactMarkdown>
-                    </p>
+                    </div>
                   </div>
                 )}
               </div>

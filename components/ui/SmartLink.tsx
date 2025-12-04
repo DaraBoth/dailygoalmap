@@ -1,9 +1,9 @@
 import React from 'react'
-import { Link, LinkProps } from '@tanstack/react-router'
+import Link from 'next/link'
 import { useLinkPreloader } from '@/hooks/useRouterNavigation'
 import { cn } from '@/lib/utils'
 
-interface SmartLinkProps extends Omit<LinkProps, 'to' | 'preload'> {
+interface SmartLinkProps extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
   to: string
   children: React.ReactNode
   className?: string
@@ -32,7 +32,7 @@ export function SmartLink({
         className={className}
         target={to.startsWith('http') ? '_blank' : undefined}
         rel={to.startsWith('http') ? 'noopener noreferrer' : undefined}
-        {...(props as any)}
+        {...props}
       >
         {children}
       </a>
@@ -44,7 +44,7 @@ export function SmartLink({
 
   return (
     <Link
-      to={to as any}
+      href={to}
       className={className}
       {...linkProps}
       {...props}

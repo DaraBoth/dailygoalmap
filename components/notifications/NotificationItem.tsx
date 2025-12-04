@@ -193,58 +193,60 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
     const goalText = payload.goal_title ? `“${payload.goal_title}”` : "the goal";
 
     return (
-      <div className="flex items-start">
-        {/* Notification Icon */}
+      <div className="flex items-start gap-3">
+        {/* Notification Icon/Avatar */}
         {avatarUrl ?
-          <Avatar className={leftAccentClass} ><AvatarImage src={avatarUrl} alt={senderName} /></Avatar>
+          <Avatar className={`flex-shrink-0 h-10 w-10 ring-2 ${isUnread ? 'ring-primary/20' : 'ring-transparent'}`}>
+            <AvatarImage src={avatarUrl} alt={senderName} />
+            <AvatarFallback>{senderName.substring(0, 2).toUpperCase()}</AvatarFallback>
+          </Avatar>
           :
-          <div className={`p-2 rounded-xl backdrop-blur-sm border ${colorScheme === 'blue' ? 'bg-blue-100/80 dark:bg-blue-900/50 border-blue-200/70 dark:border-blue-700/60 text-blue-700 dark:text-blue-300' :
-            colorScheme === 'green' ? 'bg-green-100/80 dark:bg-green-900/50 border-green-200/70 dark:border-green-700/60 text-green-700 dark:text-green-300' :
-              colorScheme === 'red' ? 'bg-red-100/80 dark:bg-red-900/50 border-red-200/70 dark:border-red-700/60 text-red-700 dark:text-red-300' :
-                colorScheme === 'orange' ? 'bg-orange-100/80 dark:bg-orange-900/50 border-orange-200/70 dark:border-orange-700/60 text-orange-700 dark:text-orange-300' :
-                  'bg-gray-100/80 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-600/60 text-gray-700 dark:text-gray-300'
-            } ${leftAccentClass}`}>
+          <div className={`flex-shrink-0 p-2.5 rounded-full ${colorScheme === 'blue' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' :
+            colorScheme === 'green' ? 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400' :
+              colorScheme === 'red' ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400' :
+                colorScheme === 'orange' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400' :
+                  'bg-muted text-muted-foreground'
+            }`}>
             {getNotificationIcon()}
           </div>}
 
-        <div className="flex-1 space-y-2">
+        <div className="flex-1 min-w-0 space-y-2">
           {/* Invitation Notifications */}
           {isInvite && (
             <div className="space-y-2">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <div className={`text-sm font-semibold ${isUnread ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-200'}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className={`text-sm font-semibold ${isUnread ? 'text-foreground' : 'text-muted-foreground'}`}>
                       Goal Invitation
-                    </div>
-                    {isUnread && <div className="w-2 h-2 bg-blue-500 rounded-full"></div>}
+                    </h4>
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                  <p className="text-xs text-muted-foreground line-clamp-2">
                     {senderName || 'Someone'} invited you to join {goalText}
-                  </div>
+                  </p>
                   {!n.goal_id && (
-                    <div className="flex items-center gap-1 text-xs text-destructive mt-1">
-                      <AlertCircle className="h-3 w-3" />
-                      This goal may have been deleted
+                    <div className="flex items-center gap-1 text-xs text-destructive mt-1.5">
+                      <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                      <span>This goal may have been deleted</span>
                     </div>
                   )}
                   {inviteAccepted && (
-                    <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 mt-1">
-                      <CheckCircle className="h-3 w-3" />
-                      Invitation accepted
+                    <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 mt-1.5">
+                      <CheckCircle className="h-3 w-3 flex-shrink-0" />
+                      <span>Invitation accepted</span>
                     </div>
                   )}
                   {inviteDeclined && (
-                    <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 mt-1">
-                      <XCircle className="h-3 w-3" />
-                      Invitation declined
+                    <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 mt-1.5">
+                      <XCircle className="h-3 w-3 flex-shrink-0" />
+                      <span>Invitation declined</span>
                     </div>
                   )}
                 </div>
 
                 {/* Invitation Action Buttons */}
                 {invitePending && (
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5 flex-shrink-0">
                     <Button
                       size="sm"
                       variant="outline"
@@ -294,7 +296,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
                   Member Left Goal
                 </div>
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-300 text-orange-600 dark:text-orange-400">
+              <div className="text-xs text-orange-600 dark:text-orange-400">
                 {senderName || 'A member'} has left {goalText}
               </div>
             </div>
@@ -403,14 +405,14 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
 
   return (
     <div
-      className={`liquid-glass-card p-4 backdrop-blur-md border rounded-2xl shadow-lg transition-all duration-300 ease-out ${isUnread
-        ? 'backdrop-blur-sm border-gray-200/70 dark:border-white/30 shadow-xl'
-        : 'backdrop-blur-lg border-gray-200/50 dark:border-white/20'
+      className={`group relative rounded-xl border transition-all duration-200 ${isUnread
+        ? 'bg-primary/5 border-primary/20 shadow-sm'
+        : 'bg-card/50 border-border/50 hover:border-border'
         } ${isClickable
-          ? 'hover:shadow-xl hover:bg-white/95 dark:hover:bg-white/25 cursor-pointer'
+          ? 'hover:bg-accent/50 cursor-pointer hover:shadow-md'
           : isReadOnly
-            ? 'opacity-80'
-            : 'hover:shadow-xl hover:bg-white/85 dark:hover:bg-white/20'
+            ? 'opacity-75'
+            : ''
         }`}
       onClick={isClickable ? handleNotificationClick : undefined}
       role={isClickable ? 'button' : undefined}
@@ -423,7 +425,14 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
       } : undefined}
       aria-label={isClickable ? `Navigate to goal` : undefined}
     >
-      {renderContent()}
+      {/* Unread indicator */}
+      {isUnread && (
+        <div className="absolute left-0 top-4 bottom-4 w-1 bg-primary rounded-r-full" />
+      )}
+      
+      <div className="p-3 sm:p-4">
+        {renderContent()}
+      </div>
     </div>
   );
 };

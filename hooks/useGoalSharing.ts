@@ -124,12 +124,38 @@ export const useGoalSharing = (goalId: string) => {
     if (!goalId) return;
     
     try {
+      // Get member details before removal for notification
+      const memberToRemove = members.find(m => m.id === memberId);
+      const { data: goalData } = await supabase
+        .from('goals')
+        .select('title')
+        .eq('id', goalId)
+        .single();
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
       // Use RPC function to remove a member
       const { error } = await supabase
         .rpc('remove_goal_member', { p_member_id: memberId });
 
       if (error) {
         throw error;
+      }
+
+      // Send notification to removed member
+      if (memberToRemove && goalData && user) {
+        try {
+          const { notifyGoalRemoval } = await import('@/services/notificationEvents');
+          await notifyGoalRemoval(
+            goalId,
+            memberToRemove.user_id,
+            user.id,
+            goalData.title
+          );
+        } catch (notifError) {
+          console.error('Error sending member removal notification:', notifError);
+        }
       }
 
       setMembers(prev => prev.filter(member => member.id !== memberId));
@@ -145,7 +171,7 @@ export const useGoalSharing = (goalId: string) => {
         variant: "destructive",
       });
     }
-  }, [goalId]);
+  }, [goalId, members]);
 
   const isCurrentUserCreator = useCallback(async (): Promise<boolean> => {
     if (!goalId) return false;

@@ -50,18 +50,18 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onUnreadChan
     
     return (
       <>
-        <Button variant="ghost" size="icon" className="relative liquid-glass-button" aria-label="Notifications" onClick={() => setOpen(true)}>
+        <Button variant="ghost" size="icon" className="relative hover:bg-accent" aria-label="Notifications" onClick={() => setOpen(true)}>
           <Bell className="h-5 w-5" />
           {unread > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-4 min-w-4 px-1 flex items-center justify-center shadow-lg">
-              {unread}
+            <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-5 min-w-5 px-1 flex items-center justify-center shadow-md animate-pulse">
+              {unread > 99 ? '99+' : unread}
             </span>
           )}
         </Button>
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent side="right" className="w-full sm:max-w-md p-0 liquid-glass backdrop-blur-2xl border-l border-white/30 dark:border-white/20">
-            <SheetHeader className="p-4 pb-2 border-b border-white/20 dark:border-white/10">
-              <SheetTitle className="text-lg font-semibold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+          <SheetContent side="right" className="w-full sm:max-w-md p-0 bg-background/98 backdrop-blur-xl border-l">
+            <SheetHeader className="p-4 pb-2 border-b bg-background/95">
+              <SheetTitle className="text-lg font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                 Notifications
               </SheetTitle>
             </SheetHeader>
@@ -77,16 +77,16 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onUnreadChan
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative liquid-glass-button" aria-label="Notifications">
+        <Button variant="ghost" size="icon" className="relative hover:bg-accent" aria-label="Notifications">
           <Bell className="h-5 w-5" />
           {unread > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-4 min-w-4 px-1 flex items-center justify-center shadow-lg">
-              {unread}
+            <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-5 min-w-5 px-1 flex items-center justify-center shadow-md animate-pulse">
+              {unread > 99 ? '99+' : unread}
             </span>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="p-0 w-80 sm:w-80 md:w-96 liquid-glass backdrop-blur-2xl border border-white/30 dark:border-white/20 rounded-3xl shadow-2xl">
+      <PopoverContent align="end" className="p-0 w-[95vw] sm:w-80 md:w-96 bg-background/98 backdrop-blur-xl border shadow-2xl">
         <NotificationList onAnyAction={refreshUnread} onUnreadChanged={onUnreadChange} isOpen={open} />
       </PopoverContent>
     </Popover>

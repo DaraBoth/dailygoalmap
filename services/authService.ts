@@ -26,8 +26,9 @@ class AuthService {
   private listeners: Array<(state: AuthState) => void> = [];
   private sessionCheckInterval: NodeJS.Timeout | null = null;
   private readonly SESSION_STORAGE_KEY = 'dailygoalmap_session';
-  private readonly SESSION_VALIDATION_INTERVAL = 5 * 60 * 1000; // 5 minutes
-  private readonly SESSION_REFRESH_THRESHOLD = 10 * 60 * 1000; // 10 minutes before expiry
+  // DISABLED: Supabase autoRefreshToken handles session validation automatically
+  // private readonly SESSION_VALIDATION_INTERVAL = 5 * 60 * 1000; // 5 minutes
+  // private readonly SESSION_REFRESH_THRESHOLD = 10 * 60 * 1000; // 10 minutes before expiry
 
   private constructor() {
     this.initializeAuth();
@@ -83,8 +84,9 @@ class AuthService {
         }
       });
 
-      // Start periodic session validation
-      this.startSessionValidation();
+      // DISABLED: Supabase autoRefreshToken handles session validation automatically
+      // No need for manual polling - this was causing high CPU usage
+      // this.startSessionValidation();
 
     } catch (error) {
       console.error('Auth initialization error:', error);
@@ -129,6 +131,7 @@ class AuthService {
    * Get stored session from localStorage
    */
   private getStoredSession(): SessionData | null {
+    if (typeof window === 'undefined') return null; // Skip on server-side
     try {
       const stored = localStorage.getItem(this.SESSION_STORAGE_KEY);
       if (!stored) return null;
@@ -145,6 +148,7 @@ class AuthService {
    * Clear stored session from localStorage
    */
   private clearStoredSession(): void {
+    if (typeof window === 'undefined') return; // Skip on server-side
     try {
       localStorage.removeItem(this.SESSION_STORAGE_KEY);
     } catch (error) {

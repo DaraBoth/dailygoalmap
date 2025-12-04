@@ -132,7 +132,13 @@ const TodaysTasks: React.FC = () => {
   const handleToggleTaskCompletion = async (taskId: string, currentStatus: boolean) => {
     const newStatus = !currentStatus;
 
+    // Get task data before update for notifications
+    const taskToUpdate = tasksForToday.find(t => t.id === taskId);
+
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       const { error } = await supabase
         .from('tasks')
         .update({ completed: newStatus })
@@ -145,6 +151,33 @@ const TodaysTasks: React.FC = () => {
           task.id === taskId ? { ...task, completed: newStatus } : task
         )
       );
+
+      // Send notifications for task completion/incompletion
+      if (taskToUpdate) {
+        try {
+          if (newStatus) {
+            // Task completed
+            const { notifyTaskCompleted } = await import('@/services/notificationEvents');
+            await notifyTaskCompleted(
+              taskId,
+              taskToUpdate.goal_id,
+              user.id,
+              taskToUpdate.title || 'Task'
+            );
+          } else {
+            // Task marked incomplete
+            const { notifyTaskIncompleted } = await import('@/services/notificationEvents');
+            await notifyTaskIncompleted(
+              taskId,
+              taskToUpdate.goal_id,
+              user.id,
+              taskToUpdate.title || 'Task'
+            );
+          }
+        } catch (notifError) {
+          console.error('Error sending task completion notification:', notifError);
+        }
+      }
     } catch (error) {
       console.error("Error updating task completion status:", error);
     }

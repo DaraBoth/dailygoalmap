@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Navigate, useParams } from '@tanstack/react-router';
-import { UserContext } from '@/routes/__root';
+import { useRouter, useParams } from 'next/navigation';
+import { UserContext } from '@/app/context/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import { checkCurrentUserGoalAccess } from '@/utils/goalAccess';
 
@@ -26,7 +26,9 @@ export const ConditionalProtectedRoute: React.FC<ConditionalProtectedRouteProps>
   children 
 }) => {
   const { user } = useContext(UserContext);
-  const { id: goalId } = useParams({ from: '/goal/$id' });
+  const params = useParams();
+  const goalId = params?.id as string;
+  const router = useRouter();
   const { toast } = useToast();
   
   const [accessState, setAccessState] = useState<GoalAccessState>({
@@ -98,6 +100,10 @@ export const ConditionalProtectedRoute: React.FC<ConditionalProtectedRouteProps>
 
   // Handle goal not found
   if (!accessState.goalExists) {
+    React.useEffect(() => {
+      router.replace('/dashboard');
+    }, [router]);
+    
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center max-w-md mx-auto p-6">
@@ -105,7 +111,6 @@ export const ConditionalProtectedRoute: React.FC<ConditionalProtectedRouteProps>
           <p className="text-muted-foreground mb-6">
             The goal you're looking for doesn't exist or may have been deleted.
           </p>
-          <Navigate to="/dashboard" replace />
         </div>
       </div>
     );
@@ -115,15 +120,18 @@ export const ConditionalProtectedRoute: React.FC<ConditionalProtectedRouteProps>
   if (!accessState.hasAccess) {
     // If user is not authenticated and goal is private, redirect to login
     if (!user && !accessState.isPublic) {
-      return (
-        <Navigate
-          to="/login"
-          replace
-        />
-      );
+      React.useEffect(() => {
+        router.replace('/login');
+      }, [router]);
+      
+      return null;
     }
 
     // User is authenticated but doesn't have access to private goal
+    React.useEffect(() => {
+      router.replace('/dashboard');
+    }, [router]);
+    
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center max-w-md mx-auto p-6">
@@ -131,7 +139,6 @@ export const ConditionalProtectedRoute: React.FC<ConditionalProtectedRouteProps>
           <p className="text-muted-foreground mb-6">
             {accessState.error || 'You do not have permission to view this goal.'}
           </p>
-          <Navigate to="/dashboard" replace />
         </div>
       </div>
     );

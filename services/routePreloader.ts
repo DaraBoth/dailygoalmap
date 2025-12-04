@@ -1,8 +1,7 @@
-import { router } from '@/router'
-
 /**
  * Route Preloader Service
  * Provides intelligent route preloading for better performance
+ * Adapted for Next.js App Router
  */
 export class RoutePreloader {
   private static instance: RoutePreloader
@@ -18,7 +17,7 @@ export class RoutePreloader {
   }
 
   /**
-   * Preload a route with its data
+   * Preload a route with its data (Next.js automatically prefetches links)
    */
   async preloadRoute(path: string, priority: 'high' | 'normal' | 'low' = 'normal'): Promise<void> {
     if (this.preloadedRoutes.has(path)) {

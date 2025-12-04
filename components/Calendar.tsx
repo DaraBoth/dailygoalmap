@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { parseYMD, formatYMD } from '@/utils/parseYMD';
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useSearch } from "@tanstack/react-router";
+import { useSearchParams } from "next/navigation";
 import AddTaskDialog from "./calendar/AddTaskDialog";
 import EditTaskDialog from "./calendar/EditTaskDialog";
 import CalendarContainer from "./calendar/CalendarContainer";
@@ -43,7 +43,11 @@ const Calendar = ({
 
   const calendarRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const searchParams = useSearch({ strict: false }) as { date?: string; taskId?: string };
+  const searchParamsObj = useSearchParams();
+  const searchParams = useMemo(() => ({
+    date: searchParamsObj?.get('date') || undefined,
+    taskId: searchParamsObj?.get('taskId') || undefined,
+  }), [searchParamsObj]);
   const hasInitializedDate = useRef(false);
   const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);

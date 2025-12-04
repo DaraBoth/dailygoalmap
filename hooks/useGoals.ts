@@ -3,10 +3,10 @@ import { Goal, SortOption } from "@/types/goal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-export const useGoals = () => {
+export const useGoals = (initialGoals?: Goal[]) => {
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [allGoals, setAllGoals] = useState<Goal[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [allGoals, setAllGoals] = useState<Goal[]>(initialGoals || []);
+  const [isLoading, setIsLoading] = useState(!initialGoals);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [goalToDelete, setGoalToDelete] = useState<Goal | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);

@@ -1,5 +1,5 @@
 
-import { supabase, supabaseAdmin } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { constructNotificationUrl } from "@/utils/urlUtils";
 
 // Function to send a push notification to a user using tinynotie-api
@@ -11,7 +11,7 @@ export async function sendNotificationToUser(
 ): Promise<boolean> {
   try {
     // Get user's email from the database
-    const { data:userInfo, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const { data:userInfo, error } = await supabase.auth.getUser();
 
     if(userInfo){
        // Send notification using tinynotie-api

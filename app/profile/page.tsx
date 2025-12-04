@@ -8,14 +8,17 @@ import ApiKeyManager from "@/components/profile/ApiKeyManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, LogOut, Lock } from "lucide-react";
-import { SmartLink } from "@/components/ui/SmartLink";
+import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, LogOut, User as UserIcon, Lock, Key, Bell } from "lucide-react";
 import NotificationSettings from "@/components/pwa/NotificationSettings";
+import ChangePasswordForm from "@/components/profile/ChangePasswordForm";
 import { User } from '@supabase/supabase-js';
+
+type SettingsSection = 'profile' | 'password' | 'api' | 'notifications';
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
+  const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
   const router = useRouter();
   const { toast } = useToast();
 
@@ -55,10 +58,11 @@ export default function ProfilePage() {
       });
       
       router.push('/login');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
       toast({
         title: "Error signing out",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -72,15 +76,23 @@ export default function ProfilePage() {
     );
   }
 
+  const navigationItems = [
+    { id: 'profile' as SettingsSection, label: 'Profile', icon: UserIcon },
+    { id: 'password' as SettingsSection, label: 'Password', icon: Lock },
+    { id: 'api' as SettingsSection, label: 'API Keys', icon: Key },
+    { id: 'notifications' as SettingsSection, label: 'Notifications', icon: Bell },
+  ];
+
   return (
     <>
       <Helmet>
-        <title>Profile - Goal Tracker</title>
+        <title>Settings - Goal Tracker</title>
       </Helmet>
       
-      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-purple-950/20 to-gray-950 text-white p-4 sm:p-6 md:p-8">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
+      <div className="min-h-screen bg-background">
+        {/* Top Navigation Bar */}
+        <div className="border-b border-border bg-background sticky top-0 z-10">
+          <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <Button
               variant="ghost"
               size="sm"
@@ -88,58 +100,103 @@ export default function ProfilePage() {
               className="flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
+              Dashboard
             </Button>
             
             <Button
-              variant="destructive"
+              variant="ghost"
               size="sm"
               onClick={handleSignOut}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-destructive hover:text-destructive"
             >
               <LogOut className="h-4 w-4" />
               Sign Out
             </Button>
           </div>
+        </div>
 
-          <Card className="bg-gray-900/50 border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-white">Profile Settings</CardTitle>
-              <CardDescription className="text-gray-400">
-                Manage your account information
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ProfileForm user={user} />
-            </CardContent>
-          </Card>
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Sidebar Navigation */}
+            <aside className="lg:w-64 flex-shrink-0">
+              <nav className="space-y-1">
+                <h2 className="text-sm font-semibold text-muted-foreground px-3 mb-3">Settings</h2>
+                {navigationItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeSection === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveSection(item.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
+                        isActive
+                          ? 'bg-muted font-medium text-foreground'
+                          : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </nav>
+            </aside>
 
-          <Card className="bg-gray-900/50 border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Lock className="h-5 w-5" />
-                API Keys
-              </CardTitle>
-              <CardDescription className="text-gray-400">
-                Manage your API keys for AI features
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ApiKeyManager userId={user.id} />
-            </CardContent>
-          </Card>
+            {/* Main Content Area */}
+            <main className="flex-1 max-w-3xl">
+              {activeSection === 'profile' && (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground mb-1">Profile</h1>
+                    <p className="text-muted-foreground">
+                      Manage your profile information and avatar
+                    </p>
+                  </div>
+                  <Separator />
+                  <ProfileForm />
+                </div>
+              )}
 
-          <Card className="bg-gray-900/50 border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-white">Notification Settings</CardTitle>
-              <CardDescription className="text-gray-400">
-                Configure push notifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <NotificationSettings />
-            </CardContent>
-          </Card>
+              {activeSection === 'password' && (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground mb-1">Change Password</h1>
+                    <p className="text-muted-foreground">
+                      Update your password to keep your account secure
+                    </p>
+                  </div>
+                  <Separator />
+                  <ChangePasswordForm />
+                </div>
+              )}
+
+              {activeSection === 'api' && (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground mb-1">API Keys</h1>
+                    <p className="text-muted-foreground">
+                      Manage your API keys for AI-powered features
+                    </p>
+                  </div>
+                  <Separator />
+                  <ApiKeyManager />
+                </div>
+              )}
+
+              {activeSection === 'notifications' && (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground mb-1">Notifications</h1>
+                    <p className="text-muted-foreground">
+                      Configure how you receive notifications
+                    </p>
+                  </div>
+                  <Separator />
+                  <NotificationSettings />
+                </div>
+              )}
+            </main>
+          </div>
         </div>
       </div>
     </>

@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
-import { Navigate, useLocation } from '@tanstack/react-router';
-import { UserContext } from '@/routes/__root';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { UserContext } from '@/app/context/UserContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -17,19 +17,22 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   fallback 
 }) => {
   const { user } = useContext(UserContext);
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // If user is not authenticated, redirect to login
   if (!user) {
     // Save the current path for post-login redirect
-    const redirectPath = location.pathname + location.search;
+    const search = searchParams?.toString();
+    const redirectPath = pathname + (search ? `?${search}` : '');
     
-    return (
-      <Navigate 
-        to="/login" 
-        replace 
-      />
-    );
+    // Use router.replace for client-side redirect
+    React.useEffect(() => {
+      router.replace('/login');
+    }, [router]);
+    
+    return null;
   }
 
   // If fallback is provided and user is authenticated, show fallback

@@ -99,7 +99,7 @@
 
 @layer utilities {
   .font-heading {
-    @apply text-4xl md: text-5xl lg:text-6xl font-bold;
+    @apply text-4xl md:text-5xl lg:text-6xl font-bold;
   }
 
   .animation-delay-2000 {
