@@ -78,6 +78,25 @@ export default async function handler(req: Request) {
       body: JSON.stringify(enrichedBody),
     });
 
+    // Check if n8n returned an error
+    if (!response.ok) {
+      console.error('n8n webhook error:', response.status, response.statusText);
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error('n8n error body:', errorText);
+      
+      return new Response(
+        JSON.stringify({ 
+          error: 'Webhook error',
+          details: errorText,
+          status: response.status 
+        }),
+        {
+          status: 502,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Handle streaming response
     if (body.enableStreaming && response.body) {
       return new Response(response.body, {
@@ -90,18 +109,41 @@ export default async function handler(req: Request) {
     }
 
     // Handle regular JSON response
-    const data = await response.json();
-    return new Response(JSON.stringify(data), {
-      status: response.status,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    try {
+      const data = await response.json();
+      return new Response(JSON.stringify(data), {
+        status: response.status,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    } catch (jsonError) {
+      // If response is not JSON, return it as text
+      const text = await response.text();
+      return new Response(JSON.stringify({ output: text }), {
+        status: 200,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    }
   } catch (error) {
-    console.error('Chat proxy error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Chat proxy error:', errorMessage, error);
+    
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        error: 'Internal server error',
+        message: errorMessage 
+      }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
       }
     );
   }
