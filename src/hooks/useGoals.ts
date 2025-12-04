@@ -77,37 +77,60 @@ export const useGoals = () => {
       // Sort goals by creation date (newest first) as default
       typedGoals.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-      // Fetch task counts for each goal
-      for (const goal of typedGoals) {
-        const { data: taskData, error: taskError } = await supabase
+      // OPTIMIZED: Fetch task counts for ALL goals in one query instead of loop
+      if (typedGoals.length > 0) {
+        const goalIds = typedGoals.map(goal => goal.id);
+        
+        // Fetch all tasks for all goals in a single query
+        const { data: allTasks, error: taskError } = await supabase
           .from('tasks')
-          .select('id, completed')
-          .eq('goal_id', goal.id);
+          .select('goal_id, completed')
+          .in('goal_id', goalIds);
 
-        if (!taskError && taskData) {
-          const totalTasks = taskData.length;
-          const completedTasks = taskData.filter(task => task.completed).length;
+        if (!taskError && allTasks) {
+          // Group tasks by goal_id
+          const tasksByGoal = allTasks.reduce((acc, task) => {
+            if (!acc[task.goal_id]) {
+              acc[task.goal_id] = { total: 0, completed: 0 };
+            }
+            acc[task.goal_id].total++;
+            if (task.completed) {
+              acc[task.goal_id].completed++;
+            }
+            return acc;
+          }, {} as Record<string, { total: number; completed: number }>);
 
-          goal.taskCounts = {
-            total: totalTasks,
-            completed: completedTasks,
-            incomplete: totalTasks - completedTasks
-          };
+          // Assign task counts to each goal
+          typedGoals.forEach(goal => {
+            const counts = tasksByGoal[goal.id] || { total: 0, completed: 0 };
+            goal.taskCounts = {
+              total: counts.total,
+              completed: counts.completed,
+              incomplete: counts.total - counts.completed
+            };
+          });
         }
 
-        const { data: goalMember, error: memberError }  = await supabase
-        .from('goal_members')
-        .select('*')
-        .eq('goal_id', goal.id )
+        // Fetch all goal members in a single query
+        const { data: allMembers, error: memberError } = await supabase
+          .from('goal_members')
+          .select('goal_id')
+          .in('goal_id', goalIds);
 
-        if (!memberError && goalMember) {
-          const totalMember = goalMember.length;
+        if (!memberError && allMembers) {
+          // Count members by goal_id
+          const membersByGoal = allMembers.reduce((acc, member) => {
+            acc[member.goal_id] = (acc[member.goal_id] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
 
-          goal.memberCounts = {
-            total: totalMember
-          };
+          // Assign member counts to each goal
+          typedGoals.forEach(goal => {
+            goal.memberCounts = {
+              total: membersByGoal[goal.id] || 0
+            };
+          });
         }
-
       }
 
       setAllGoals(typedGoals);

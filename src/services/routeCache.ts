@@ -214,13 +214,13 @@ export function initializeRouteCache(): void {
   // Set up periodic cleanup
   setInterval(() => {
     const stats = routeCache.getStats()
-    if (stats.expiredEntries > 10) {
+    if (stats.expiredEntries > 20) {
       console.log('Cleaning up route cache...')
       // Trigger cleanup by trying to set a dummy entry
       routeCache.set('__cleanup__', null)
       routeCache.delete('__cleanup__')
     }
-  }, 60000) // Every minute
+  }, 300000) // Every 5 minutes (reduced CPU usage)
 
   // Log cache stats in development
   if (process.env.NODE_ENV === 'development') {
@@ -234,6 +234,6 @@ export function initializeRouteCache(): void {
           memory: `${(stats.memoryUsage / 1024).toFixed(1)}KB`,
         })
       }
-    }, 30000) // Every 30 seconds
+    }, 300000) // Every 5 minutes (reduced CPU usage)
   }
 }

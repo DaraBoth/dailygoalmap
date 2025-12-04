@@ -243,6 +243,6 @@ export function initializePerformanceMonitoring(): void {
         }
         console.groupEnd()
       }
-    }, 30000) // Every 30 seconds
+    }, 300000) // Every 5 minutes (reduced CPU usage)
   }
 }

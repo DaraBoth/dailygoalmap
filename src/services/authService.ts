@@ -184,7 +184,7 @@ class AuthService {
       if (this.authState.isAuthenticated) {
         await this.validateCurrentSession();
       }
-    }, this.SESSION_VALIDATION_INTERVAL);
+    }, 900000); // Every 15 minutes (reduced from 5 minutes to save CPU)
   }
 
   /**

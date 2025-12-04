@@ -107,18 +107,6 @@ const GoalDetail: React.FC = () => {
     }
   };
 
-  // Function to refresh tasks from database
-  const refreshTasks = React.useCallback(async () => {
-    if (!goalId) return;
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('goal_id', goalId);
-    if (!error && data) {
-      setTasks(data as Task[]);
-    }
-  }, [goalId]);
-
   // Set up realtime subscription
   useEffect(() => {
     if (!goalId) return;
@@ -138,7 +126,14 @@ const GoalDetail: React.FC = () => {
         },
         async (payload) => {
           // Refresh the entire task list to ensure consistency
-          await refreshTasks();
+          if (!goalId) return;
+          const { data, error } = await supabase
+            .from('tasks')
+            .select('*')
+            .eq('goal_id', goalId);
+          if (!error && data) {
+            setTasks(data as Task[]);
+          }
           
           // Show appropriate toast message
           if (payload.eventType === 'INSERT') {
@@ -168,7 +163,17 @@ const GoalDetail: React.FC = () => {
       .subscribe();
 
     // Initial fetch
-    refreshTasks();
+    const fetchInitialTasks = async () => {
+      if (!goalId) return;
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('goal_id', goalId);
+      if (!error && data) {
+        setTasks(data as Task[]);
+      }
+    };
+    fetchInitialTasks();
 
     return () => { 
       try { 
@@ -177,7 +182,7 @@ const GoalDetail: React.FC = () => {
         /* ignore errors during cleanup */ 
       } 
     };
-  }, [goalId, toast, refreshTasks]);
+  }, [goalId, toast]); // FIXED: Removed refreshTasks from dependency array to prevent infinite loop
 
   const completedTasks = tasks.filter(t => t.completed).length;
 
