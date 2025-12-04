@@ -6,11 +6,6 @@
       "destination": "/index.html"
     }
   ],
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "edge"
-    }
-  },
   "headers": [
     {
       "source": "/api/(.*)",
