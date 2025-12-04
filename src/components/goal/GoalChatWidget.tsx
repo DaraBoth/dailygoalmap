@@ -78,24 +78,31 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   // Customize the floating button with your custom icon
   useEffect(() => {
     const replaceIcon = () => {
-      const button = document.querySelector('.chat-window-toggle');
-      if (button) {
-        const svg = button.querySelector('svg');
-        if (svg) {
-          const img = document.createElement('img');
-          img.src = chatAIGif;
-          img.style.width = '32px';
-          img.style.height = '32px';
-          svg.replaceWith(img);
+      try {
+        const button = document.querySelector('.chat-window-toggle');
+        if (button) {
+          const svg = button.querySelector('svg');
+          if (svg) {
+            const img = document.createElement('img');
+            img.src = chatAIGif;
+            img.style.width = '32px';
+            img.style.height = '32px';
+            svg.replaceWith(img);
+          }
         }
+      } catch (err) {
+        // Silently fail if DOM not ready
       }
     };
 
-    // Try replacing immediately and after a delay
-    const timer = setTimeout(replaceIcon, 100);
-    replaceIcon();
+    // Wait for DOM to be ready, then replace icon
+    const timer1 = setTimeout(replaceIcon, 200);
+    const timer2 = setTimeout(replaceIcon, 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
   }, []);
 
   // Make floating button draggable
