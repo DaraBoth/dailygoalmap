@@ -130,6 +130,15 @@ const ApiKeyManager = () => {
   const handleUpdateKey = async () => {
     if (!editingKey) return;
     
+    if (!newKeyName.trim() || !newKeyValue.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please provide both a name and value for your API key.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsAddingKey(true);
     
     try {
@@ -137,12 +146,15 @@ const ApiKeyManager = () => {
         .from('api_keys')
         .update({
           key_name: newKeyName.trim(),
-          key_value: newKeyValue.trim(),
-          updated_at: new Date().toISOString()
+          key_value: newKeyValue.trim()
+          // updated_at is auto-updated by database trigger
         })
         .eq('id', editingKey.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Database error:", error);
+        throw new Error(`Database error: ${error.message} (Code: ${error.code})`);
+      }
       
       setApiKeys(prev => prev.map(key => 
         key.id === editingKey.id 
@@ -161,9 +173,20 @@ const ApiKeyManager = () => {
       });
     } catch (error: any) {
       console.error("Error updating API key:", error);
+      let errorDescription = error.message;
+      
+      // Provide more specific error messages
+      if (error.message?.includes('violates row-level security')) {
+        errorDescription = "You don't have permission to update this API key.";
+      } else if (error.message?.includes('duplicate key')) {
+        errorDescription = "An API key with this name already exists.";
+      } else if (error.code === '23505') {
+        errorDescription = "A key with this name already exists for this API type.";
+      }
+      
       toast({
         title: "Failed to update API key",
-        description: error.message,
+        description: errorDescription,
         variant: "destructive"
       });
     } finally {

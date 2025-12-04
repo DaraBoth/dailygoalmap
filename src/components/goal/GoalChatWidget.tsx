@@ -220,12 +220,28 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
           },
         ]);
       } else if (errorData?.error === "AI_SERVICE_ERROR") {
-        // Handle AI service errors gracefully
+        // Handle AI service errors with detailed information
+        let aiErrorMsg = errorData.message || "⚠️ The AI service is temporarily unavailable. Please try again.";
+        
+        // Add status code info if available
+        if (errorData.statusCode) {
+          aiErrorMsg += `\n\n💡 Status Code: ${errorData.statusCode}`;
+        }
+        
+        // Log technical details for debugging
+        if (errorData.technicalDetails) {
+          console.error("AI Service Technical Details:", errorData.technicalDetails);
+        }
+        
+        if (errorData.details) {
+          console.error("AI Service Error Details:", errorData.details);
+        }
+        
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: errorData.message || "⚠️ The AI service is temporarily unavailable. Please try again.",
+            content: aiErrorMsg,
             timestamp: Date.now(),
           },
         ]);
