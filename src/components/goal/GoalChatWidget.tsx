@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, Loader2, Clipboard, Copy, Pointer, ArrowUp } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Clipboard, Copy, Pointer, ArrowUp, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -16,6 +17,10 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import chatAIGif from '@/assets/images/image.png'
 import robot from '@/assets/images/robot.png'
 import { supabase } from '@/integrations/supabase/client';
+import { KeySelector } from './KeySelector';
+import { ModelVariantPicker } from './ModelVariantPicker';
+
+type ModelType = 'gemini' | 'openai' | 'claude';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -42,6 +47,10 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [lastMessageTime, setLastMessageTime] = useState(0);
+  const [selectedModel, setSelectedModel] = useState<ModelType>('gemini');
+  const [selectedModelId, setSelectedModelId] = useState<string>('gemini-2.0-flash-exp');
+  const [selectedKeyIds, setSelectedKeyIds] = useState<string[]>([]);
+  const [currentApiKey, setCurrentApiKey] = useState<string>('');
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -84,6 +93,23 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
         console.error('Failed to parse saved messages:', error);
       }
     }
+
+    // Load model preference from database
+    const loadModelPreference = async () => {
+      if (!userInfo?.id) return;
+      
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('model_preference')
+        .eq('id', userInfo.id)
+        .single();
+      
+      if (!error && data?.model_preference) {
+        setSelectedModel(data.model_preference as ModelType);
+      }
+    };
+    
+    loadModelPreference();
   }, [goalId, userInfo?.id, SESSION_KEY, CHAT_KEY]);
 
   // Save messages
@@ -134,14 +160,36 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     }
 
     const text = inputValue.trim();
-    setMessages((prev) => [...prev, { role: 'user', content: text, timestamp: now }]);
+    const userMessage: ChatMessage = { role: 'user', content: text, timestamp: now };
+    setMessages((prev) => [...prev, userMessage]);
 
     setInputValue('');
     setIsLoading(true);
     setLastMessageTime(now);
 
+    // Create placeholder for AI response
+    const placeholderMessage: ChatMessage = {
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now(),
+      isStreaming: true
+    };
+    setMessages((prev) => [...prev, placeholderMessage]);
+
+    const updateAssistantPlaceholder = (updater: (last: ChatMessage) => ChatMessage) => {
+      setMessages(prev => {
+        if (prev.length === 0) return prev;
+        const updated = [...prev];
+        const lastIndex = updated.length - 1;
+        const lastMessage = updated[lastIndex];
+        if (!lastMessage) return prev;
+        updated[lastIndex] = updater(lastMessage);
+        return updated;
+      });
+    };
+
     try {
-      console.log("🤖 Using built-in AI agent...");
+      console.log("🤖 Using streaming AI agent...");
       
       // Build conversation history for the agent
       const conversationMessages = messages.map(m => ({
@@ -155,38 +203,217 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
         content: text
       });
 
-      // Call the new AI agent via Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke('ai-agent', {
-        body: {
-          messages: conversationMessages,
-          userId: userInfo?.id,
-          goalId: goalId,
-          sessionId: sessionId || crypto.randomUUID()
-        }
-      });
+      // Get session token
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
 
-      if (error) {
-        console.error("❌ AI Agent Error:", error);
-        throw error;
+      if (!accessToken) {
+        throw new Error('No session token available');
       }
 
-      console.log("✅ AI Agent Response:", data);
+      // Get Supabase URL for Edge Function
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const functionUrl = `${supabaseUrl}/functions/v1/ai-agent`;
 
-      // Extract the message from the response
-      const aiMessage = data?.message || "I'm having trouble processing your request. Please try again.";
-
-      // Add AI response to chat
-      setMessages((prev) => [
-        ...prev,
+      // Call Edge Function with streaming
+      const response = await fetch(
+        functionUrl,
         {
-          role: "assistant",
-          content: aiMessage.trim(),
-          timestamp: Date.now(),
-        },
-      ]);
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            messages: conversationMessages,
+            userId: userInfo?.id,
+            goalId: goalId,
+            sessionId: sessionId || crypto.randomUUID(),
+            stream: true,
+            modelId: selectedModelId,
+            selectedKeyIds: selectedKeyIds.length > 0 ? selectedKeyIds : undefined
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        
+        // Handle API key errors
+        if (errorData?.error === "API_KEY_REQUIRED") {
+          const instructions = errorData.setupInstructions;
+          let instructionText = "";
+          
+          if (instructions) {
+            instructionText = "\n\n" + instructions.title + "\n" + instructions.steps.join("\n");
+          }
+
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              role: "assistant",
+              content: errorData.message + instructionText,
+              timestamp: Date.now(),
+              isStreaming: false
+            };
+            return updated;
+          });
+          return;
+        }
+        
+        throw new Error(errorData.error || 'Failed to get response');
+      }
+
+      if (!response.body) {
+        throw new Error('No response body');
+      }
+
+      // Handle streaming response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedContent = '';
+      let buffer = '';
+      let isFirstContent = true; // Track if this is the first content event
+
+      console.log('🔄 Starting to read stream...');
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          console.log('✅ Stream complete');
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        console.log(`📦 Received ${lines.length} lines`);
+
+        for (const line of lines) {
+          if (!line.trim() || !line.startsWith('data: ')) continue;
+          
+          const data = line.slice(6);
+          console.log('📨 Raw data:', data);
+
+          try {
+            const parsed = JSON.parse(data);
+            console.log('✨ Parsed event:', parsed);
+
+            if (parsed.type === 'key_info') {
+              // Update current API key display
+              const keyLabel = parsed.content ?? parsed.message ?? '';
+              if (keyLabel) {
+                setCurrentApiKey(keyLabel);
+                console.log('🔑 Using API key:', keyLabel);
+              }
+            } else if (parsed.type === 'status') {
+              // Show status updates
+              const statusText = parsed.message ?? parsed.content ?? '';
+              if (statusText) {
+                updateAssistantPlaceholder(last => ({
+                  ...last,
+                  content: `_${statusText}_`,
+                  isStreaming: true
+                }));
+              }
+            } else if (parsed.type === 'thinking') {
+              // Show thinking indicator
+              const thinkingText = parsed.message ?? parsed.content ?? '';
+              if (thinkingText) {
+                updateAssistantPlaceholder(last => ({
+                  ...last,
+                  content: `_${thinkingText}_`,
+                  isStreaming: true
+                }));
+              }
+            } else if (parsed.type === 'tool') {
+              // Show tool execution (temporary message)
+              const toolStatus = parsed.message ?? parsed.content ?? 'Working...';
+              const toolName = parsed.name ?? 'Tool';
+              const toolMessage = `🔧 **Using tool:** ${toolName}\n\n_${toolStatus}_`;
+              updateAssistantPlaceholder(last => ({
+                ...last,
+                content: toolMessage,
+                isStreaming: true
+              }));
+            } else if (parsed.type === 'tool_result') {
+              // Show tool result (temporary message)
+              const resultIcon = parsed.success ? '✅' : '❌';
+              const resultText = parsed.message ?? parsed.content ?? '';
+              const toolResultMessage = resultText ? `${resultIcon} ${resultText}` : resultIcon;
+              updateAssistantPlaceholder(last => {
+                const previousContent = typeof last.content === 'string' ? last.content : '';
+                const combinedContent = previousContent
+                  ? `${previousContent}\n\n${toolResultMessage}`
+                  : toolResultMessage;
+                return {
+                  ...last,
+                  content: combinedContent,
+                  isStreaming: true
+                };
+              });
+            } else if (parsed.type === 'content') {
+              // Append content chunk (this is the final response after tools)
+              const chunk = typeof parsed.delta === 'string'
+                ? parsed.delta
+                : (typeof parsed.content === 'string' ? parsed.content : '');
+
+              if (!chunk) {
+                continue;
+              }
+
+              if (isFirstContent) {
+                accumulatedContent = '';
+                isFirstContent = false;
+                console.log('🔄 First content event - resetting accumulator');
+              }
+
+              accumulatedContent += chunk;
+              console.log('📝 Delta:', chunk, '| Accumulated:', accumulatedContent.substring(0, 50));
+              updateAssistantPlaceholder(last => ({
+                ...last,
+                content: accumulatedContent,
+                isStreaming: true
+              }));
+            } else if (parsed.type === 'done') {
+              // Finalize message
+              updateAssistantPlaceholder(last => {
+                const existingContent = typeof last.content === 'string' ? last.content : '';
+                const finalContent = accumulatedContent || existingContent;
+                return {
+                  ...last,
+                  content: finalContent,
+                  isStreaming: false
+                };
+              });
+            } else if (parsed.type === 'error') {
+              // Handle streaming errors
+              let errorMessage = parsed.content ?? parsed.message ?? 'An error occurred';
+              
+              // Check for rate limit error
+              if (errorMessage.includes('429')) {
+                errorMessage = `⚠️ **Rate Limit Reached**\n\nYou've exceeded the API rate limit for ${selectedModel === 'gemini' ? 'Gemini' : selectedModel === 'openai' ? 'OpenAI' : 'Claude'}.\n\n**Solutions:**\n- Wait a few minutes and try again\n- Switch to a different AI model using the dropdown below\n- Upgrade your API key tier for higher limits\n\n**Rate Limits:**\n- Gemini Free: 15 requests/minute\n- OpenAI Free: 3 requests/minute\n- Claude Free: 5 requests/minute`;
+              } else if (errorMessage.includes('API error')) {
+                errorMessage = `⚠️ **API Error**\n\n${errorMessage}\n\nPlease check your API key or try switching models.`;
+              }
+              
+              updateAssistantPlaceholder(last => ({
+                ...last,
+                content: errorMessage,
+                isStreaming: false
+              }));
+              
+              return; // Don't throw, just show error message
+            }
+          } catch (e) {
+            console.error('❌ Parse error:', e, 'Raw line:', line);
+          }
+        }
+      }
 
     } catch (err) {
-      console.error("❌ Error:", err);
+      console.error("❌ Streaming Error:", err);
 
       // Check if it's an API key error from the response data
       let errorData = null;
@@ -412,6 +639,22 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                                     </code>
                                   );
                                 },
+                                a({ href, children }) {
+                                  // Render links as buttons
+                                  return (
+                                    <a
+                                      href={href}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 my-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-all shadow-sm hover:shadow-md no-underline"
+                                    >
+                                      {children}
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                      </svg>
+                                    </a>
+                                  );
+                                },
                                 table({ children }) {
                                   return (
                                     <div className="overflow-x-auto my-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md">
@@ -421,16 +664,58 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                                     </div>
                                   );
                                 },
+                                thead({ children }) {
+                                  return (
+                                    <thead className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-800 dark:to-blue-900">
+                                      {children}
+                                    </thead>
+                                  );
+                                },
+                                tbody({ children }) {
+                                  return (
+                                    <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                                      {children}
+                                    </tbody>
+                                  );
+                                },
                                 th({ children }) {
                                   return (
-                                    <th className="px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-800 dark:to-blue-900 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                                       {children}
                                     </th>
                                   );
                                 },
                                 td({ children }) {
+                                  // Check if cell contains a URL and make it clickable
+                                  const content = String(children);
+                                  const urlRegex = /(https?:\/\/[^\s]+)/g;
+                                  
+                                  if (urlRegex.test(content)) {
+                                    const parts = content.split(urlRegex);
+                                    return (
+                                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                                        {parts.map((part, i) => {
+                                          if (part.match(urlRegex)) {
+                                            return (
+                                              <a
+                                                key={i}
+                                                href={part}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                                              >
+                                                {part}
+                                              </a>
+                                            );
+                                          }
+                                          return part;
+                                        })}
+                                      </td>
+                                    );
+                                  }
+                                  
                                   return (
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                                       {children}
                                     </td>
                                   );
@@ -501,6 +786,54 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
             {/* Input */}
             <div className="p-4 border-t bg-muted/80">
+              {/* Model Selector and API Key Info */}
+              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <ModelVariantPicker
+                    selectedModel={selectedModelId}
+                    onModelChange={(modelId) => {
+                      setSelectedModelId(modelId);
+                      
+                      // Determine provider from model ID
+                      const provider = modelId.startsWith('gemini') ? 'gemini' : 
+                                     modelId.startsWith('gpt') ? 'openai' : 'claude';
+                      setSelectedModel(provider as ModelType);
+                      
+                      // Update model preference in database
+                      if (userInfo?.id) {
+                        supabase
+                          .from('user_profiles')
+                          .update({ model_preference: provider })
+                          .eq('id', userInfo.id)
+                          .then(({ error }) => {
+                            if (error) {
+                              console.error('Failed to update model preference:', error);
+                            } else {
+                              toast({
+                                title: "Model updated",
+                                description: `Switched to ${modelId}`,
+                              });
+                            }
+                          });
+                      }
+                    }}
+                  />
+                  
+                  <KeySelector
+                    selectedModel={selectedModelId}
+                    selectedKeyIds={selectedKeyIds}
+                    onKeySelectionChange={setSelectedKeyIds}
+                  />
+                </div>
+                
+                {currentApiKey && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                    <span className="font-medium">🔑</span>
+                    <span>{currentApiKey}</span>
+                  </div>
+                )}
+              </div>
+
               <div className="relative w-full">
 
                 <textarea

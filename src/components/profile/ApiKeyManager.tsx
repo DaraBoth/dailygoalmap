@@ -28,6 +28,8 @@ const getApiKeyLink = (keyType: string): string | null => {
       return "https://platform.openai.com/account/api-keys";
     case "anthropic":
       return "https://console.anthropic.com/";
+    case "serpapi":
+      return "https://serpapi.com/manage-api-key";
     default:
       return null;
   }
@@ -42,11 +44,24 @@ const ApiKeyManager = () => {
   const [isAddingKey, setIsAddingKey] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchApiKeys();
   }, []);
+
+  // Track changes when editing
+  useEffect(() => {
+    if (editingKey) {
+      const nameChanged = newKeyName.trim() !== editingKey.key_name;
+      const valueChanged = newKeyValue.trim() !== editingKey.key_value;
+      setHasChanges(nameChanged || valueChanged);
+    } else {
+      // For new keys, check if both fields have values
+      setHasChanges(newKeyName.trim().length > 0 && newKeyValue.trim().length > 0);
+    }
+  }, [newKeyName, newKeyValue, editingKey]);
 
   const fetchApiKeys = async () => {
     try {
@@ -336,10 +351,11 @@ const ApiKeyManager = () => {
                   <SelectTrigger id="key-type">
                     <SelectValue placeholder="Select API Key Type" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[9999]">
                     <SelectItem value="gemini">Google Gemini</SelectItem>
                     <SelectItem value="openai">OpenAI</SelectItem>
-                    <SelectItem value="anthropic">Anthropic</SelectItem>
+                    <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+                    <SelectItem value="serpapi">SerpAPI (Google Search)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -375,7 +391,7 @@ const ApiKeyManager = () => {
               </Button>
               <Button 
                 onClick={editingKey ? handleUpdateKey : handleAddKey}
-                disabled={isAddingKey}
+                disabled={isAddingKey || !hasChanges}
               >
                 {isAddingKey ? (
                   <>
@@ -405,18 +421,23 @@ const ApiKeyManager = () => {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
-                    <h4 
-                      className="font-medium truncate" 
-                      title={key.key_name.length > 20 ? key.key_name : undefined}
-                    >
-                      {key.key_name.length > 20 ? `${key.key_name.substring(0, 20)}...` : key.key_name}
-                    </h4>
-                    {key.is_default && (
-                      <span className="ml-2 inline-flex items-center text-xs text-amber-600 bg-amber-100 px-2 py-1 rounded-full">
-                        <Star className="h-3 w-3 mr-1 fill-amber-500" />
-                        Default
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 
+                        className="font-medium truncate" 
+                        title={key.key_name.length > 20 ? key.key_name : undefined}
+                      >
+                        {key.key_name.length > 20 ? `${key.key_name.substring(0, 20)}...` : key.key_name}
+                      </h4>
+                      {key.is_default && (
+                        <span className="inline-flex items-center text-xs text-amber-600 bg-amber-100 px-2 py-1 rounded-full">
+                          <Star className="h-3 w-3 mr-1 fill-amber-500" />
+                          Default
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-500 capitalize">
+                      {key.key_type === 'serpapi' ? 'SerpAPI' : key.key_type === 'openai' ? 'OpenAI' : key.key_type === 'anthropic' ? 'Anthropic' : 'Gemini'}
+                    </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <p 

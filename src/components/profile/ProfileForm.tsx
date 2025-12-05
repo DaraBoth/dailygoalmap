@@ -32,6 +32,7 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -92,6 +93,20 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
     
     fetchProfile();
   }, [toast]);
+
+  // Track changes
+  useEffect(() => {
+    if (!profile) {
+      setHasChanges(false);
+      return;
+    }
+    
+    const nameChanged = displayName !== (profile.display_name || "");
+    const bioChanged = bio !== (profile.bio || "");
+    const avatarChanged = avatarUrl !== profile.avatar_url;
+    
+    setHasChanges(nameChanged || bioChanged || avatarChanged);
+  }, [displayName, bio, avatarUrl, profile]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -178,6 +193,14 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
       });
       
       if (updateUserError) throw updateUserError;
+      
+      // Update local state to match saved values
+      setProfile({
+        ...profile,
+        display_name: displayName,
+        bio: bio,
+        avatar_url: avatarUrl
+      });
       
       toast({
         title: "Profile updated",
@@ -294,7 +317,7 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
         <Button 
           type="submit" 
           className="w-2/3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-md"
-          disabled={isSaving}
+          disabled={isSaving || !hasChanges}
         >
           {isSaving ? (
             <>
