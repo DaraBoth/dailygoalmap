@@ -6,6 +6,111 @@
 import { AgentContext, ToolParams } from './types.ts';
 
 /**
+ * Conversation Memory Management
+ * Stores task ID mappings to prevent AI from using wrong IDs
+ */
+
+// Store task mappings in conversation memory
+async function storeTaskMappings(tasks: any[], sessionId: string, context: AgentContext, supabase: any) {
+  if (!tasks || tasks.length === 0) return;
+  
+  const memories = tasks.map((task, index) => ({
+    session_id: sessionId,
+    user_id: context.userId,
+    goal_id: context.goalId,
+    memory_type: 'task_mapping',
+    memory_key: `task_${index + 1}`, // task_1, task_2, task_3, etc.
+    memory_value: {
+      id: task.id,
+      title: task.title,
+      position: index + 1,
+      start_date: task.start_date,
+      description: task.description
+    }
+  }));
+  
+  const { error } = await supabase
+    .from('conversation_memory')
+    .upsert(memories, { onConflict: 'session_id,memory_key' });
+  
+  if (error) {
+    console.error('Failed to store task mappings:', error);
+  } else {
+    console.log(`✅ Stored ${memories.length} task mappings in conversation memory`);
+  }
+}
+
+// Retrieve task ID from memory by position or title
+async function getTaskIdFromMemory(identifier: string, sessionId: string, context: AgentContext, supabase: any): Promise<string | null> {
+  // Check if it's already a valid UUID
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(identifier)) {
+    return identifier;
+  }
+  
+  // Try to parse as task position (e.g., "task 1", "1", "first task")
+  const positionMatch = identifier.match(/\d+/);
+  if (positionMatch) {
+    const position = parseInt(positionMatch[0]);
+    const memoryKey = `task_${position}`;
+    
+    const { data, error } = await supabase
+      .from('conversation_memory')
+      .select('memory_value')
+      .eq('session_id', sessionId)
+      .eq('user_id', context.userId)
+      .eq('memory_type', 'task_mapping')
+      .eq('memory_key', memoryKey)
+      .single();
+    
+    if (!error && data?.memory_value?.id) {
+      console.log(`✅ Found task ID from memory: ${memoryKey} → ${data.memory_value.id}`);
+      return data.memory_value.id;
+    }
+  }
+  
+  // Try to search by title in memory
+  const { data: allMemories, error } = await supabase
+    .from('conversation_memory')
+    .select('memory_value')
+    .eq('session_id', sessionId)
+    .eq('user_id', context.userId)
+    .eq('memory_type', 'task_mapping');
+  
+  if (!error && allMemories) {
+    const matchingTask = allMemories.find((mem: any) => 
+      mem.memory_value?.title?.toLowerCase().includes(identifier.toLowerCase())
+    );
+    
+    if (matchingTask?.memory_value?.id) {
+      console.log(`✅ Found task ID from memory by title: "${identifier}" → ${matchingTask.memory_value.id}`);
+      return matchingTask.memory_value.id;
+    }
+  }
+  
+  console.warn(`⚠️ Could not find task ID in memory for: ${identifier}`);
+  return null;
+}
+
+// Get all task mappings for display
+async function getTaskMappingsFromMemory(sessionId: string, context: AgentContext, supabase: any) {
+  const { data, error } = await supabase
+    .from('conversation_memory')
+    .select('memory_key, memory_value')
+    .eq('session_id', sessionId)
+    .eq('user_id', context.userId)
+    .eq('memory_type', 'task_mapping')
+    .order('memory_key');
+  
+  if (error) {
+    console.error('Failed to retrieve task mappings:', error);
+    return [];
+  }
+  
+  return data || [];
+}
+
+/**
  * Helper Functions for Data Normalization
  */
 
@@ -177,6 +282,12 @@ async function getTasksByStartDate(params: ToolParams, context: AgentContext, su
     sample_tasks: data?.slice(0, 3).map((t: any) => ({ title: t.title, start_date: t.start_date, time: t.daily_start_time }))
   });
   if (error) throw error;
+  
+  // Store task mappings in conversation memory
+  if (data && data.length > 0 && context.sessionId) {
+    await storeTaskMappings(data, context.sessionId, context, supabase);
+  }
+  
   return { tasks: data, count: data?.length || 0 };
 }
 
@@ -244,6 +355,10 @@ async function updateTaskInfo(params: ToolParams, context: AgentContext, supabas
 }
 
 async function moveTask(params: ToolParams, context: AgentContext, supabase: any) {
+  // Resolve task ID from memory if needed
+  const resolvedTaskId = await getTaskIdFromMemory(params.task_id, context.sessionId || '', context, supabase);
+  const taskId = resolvedTaskId || params.task_id;
+  
   // Create timestamps for start_date and end_date
   const startTime = normalizeTime(params.daily_start_time);
   const endTime = normalizeTime(params.daily_end_time);
@@ -251,7 +366,8 @@ async function moveTask(params: ToolParams, context: AgentContext, supabase: any
   const endTimestamp = normalizeToTimestamp(params.end_date || params.start_date, endTime);
   
   console.log('🔍 [moveTask] Query:', {
-    task_id: params.task_id,
+    original_id: params.task_id,
+    resolved_id: taskId,
     start_date: startTimestamp,
     end_date: endTimestamp,
     daily_start_time: startTime,
@@ -266,7 +382,7 @@ async function moveTask(params: ToolParams, context: AgentContext, supabase: any
       daily_start_time: startTime,
       daily_end_time: endTime
     })
-    .eq('id', params.task_id)
+    .eq('id', taskId)
     .eq('goal_id', context.goalId)
     .select()
     .single();
@@ -293,12 +409,20 @@ async function moveTask(params: ToolParams, context: AgentContext, supabase: any
 }
 
 async function deleteTask(params: ToolParams, context: AgentContext, supabase: any) {
-  console.log('🔍 [deleteTask] Query:', { task_id: params.task_id, goal_id: context.goalId });
+  // Resolve task ID from memory if needed
+  const resolvedTaskId = await getTaskIdFromMemory(params.task_id, context.sessionId || '', context, supabase);
+  const taskId = resolvedTaskId || params.task_id;
+  
+  console.log('🔍 [deleteTask] Query:', { 
+    original_id: params.task_id,
+    resolved_id: taskId,
+    goal_id: context.goalId 
+  });
   
   const { data, error } = await supabase
     .from('tasks')
     .delete()
-    .eq('id', params.task_id)
+    .eq('id', taskId)
     .eq('goal_id', context.goalId)
     .select();
   
@@ -332,6 +456,17 @@ async function moveTasksBatch(params: ToolParams, context: AgentContext, supabas
     throw new Error('new_start_date is required for batch move');
   }
   
+  // Resolve all task IDs from memory
+  const resolvedTaskIds = await Promise.all(
+    params.task_ids.map(id => getTaskIdFromMemory(id, context.sessionId || '', context, supabase))
+  );
+  const taskIds = resolvedTaskIds.map((resolved, i) => resolved || params.task_ids[i]);
+  
+  console.log('🔍 [moveTasksBatch] Resolved IDs:', {
+    original: params.task_ids,
+    resolved: taskIds
+  });
+  
   // Create timestamps - use midnight if no time specified
   const newStartTimestamp = normalizeToTimestamp(params.new_start_date);
   const newEndTimestamp = normalizeToTimestamp(params.new_end_date || params.new_start_date);
@@ -340,7 +475,7 @@ async function moveTasksBatch(params: ToolParams, context: AgentContext, supabas
   let successCount = 0;
   let errorCount = 0;
   
-  for (const taskId of params.task_ids) {
+  for (const taskId of taskIds) {
     try {
       const { data, error } = await supabase
         .from('tasks')
@@ -389,10 +524,21 @@ async function deleteTasksBatch(params: ToolParams, context: AgentContext, supab
     throw new Error('task_ids array is required for batch delete');
   }
   
+  // Resolve all task IDs from memory
+  const resolvedTaskIds = await Promise.all(
+    params.task_ids.map(id => getTaskIdFromMemory(id, context.sessionId || '', context, supabase))
+  );
+  const taskIds = resolvedTaskIds.map((resolved, i) => resolved || params.task_ids[i]);
+  
+  console.log('🔍 [deleteTasksBatch] Resolved IDs:', {
+    original: params.task_ids,
+    resolved: taskIds
+  });
+  
   const { data, error } = await supabase
     .from('tasks')
     .delete()
-    .in('id', params.task_ids)
+    .in('id', taskIds)
     .eq('goal_id', context.goalId)
     .select();
   
