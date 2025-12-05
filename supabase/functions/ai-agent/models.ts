@@ -115,13 +115,6 @@ export const MODELS: Record<ModelType, ModelInfo> = {
     provider: 'claude',
     maxTokens: 4096,
     contextWindow: 200000
-  },
-  'claude-3-sonnet-20240229': {
-    id: 'claude-3-sonnet-20240229',
-    name: 'Claude 3 Sonnet',
-    provider: 'claude',
-    maxTokens: 4096,
-    contextWindow: 200000
   }
 };
 

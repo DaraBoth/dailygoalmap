@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { MessageCircle, X, Send, Loader2, Clipboard, Copy, Pointer, ArrowUp, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import robot from '@/assets/images/robot.png'
 import { supabase } from '@/integrations/supabase/client';
 import { KeySelector } from './KeySelector';
 import { ModelVariantPicker } from './ModelVariantPicker';
+import { useAutoResizeTextArea } from '@/hooks/useAutoResizeTextArea';
 
 type ModelType = 'gemini' | 'openai' | 'claude';
 
@@ -57,21 +58,21 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
   const isMobile = useIsMobile();
 
-  const SESSION_KEY = `goal_chat_session_${goalId}_${userInfo?.id}`;
-  const CHAT_KEY = `goal_chat_${goalId}`;
+  const SESSION_KEY = useMemo(() => `goal_chat_session_${goalId}_${userInfo?.id}`, [goalId, userInfo?.id]);
+  const CHAT_KEY = useMemo(() => `goal_chat_${goalId}`, [goalId]);
 
   const [showScrollButton, setShowScrollButton] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const autoResizeInput = () => {
-    const el = textareaRef.current;
-    if (!el) return;
+  // Auto-resize textarea with performance optimization
+  useAutoResizeTextArea(textareaRef, inputValue, { minRows: 1, maxRows: 6 });
 
-    el.style.height = "auto"; // reset
-    el.style.height = el.scrollHeight + "px";
-  };
+  // Memoized input change handler
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValue(e.target.value);
+  }, []);
 
   // Load sessionId and messages
   useEffect(() => {
@@ -112,30 +113,34 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     loadModelPreference();
   }, [goalId, userInfo?.id, SESSION_KEY, CHAT_KEY]);
 
-  // Save messages
+  // Save messages with debounce to avoid excessive localStorage writes
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length === 0) return;
+    
+    const timeoutId = setTimeout(() => {
       const filtered = messages.filter((m) => !m.isStreaming);
       localStorage.setItem(CHAT_KEY, JSON.stringify(filtered));
-    }
+    }, 500); // Debounce 500ms
+
+    return () => clearTimeout(timeoutId);
   }, [messages, CHAT_KEY]);
 
+  // Autoscroll (single optimized effect)
   useEffect(() => {
     if (!chatContainerRef.current) return;
 
-    // only autoscroll when user is NOT manually scrolling up
-    const el = chatContainerRef.current;
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    // Use requestAnimationFrame to batch DOM reads/writes
+    const timeoutId = requestAnimationFrame(() => {
+      const el = chatContainerRef.current;
+      if (!el) return;
+      
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+      if (atBottom) {
+        scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
 
-    if (atBottom) {
-      scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
-
-
-  // Autoscroll
-  useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+    return () => cancelAnimationFrame(timeoutId);
   }, [messages]);
 
   // Autofocus input
@@ -868,10 +873,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                 <textarea
                   ref={textareaRef}
                   value={inputValue}
-                  onChange={(e) => {
-                    setInputValue(e.target.value);
-                    autoResizeInput();
-                  }}
+                  onChange={handleInputChange}
                   placeholder="Type your message..."
                   rows={1}
                   disabled={isLoading}

@@ -29,6 +29,27 @@ declare const Deno: {
   };
 };
 
+// User-friendly tool name mapping
+const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  'get_tasks_by_start_date': 'Checking your schedule',
+  'insert_new_task': 'Adding new task',
+  'update_task_info': 'Updating task',
+  'move_task': 'Moving task',
+  'delete_task': 'Removing task',
+  'move_tasks_batch': 'Moving multiple tasks',
+  'delete_tasks_batch': 'Removing multiple tasks',
+  'find_by_title': 'Searching tasks',
+  'get_user_profile': 'Loading your profile',
+  'get_goal_detail': 'Loading goal details',
+  'google_search': 'Searching the web',
+  'send_notification': 'Sending notification',
+  'mark_notification_read': 'Updating notification'
+};
+
+function getToolDisplayName(toolName: string): string {
+  return TOOL_DISPLAY_NAMES[toolName] || toolName;
+}
+
 const SYSTEM_PROMPT = `You are **GuoErrAI**, a personal AI assistant helping users manage their goals, tasks, and daily schedules.
 
 ## YOUR CAPABILITIES
@@ -394,21 +415,53 @@ PARAMS: {"title_search":"meeting","limit":20}
                       continue;
                     }
 
-                    // Notify user about tool execution
-                    sendEvent('tool', { name: toolName, params: params, message: `Executing ${toolName}...`, content: `Executing ${toolName}...` });
+                    // Notify user about tool execution with friendly name
+                    const displayName = getToolDisplayName(toolName);
+                    console.log(`\n🔧 [AI Agent] Executing tool: ${toolName}`);
+                    console.log(`📋 [AI Agent] Params:`, JSON.stringify(params, null, 2));
+                    console.log(`🎯 [AI Agent] Context:`, { goalId: context.goalId, userId: context.userId });
+                    
+                    sendEvent('tool', { name: toolName, params: params, message: `${displayName}...`, content: `${displayName}...` });
                     toolsUsed.push(toolName);
 
                     // Execute tool
                     let toolResult: unknown;
                     try {
                       toolResult = await executeTool(toolName, params, context, supabase);
-                      sendEvent('tool_result', { name: toolName, success: true, message: `✓ ${toolName} completed`, content: `✓ ${toolName} completed` });
+                      
+                      console.log(`✅ [AI Agent] Tool ${toolName} succeeded`);
+                      console.log(`📊 [AI Agent] Result:`, JSON.stringify(toolResult, null, 2));
+                      
+                      // Create user-friendly completion message
+                      const displayName = getToolDisplayName(toolName);
+                      let resultMessage = `✓ ${displayName} completed`;
+                      
+                      // For data retrieval tools, show count if available
+                      if (toolName === 'get_tasks_by_start_date' && toolResult && typeof toolResult === 'object' && 'tasks' in toolResult) {
+                        const tasks = (toolResult as any).tasks;
+                        const count = Array.isArray(tasks) ? tasks.length : 0;
+                        resultMessage = count > 0 
+                          ? `✓ Found ${count} task${count !== 1 ? 's' : ''}`
+                          : `✓ No tasks scheduled for this date`;
+                        console.log(`📈 [AI Agent] Tasks count: ${count}`);
+                      } else if (toolName === 'find_by_title' && toolResult && typeof toolResult === 'object' && 'tasks' in toolResult) {
+                        const tasks = (toolResult as any).tasks;
+                        const count = Array.isArray(tasks) ? tasks.length : 0;
+                        resultMessage = count > 0
+                          ? `✓ Found ${count} matching task${count !== 1 ? 's' : ''}`
+                          : `✓ No matching tasks found`;
+                        console.log(`📈 [AI Agent] Search results: ${count}`);
+                      }
+                      
+                      sendEvent('tool_result', { name: toolName, success: true, message: resultMessage, content: resultMessage });
                     } catch (toolError) {
+                      console.error(`❌ [AI Agent] Tool ${toolName} failed:`, toolError);
+                      const displayName = getToolDisplayName(toolName);
                       sendEvent('tool_result', { 
                         name: toolName, 
                         success: false, 
-                        message: `✗ ${toolName} failed: ${toolError instanceof Error ? toolError.message : String(toolError)}`,
-                        content: `✗ ${toolName} failed: ${toolError instanceof Error ? toolError.message : String(toolError)}` 
+                        message: `✗ ${displayName} failed: ${toolError instanceof Error ? toolError.message : String(toolError)}`,
+                        content: `✗ ${displayName} failed: ${toolError instanceof Error ? toolError.message : String(toolError)}` 
                       });
                       toolResult = {
                         error: toolError instanceof Error ? toolError.message : String(toolError),

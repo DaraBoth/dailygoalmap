@@ -57,42 +57,72 @@ export async function executeTool(
 }
 
 async function getUserProfile(params: ToolParams, context: AgentContext, supabase: any) {
+  console.log('🔍 [getUserProfile] Query:', { user_id: params.user_id || context.userId });
+  
   const { data, error } = await supabase
     .from('user_profiles')
     .select('*')
     .eq('id', params.user_id || context.userId)
     .single();
   
+  console.log('✅ [getUserProfile] Result:', { success: !error, data: data ? 'found' : 'null', error: error?.message });
   if (error) throw error;
   return { profile: data };
 }
 
 async function getGoalDetail(params: ToolParams, context: AgentContext, supabase: any) {
+  console.log('🔍 [getGoalDetail] Query:', { goal_id: params.goal_id || context.goalId });
+  
   const { data, error } = await supabase
     .from('goals')
     .select('*')
     .eq('id', params.goal_id || context.goalId)
     .single();
   
+  console.log('✅ [getGoalDetail] Result:', { success: !error, data: data ? 'found' : 'null', error: error?.message });
   if (error) throw error;
   return { goal: data };
 }
 
 async function getTasksByStartDate(params: ToolParams, context: AgentContext, supabase: any) {
+  console.log('🔍 [getTasksByStartDate] Query:', {
+    goal_id: context.goalId,
+    start_date: params.start_date,
+    end_date: params.end_date,
+    limit: params.limit || '100'
+  });
+  
+  // Handle date comparison properly for both date-only and timestamp formats
+  const startDate = params.start_date;
+  const endDate = params.end_date;
+  
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
     .eq('goal_id', context.goalId)
-    .gte('start_date', params.start_date)
-    .lte('start_date', params.end_date)
+    .gte('start_date', startDate)
+    .lt('start_date', `${endDate}T23:59:59.999Z`) // Include full day
     .order('start_date', { ascending: true })
     .limit(parseInt(params.limit || '100'));
   
+  console.log('✅ [getTasksByStartDate] Result:', { 
+    success: !error, 
+    count: data?.length || 0, 
+    error: error?.message,
+    sample_dates: data?.slice(0, 3).map((t: any) => ({ id: t.id, title: t.title, start_date: t.start_date }))
+  });
   if (error) throw error;
   return { tasks: data, count: data?.length || 0 };
 }
 
 async function insertNewTask(params: ToolParams, context: AgentContext, supabase: any) {
+  console.log('🔍 [insertNewTask] Query:', {
+    goal_id: context.goalId,
+    title: params.title,
+    start_date: params.start_date,
+    end_date: params.end_date
+  });
+  
   const { data, error } = await supabase
     .from('tasks')
     .insert({
@@ -110,6 +140,7 @@ async function insertNewTask(params: ToolParams, context: AgentContext, supabase
     .select()
     .single();
   
+  console.log('✅ [insertNewTask] Result:', { success: !error, task_id: data?.id, error: error?.message });
   if (error) throw error;
   return { success: true, task: data };
 }
@@ -120,6 +151,8 @@ async function updateTaskInfo(params: ToolParams, context: AgentContext, supabas
   if (params.description) updates.description = params.description;
   if (params.completed !== undefined) updates.completed = params.completed === 'true';
   
+  console.log('🔍 [updateTaskInfo] Query:', { task_id: params.task_id, updates });
+  
   const { data, error } = await supabase
     .from('tasks')
     .update(updates)
@@ -128,6 +161,7 @@ async function updateTaskInfo(params: ToolParams, context: AgentContext, supabas
     .select()
     .single();
   
+  console.log('✅ [updateTaskInfo] Result:', { success: !error, task_id: data?.id, error: error?.message });
   if (error) {
     console.error('Update task error:', error);
     throw error;
@@ -137,6 +171,12 @@ async function updateTaskInfo(params: ToolParams, context: AgentContext, supabas
 }
 
 async function moveTask(params: ToolParams, context: AgentContext, supabase: any) {
+  console.log('🔍 [moveTask] Query:', {
+    task_id: params.task_id,
+    start_date: params.start_date,
+    end_date: params.end_date || params.start_date
+  });
+  
   const { data, error } = await supabase
     .from('tasks')
     .update({
@@ -151,6 +191,7 @@ async function moveTask(params: ToolParams, context: AgentContext, supabase: any
     .select()
     .single();
   
+  console.log('✅ [moveTask] Result:', { success: !error, task_id: data?.id, error: error?.message });
   if (error) {
     console.error('Move task error:', error);
     throw error;
@@ -172,6 +213,8 @@ async function moveTask(params: ToolParams, context: AgentContext, supabase: any
 }
 
 async function deleteTask(params: ToolParams, context: AgentContext, supabase: any) {
+  console.log('🔍 [deleteTask] Query:', { task_id: params.task_id, goal_id: context.goalId });
+  
   const { data, error } = await supabase
     .from('tasks')
     .delete()
@@ -180,6 +223,7 @@ async function deleteTask(params: ToolParams, context: AgentContext, supabase: a
     .eq('goal_id', context.goalId)
     .select();
   
+  console.log('✅ [deleteTask] Result:', { success: !error, deleted: data?.length || 0, error: error?.message });
   if (error) {
     console.error('Delete task error:', error);
     throw error;
@@ -286,6 +330,8 @@ async function deleteTasksBatch(params: ToolParams, context: AgentContext, supab
 }
 
 async function findByTitle(params: ToolParams, context: AgentContext, supabase: any) {
+  console.log('🔍 [findByTitle] Query:', { search: params.title_search, goal_id: context.goalId, limit: params.limit || '50' });
+  
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
@@ -293,6 +339,7 @@ async function findByTitle(params: ToolParams, context: AgentContext, supabase: 
     .ilike('title', `%${params.title_search}%`)
     .limit(parseInt(params.limit || '50'));
   
+  console.log('✅ [findByTitle] Result:', { success: !error, found: data?.length || 0, error: error?.message });
   if (error) throw error;
   return { tasks: data, count: data?.length || 0 };
 }
