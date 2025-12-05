@@ -502,10 +502,28 @@ PARAMS: {"title_search":"meeting","limit":20}
                       };
                     }
 
-                    // Add tool result to conversation
+                    // Add tool result to conversation with task ID mappings if available
+                    let contextMessage = `Tool ${toolName} executed. Result:\n${JSON.stringify(toolResult, null, 2)}`;
+                    
+                    // If this was a task query, include the ID mappings explicitly
+                    if (toolName === 'get_tasks_by_start_date' || toolName === 'find_by_title') {
+                      if (toolResult && typeof toolResult === 'object' && 'tasks' in toolResult) {
+                        const tasks = (toolResult as any).tasks;
+                        if (Array.isArray(tasks) && tasks.length > 0) {
+                          contextMessage += '\n\n**CRITICAL - TASK ID MAPPINGS:**\n';
+                          tasks.forEach((task: any, index: number) => {
+                            contextMessage += `- Task ${index + 1}: "${task.title}" → ID: ${task.id}\n`;
+                          });
+                          contextMessage += '\n**When user asks to update/move/delete tasks, use these EXACT IDs above.**';
+                        }
+                      }
+                    }
+                    
+                    contextMessage += '\n\nAnalyze this result and provide a natural response to the user.';
+                    
                     conversationHistory.push({
                       role: 'user',
-                      content: `Tool ${toolName} executed. Result:\n${JSON.stringify(toolResult, null, 2)}\n\nAnalyze this result and provide a natural response to the user. IMPORTANT: Remember all task IDs from the result - you MUST use these exact IDs when moving or deleting tasks. When showing tasks to user, include their position number (Task 1, Task 2) but keep the actual ID in your memory for future operations.`
+                      content: contextMessage
                     });
 
                     // Continue loop
