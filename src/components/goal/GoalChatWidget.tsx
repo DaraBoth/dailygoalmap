@@ -52,6 +52,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   const [selectedModelId, setSelectedModelId] = useState<string>('gemini-1.5-flash');
   const [selectedKeyIds, setSelectedKeyIds] = useState<string[]>([]);
   const [currentApiKey, setCurrentApiKey] = useState<string>('');
+  const [temporaryStatus, setTemporaryStatus] = useState<string>(''); // For status messages that disappear
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -317,76 +318,22 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             } else if (parsed.type === 'status') {
               const statusText = parsed.message ?? parsed.content ?? '';
               if (typeof statusText === 'string' && statusText.trim().length > 0) {
-                // Add status as a separate visible message bubble
-                setMessages(prev => {
-                  // Check if last message is the placeholder
-                  const withoutPlaceholder = prev.slice(0, -1);
-                  return [
-                    ...withoutPlaceholder,
-                    {
-                      role: 'assistant' as const,
-                      content: `_${statusText}_`,
-                      timestamp: Date.now(),
-                      isStreaming: false
-                    },
-                    placeholderMessage // Re-add placeholder for content
-                  ];
-                });
+                // Update temporary status instead of creating chat bubble
+                setTemporaryStatus(statusText);
               }
             } else if (parsed.type === 'thinking') {
-              const thinkingText = parsed.message ?? parsed.content ?? '';
-              if (typeof thinkingText === 'string' && thinkingText.trim().length > 0) {
-                // Add thinking as a separate visible message bubble
-                setMessages(prev => {
-                  const withoutPlaceholder = prev.slice(0, -1);
-                  return [
-                    ...withoutPlaceholder,
-                    {
-                      role: 'assistant' as const,
-                      content: `💭 _${thinkingText}_`,
-                      timestamp: Date.now(),
-                      isStreaming: false
-                    },
-                    placeholderMessage
-                  ];
-                });
-              }
+              // Ignore thinking messages - they're redundant
+              continue;
             } else if (parsed.type === 'tool') {
-              const toolStatus = parsed.message ?? parsed.content ?? 'Working...';
-              const toolName = parsed.name ?? 'Tool';
-              const toolMessage = `🔧 **Using tool:** ${toolName}\n\n_${toolStatus}_`;
-              // Add tool execution as a separate visible message bubble
-              setMessages(prev => {
-                const withoutPlaceholder = prev.slice(0, -1);
-                return [
-                  ...withoutPlaceholder,
-                  {
-                    role: 'assistant' as const,
-                    content: toolMessage,
-                    timestamp: Date.now(),
-                    isStreaming: false
-                  },
-                  placeholderMessage
-                ];
-              });
+              // Ignore tool messages - they're too technical
+              continue;
             } else if (parsed.type === 'tool_result') {
               const resultIcon = parsed.success ? '✅' : '❌';
               const resultText = parsed.message ?? parsed.content ?? '';
-              const toolResultMessage = resultText ? `${resultIcon} ${resultText}` : resultIcon;
-              // Add tool result as a separate visible message bubble
-              setMessages(prev => {
-                const withoutPlaceholder = prev.slice(0, -1);
-                return [
-                  ...withoutPlaceholder,
-                  {
-                    role: 'assistant' as const,
-                    content: toolResultMessage,
-                    timestamp: Date.now(),
-                    isStreaming: false
-                  },
-                  placeholderMessage
-                ];
-              });
+              // Update temporary status with result
+              if (resultText) {
+                setTemporaryStatus(`${resultIcon} ${resultText}`);
+              }
             } else if (parsed.type === 'content') {
               const chunk = typeof parsed.delta === 'string'
                 ? parsed.delta
@@ -525,6 +472,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
       });
     } finally {
       setIsLoading(false);
+      setTemporaryStatus(''); // Clear status when done
     }
   };
 
@@ -803,6 +751,15 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                   ))}
 
                 </div>
+                
+                {/* Temporary status indicator */}
+                {temporaryStatus && (
+                  <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground bg-muted/50 rounded-lg animate-pulse">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>{temporaryStatus}</span>
+                  </div>
+                )}
+                
                 <div ref={scrollRef} />
               </ScrollArea>
             </div>  {/* end wrapper */}

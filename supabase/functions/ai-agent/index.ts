@@ -427,7 +427,6 @@ PARAMS: {"title_search":"meeting","limit":20}
                 // Tool execution loop
                 while (loopCount < MAX_LOOPS) {
                   loopCount++;
-                  sendEvent('thinking', { message: 'Processing your request...', content: 'Processing your request...' });
 
                   const aiResponseText = await callAIModel(targetModel, keyData.key_value, conversationHistory, systemInstruction);
 
@@ -514,8 +513,6 @@ PARAMS: {"title_search":"meeting","limit":20}
                   }
 
                   // No tool request - AI provided final response
-                  sendEvent('thinking', { message: 'Preparing final response...', content: 'Preparing final response...' });
-                  
                   // Stream the final response word by word for better UX
                   const words = aiResponseText.split(' ');
                   for (const word of words) {

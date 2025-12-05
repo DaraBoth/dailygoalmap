@@ -330,17 +330,25 @@ async function insertNewTask(params: ToolParams, context: AgentContext, supabase
 }
 
 async function updateTaskInfo(params: ToolParams, context: AgentContext, supabase: any) {
+  // Resolve task ID from memory if needed
+  const resolvedTaskId = await getTaskIdFromMemory(params.task_id, context.sessionId || '', context, supabase);
+  const taskId = resolvedTaskId || params.task_id;
+  
   const updates: any = {};
   if (params.title) updates.title = params.title;
   if (params.description) updates.description = params.description;
   if (params.completed !== undefined) updates.completed = params.completed === 'true';
   
-  console.log('🔍 [updateTaskInfo] Query:', { task_id: params.task_id, updates });
+  console.log('🔍 [updateTaskInfo] Query:', { 
+    original_id: params.task_id,
+    resolved_id: taskId,
+    updates 
+  });
   
   const { data, error } = await supabase
     .from('tasks')
     .update(updates)
-    .eq('id', params.task_id)
+    .eq('id', taskId)
     .eq('goal_id', context.goalId)
     .select()
     .single();
