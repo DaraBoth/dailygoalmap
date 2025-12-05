@@ -15,18 +15,30 @@ interface ModelVariant {
 }
 
 const MODEL_VARIANTS: ModelVariant[] = [
-  // Gemini Models
+  // Gemini Models - Official from ai.google.dev
   {
-    id: 'gemini-2.0-flash-exp',
-    name: 'Gemini 2.0 Flash (Exp) 🆓',
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash 🆓',
     provider: 'gemini',
-    description: '✨ FREE - Latest experimental, 1M context'
+    description: '✨ FREE - Best price-performance, fast & intelligent'
+  },
+  {
+    id: 'gemini-2.0-flash',
+    name: 'Gemini 2.0 Flash 🆓',
+    provider: 'gemini',
+    description: '✨ FREE - 2nd gen workhorse, 1M context'
   },
   {
     id: 'gemini-1.5-flash',
     name: 'Gemini 1.5 Flash 🆓',
     provider: 'gemini',
     description: '✨ FREE - Fast and efficient, 1M context'
+  },
+  {
+    id: 'gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    provider: 'gemini',
+    description: 'Advanced thinking model, 2M context'
   },
   {
     id: 'gemini-1.5-pro',

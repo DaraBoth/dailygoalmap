@@ -200,7 +200,7 @@ serve(async (req: Request) => {
     }
 
     // Determine which model to use
-    const fallbackModel: ModelType = 'gemini-2.0-flash-exp';
+    const fallbackModel: ModelType = 'gemini-1.5-flash';
     const requestedModel = typeof modelId === 'string' ? (modelId as ModelType) : undefined;
     const targetModel: ModelType = requestedModel && getModelInfo(requestedModel)
       ? requestedModel
@@ -285,17 +285,64 @@ Context:
 - Goal ID: ${context.goalId || 'Not set'}
 
 ## TOOL PARAMETER EXAMPLES (CURRENT CONTEXT)
-- Fetch today's tasks:
+
+### 1. FETCH TASKS
+- Get today's tasks:
 TOOL: get_tasks_by_start_date
 PARAMS: {"start_date":"${context.currentDate}","end_date":"${context.currentDate}","limit":50}
 
-- Fetch tomorrow's tasks:
+- Get this week's tasks:
 TOOL: get_tasks_by_start_date
-PARAMS: {"start_date":"${tomorrowIso}","end_date":"${tomorrowIso}","limit":50}
+PARAMS: {"start_date":"${context.currentDate}","end_date":"${tomorrowIso}","limit":100}
 
-- Create a task for the next hour:
+### 2. CREATE TASK
 TOOL: insert_new_task
-PARAMS: {"title":"Task title","description":"Brief summary","start_date":"${context.currentDate}","end_date":"${context.currentDate}","daily_start_time":"${context.currentTime}","daily_end_time":"${context.currentTime}"}`;
+PARAMS: {"title":"Morning workout","description":"30 min cardio session","start_date":"${context.currentDate}","end_date":"${context.currentDate}","daily_start_time":"06:00:00","daily_end_time":"07:00:00"}
+
+### 3. UPDATE TASK (mark complete, rename, or change description)
+- Mark task as complete:
+TOOL: update_task_info
+PARAMS: {"task_id":"abc-123-def","completed":"true"}
+
+- Rename a task:
+TOOL: update_task_info
+PARAMS: {"task_id":"abc-123-def","title":"New task name"}
+
+- Update description:
+TOOL: update_task_info
+PARAMS: {"task_id":"abc-123-def","description":"Updated description text"}
+
+### 4. MOVE/RESCHEDULE TASK
+- Move one task to tomorrow:
+TOOL: move_task
+PARAMS: {"task_id":"abc-123-def","start_date":"${tomorrowIso}","end_date":"${tomorrowIso}","daily_start_time":"09:00:00","daily_end_time":"10:00:00"}
+
+- Move task to later today:
+TOOL: move_task
+PARAMS: {"task_id":"abc-123-def","start_date":"${context.currentDate}","end_date":"${context.currentDate}","daily_start_time":"15:00:00","daily_end_time":"16:00:00"}
+
+### 5. DELETE TASK
+TOOL: delete_task
+PARAMS: {"task_id":"abc-123-def"}
+
+### 6. BATCH OPERATIONS (for multiple tasks)
+- Move multiple tasks to tomorrow:
+TOOL: move_tasks_batch
+PARAMS: {"task_ids":["task-id-1","task-id-2","task-id-3"],"new_start_date":"${tomorrowIso}","new_end_date":"${tomorrowIso}"}
+
+- Delete multiple tasks:
+TOOL: delete_tasks_batch
+PARAMS: {"task_ids":["task-id-1","task-id-2","task-id-3"]}
+
+### 7. SEARCH TASKS
+TOOL: find_by_title
+PARAMS: {"title_search":"meeting","limit":20}
+
+## CRITICAL TOOL USAGE PATTERNS
+1. To get task IDs for move/delete operations, FIRST call get_tasks_by_start_date or find_by_title
+2. Extract task IDs from the result, then use them in move_task/delete_task/update_task_info
+3. For multiple tasks, use batch operations (move_tasks_batch, delete_tasks_batch) instead of loops
+4. Always provide ALL required time parameters (daily_start_time, daily_end_time) when moving tasks`;
 
     // ALWAYS use streaming with tool execution support
     if (stream) {
@@ -325,7 +372,7 @@ PARAMS: {"title":"Task title","description":"Brief summary","start_date":"${cont
                 // Tool execution loop
                 while (loopCount < MAX_LOOPS) {
                   loopCount++;
-                  sendEvent('thinking', { message: `Processing request (step ${loopCount}/${MAX_LOOPS})...`, content: `Processing request (step ${loopCount}/${MAX_LOOPS})...` });
+                  sendEvent('thinking', { message: 'Processing your request...', content: 'Processing your request...' });
 
                   const aiResponseText = await callAIModel(targetModel, keyData.key_value, conversationHistory, systemInstruction);
 
@@ -392,7 +439,6 @@ PARAMS: {"title":"Task title","description":"Brief summary","start_date":"${cont
 
                   sendEvent('done', { 
                     toolsUsed: toolsUsed,
-                    iterations: loopCount,
                     keyUsed: keyData.key_name,
                     content: aiResponseText
                   });

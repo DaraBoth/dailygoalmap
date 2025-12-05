@@ -5,10 +5,25 @@
 import { ModelInfo, ModelType } from './types.ts';
 
 export const MODELS: Record<ModelType, ModelInfo> = {
-  // Gemini Models (FREE)
-  'gemini-2.0-flash-exp': {
-    id: 'gemini-2.0-flash-exp',
-    name: 'Gemini 2.0 Flash (Experimental)',
+  // Gemini Models - From official Google AI documentation
+  // https://ai.google.dev/gemini-api/docs/models/gemini
+  'gemini-2.5-flash': {
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    provider: 'gemini',
+    maxTokens: 8192,
+    contextWindow: 1000000
+  },
+  'gemini-2.5-pro': {
+    id: 'gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    provider: 'gemini',
+    maxTokens: 8192,
+    contextWindow: 2000000
+  },
+  'gemini-2.0-flash': {
+    id: 'gemini-2.0-flash',
+    name: 'Gemini 2.0 Flash',
     provider: 'gemini',
     maxTokens: 8192,
     contextWindow: 1000000
@@ -27,20 +42,27 @@ export const MODELS: Record<ModelType, ModelInfo> = {
     maxTokens: 8192,
     contextWindow: 2000000
   },
-  'gemini-1.0-pro': {
-    id: 'gemini-1.0-pro',
-    name: 'Gemini 1.0 Pro',
-    provider: 'gemini',
-    maxTokens: 2048,
-    contextWindow: 32000
-  },
   
   // OpenAI Models
+  'gpt-4o': {
+    id: 'gpt-4o',
+    name: 'GPT-4o',
+    provider: 'openai',
+    maxTokens: 16384,
+    contextWindow: 128000
+  },
   'gpt-4o-mini': {
     id: 'gpt-4o-mini',
     name: 'GPT-4o Mini',
     provider: 'openai',
     maxTokens: 16384,
+    contextWindow: 128000
+  },
+  'gpt-4-turbo': {
+    id: 'gpt-4-turbo',
+    name: 'GPT-4 Turbo',
+    provider: 'openai',
+    maxTokens: 4096,
     contextWindow: 128000
   },
   'gpt-3.5-turbo': {
@@ -50,39 +72,39 @@ export const MODELS: Record<ModelType, ModelInfo> = {
     maxTokens: 4096,
     contextWindow: 16385
   },
-  'gpt-4-turbo-preview': {
-    id: 'gpt-4-turbo-preview',
-    name: 'GPT-4 Turbo',
+  'o1-preview': {
+    id: 'o1-preview',
+    name: 'O1 Preview',
     provider: 'openai',
-    maxTokens: 4096,
+    maxTokens: 32768,
     contextWindow: 128000
   },
-  'gpt-4': {
-    id: 'gpt-4',
-    name: 'GPT-4',
+  'o1-mini': {
+    id: 'o1-mini',
+    name: 'O1 Mini',
     provider: 'openai',
-    maxTokens: 8192,
-    contextWindow: 8192
-  },
-  'gpt-4o': {
-    id: 'gpt-4o',
-    name: 'GPT-4o',
-    provider: 'openai',
-    maxTokens: 16384,
+    maxTokens: 65536,
     contextWindow: 128000
   },
   
-  // Claude Models
-  'claude-3-haiku-20240307': {
-    id: 'claude-3-haiku-20240307',
-    name: 'Claude 3 Haiku',
+  // Claude Models - Anthropic
+  'claude-3-7-sonnet-20250219': {
+    id: 'claude-3-7-sonnet-20250219',
+    name: 'Claude 3.7 Sonnet',
     provider: 'claude',
-    maxTokens: 4096,
+    maxTokens: 8192,
     contextWindow: 200000
   },
   'claude-3-5-sonnet-20241022': {
     id: 'claude-3-5-sonnet-20241022',
     name: 'Claude 3.5 Sonnet',
+    provider: 'claude',
+    maxTokens: 8192,
+    contextWindow: 200000
+  },
+  'claude-3-5-haiku-20241022': {
+    id: 'claude-3-5-haiku-20241022',
+    name: 'Claude 3.5 Haiku',
     provider: 'claude',
     maxTokens: 8192,
     contextWindow: 200000

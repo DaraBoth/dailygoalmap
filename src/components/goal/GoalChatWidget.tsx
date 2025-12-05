@@ -47,8 +47,8 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [lastMessageTime, setLastMessageTime] = useState(0);
-  const [selectedModel, setSelectedModel] = useState<ModelType>('gemini');
-  const [selectedModelId, setSelectedModelId] = useState<string>('gemini-2.0-flash-exp');
+  const [selectedModel, setSelectedModel] = useState<ModelType>("gemini");
+  const [selectedModelId, setSelectedModelId] = useState<string>('gemini-1.5-flash');
   const [selectedKeyIds, setSelectedKeyIds] = useState<string[]>([]);
   const [currentApiKey, setCurrentApiKey] = useState<string>('');
 
@@ -312,41 +312,76 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             } else if (parsed.type === 'status') {
               const statusText = parsed.message ?? parsed.content ?? '';
               if (typeof statusText === 'string' && statusText.trim().length > 0) {
-                updateAssistantPlaceholder(last => ({
-                  ...last,
-                  content: `_${statusText}_`,
-                  isStreaming: true
-                }));
+                // Add status as a separate visible message bubble
+                setMessages(prev => {
+                  // Check if last message is the placeholder
+                  const withoutPlaceholder = prev.slice(0, -1);
+                  return [
+                    ...withoutPlaceholder,
+                    {
+                      role: 'assistant' as const,
+                      content: `_${statusText}_`,
+                      timestamp: Date.now(),
+                      isStreaming: false
+                    },
+                    placeholderMessage // Re-add placeholder for content
+                  ];
+                });
               }
             } else if (parsed.type === 'thinking') {
               const thinkingText = parsed.message ?? parsed.content ?? '';
               if (typeof thinkingText === 'string' && thinkingText.trim().length > 0) {
-                updateAssistantPlaceholder(last => ({
-                  ...last,
-                  content: `_${thinkingText}_`,
-                  isStreaming: true
-                }));
+                // Add thinking as a separate visible message bubble
+                setMessages(prev => {
+                  const withoutPlaceholder = prev.slice(0, -1);
+                  return [
+                    ...withoutPlaceholder,
+                    {
+                      role: 'assistant' as const,
+                      content: `💭 _${thinkingText}_`,
+                      timestamp: Date.now(),
+                      isStreaming: false
+                    },
+                    placeholderMessage
+                  ];
+                });
               }
             } else if (parsed.type === 'tool') {
               const toolStatus = parsed.message ?? parsed.content ?? 'Working...';
               const toolName = parsed.name ?? 'Tool';
               const toolMessage = `🔧 **Using tool:** ${toolName}\n\n_${toolStatus}_`;
-              updateAssistantPlaceholder(last => ({
-                ...last,
-                content: toolMessage,
-                isStreaming: true
-              }));
+              // Add tool execution as a separate visible message bubble
+              setMessages(prev => {
+                const withoutPlaceholder = prev.slice(0, -1);
+                return [
+                  ...withoutPlaceholder,
+                  {
+                    role: 'assistant' as const,
+                    content: toolMessage,
+                    timestamp: Date.now(),
+                    isStreaming: false
+                  },
+                  placeholderMessage
+                ];
+              });
             } else if (parsed.type === 'tool_result') {
               const resultIcon = parsed.success ? '✅' : '❌';
               const resultText = parsed.message ?? parsed.content ?? '';
               const toolResultMessage = resultText ? `${resultIcon} ${resultText}` : resultIcon;
-              updateAssistantPlaceholder(last => ({
-                ...last,
-                content: typeof last.content === 'string' && last.content.length > 0
-                  ? `${last.content}\n\n${toolResultMessage}`
-                  : toolResultMessage,
-                isStreaming: true
-              }));
+              // Add tool result as a separate visible message bubble
+              setMessages(prev => {
+                const withoutPlaceholder = prev.slice(0, -1);
+                return [
+                  ...withoutPlaceholder,
+                  {
+                    role: 'assistant' as const,
+                    content: toolResultMessage,
+                    timestamp: Date.now(),
+                    isStreaming: false
+                  },
+                  placeholderMessage
+                ];
+              });
             } else if (parsed.type === 'content') {
               const chunk = typeof parsed.delta === 'string'
                 ? parsed.delta
