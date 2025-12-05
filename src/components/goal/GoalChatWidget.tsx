@@ -301,16 +301,17 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             console.log('✨ Parsed event:', parsed);
 
             if (parsed.type === 'key_info') {
-              // Update current API key display
-              const keyLabel = parsed.content ?? parsed.message ?? '';
+              const keyLabel = typeof parsed.content === 'string'
+                ? parsed.content
+                : (typeof parsed.message === 'string' ? parsed.message : '');
+
               if (keyLabel) {
                 setCurrentApiKey(keyLabel);
                 console.log('🔑 Using API key:', keyLabel);
               }
             } else if (parsed.type === 'status') {
-              // Show status updates
               const statusText = parsed.message ?? parsed.content ?? '';
-              if (statusText) {
+              if (typeof statusText === 'string' && statusText.trim().length > 0) {
                 updateAssistantPlaceholder(last => ({
                   ...last,
                   content: `_${statusText}_`,
@@ -318,9 +319,8 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                 }));
               }
             } else if (parsed.type === 'thinking') {
-              // Show thinking indicator
               const thinkingText = parsed.message ?? parsed.content ?? '';
-              if (thinkingText) {
+              if (typeof thinkingText === 'string' && thinkingText.trim().length > 0) {
                 updateAssistantPlaceholder(last => ({
                   ...last,
                   content: `_${thinkingText}_`,
@@ -328,7 +328,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                 }));
               }
             } else if (parsed.type === 'tool') {
-              // Show tool execution (temporary message)
               const toolStatus = parsed.message ?? parsed.content ?? 'Working...';
               const toolName = parsed.name ?? 'Tool';
               const toolMessage = `🔧 **Using tool:** ${toolName}\n\n_${toolStatus}_`;
@@ -338,23 +337,17 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                 isStreaming: true
               }));
             } else if (parsed.type === 'tool_result') {
-              // Show tool result (temporary message)
               const resultIcon = parsed.success ? '✅' : '❌';
               const resultText = parsed.message ?? parsed.content ?? '';
               const toolResultMessage = resultText ? `${resultIcon} ${resultText}` : resultIcon;
-              updateAssistantPlaceholder(last => {
-                const previousContent = typeof last.content === 'string' ? last.content : '';
-                const combinedContent = previousContent
-                  ? `${previousContent}\n\n${toolResultMessage}`
-                  : toolResultMessage;
-                return {
-                  ...last,
-                  content: combinedContent,
-                  isStreaming: true
-                };
-              });
+              updateAssistantPlaceholder(last => ({
+                ...last,
+                content: typeof last.content === 'string' && last.content.length > 0
+                  ? `${last.content}\n\n${toolResultMessage}`
+                  : toolResultMessage,
+                isStreaming: true
+              }));
             } else if (parsed.type === 'content') {
-              // Append content chunk (this is the final response after tools)
               const chunk = typeof parsed.delta === 'string'
                 ? parsed.delta
                 : (typeof parsed.content === 'string' ? parsed.content : '');
@@ -377,16 +370,11 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                 isStreaming: true
               }));
             } else if (parsed.type === 'done') {
-              // Finalize message
-              updateAssistantPlaceholder(last => {
-                const existingContent = typeof last.content === 'string' ? last.content : '';
-                const finalContent = accumulatedContent || existingContent;
-                return {
-                  ...last,
-                  content: finalContent,
-                  isStreaming: false
-                };
-              });
+              updateAssistantPlaceholder(last => ({
+                ...last,
+                content: accumulatedContent || (typeof last.content === 'string' ? last.content : ''),
+                isStreaming: false
+              }));
             } else if (parsed.type === 'error') {
               // Handle streaming errors
               let errorMessage = parsed.content ?? parsed.message ?? 'An error occurred';
@@ -415,79 +403,85 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     } catch (err) {
       console.error("❌ Streaming Error:", err);
 
-      // Check if it's an API key error from the response data
-      let errorData = null;
-      
-      // Try to extract error data from different possible error structures
-      if ((err as any)?.context?.body) {
-        errorData = (err as any).context.body;
-      } else if ((err as any)?.message) {
-        // Try parsing the error message as JSON
-        try {
-          errorData = JSON.parse((err as any).message);
-        } catch {
-          // Not JSON, continue
-        }
-      }
-      
-      if (errorData?.error === "API_KEY_REQUIRED") {
-        const instructions = errorData.setupInstructions;
-        let instructionText = "";
-        
-        if (instructions) {
-          instructionText = "\n\n" + instructions.title + "\n" + instructions.steps.join("\n");
+      type ErrorContextPayload = {
+        error?: string;
+        message?: string;
+        statusCode?: number;
+        setupInstructions?: { title: string; steps: string[] };
+        technicalDetails?: unknown;
+        details?: unknown;
+      };
+
+      const extractErrorPayload = (input: unknown): ErrorContextPayload | null => {
+        if (!input || typeof input !== 'object') return null;
+        const record = input as Record<string, unknown>;
+
+        const contextValue = record.context;
+        if (contextValue && typeof contextValue === 'object') {
+          const body = (contextValue as Record<string, unknown>).body;
+          if (body && typeof body === 'object') {
+            return body as ErrorContextPayload;
+          }
         }
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: errorData.message + instructionText,
-            timestamp: Date.now(),
-          },
-        ]);
-      } else if (errorData?.error === "AI_SERVICE_ERROR") {
-        // Handle AI service errors with detailed information
-        let aiErrorMsg = errorData.message || "⚠️ The AI service is temporarily unavailable. Please try again.";
-        
-        // Add status code info if available
-        if (errorData.statusCode) {
+        const rawMessage = record.message;
+        if (typeof rawMessage === 'string') {
+          try {
+            return JSON.parse(rawMessage) as ErrorContextPayload;
+          } catch {
+            return null;
+          }
+        }
+
+        return null;
+      };
+
+      const errorData = extractErrorPayload(err);
+
+      if (errorData?.error === 'API_KEY_REQUIRED') {
+        const instructions = errorData.setupInstructions;
+        const instructionText = instructions
+          ? `\n\n${instructions.title}\n${instructions.steps.join('\n')}`
+          : '';
+
+        updateAssistantPlaceholder(last => ({
+          ...last,
+          content: `${errorData?.message ?? 'API key required.'}${instructionText}`,
+          isStreaming: false
+        }));
+      } else if (errorData?.error === 'AI_SERVICE_ERROR') {
+        let aiErrorMsg = errorData.message || '⚠️ The AI service is temporarily unavailable. Please try again.';
+
+        if (typeof errorData.statusCode === 'number') {
           aiErrorMsg += `\n\n💡 Status Code: ${errorData.statusCode}`;
         }
-        
-        // Log technical details for debugging
+
         if (errorData.technicalDetails) {
-          console.error("AI Service Technical Details:", errorData.technicalDetails);
+          console.error('AI Service Technical Details:', errorData.technicalDetails);
         }
-        
+
         if (errorData.details) {
-          console.error("AI Service Error Details:", errorData.details);
+          console.error('AI Service Error Details:', errorData.details);
         }
-        
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: aiErrorMsg,
-            timestamp: Date.now(),
-          },
-        ]);
+
+        updateAssistantPlaceholder(last => ({
+          ...last,
+          content: aiErrorMsg,
+          isStreaming: false
+        }));
       } else {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: "⚠️ I'm having trouble connecting. Please try again.",
-            timestamp: Date.now(),
-          },
-        ]);
+        updateAssistantPlaceholder(last => ({
+          ...last,
+          content: "⚠️ I'm having trouble connecting. Please try again.",
+          isStreaming: false
+        }));
       }
 
-      const errorMessage = err instanceof Error ? err.message : "Something went wrong.";
+      const errorMessage = err instanceof Error ? err.message : 'Something went wrong.';
       toast({
-        title: "Error",
+        title: 'Error',
         description: errorMessage,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);

@@ -9,10 +9,25 @@ import { corsHeaders } from "../_shared/cors.ts";
 // @ts-expect-error - ESM.sh import for Deno
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-import { AgentContext, Message, ModelType } from './types.ts';
-import { getModelInfo, getModelsByProvider, getKeyTypeFromProvider } from './models.ts';
-import { streamAIResponse } from './streaming.ts';
+import { AgentContext, Message, ModelType, ToolParams } from './types.ts';
+import { getModelInfo, getKeyTypeFromProvider } from './models.ts';
 import { executeTool } from './tools.ts';
+
+type StreamPayload = Record<string, unknown>;
+
+interface StoredApiKey {
+  id: string;
+  key_value: string;
+  key_name?: string;
+  key_type?: string;
+  is_default?: boolean;
+}
+
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined;
+  };
+};
 
 const SYSTEM_PROMPT = `You are **GuoErrAI**, a personal AI assistant helping users manage their goals, tasks, and daily schedules.
 
@@ -106,15 +121,43 @@ Available tools:
   * Params: title, message, url (optional)
   * Use this to remind users about important tasks or updates
 
-For batch operations, use the batch tools to handle multiple items efficiently.`;
+For batch operations, use the batch tools to handle multiple items efficiently.
 
-serve(async (req) => {
+## TOOL USAGE RULES
+- When you need data or need to make changes, you **must** call a tool instead of guessing.
+- Request a tool by responding with **exactly** the following format (no extra text before or after):
+
+TOOL: tool_name
+PARAMS: {"param": "value"}
+
+- After sending a tool request, wait for the tool result message before giving the user-facing answer.
+- If a tool fails, acknowledge the failure, explain the reason, and suggest next steps instead of guessing.
+- Before telling the user that no tasks exist for a date:
+  - call 'get_tasks_by_start_date' for the relevant date range (e.g., today, tomorrow, this week), and only say "no tasks" if it returns zero results.
+- Always follow the database time rules when constructing parameters (YYYY-MM-DD for dates, HH:MM:SS for times).
+- After you have the tool result, summarize it clearly using Markdown tables when listing schedules.
+
+## TASK & SCHEDULE BEST PRACTICES
+- When the user asks for "today", treat it as the current date in the context.
+- When the user asks for "tomorrow" or "next", shift the date forward appropriately using the provided ISO helpers.
+- When planning a day, fetch the task list first, then add or update tasks using the relevant tool.
+- Keep answers high-level and friendly. Do not expose tool names or raw IDs in the final response.`;
+
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages, userId, goalId, sessionId, stream, modelId, selectedKeyIds } = await req.json();
+    const { messages, userId, goalId, sessionId, stream, modelId, selectedKeyIds } = await req.json() as {
+      messages: unknown;
+      userId?: string;
+      goalId?: string;
+      sessionId?: string;
+      stream?: boolean;
+      modelId?: string;
+      selectedKeyIds?: string[];
+    };
     
     if (!userId) {
       throw new Error("userId is required");
@@ -125,9 +168,22 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Normalise incoming messages
+    const aiMessages: Message[] = Array.isArray(messages)
+      ? (messages as Array<Record<string, unknown>>)
+          .map((msg) => ({
+            role: String(msg.role ?? 'user') as Message['role'],
+            content: typeof msg.content === 'string' ? msg.content : String(msg.content ?? ''),
+            timestamp: typeof msg.timestamp === 'string' ? msg.timestamp : undefined
+          }))
+          .filter((msg) => msg.content.trim().length > 0)
+      : [];
+
     // Build context
     const now = new Date();
     const currentDate = new Date();
+    const tomorrowIso = new Date(currentDate.getTime() + 86400000).toISOString().split('T')[0];
+    const yesterdayIso = new Date(currentDate.getTime() - 86400000).toISOString().split('T')[0];
     const context: AgentContext = {
       userId,
       goalId,
@@ -138,13 +194,17 @@ serve(async (req) => {
     };
 
     // Get the user's latest message
-    const userMessage = messages[messages.length - 1];
+    const userMessage = aiMessages[aiMessages.length - 1];
     if (!userMessage || userMessage.role !== 'user') {
       throw new Error('Invalid user message');
     }
 
     // Determine which model to use
-    let targetModel: ModelType = modelId || 'gemini-2.0-flash-exp';
+    const fallbackModel: ModelType = 'gemini-2.0-flash-exp';
+    const requestedModel = typeof modelId === 'string' ? (modelId as ModelType) : undefined;
+    const targetModel: ModelType = requestedModel && getModelInfo(requestedModel)
+      ? requestedModel
+      : fallbackModel;
     
     // Get model info to determine provider
     const modelInfo = getModelInfo(targetModel);
@@ -153,7 +213,7 @@ serve(async (req) => {
     }
 
     // Get API keys for this provider
-    let apiKeys: any[] = [];
+    let apiKeys: StoredApiKey[] = [];
     const dbKeyType = getKeyTypeFromProvider(modelInfo.provider);
     
     if (selectedKeyIds && selectedKeyIds.length > 0) {
@@ -217,15 +277,25 @@ CURRENT DATE AND TIME (CRITICAL):
 
 When user says:
 - "today" → use ${context.currentDate}
-- "tomorrow" → use ${new Date(currentDate.getTime() + 86400000).toISOString().split('T')[0]}
-- "yesterday" → use ${new Date(currentDate.getTime() - 86400000).toISOString().split('T')[0]}
+- "tomorrow" → use ${tomorrowIso}
+- "yesterday" → use ${yesterdayIso}
 
 Context:
 - User ID: ${context.userId}
-- Goal ID: ${context.goalId || 'Not set'}`;
+- Goal ID: ${context.goalId || 'Not set'}
 
-    // Build AI messages - pass system instruction separately to functions
-    const aiMessages = messages;
+## TOOL PARAMETER EXAMPLES (CURRENT CONTEXT)
+- Fetch today's tasks:
+TOOL: get_tasks_by_start_date
+PARAMS: {"start_date":"${context.currentDate}","end_date":"${context.currentDate}","limit":50}
+
+- Fetch tomorrow's tasks:
+TOOL: get_tasks_by_start_date
+PARAMS: {"start_date":"${tomorrowIso}","end_date":"${tomorrowIso}","limit":50}
+
+- Create a task for the next hour:
+TOOL: insert_new_task
+PARAMS: {"title":"Task title","description":"Brief summary","start_date":"${context.currentDate}","end_date":"${context.currentDate}","daily_start_time":"${context.currentTime}","daily_end_time":"${context.currentTime}"}`;
 
     // ALWAYS use streaming with tool execution support
     if (stream) {
@@ -233,7 +303,7 @@ Context:
       const encoder = new TextEncoder();
       const stream = new ReadableStream({
         async start(controller) {
-          const sendEvent = (type: string, data: any) => {
+          const sendEvent = (type: string, data: StreamPayload) => {
             const message = `data: ${JSON.stringify({ type, ...data })}\n\n`;
             controller.enqueue(encoder.encode(message));
           };
@@ -241,7 +311,7 @@ Context:
           try {
             const MAX_LOOPS = 30;
             let loopCount = 0;
-            let conversationHistory = [...aiMessages];
+            const conversationHistory = [...aiMessages];
             const toolsUsed: string[] = [];
 
             // Try each API key until one succeeds
@@ -260,11 +330,11 @@ Context:
                   const aiResponseText = await callAIModel(targetModel, keyData.key_value, conversationHistory, systemInstruction);
 
                   // Check for tool usage
-                  const toolMatch = aiResponseText.match(/TOOL: (\w+)\nPARAMS: ({.*?})/s);
+                    const toolMatch = aiResponseText.match(/TOOL: (\w+)\nPARAMS: ({.*?})/s);
 
                   if (toolMatch) {
                     const toolName = toolMatch[1];
-                    let params;
+                      let params: ToolParams;
 
                     try {
                       params = JSON.parse(toolMatch[2]);
@@ -282,7 +352,7 @@ Context:
                     toolsUsed.push(toolName);
 
                     // Execute tool
-                    let toolResult;
+                    let toolResult: unknown;
                     try {
                       toolResult = await executeTool(toolName, params, context, supabase);
                       sendEvent('tool_result', { name: toolName, success: true, message: `✓ ${toolName} completed`, content: `✓ ${toolName} completed` });
@@ -367,8 +437,8 @@ Context:
     // Non-streaming path with tool looping (max 30 iterations)
     const MAX_LOOPS = 30;
     let loopCount = 0;
-    let conversationHistory = [...aiMessages];
-    let toolsUsed: string[] = [];
+    const conversationHistory = [...aiMessages];
+    const toolsUsed: string[] = [];
     
     for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
       try {
@@ -390,7 +460,7 @@ Context:
           
           if (toolMatch) {
             const toolName = toolMatch[1];
-            let params;
+            let params: ToolParams;
             
             try {
               params = JSON.parse(toolMatch[2]);
@@ -408,7 +478,7 @@ Context:
             toolsUsed.push(toolName);
             
             // Execute tool
-            let toolResult;
+            let toolResult: unknown;
             try {
               toolResult = await executeTool(toolName, params, context, supabase);
               console.log(`✅ Tool result:`, JSON.stringify(toolResult).substring(0, 200));
@@ -485,7 +555,7 @@ Context:
 });
 
 // Non-streaming AI calls
-async function callAIModel(modelId: ModelType, apiKey: string, messages: any[], systemInstruction: string): Promise<string> {
+async function callAIModel(modelId: ModelType, apiKey: string, messages: Message[], systemInstruction: string): Promise<string> {
   const modelInfo = getModelInfo(modelId);
   if (!modelInfo) {
     throw new Error(`Unknown model: ${modelId}`);
@@ -503,44 +573,83 @@ async function callAIModel(modelId: ModelType, apiKey: string, messages: any[], 
   }
 }
 
-async function callGemini(modelId: ModelType, apiKey: string, messages: any[], systemInstruction: string): Promise<string> {
-  // Convert messages to Gemini format
-  const geminiMessages = messages.map((m: Message) => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }]
-  }));
+async function callGemini(modelId: ModelType, apiKey: string, messages: Message[], systemInstruction: string): Promise<string> {
+  // Gemini currently expects only model/user roles, so strip anything else
+  const geminiMessages = messages
+    .filter((m) => m.role === 'assistant' || m.role === 'user')
+    .map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1/models/${modelId}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: systemInstruction }]
-        },
-        contents: geminiMessages,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 8192,
-        }
-      })
+  const basePayload: Record<string, unknown> = {
+    contents: geminiMessages,
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 8192,
     }
-  );
+  };
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${errorText.substring(0, 100)}`);
+  if (systemInstruction.trim().length > 0) {
+    basePayload.systemInstruction = {
+      role: 'system',
+      parts: [{ text: systemInstruction }]
+    };
   }
 
-  const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated";
+  const endpoint = `https://generativelanguage.googleapis.com/v1/models/${modelId}:generateContent?key=${apiKey}`;
+
+  const executeRequest = async (payload: Record<string, unknown>) => {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${response.status} - ${errorText.substring(0, 200)}`);
+    }
+
+    return response.json();
+  };
+
+  try {
+    const data = await executeRequest(basePayload);
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    // Gemini sometimes rejects systemInstruction for experimental models. Retry without it.
+    if (message.includes('Unknown name "system"') || message.includes('systemInstruction')) {
+      console.warn('⚠️ Gemini rejected systemInstruction, retrying without it');
+      const fallbackPayload: Record<string, unknown> = {
+        ...basePayload,
+      };
+      delete fallbackPayload.systemInstruction;
+
+      // Prepend the system prompt as an implicit first user turn
+      fallbackPayload.contents = [
+        {
+          role: 'user',
+          parts: [{ text: `Follow these instructions carefully:
+${systemInstruction}` }]
+        },
+        ...((basePayload.contents as unknown[]) ?? [])
+      ];
+
+      const data = await executeRequest(fallbackPayload);
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
+    }
+
+    throw error;
+  }
 }
 
-async function callOpenAI(modelId: ModelType, apiKey: string, messages: any[], systemInstruction: string): Promise<string> {
+async function callOpenAI(modelId: ModelType, apiKey: string, messages: Message[], systemInstruction: string): Promise<string> {
   const openAIMessages = [
     { role: 'system', content: systemInstruction },
-    ...messages
+    ...messages.map((m) => ({ role: m.role, content: m.content }))
   ];
 
   // Define OpenAI function calling tools
@@ -669,7 +778,12 @@ async function callOpenAI(modelId: ModelType, apiKey: string, messages: any[], s
   return message?.content || "No response generated";
 }
 
-async function callClaude(modelId: ModelType, apiKey: string, messages: any[], systemInstruction: string): Promise<string> {
+async function callClaude(modelId: ModelType, apiKey: string, messages: Message[], systemInstruction: string): Promise<string> {
+  const claudeMessages = messages.map((m) => ({
+    role: m.role === 'assistant' ? 'assistant' : 'user',
+    content: [{ type: 'text', text: m.content }]
+  }));
+
   const response = await fetch(
     'https://api.anthropic.com/v1/messages',
     {
@@ -684,7 +798,7 @@ async function callClaude(modelId: ModelType, apiKey: string, messages: any[], s
         max_tokens: 8192,
         temperature: 0.7,
         system: systemInstruction,
-        messages: messages
+        messages: claudeMessages
       })
     }
   );

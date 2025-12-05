@@ -316,6 +316,7 @@ export type Database = {
           device_id: string | null
           display_name: string | null
           id: string
+          model_preference: string | null
           updated_at: string
         }
         Insert: {
@@ -325,6 +326,7 @@ export type Database = {
           device_id?: string | null
           display_name?: string | null
           id: string
+          model_preference?: string | null
           updated_at?: string
         }
         Update: {
@@ -334,6 +336,7 @@ export type Database = {
           device_id?: string | null
           display_name?: string | null
           id?: string
+          model_preference?: string | null
           updated_at?: string
         }
         Relationships: []
