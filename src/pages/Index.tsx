@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Helmet } from "react-helmet-async";
 import FloatingNavigation from "@/components/home/FloatingNavigation";
 import Background from "@/components/home/Background";
@@ -10,20 +10,6 @@ import Footer from "@/components/home/Footer";
 import { useAuth } from "@/hooks/useAuth";
 const Index: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
-
-  // Animation on component mount
-  useEffect(() => {
-    const animateElements = () => {
-      const elements = document.querySelectorAll('.animate-on-mount');
-      elements.forEach((el, index) => {
-        setTimeout(() => {
-          el.classList.add('animate-fadeIn');
-          el.classList.remove('opacity-0');
-        }, index * 150);
-      });
-    };
-    animateElements();
-  }, []);
 
   // Create structured data for SEO
   const structuredData = {

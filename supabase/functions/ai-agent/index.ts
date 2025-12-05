@@ -158,6 +158,22 @@ PARAMS: {"param": "value"}
 - Always follow the database time rules when constructing parameters (YYYY-MM-DD for dates, HH:MM:SS for times).
 - After you have the tool result, summarize it clearly using Markdown tables when listing schedules.
 
+## CRITICAL: TASK ID HANDLING
+**EXTREMELY IMPORTANT - READ CAREFULLY:**
+- When you receive task data from get_tasks_by_start_date or find_by_title, each task has an "id" field (UUID string like "abc-123-def")
+- You MUST remember and store these exact task IDs in your memory throughout the conversation
+- When user asks to "move task 2" or "delete the lunch task", you MUST use the ACTUAL task ID from the query result
+- NEVER make up task IDs, NEVER use sequential numbers as IDs, NEVER guess
+- If you don't have the task ID, call get_tasks_by_start_date or find_by_title FIRST to get the real IDs
+- When showing tasks to users, you can say "Task 1", "Task 2" for readability, but internally you MUST track the real UUID
+
+Example flow:
+1. User: "Show my tasks for today"
+2. You call: get_tasks_by_start_date → Result: [{"id": "550e8400-e29b-41d4-a716-446655440000", "title": "Lunch"}, {"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8", "title": "Meeting"}]
+3. You show user: "Task 1: Lunch, Task 2: Meeting"
+4. User: "Delete task 1"
+5. You MUST call: delete_task with task_id="550e8400-e29b-41d4-a716-446655440000" (the ACTUAL ID from step 2)
+
 ## TASK & SCHEDULE BEST PRACTICES
 - When the user asks for "today", treat it as the current date in the context.
 - When the user asks for "tomorrow" or "next", shift the date forward appropriately using the provided ISO helpers.
@@ -221,7 +237,7 @@ serve(async (req: Request) => {
     }
 
     // Determine which model to use
-    const fallbackModel: ModelType = 'gemini-1.5-flash';
+    const fallbackModel: ModelType = 'gemini-2.5-flash';
     const requestedModel = typeof modelId === 'string' ? (modelId as ModelType) : undefined;
     const targetModel: ModelType = requestedModel && getModelInfo(requestedModel)
       ? requestedModel
@@ -421,7 +437,7 @@ PARAMS: {"title_search":"meeting","limit":20}
                     console.log(`📋 [AI Agent] Params:`, JSON.stringify(params, null, 2));
                     console.log(`🎯 [AI Agent] Context:`, { goalId: context.goalId, userId: context.userId });
                     
-                    sendEvent('tool', { name: toolName, params: params, message: `${displayName}...`, content: `${displayName}...` });
+                    sendEvent('status', { message: displayName, content: displayName });
                     toolsUsed.push(toolName);
 
                     // Execute tool
@@ -472,7 +488,7 @@ PARAMS: {"title_search":"meeting","limit":20}
                     // Add tool result to conversation
                     conversationHistory.push({
                       role: 'user',
-                      content: `Tool ${toolName} executed. Result:\n${JSON.stringify(toolResult, null, 2)}\n\nAnalyze this result and provide a natural response to the user. NO technical details or IDs.`
+                      content: `Tool ${toolName} executed. Result:\n${JSON.stringify(toolResult, null, 2)}\n\nAnalyze this result and provide a natural response to the user. IMPORTANT: Remember all task IDs from the result - you MUST use these exact IDs when moving or deleting tasks. When showing tasks to user, include their position number (Task 1, Task 2) but keep the actual ID in your memory for future operations.`
                     });
 
                     // Continue loop

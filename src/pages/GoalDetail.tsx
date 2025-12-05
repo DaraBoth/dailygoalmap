@@ -41,8 +41,6 @@ const GoalDetail: React.FC = () => {
     if (taskParam) setAutoOpenTaskId(taskParam);
   }, [search]);
 
-  useEffect(() => { enableRealtimeForTable?.('tasks').catch(() => {}); }, []);
-
   // Fetch theme when goal data changes
   useEffect(() => {
     const fetchTheme = async () => {

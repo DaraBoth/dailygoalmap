@@ -5,6 +5,69 @@
 
 import { AgentContext, ToolParams } from './types.ts';
 
+/**
+ * Helper Functions for Data Normalization
+ */
+
+// Normalize date input to timestamp format: YYYY-MM-DD HH:MM:SS+00
+// Database stores start_date and end_date as timestamps with timezone
+function normalizeToTimestamp(dateInput: string, timeInput?: string): string {
+  if (!dateInput) return dateInput;
+  
+  let dateStr = dateInput;
+  
+  // Extract just the date part from various formats
+  if (dateInput.includes('T')) {
+    dateStr = dateInput.split('T')[0];
+  } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+    dateStr = dateInput;
+  } else {
+    // Try to parse
+    try {
+      const date = new Date(dateInput);
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        dateStr = `${year}-${month}-${day}`;
+      }
+    } catch (e) {
+      console.warn('Date parsing failed for:', dateInput);
+      return dateInput;
+    }
+  }
+  
+  // Combine with time or use midnight
+  const time = timeInput ? normalizeTime(timeInput) : '00:00:00';
+  return `${dateStr} ${time}+00`;
+}
+
+// Normalize time to HH:MM:SS format
+function normalizeTime(timeInput: string): string {
+  if (!timeInput) return timeInput;
+  
+  // If already in HH:MM:SS format, return as-is
+  if (/^\d{2}:\d{2}:\d{2}$/.test(timeInput)) {
+    return timeInput;
+  }
+  
+  // If in HH:MM format, add :00
+  if (/^\d{2}:\d{2}$/.test(timeInput)) {
+    return `${timeInput}:00`;
+  }
+  
+  // Handle timestamp (2025-12-05T14:30:00) -> extract time part
+  if (timeInput.includes('T')) {
+    const timePart = timeInput.split('T')[1]?.split('.')[0]?.split('Z')[0];
+    if (timePart && /^\d{2}:\d{2}:\d{2}$/.test(timePart)) {
+      return timePart;
+    }
+  }
+  
+  console.warn('Time normalization failed for:', timeInput);
+  return timeInput; // Return original if can't normalize
+}
+
 export async function executeTool(
   toolName: string, 
   params: ToolParams, 
@@ -85,42 +148,52 @@ async function getGoalDetail(params: ToolParams, context: AgentContext, supabase
 }
 
 async function getTasksByStartDate(params: ToolParams, context: AgentContext, supabase: any) {
+  // Extract just the date part for filtering
+  const startDate = params.start_date.includes('T') ? params.start_date.split('T')[0] : params.start_date;
+  const endDate = params.end_date.includes('T') ? params.end_date.split('T')[0] : params.end_date;
+  
   console.log('🔍 [getTasksByStartDate] Query:', {
     goal_id: context.goalId,
-    start_date: params.start_date,
-    end_date: params.end_date,
+    start_date: startDate,
+    end_date: endDate,
     limit: params.limit || '100'
   });
   
-  // Handle date comparison properly for both date-only and timestamp formats
-  const startDate = params.start_date;
-  const endDate = params.end_date;
-  
+  // Query by casting start_date timestamp to date for comparison
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
     .eq('goal_id', context.goalId)
-    .gte('start_date', startDate)
-    .lt('start_date', `${endDate}T23:59:59.999Z`) // Include full day
+    .gte('start_date', `${startDate} 00:00:00+00`)
+    .lt('start_date', `${endDate} 23:59:59+00`)
     .order('start_date', { ascending: true })
+    .order('daily_start_time', { ascending: true })
     .limit(parseInt(params.limit || '100'));
   
   console.log('✅ [getTasksByStartDate] Result:', { 
     success: !error, 
     count: data?.length || 0, 
     error: error?.message,
-    sample_dates: data?.slice(0, 3).map((t: any) => ({ id: t.id, title: t.title, start_date: t.start_date }))
+    sample_tasks: data?.slice(0, 3).map((t: any) => ({ title: t.title, start_date: t.start_date, time: t.daily_start_time }))
   });
   if (error) throw error;
   return { tasks: data, count: data?.length || 0 };
 }
 
 async function insertNewTask(params: ToolParams, context: AgentContext, supabase: any) {
+  // Create timestamps for start_date and end_date
+  const startTime = normalizeTime(params.daily_start_time);
+  const endTime = normalizeTime(params.daily_end_time);
+  const startTimestamp = normalizeToTimestamp(params.start_date, startTime);
+  const endTimestamp = normalizeToTimestamp(params.end_date || params.start_date, endTime);
+  
   console.log('🔍 [insertNewTask] Query:', {
     goal_id: context.goalId,
     title: params.title,
-    start_date: params.start_date,
-    end_date: params.end_date
+    start_date: startTimestamp,
+    end_date: endTimestamp,
+    daily_start_time: startTime,
+    daily_end_time: endTime
   });
   
   const { data, error } = await supabase
@@ -129,11 +202,11 @@ async function insertNewTask(params: ToolParams, context: AgentContext, supabase
       goal_id: context.goalId,
       user_id: context.userId,
       title: params.title,
-      description: params.description,
-      start_date: params.start_date,
-      end_date: params.end_date,
-      daily_start_time: params.daily_start_time,
-      daily_end_time: params.daily_end_time,
+      description: params.description || '',
+      start_date: startTimestamp,
+      end_date: endTimestamp,
+      daily_start_time: startTime,
+      daily_end_time: endTime,
       tags: params.tags || [],
       completed: params.completed === 'true' || false
     })
@@ -157,7 +230,7 @@ async function updateTaskInfo(params: ToolParams, context: AgentContext, supabas
     .from('tasks')
     .update(updates)
     .eq('id', params.task_id)
-    .eq('user_id', context.userId)
+    .eq('goal_id', context.goalId)
     .select()
     .single();
   
@@ -171,22 +244,29 @@ async function updateTaskInfo(params: ToolParams, context: AgentContext, supabas
 }
 
 async function moveTask(params: ToolParams, context: AgentContext, supabase: any) {
+  // Create timestamps for start_date and end_date
+  const startTime = normalizeTime(params.daily_start_time);
+  const endTime = normalizeTime(params.daily_end_time);
+  const startTimestamp = normalizeToTimestamp(params.start_date, startTime);
+  const endTimestamp = normalizeToTimestamp(params.end_date || params.start_date, endTime);
+  
   console.log('🔍 [moveTask] Query:', {
     task_id: params.task_id,
-    start_date: params.start_date,
-    end_date: params.end_date || params.start_date
+    start_date: startTimestamp,
+    end_date: endTimestamp,
+    daily_start_time: startTime,
+    daily_end_time: endTime
   });
   
   const { data, error } = await supabase
     .from('tasks')
     .update({
-      start_date: params.start_date,
-      end_date: params.end_date || params.start_date,
-      daily_start_time: params.daily_start_time,
-      daily_end_time: params.daily_end_time
+      start_date: startTimestamp,
+      end_date: endTimestamp,
+      daily_start_time: startTime,
+      daily_end_time: endTime
     })
     .eq('id', params.task_id)
-    .eq('user_id', context.userId)
     .eq('goal_id', context.goalId)
     .select()
     .single();
@@ -208,7 +288,7 @@ async function moveTask(params: ToolParams, context: AgentContext, supabase: any
   return { 
     success: true, 
     task: data,
-    message: `Moved "${data.title}" to ${params.start_date}`
+    message: `Moved "${data.title}" to ${startTimestamp.split(' ')[0]}`
   };
 }
 
@@ -219,7 +299,6 @@ async function deleteTask(params: ToolParams, context: AgentContext, supabase: a
     .from('tasks')
     .delete()
     .eq('id', params.task_id)
-    .eq('user_id', context.userId)
     .eq('goal_id', context.goalId)
     .select();
   
@@ -253,6 +332,10 @@ async function moveTasksBatch(params: ToolParams, context: AgentContext, supabas
     throw new Error('new_start_date is required for batch move');
   }
   
+  // Create timestamps - use midnight if no time specified
+  const newStartTimestamp = normalizeToTimestamp(params.new_start_date);
+  const newEndTimestamp = normalizeToTimestamp(params.new_end_date || params.new_start_date);
+  
   const results = [];
   let successCount = 0;
   let errorCount = 0;
@@ -262,11 +345,10 @@ async function moveTasksBatch(params: ToolParams, context: AgentContext, supabas
       const { data, error } = await supabase
         .from('tasks')
         .update({
-          start_date: params.new_start_date,
-          end_date: params.new_end_date || params.new_start_date,
+          start_date: newStartTimestamp,
+          end_date: newEndTimestamp,
         })
         .eq('id', taskId)
-        .eq('user_id', context.userId)
         .eq('goal_id', context.goalId)
         .select()
         .single();
@@ -279,7 +361,7 @@ async function moveTasksBatch(params: ToolParams, context: AgentContext, supabas
           task_id: taskId, 
           success: true, 
           title: data.title,
-          moved_to: params.new_start_date
+          moved_to: newStartTimestamp.split(' ')[0]
         });
       }
     } catch (error) {
@@ -298,7 +380,7 @@ async function moveTasksBatch(params: ToolParams, context: AgentContext, supabas
     moved_count: successCount,
     failed_count: errorCount,
     results: results,
-    message: `Successfully moved ${successCount} out of ${params.task_ids.length} tasks to ${params.new_start_date}`
+    message: `Successfully moved ${successCount} out of ${params.task_ids.length} tasks to ${newStartTimestamp.split(' ')[0]}`
   };
 }
 
@@ -311,7 +393,6 @@ async function deleteTasksBatch(params: ToolParams, context: AgentContext, supab
     .from('tasks')
     .delete()
     .in('id', params.task_ids)
-    .eq('user_id', context.userId)
     .eq('goal_id', context.goalId)
     .select();
   

@@ -29,12 +29,6 @@ const MODEL_VARIANTS: ModelVariant[] = [
     description: '✨ FREE - 2nd gen workhorse, 1M context'
   },
   {
-    id: 'gemini-1.5-flash',
-    name: 'Gemini 1.5 Flash 🆓',
-    provider: 'gemini',
-    description: '✨ FREE - Fast and efficient, 1M context'
-  },
-  {
     id: 'gemini-2.5-pro',
     name: 'Gemini 2.5 Pro',
     provider: 'gemini',

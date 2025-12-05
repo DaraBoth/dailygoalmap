@@ -28,13 +28,6 @@ export const MODELS: Record<ModelType, ModelInfo> = {
     maxTokens: 8192,
     contextWindow: 1000000
   },
-  'gemini-1.5-flash': {
-    id: 'gemini-1.5-flash',
-    name: 'Gemini 1.5 Flash',
-    provider: 'gemini',
-    maxTokens: 8192,
-    contextWindow: 1000000
-  },
   'gemini-1.5-pro': {
     id: 'gemini-1.5-pro',
     name: 'Gemini 1.5 Pro',
