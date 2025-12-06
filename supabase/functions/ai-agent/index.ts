@@ -188,37 +188,24 @@ PARAMS: {"param": "value"}
 ### RECOMMENDED WORKFLOW:
 1. User asks: "Delete my workout task"
 2. You call: get_tasks_by_start_date or find_by_title
-3. You receive: `{"tasks": [{"id": "550e8400-...", "title": "Workout", ...}]}`
-4. You extract the ID from the result: `const taskId = tasks[0].id`
-5. You use that exact ID: delete_task with `{"task_id": "550e8400-..."}`
+3. You receive the task object with an "id" field containing the UUID
+4. You extract the ACTUAL ID from the result
+5. You use that exact UUID in delete_task
 
 ### Alternative (using memory references):
-1. After getting tasks, reference them by position: "task_1", "task_2"
-2. Backend automatically resolves to UUID
+1. After getting tasks, they are stored with position numbers (task_1, task_2, etc.)
+2. You can reference them by position: "1", "2", "task_1", "task_2"
+3. Backend automatically resolves these to the real UUID
 
-### Examples:
-✅ CORRECT - Extract ID from result:
-```
-User: "Show my tasks for today"
-AI: get_tasks_by_start_date
-Result: {"tasks": [{"id": "abc123...", "title": "Lunch"}]}
-User: "Delete the lunch task"
-AI: delete_task with {"task_id": "abc123..."} ← Use the actual ID!
-```
+### CORRECT Examples:
+- Extract ID from result and use the actual UUID
+- Use position numbers like "1" or "task_1" which backend resolves to UUID
+- Use partial title matches like "workout" or "meeting" which backend finds in memory
 
-✅ ALSO CORRECT - Use position from memory:
-```
-User: "Show my tasks for today"
-AI: get_tasks_by_start_date (stores as task_1, task_2...)
-User: "Delete task 1"
-AI: delete_task with {"task_id": "1"} ← Backend resolves automatically
-```
-
-❌ WRONG - Making up IDs:
-```
-User: "Delete lunch"
-AI: delete_task with {"task_id": "lunch"} ← WRONG! Not a valid UUID!
-```
+### WRONG Examples (will fail):
+- Making up IDs like "task_1" without first getting the tasks
+- Using task titles as IDs directly without the memory system
+- Inventing placeholder IDs that don't exist in the database
 
 ### Important Rules:
 - NEVER try to remember UUIDs yourself
