@@ -560,10 +560,10 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-0 md:bottom-24 right-0 left-0 md:left-6 w-full h-full md:w-[calc(100vw-45px)] md:h-[calc(100vh-120px)] liquid-glass-container z-50 flex flex-col"
+            className="fixed inset-0 lg:inset-auto lg:bottom-24 lg:right-6 lg:left-6 lg:top-auto w-full h-dvh lg:w-[calc(100vw-48px)] lg:h-[calc(100vh-120px)] liquid-glass-container z-50 flex flex-col"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b bg-muted/80">
+            <div className="flex-shrink-0 flex items-center justify-between p-4 border-b bg-muted/80">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold">GuoErr AI</h3>
                 <img className='h-6 w-6' src={robot} alt="Chat AI Image" />
@@ -583,7 +583,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
             {/* Messages */}
             <div
-              className="flex-1 overflow-y-auto px-2 md:p-4 backdrop-blur-3xl bg-muted/80 p-4 shadow-sm border"
+              className="flex-1 min-h-0 overflow-y-auto px-2 lg:p-4 backdrop-blur-3xl bg-muted/80 p-4 shadow-sm border"
               ref={chatContainerRef}
               onScroll={() => {
                 if (!chatContainerRef.current) return;
@@ -594,23 +594,23 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
               }}
             >
 
-              <ScrollArea className="flex-1 px-1 md:p-4 ">
-                <div className="w-full px-1 md:px-4 ">
+              <ScrollArea className="h-full px-1 lg:p-4 ">
+                <div className="w-full px-1 lg:px-4">
                   {messages.map((msg, i) => (
                     <div
                       key={i}
-                      className={`w-full mb-4  ${msg.role === "assistant" ? "flex" : "flex justify-end"
+                      className={`mb-4 w-full flex ${msg.role === "assistant" ? "" : "justify-end"
                         }`}
                     >
                       {/* Assistant Bubble */}
                       {msg.role === "assistant" && (
-                        <div className="group relative w-full rounded-xl">
+                        <div className="group relative w-full min-w-0 rounded-xl overflow-hidden">
 
                           {/* Markdown container */}
-                          <div className="prose prose-sm dark:prose-invert max-w-none break-words
+                          <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-x-auto
                             prose-pre:bg-[#1e1e1e] prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded-xl prose-pre:overflow-x-auto prose-pre:shadow-lg
                             prose-code:bg-gray-800/80 prose-code:text-emerald-400 prose-code:px-2 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
-                            prose-p:my-3 prose-p:leading-relaxed prose-p:text-base
+                            prose-p:my-3 prose-p:leading-relaxed prose-p:text-base prose-p:break-words
                             prose-headings:font-bold prose-headings:mt-6 prose-headings:mb-3 prose-headings:text-foreground
                             prose-h1:text-3xl prose-h1:border-b prose-h1:pb-2 prose-h2:text-2xl prose-h3:text-xl
                             prose-ul:my-3 prose-ul:space-y-1 prose-ol:my-3 prose-ol:space-y-1 prose-li:my-1 prose-li:leading-relaxed
@@ -685,10 +685,12 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                                 },
                                 table({ children }) {
                                   return (
-                                    <div className="overflow-x-auto my-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md">
-                                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border-collapse">
-                                        {children}
-                                      </table>
+                                    <div className="overflow-x-auto my-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md -mx-4 sm:mx-0">
+                                      <div className="inline-block align-middle w-full">
+                                        <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 border-collapse">
+                                          {children}
+                                        </table>
+                                      </div>
                                     </div>
                                   );
                                 },
@@ -789,7 +791,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
                       {/* User Bubble */}
                       {msg.role === "user" && (
-                        <div className="max-w-[80%] bg-blue-600 text-white p-3 rounded-xl shadow">
+                        <div className="max-w-[85%] sm:max-w-[80%] bg-blue-600 text-white p-3 rounded-xl shadow break-words whitespace-pre-wrap overflow-wrap-anywhere overflow-x-auto">
                           {msg.content}
                         </div>
                       )}
@@ -822,7 +824,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             )}
 
             {/* Input */}
-            <div className="p-4 border-t bg-muted/80">
+            <div className="flex-shrink-0 p-4 border-t bg-muted/80">
               {/* Model Selector and API Key Info */}
               <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                 <div className="flex items-center gap-2 flex-wrap">
