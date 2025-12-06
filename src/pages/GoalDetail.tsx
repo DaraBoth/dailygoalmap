@@ -13,6 +13,7 @@ import { Helmet } from 'react-helmet-async';
 import { GoalTheme } from '@/types/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { GoalChatWidget } from '@/components/goal/GoalChatWidget';
+import GoalChatWidgetN8N from '@/components/goal/GoalChatWidgetN8N';
 
 const GoalDetail: React.FC = () => {
   const { id: goalId } = useParams({ from: '/goal/$id' });
@@ -270,7 +271,8 @@ const GoalDetail: React.FC = () => {
       </div>
       
       {/* Goal Chat Widget */}
-      <GoalChatWidget goalId={goalId} userInfo={user} />
+      <GoalChatWidgetN8N goalId={goalId} userInfo={user} />
+      {/* <GoalChatWidget goalId={goalId} userInfo={user} /> */}
     </>
   );
 };

@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { MessageCircle, X, Send, Loader2, Clipboard, Copy, Pointer, ArrowUp, Bot } from 'lucide-react';
+import { X, Loader2, Copy, ArrowUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -14,14 +12,9 @@ import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github-dark.css';
 import 'katex/dist/katex.min.css';
 import { useIsMobile } from '@/hooks/use-mobile';
-import chatAIGif from '@/assets/images/image.png'
-import robot from '@/assets/images/robot.png'
-import { supabase } from '@/integrations/supabase/client';
-import { KeySelector } from './KeySelector';
-import { ModelVariantPicker } from './ModelVariantPicker';
 import { useAutoResizeTextArea } from '@/hooks/useAutoResizeTextArea';
-
-type ModelType = 'gemini' | 'openai' | 'claude';
+import chatAIGif from '@/assets/images/image.png';
+import robot from '@/assets/images/robot.png';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -39,34 +32,29 @@ interface GoalChatWidgetProps {
   } | null;
 }
 
+const WEBHOOK_URL = 'https://n8n.tonlaysab.com/webhook/142e0e30-4fce-4baa-ac7e-6ead0b16a3a9/chat';
 const MIN_MESSAGE_INTERVAL = 3000;
 
-export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo }) => {
+export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [lastMessageTime, setLastMessageTime] = useState(0);
-  const [selectedModel, setSelectedModel] = useState<ModelType>("gemini");
-  const [selectedModelId, setSelectedModelId] = useState<string>('gemini-1.5-flash');
-  const [selectedKeyIds, setSelectedKeyIds] = useState<string[]>([]);
-  const [currentApiKey, setCurrentApiKey] = useState<string>('');
-  const [temporaryStatus, setTemporaryStatus] = useState<string>(''); // For status messages that disappear
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const currentStreamBufferRef = useRef<string>('');
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const isMobile = useIsMobile();
 
   const SESSION_KEY = useMemo(() => `goal_chat_session_${goalId}_${userInfo?.id}`, [goalId, userInfo?.id]);
   const CHAT_KEY = useMemo(() => `goal_chat_${goalId}`, [goalId]);
-
-  const [showScrollButton, setShowScrollButton] = useState(false);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea with performance optimization
   useAutoResizeTextArea(textareaRef, inputValue, { minRows: 1, maxRows: 6 });
@@ -96,24 +84,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
         console.error('Failed to parse saved messages:', error);
       }
     }
-
-    // Load model preference from database
-    const loadModelPreference = async () => {
-      if (!userInfo?.id) return;
-      
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('model_preference')
-        .eq('id', userInfo.id)
-        .single();
-      
-      if (!error && data?.model_preference) {
-        setSelectedModel(data.model_preference as ModelType);
-      }
-    };
-    
-    loadModelPreference();
-  }, [goalId, userInfo?.id, SESSION_KEY, CHAT_KEY]);
+  }, [SESSION_KEY, CHAT_KEY]);
 
   // Save messages with debounce to avoid excessive localStorage writes
   useEffect(() => {
@@ -161,13 +132,13 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   }, [isOpen]);
 
   // === COPY-TO-CLIPBOARD ===
-  const copyMessage = (text: string) => {
+  const copyMessage = useCallback((text: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: 'Copied!', description: 'Message copied to clipboard.' });
-  };
+  }, []);
 
   // === STOP STREAMING ===
-  const stopStreaming = () => {
+  const stopStreaming = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
@@ -185,10 +156,46 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
       });
 
       setIsLoading(false);
-      setTemporaryStatus('');
+      currentStreamBufferRef.current = '';
       toast({ title: 'Stopped', description: 'AI response stopped.' });
     }
-  };
+  }, []);
+
+  // Update assistant message helper
+  const updateAssistantMessage = useCallback((content: string) => {
+    setMessages(prev => {
+      const updated = [...prev];
+      const lastIndex = updated.length - 1;
+
+      if (updated[lastIndex]?.role === "assistant") {
+        updated[lastIndex] = {
+          ...updated[lastIndex],
+          content,
+          isStreaming: true
+        };
+      }
+
+      return updated;
+    });
+  }, []);
+
+  // Finalize assistant message
+  const finalizeAssistantMessage = useCallback(() => {
+    setMessages(prev => {
+      const updated = [...prev];
+      const lastIndex = updated.length - 1;
+
+      if (updated[lastIndex]?.role === "assistant") {
+        updated[lastIndex] = {
+          ...updated[lastIndex],
+          isStreaming: false
+        };
+      }
+
+      return updated;
+    });
+    currentStreamBufferRef.current = '';
+  }, []);
 
   // === SEND MESSAGE ===
   const handleSendMessage = async () => {
@@ -217,96 +224,28 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     };
     setMessages((prev) => [...prev, placeholderMessage]);
 
-    const updateAssistantPlaceholder = (updater: (last: ChatMessage) => ChatMessage) => {
-      setMessages(prev => {
-        if (prev.length === 0) return prev;
-        const updated = [...prev];
-        const lastIndex = updated.length - 1;
-        const lastMessage = updated[lastIndex];
-        if (!lastMessage) return prev;
-        updated[lastIndex] = updater(lastMessage);
-        return updated;
-      });
-    };
-
     try {
-      console.log("🤖 Using streaming AI agent...");
-      
-      // Build conversation history for the agent
-      const conversationMessages = messages.map(m => ({
-        role: m.role,
-        content: m.content
-      }));
-      
-      // Add current user message
-      conversationMessages.push({
-        role: 'user',
-        content: text
-      });
-
-      // Get session token
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData?.session?.access_token;
-
-      if (!accessToken) {
-        throw new Error('No session token available');
-      }
-
-      // Get Supabase URL for Edge Function
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const functionUrl = `${supabaseUrl}/functions/v1/ai-agent`;
+      console.log("🤖 Starting N8N webhook streaming...");
 
       // Create abort controller for this request
       abortControllerRef.current = new AbortController();
 
-      // Call Edge Function with streaming
-      const response = await fetch(
-        functionUrl,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            messages: conversationMessages,
-            userId: userInfo?.id,
-            goalId: goalId,
-            sessionId: sessionId || crypto.randomUUID(),
-            stream: true,
-            modelId: selectedModelId,
-            selectedKeyIds: selectedKeyIds.length > 0 ? selectedKeyIds : undefined
-          }),
-          signal: abortControllerRef.current.signal
-        }
-      );
+      // Call webhook with streaming
+      const response = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sendMessage',
+          sessionId,
+          chatInput: text,
+          goalId,
+          userId: userInfo?.id,
+        }),
+        signal: abortControllerRef.current.signal,
+      });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        
-        // Handle API key errors
-        if (errorData?.error === "API_KEY_REQUIRED") {
-          const instructions = errorData.setupInstructions;
-          let instructionText = "";
-          
-          if (instructions) {
-            instructionText = "\n\n" + instructions.title + "\n" + instructions.steps.join("\n");
-          }
-
-          setMessages((prev) => {
-            const updated = [...prev];
-            updated[updated.length - 1] = {
-              role: "assistant",
-              content: errorData.message + instructionText,
-              timestamp: Date.now(),
-              isStreaming: false
-            };
-            return updated;
-          });
-          return;
-        }
-        
-        throw new Error(errorData.error || 'Failed to get response');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       if (!response.body) {
@@ -316,9 +255,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
       // Handle streaming response
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let accumulatedContent = '';
       let buffer = '';
-      let isFirstContent = true; // Track if this is the first content event
 
       console.log('🔄 Starting to read stream...');
 
@@ -329,96 +266,45 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
           break;
         }
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n\n');
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+
+        const lines = buffer.split('\n');
         buffer = lines.pop() || '';
 
-        console.log(`📦 Received ${lines.length} lines`);
-
         for (const line of lines) {
-          if (!line.trim() || !line.startsWith('data: ')) continue;
-          
-          const data = line.slice(6);
-          console.log('📨 Raw data:', data);
+          const trimmed = line.trim();
+          if (!trimmed) continue;
 
           try {
-            const parsed = JSON.parse(data);
+            const parsed = JSON.parse(trimmed);
             console.log('✨ Parsed event:', parsed);
 
-            if (parsed.type === 'key_info') {
-              const keyLabel = typeof parsed.content === 'string'
-                ? parsed.content
-                : (typeof parsed.message === 'string' ? parsed.message : '');
+            // Handle streaming chunk
+            if (parsed.type === 'item' && parsed.content) {
+              currentStreamBufferRef.current += parsed.content;
+              updateAssistantMessage(currentStreamBufferRef.current);
+            }
 
-              if (keyLabel) {
-                setCurrentApiKey(keyLabel);
-                console.log('🔑 Using API key:', keyLabel);
-              }
-            } else if (parsed.type === 'status') {
-              const statusText = parsed.message ?? parsed.content ?? '';
-              if (typeof statusText === 'string' && statusText.trim().length > 0) {
-                // Update temporary status instead of creating chat bubble
-                setTemporaryStatus(statusText);
-              }
-            } else if (parsed.type === 'thinking') {
-              // Ignore thinking messages - they're redundant
-              continue;
-            } else if (parsed.type === 'tool') {
-              // Ignore tool messages - they're too technical
-              continue;
-            } else if (parsed.type === 'tool_result') {
-              const resultIcon = parsed.success ? '✅' : '❌';
-              const resultText = parsed.message ?? parsed.content ?? '';
-              // Update temporary status with result
-              if (resultText) {
-                setTemporaryStatus(`${resultIcon} ${resultText}`);
-              }
-            } else if (parsed.type === 'content') {
-              const chunk = typeof parsed.delta === 'string'
-                ? parsed.delta
-                : (typeof parsed.content === 'string' ? parsed.content : '');
+            // Handle stream end
+            if (parsed.type === 'end') {
+              finalizeAssistantMessage();
+            }
 
-              if (!chunk) {
-                continue;
-              }
-
-              if (isFirstContent) {
-                accumulatedContent = '';
-                isFirstContent = false;
-                console.log('🔄 First content event - resetting accumulator');
-              }
-
-              accumulatedContent += chunk;
-              console.log('📝 Delta:', chunk, '| Accumulated:', accumulatedContent.substring(0, 50));
-              updateAssistantPlaceholder(last => ({
-                ...last,
-                content: accumulatedContent,
-                isStreaming: true
-              }));
-            } else if (parsed.type === 'done') {
-              updateAssistantPlaceholder(last => ({
-                ...last,
-                content: accumulatedContent || (typeof last.content === 'string' ? last.content : ''),
-                isStreaming: false
-              }));
-            } else if (parsed.type === 'error') {
-              // Handle streaming errors
-              let errorMessage = parsed.content ?? parsed.message ?? 'An error occurred';
-              
-              // Check for rate limit error
-              if (errorMessage.includes('429')) {
-                errorMessage = `⚠️ **Rate Limit Reached**\n\nYou've exceeded the API rate limit for ${selectedModel === 'gemini' ? 'Gemini' : selectedModel === 'openai' ? 'OpenAI' : 'Claude'}.\n\n**Solutions:**\n- Wait a few minutes and try again\n- Switch to a different AI model using the dropdown below\n- Upgrade your API key tier for higher limits\n\n**Rate Limits:**\n- Gemini Free: 15 requests/minute\n- OpenAI Free: 3 requests/minute\n- Claude Free: 5 requests/minute`;
-              } else if (errorMessage.includes('API error')) {
-                errorMessage = `⚠️ **API Error**\n\n${errorMessage}\n\nPlease check your API key or try switching models.`;
-              }
-              
-              updateAssistantPlaceholder(last => ({
-                ...last,
-                content: errorMessage,
-                isStreaming: false
-              }));
-              
-              return; // Don't throw, just show error message
+            // Handle errors
+            if (parsed.type === 'error') {
+              const errorMessage = parsed.content || parsed.message || 'An error occurred';
+              setMessages((prev) => {
+                const updated = [...prev];
+                updated[updated.length - 1] = {
+                  role: 'assistant',
+                  content: `⚠️ Error: ${errorMessage}`,
+                  timestamp: Date.now(),
+                  isStreaming: false
+                };
+                return updated;
+              });
+              return;
             }
           } catch (e) {
             console.error('❌ Parse error:', e, 'Raw line:', line);
@@ -426,7 +312,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
         }
       }
 
-    } catch (err) {
+      finalizeAssistantMessage();
+
+    } catch (err: unknown) {
       console.error("❌ Streaming Error:", err);
 
       // Check if it was aborted by user
@@ -435,81 +323,19 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
         return;
       }
 
-      type ErrorContextPayload = {
-        error?: string;
-        message?: string;
-        statusCode?: number;
-        setupInstructions?: { title: string; steps: string[] };
-        technicalDetails?: unknown;
-        details?: unknown;
-      };
-
-      const extractErrorPayload = (input: unknown): ErrorContextPayload | null => {
-        if (!input || typeof input !== 'object') return null;
-        const record = input as Record<string, unknown>;
-
-        const contextValue = record.context;
-        if (contextValue && typeof contextValue === 'object') {
-          const body = (contextValue as Record<string, unknown>).body;
-          if (body && typeof body === 'object') {
-            return body as ErrorContextPayload;
-          }
-        }
-
-        const rawMessage = record.message;
-        if (typeof rawMessage === 'string') {
-          try {
-            return JSON.parse(rawMessage) as ErrorContextPayload;
-          } catch {
-            return null;
-          }
-        }
-
-        return null;
-      };
-
-      const errorData = extractErrorPayload(err);
-
-      if (errorData?.error === 'API_KEY_REQUIRED') {
-        const instructions = errorData.setupInstructions;
-        const instructionText = instructions
-          ? `\n\n${instructions.title}\n${instructions.steps.join('\n')}`
-          : '';
-
-        updateAssistantPlaceholder(last => ({
-          ...last,
-          content: `${errorData?.message ?? 'API key required.'}${instructionText}`,
-          isStreaming: false
-        }));
-      } else if (errorData?.error === 'AI_SERVICE_ERROR') {
-        let aiErrorMsg = errorData.message || '⚠️ The AI service is temporarily unavailable. Please try again.';
-
-        if (typeof errorData.statusCode === 'number') {
-          aiErrorMsg += `\n\n💡 Status Code: ${errorData.statusCode}`;
-        }
-
-        if (errorData.technicalDetails) {
-          console.error('AI Service Technical Details:', errorData.technicalDetails);
-        }
-
-        if (errorData.details) {
-          console.error('AI Service Error Details:', errorData.details);
-        }
-
-        updateAssistantPlaceholder(last => ({
-          ...last,
-          content: aiErrorMsg,
-          isStreaming: false
-        }));
-      } else {
-        updateAssistantPlaceholder(last => ({
-          ...last,
-          content: "⚠️ I'm having trouble connecting. Please try again.",
-          isStreaming: false
-        }));
-      }
-
       const errorMessage = err instanceof Error ? err.message : 'Something went wrong.';
+      
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'assistant',
+          content: `⚠️ I'm having trouble connecting. Please try again.\n\nError: ${errorMessage}`,
+          timestamp: Date.now(),
+          isStreaming: false
+        };
+        return updated;
+      });
+
       toast({
         title: 'Error',
         description: errorMessage,
@@ -517,20 +343,13 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
       });
     } finally {
       setIsLoading(false);
-      setTemporaryStatus(''); // Clear status when done
       abortControllerRef.current = null;
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (!isLoading) handleSendMessage();
+      currentStreamBufferRef.current = '';
     }
   };
 
   // === CLEAR CHAT + NEW SESSION ===
-  const clearChat = () => {
+  const clearChat = useCallback(() => {
     setMessages([]);
     localStorage.removeItem(CHAT_KEY);
 
@@ -539,7 +358,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     setSessionId(newSession);
 
     toast({ title: 'Cleared', description: 'Chat reset successfully.' });
-  };
+  }, [CHAT_KEY, SESSION_KEY]);
 
   return (
     <>
@@ -594,19 +413,17 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
               }}
             >
 
-              <ScrollArea className="flex-1 px-1 md:p-4 ">
-                <div className="w-full px-1 md:px-4 ">
+              <ScrollArea className="flex-1 px-1 md:p-4">
+                <div className="w-full px-1 md:px-4">
                   {messages.map((msg, i) => (
                     <div
                       key={i}
-                      className={`w-full mb-4  ${msg.role === "assistant" ? "flex" : "flex justify-end"
-                        }`}
+                      className={`w-full mb-4 ${msg.role === "assistant" ? "flex" : "flex justify-end"}`}
                     >
                       {/* Assistant Bubble */}
                       {msg.role === "assistant" && (
                         <div className="group relative w-full rounded-xl">
-
-                          {/* Markdown container */}
+                          {/* Markdown container with improved styling */}
                           <div className="prose prose-sm dark:prose-invert max-w-none break-words
                             prose-pre:bg-[#1e1e1e] prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded-xl prose-pre:overflow-x-auto prose-pre:shadow-lg
                             prose-code:bg-gray-800/80 prose-code:text-emerald-400 prose-code:px-2 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
@@ -668,7 +485,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                                   );
                                 },
                                 a({ href, children }) {
-                                  // Render links as buttons
                                   return (
                                     <a
                                       href={href}
@@ -762,9 +578,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                           </div>
 
                           {/* Typing loader when AI is streaming */}
-                          {msg.isStreaming && (
-                            <TypingLoader />
-                          )}
+                          {msg.isStreaming && <TypingLoader />}
 
                           {/* COPY BUTTON */}
                           {!isLoading && !msg.isStreaming && (
@@ -777,15 +591,14 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                                 bg-gray-200 hover:bg-gray-300
                                 dark:bg-gray-700 dark:hover:bg-gray-600
                                 md:opacity-0
-                                mobile:opacity-100
                               "
+                              aria-label="Copy message"
                             >
                               <Copy className='w-5 h-5' />
                             </button>
                           )}
                         </div>
                       )}
-
 
                       {/* User Bubble */}
                       {msg.role === "user" && (
@@ -795,16 +608,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                       )}
                     </div>
                   ))}
-
                 </div>
-                
-                {/* Temporary status indicator */}
-                {temporaryStatus && (
-                  <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground bg-muted/50 rounded-lg animate-pulse">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>{temporaryStatus}</span>
-                  </div>
-                )}
                 
                 <div ref={scrollRef} />
               </ScrollArea>
@@ -823,56 +627,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
             {/* Input */}
             <div className="p-4 border-t bg-muted/80">
-              {/* Model Selector and API Key Info */}
-              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <ModelVariantPicker
-                    selectedModel={selectedModelId}
-                    onModelChange={(modelId) => {
-                      setSelectedModelId(modelId);
-                      
-                      // Determine provider from model ID
-                      const provider = modelId.startsWith('gemini') ? 'gemini' : 
-                                     modelId.startsWith('gpt') ? 'openai' : 'claude';
-                      setSelectedModel(provider as ModelType);
-                      
-                      // Update model preference in database
-                      if (userInfo?.id) {
-                        supabase
-                          .from('user_profiles')
-                          .update({ model_preference: provider })
-                          .eq('id', userInfo.id)
-                          .then(({ error }) => {
-                            if (error) {
-                              console.error('Failed to update model preference:', error);
-                            } else {
-                              toast({
-                                title: "Model updated",
-                                description: `Switched to ${modelId}`,
-                              });
-                            }
-                          });
-                      }
-                    }}
-                  />
-                  
-                  <KeySelector
-                    selectedModel={selectedModelId}
-                    selectedKeyIds={selectedKeyIds}
-                    onKeySelectionChange={setSelectedKeyIds}
-                  />
-                </div>
-                
-                {currentApiKey && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                    <span className="font-medium">🔑</span>
-                    <span>{currentApiKey}</span>
-                  </div>
-                )}
-              </div>
-
               <div className="relative w-full">
-
                 <textarea
                   ref={textareaRef}
                   value={inputValue}
@@ -889,9 +644,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                   className="w-full resize-none overflow-hidden p-4 pr-14 rounded-2xl border bg-background max-h-40 outline-none"
                 />
 
-                <motion.div
-                  className="absolute bottom-3 right-3"
-                >
+                <motion.div className="absolute bottom-3 right-3">
                   <Button
                     size="icon"
                     onClick={isLoading ? stopStreaming : handleSendMessage}
@@ -902,7 +655,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                     {isLoading ? <X className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
                   </Button>
                 </motion.div>
-
               </div>
             </div>
           </motion.div>
@@ -913,7 +665,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   );
 };
 
-export default GoalChatWidget;
+export default GoalChatWidgetN8N;
 
 
 const TypingLoader = () => (
