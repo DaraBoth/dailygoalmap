@@ -334,16 +334,57 @@ async function updateTaskInfo(params: ToolParams, context: AgentContext, supabas
   const resolvedTaskId = await getTaskIdFromMemory(params.task_id, context.sessionId || '', context, supabase);
   const taskId = resolvedTaskId || params.task_id;
   
+  console.log('🔍 [updateTaskInfo] Starting update:', { 
+    original_id: params.task_id,
+    resolved_id: taskId,
+    has_resolved: !!resolvedTaskId,
+    goal_id: context.goalId,
+    session_id: context.sessionId
+  });
+  
+  // First, check if the task exists
+  const { data: existingTask, error: fetchError } = await supabase
+    .from('tasks')
+    .select('id, title, goal_id, user_id')
+    .eq('id', taskId)
+    .maybeSingle();
+  
+  if (fetchError) {
+    console.error('❌ [updateTaskInfo] Error fetching task:', fetchError);
+    throw new Error(`Failed to fetch task: ${fetchError.message}`);
+  }
+  
+  if (!existingTask) {
+    console.error('❌ [updateTaskInfo] Task not found:', {
+      task_id: taskId,
+      original_id: params.task_id,
+      goal_id: context.goalId
+    });
+    throw new Error(`Task not found with ID: ${taskId}. Please fetch tasks first to get valid IDs.`);
+  }
+  
+  console.log('✅ [updateTaskInfo] Task found:', {
+    id: existingTask.id,
+    title: existingTask.title,
+    goal_id: existingTask.goal_id,
+    matches_context: existingTask.goal_id === context.goalId
+  });
+  
+  // Check if task belongs to the correct goal
+  if (context.goalId && existingTask.goal_id !== context.goalId) {
+    console.error('❌ [updateTaskInfo] Task belongs to different goal:', {
+      task_goal: existingTask.goal_id,
+      context_goal: context.goalId
+    });
+    throw new Error(`Task belongs to a different goal. Cannot update.`);
+  }
+  
   const updates: any = {};
   if (params.title) updates.title = params.title;
   if (params.description) updates.description = params.description;
   if (params.completed !== undefined) updates.completed = params.completed === 'true';
   
-  console.log('🔍 [updateTaskInfo] Query:', { 
-    original_id: params.task_id,
-    resolved_id: taskId,
-    updates 
-  });
+  console.log('🔍 [updateTaskInfo] Applying updates:', updates);
   
   const { data, error } = await supabase
     .from('tasks')
@@ -355,8 +396,8 @@ async function updateTaskInfo(params: ToolParams, context: AgentContext, supabas
   
   console.log('✅ [updateTaskInfo] Result:', { success: !error, task_id: data?.id, error: error?.message });
   if (error) {
-    console.error('Update task error:', error);
-    throw error;
+    console.error('❌ [updateTaskInfo] Update failed:', error);
+    throw new Error(`Failed to update task: ${error.message}`);
   }
   
   return { success: true, task: data };
@@ -367,15 +408,42 @@ async function moveTask(params: ToolParams, context: AgentContext, supabase: any
   const resolvedTaskId = await getTaskIdFromMemory(params.task_id, context.sessionId || '', context, supabase);
   const taskId = resolvedTaskId || params.task_id;
   
+  console.log('🔍 [moveTask] Starting move:', { 
+    original_id: params.task_id,
+    resolved_id: taskId,
+    has_resolved: !!resolvedTaskId,
+    goal_id: context.goalId
+  });
+  
+  // First, check if the task exists
+  const { data: existingTask, error: fetchError } = await supabase
+    .from('tasks')
+    .select('id, title, goal_id')
+    .eq('id', taskId)
+    .maybeSingle();
+  
+  if (fetchError) {
+    console.error('❌ [moveTask] Error fetching task:', fetchError);
+    throw new Error(`Failed to fetch task: ${fetchError.message}`);
+  }
+  
+  if (!existingTask) {
+    console.error('❌ [moveTask] Task not found:', {
+      task_id: taskId,
+      original_id: params.task_id
+    });
+    throw new Error(`Task not found with ID: ${taskId}. Please fetch tasks first to get valid IDs.`);
+  }
+  
+  console.log('✅ [moveTask] Task found:', existingTask.title);
+  
   // Create timestamps for start_date and end_date
   const startTime = normalizeTime(params.daily_start_time);
   const endTime = normalizeTime(params.daily_end_time);
   const startTimestamp = normalizeToTimestamp(params.start_date, startTime);
   const endTimestamp = normalizeToTimestamp(params.end_date || params.start_date, endTime);
   
-  console.log('🔍 [moveTask] Query:', {
-    original_id: params.task_id,
-    resolved_id: taskId,
+  console.log('🔍 [moveTask] Applying move:', {
     start_date: startTimestamp,
     end_date: endTimestamp,
     daily_start_time: startTime,
@@ -397,16 +465,12 @@ async function moveTask(params: ToolParams, context: AgentContext, supabase: any
   
   console.log('✅ [moveTask] Result:', { success: !error, task_id: data?.id, error: error?.message });
   if (error) {
-    console.error('Move task error:', error);
-    throw error;
+    console.error('❌ [moveTask] Move failed:', error);
+    throw new Error(`Failed to move task: ${error.message}`);
   }
   
   if (!data) {
-    return { 
-      success: false, 
-      error: 'Task not found or access denied',
-      task_id: params.task_id 
-    };
+    throw new Error('Task not found or access denied');
   }
   
   return { 
@@ -421,11 +485,34 @@ async function deleteTask(params: ToolParams, context: AgentContext, supabase: a
   const resolvedTaskId = await getTaskIdFromMemory(params.task_id, context.sessionId || '', context, supabase);
   const taskId = resolvedTaskId || params.task_id;
   
-  console.log('🔍 [deleteTask] Query:', { 
+  console.log('🔍 [deleteTask] Starting delete:', { 
     original_id: params.task_id,
     resolved_id: taskId,
+    has_resolved: !!resolvedTaskId,
     goal_id: context.goalId 
   });
+  
+  // First, check if the task exists
+  const { data: existingTask, error: fetchError } = await supabase
+    .from('tasks')
+    .select('id, title, goal_id')
+    .eq('id', taskId)
+    .maybeSingle();
+  
+  if (fetchError) {
+    console.error('❌ [deleteTask] Error fetching task:', fetchError);
+    throw new Error(`Failed to fetch task: ${fetchError.message}`);
+  }
+  
+  if (!existingTask) {
+    console.error('❌ [deleteTask] Task not found:', {
+      task_id: taskId,
+      original_id: params.task_id
+    });
+    throw new Error(`Task not found with ID: ${taskId}. Please fetch tasks first to get valid IDs.`);
+  }
+  
+  console.log('✅ [deleteTask] Task found, deleting:', existingTask.title);
   
   const { data, error } = await supabase
     .from('tasks')
@@ -436,16 +523,12 @@ async function deleteTask(params: ToolParams, context: AgentContext, supabase: a
   
   console.log('✅ [deleteTask] Result:', { success: !error, deleted: data?.length || 0, error: error?.message });
   if (error) {
-    console.error('Delete task error:', error);
-    throw error;
+    console.error('❌ [deleteTask] Delete failed:', error);
+    throw new Error(`Failed to delete task: ${error.message}`);
   }
   
   if (!data || data.length === 0) {
-    return { 
-      success: false, 
-      error: 'Task not found or already deleted',
-      task_id: params.task_id 
-    };
+    throw new Error('Task not found or already deleted');
   }
   
   return { 
