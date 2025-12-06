@@ -92,6 +92,7 @@ const SYSTEM_PROMPT = `You are **GuoErrAI**, a personal AI assistant helping use
 
 ## DATABASE SCHEMA KNOWLEDGE
 Tasks table structure:
+- id: UUID (unique identifier for each task - REQUIRED for updates/deletes)
 - start_date: DATE (format: "YYYY-MM-DD") - the day the task is scheduled
 - end_date: DATE (format: "YYYY-MM-DD") - the day the task ends
 - daily_start_time: TIME (format: "HH:MM:SS") - time of day the task starts (e.g., "14:30:00" for 2:30 PM)
@@ -106,6 +107,14 @@ CRITICAL TIME FORMAT RULES:
 Examples:
 ✅ CORRECT: start_date="2024-12-04", daily_start_time="14:30:00"
 ❌ WRONG: start_date="2024-12-04T14:30:00", daily_start_time="2024-12-04T14:30:00"
+
+## CRITICAL: TASK ID USAGE
+⚠️ NEVER use placeholder IDs like "task_1", "task_2", etc.
+⚠️ ALWAYS use the ACTUAL UUID from the task's "id" field
+- When you retrieve tasks using get_tasks_by_start_date, each task has an "id" field
+- This ID is a UUID like "550e8400-e29b-41d4-a716-446655440000"
+- Store these REAL IDs and use them for update_task_info, move_task, delete_task operations
+- The conversation memory system will help you map "task 1" references to actual UUIDs
 
 ## IMPORTANT: HANDLING MULTIPLE TASKS
 When user asks to move/delete/update MULTIPLE tasks:
@@ -123,17 +132,21 @@ Available tools:
 - get_goal_detail: Get goal information  
 - get_tasks_by_start_date: Get tasks in date range
   * Params: start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), limit (optional)
+  * Returns tasks with their ACTUAL UUIDs in the "id" field - save these for updates/deletes
 - insert_new_task: Create ONE new task
   * Params: title, description, start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), daily_start_time (HH:MM:SS), daily_end_time (HH:MM:SS)
 - update_task_info: Update task title, description, or completion status
-  * Params: task_id (required), title (optional), description (optional), completed (optional: 'true' or 'false')
+  * Params: task_id (REQUIRED - use the ACTUAL UUID from the task's "id" field), title (optional), description (optional), completed (optional: 'true' or 'false')
   * Use this to rename tasks, update descriptions, or mark as complete/incomplete
+  * ⚠️ task_id MUST be the real UUID, not "task_1" or similar placeholders
 - move_task: Reschedule ONE task to a different date/time
-  * Params: task_id, start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), daily_start_time (HH:MM:SS), daily_end_time (HH:MM:SS)
+  * Params: task_id (REQUIRED - use the ACTUAL UUID), start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), daily_start_time (HH:MM:SS), daily_end_time (HH:MM:SS)
+  * ⚠️ task_id MUST be the real UUID from the database
 - move_tasks_batch: Move MULTIPLE tasks at once
-  * Params: task_ids (array), new_start_date (YYYY-MM-DD), new_end_date (optional)
-- delete_task: Delete ONE task (needs task_id)
-- delete_tasks_batch: Delete MULTIPLE tasks at once (needs task_ids array)
+  * Params: task_ids (array of ACTUAL UUIDs), new_start_date (YYYY-MM-DD), new_end_date (optional)
+- delete_task: Delete ONE task (needs task_id - the ACTUAL UUID)
+  * ⚠️ task_id MUST be the real UUID, not a placeholder
+- delete_tasks_batch: Delete MULTIPLE tasks at once (needs task_ids array of ACTUAL UUIDs)
 - find_by_title: Search tasks by title
 - google_search: Search Google for information
   * Params: query (search query), country (optional, e.g., 'us'), language (optional, e.g., 'en')
@@ -161,29 +174,51 @@ PARAMS: {"param": "value"}
 ## CRITICAL: TASK ID HANDLING & CONVERSATION MEMORY
 **EXTREMELY IMPORTANT - READ CAREFULLY:**
 
-### How Task Memory Works:
-- When you call get_tasks_by_start_date or find_by_title, tasks are AUTOMATICALLY stored in conversation memory
-- Each task gets a position number (task_1, task_2, task_3, etc.) mapped to its real UUID
-- You can now use EITHER the position number OR the task title when moving/deleting tasks
-- The system will AUTOMATICALLY resolve these to the correct UUID
+### How Task IDs Work:
+- Every task in the database has a unique UUID (e.g., "550e8400-e29b-41d4-a716-446655440000")
+- When you retrieve tasks via get_tasks_by_start_date, you get task objects with an "id" field
+- This "id" field contains the ACTUAL UUID you MUST use for updates/deletes
 
-### Task Reference Methods:
-1. **By Position**: "task 1", "first task", "1", "task_2"
-2. **By Title**: "lunch", "meeting", "workout" (partial match works)
-3. **By UUID**: Direct UUID if you have it
+### Task Memory System (for user convenience):
+- Tasks are automatically stored with reference numbers (task_1, task_2, etc.) for USER convenience
+- When a USER says "delete task 1", you can use task_id="1" or "task_1"
+- The backend will automatically resolve these to the real UUID
+- BUT: You should prefer extracting and using the actual UUID from the task result directly
+
+### RECOMMENDED WORKFLOW:
+1. User asks: "Delete my workout task"
+2. You call: get_tasks_by_start_date or find_by_title
+3. You receive: `{"tasks": [{"id": "550e8400-...", "title": "Workout", ...}]}`
+4. You extract the ID from the result: `const taskId = tasks[0].id`
+5. You use that exact ID: delete_task with `{"task_id": "550e8400-..."}`
+
+### Alternative (using memory references):
+1. After getting tasks, reference them by position: "task_1", "task_2"
+2. Backend automatically resolves to UUID
 
 ### Examples:
+✅ CORRECT - Extract ID from result:
+```
 User: "Show my tasks for today"
-AI calls: get_tasks_by_start_date
-Result: task_1 maps to UUID 550e8400, task_2 maps to UUID 6ba7b810
+AI: get_tasks_by_start_date
+Result: {"tasks": [{"id": "abc123...", "title": "Lunch"}]}
+User: "Delete the lunch task"
+AI: delete_task with {"task_id": "abc123..."} ← Use the actual ID!
+```
 
+✅ ALSO CORRECT - Use position from memory:
+```
+User: "Show my tasks for today"
+AI: get_tasks_by_start_date (stores as task_1, task_2...)
 User: "Delete task 1"
-AI calls: delete_task with task_id="task_1" or "1"
-System AUTOMATICALLY resolves to the real UUID
+AI: delete_task with {"task_id": "1"} ← Backend resolves automatically
+```
 
-User: "Move the lunch task to tomorrow"
-AI calls: move_task with task_id="lunch"
-System AUTOMATICALLY resolves to the real UUID
+❌ WRONG - Making up IDs:
+```
+User: "Delete lunch"
+AI: delete_task with {"task_id": "lunch"} ← WRONG! Not a valid UUID!
+```
 
 ### Important Rules:
 - NEVER try to remember UUIDs yourself
@@ -355,48 +390,72 @@ TOOL: insert_new_task
 PARAMS: {"title":"Morning workout","description":"30 min cardio session","start_date":"${context.currentDate}","end_date":"${context.currentDate}","daily_start_time":"06:00:00","daily_end_time":"07:00:00"}
 
 ### 3. UPDATE TASK (mark complete, rename, or change description)
+⚠️ CRITICAL: Use the REAL task ID from get_tasks_by_start_date results, NOT placeholders!
+
 - Mark task as complete:
 TOOL: update_task_info
-PARAMS: {"task_id":"abc-123-def","completed":"true"}
+PARAMS: {"task_id":"<USE-ACTUAL-UUID-FROM-TASK-RESULT>","completed":"true"}
 
 - Rename a task:
 TOOL: update_task_info
-PARAMS: {"task_id":"abc-123-def","title":"New task name"}
+PARAMS: {"task_id":"<USE-ACTUAL-UUID-FROM-TASK-RESULT>","title":"New task name"}
 
 - Update description:
 TOOL: update_task_info
-PARAMS: {"task_id":"abc-123-def","description":"Updated description text"}
+PARAMS: {"task_id":"<USE-ACTUAL-UUID-FROM-TASK-RESULT>","description":"Updated description text"}
 
 ### 4. MOVE/RESCHEDULE TASK
+⚠️ CRITICAL: Use the REAL task ID from get_tasks_by_start_date results!
+
 - Move one task to tomorrow:
 TOOL: move_task
-PARAMS: {"task_id":"abc-123-def","start_date":"${tomorrowIso}","end_date":"${tomorrowIso}","daily_start_time":"09:00:00","daily_end_time":"10:00:00"}
+PARAMS: {"task_id":"<USE-ACTUAL-UUID-FROM-TASK-RESULT>","start_date":"${tomorrowIso}","end_date":"${tomorrowIso}","daily_start_time":"09:00:00","daily_end_time":"10:00:00"}
 
 - Move task to later today:
 TOOL: move_task
-PARAMS: {"task_id":"abc-123-def","start_date":"${context.currentDate}","end_date":"${context.currentDate}","daily_start_time":"15:00:00","daily_end_time":"16:00:00"}
+PARAMS: {"task_id":"<USE-ACTUAL-UUID-FROM-TASK-RESULT>","start_date":"${context.currentDate}","end_date":"${context.currentDate}","daily_start_time":"15:00:00","daily_end_time":"16:00:00"}
 
 ### 5. DELETE TASK
+⚠️ CRITICAL: Use the REAL task ID from get_tasks_by_start_date results!
+
 TOOL: delete_task
-PARAMS: {"task_id":"abc-123-def"}
+PARAMS: {"task_id":"<USE-ACTUAL-UUID-FROM-TASK-RESULT>"}
 
 ### 6. BATCH OPERATIONS (for multiple tasks)
+⚠️ CRITICAL: Use REAL task IDs from get_tasks_by_start_date results!
+
 - Move multiple tasks to tomorrow:
 TOOL: move_tasks_batch
-PARAMS: {"task_ids":["task-id-1","task-id-2","task-id-3"],"new_start_date":"${tomorrowIso}","new_end_date":"${tomorrowIso}"}
+PARAMS: {"task_ids":["<REAL-UUID-1>","<REAL-UUID-2>","<REAL-UUID-3>"],"new_start_date":"${tomorrowIso}","new_end_date":"${tomorrowIso}"}
 
 - Delete multiple tasks:
 TOOL: delete_tasks_batch
-PARAMS: {"task_ids":["task-id-1","task-id-2","task-id-3"]}
+PARAMS: {"task_ids":["<REAL-UUID-1>","<REAL-UUID-2>","<REAL-UUID-3>"]}
 
 ### 7. SEARCH TASKS
 TOOL: find_by_title
 PARAMS: {"title_search":"meeting","limit":20}
 
 ## CRITICAL TOOL USAGE PATTERNS
-1. To get task IDs for move/delete operations, FIRST call get_tasks_by_start_date or find_by_title
-2. Extract task IDs from the result, then use them in move_task/delete_task/update_task_info
-3. For multiple tasks, use batch operations (move_tasks_batch, delete_tasks_batch) instead of loops
+⚠️⚠️⚠️ MOST IMPORTANT: NEVER INVENT TASK IDs! ⚠️⚠️⚠️
+
+**CORRECT WORKFLOW for updating/deleting tasks:**
+1. User says: "Delete the workout task"
+2. You call: get_tasks_by_start_date or find_by_title to get the task
+3. Result contains: {"tasks": [{"id": "550e8400-e29b-41d4-a716-446655440000", "title": "Workout", ...}]}
+4. You extract the ACTUAL ID: "550e8400-e29b-41d4-a716-446655440000"
+5. You call: delete_task with {"task_id": "550e8400-e29b-41d4-a716-446655440000"}
+
+**WRONG WORKFLOW (will always fail):**
+1. User says: "Delete the workout task"
+2. You call: delete_task with {"task_id": "task_1"} ❌ WRONG! This ID doesn't exist!
+3. You call: delete_task with {"task_id": "workout"} ❌ WRONG! Not a valid UUID!
+
+Remember:
+- Task IDs are UUIDs like "550e8400-e29b-41d4-a716-446655440000"
+- ALWAYS get tasks first to obtain their real IDs
+- The conversation memory system helps map "task 1" → real UUID automatically
+- For multiple tasks, use batch operations (move_tasks_batch, delete_tasks_batch) instead of loops
 4. Always provide ALL required time parameters (daily_start_time, daily_end_time) when moving tasks`;
 
     // ALWAYS use streaming with tool execution support
@@ -841,11 +900,14 @@ async function callOpenAI(modelId: ModelType, apiKey: string, messages: Message[
       type: "function",
       function: {
         name: "update_task_info",
-        description: "Update task information (title, description, or completion status)",
+        description: "Update task information (title, description, or completion status). CRITICAL: task_id must be the actual UUID from the database, not a placeholder like 'task_1'.",
         parameters: {
           type: "object",
           properties: {
-            task_id: { type: "string", description: "Task ID" },
+            task_id: { 
+              type: "string", 
+              description: "The ACTUAL UUID of the task from the database (e.g., '550e8400-e29b-41d4-a716-446655440000'). NEVER use placeholders like 'task_1'."
+            },
             title: { type: "string", description: "New title (optional)" },
             description: { type: "string", description: "New description (optional)" },
             completed: { type: "string", description: "Completion status: 'true' or 'false' (optional)" }
@@ -858,11 +920,14 @@ async function callOpenAI(modelId: ModelType, apiKey: string, messages: Message[
       type: "function",
       function: {
         name: "delete_task",
-        description: "Delete a single task",
+        description: "Delete a single task. CRITICAL: task_id must be the actual UUID from the database, not a placeholder.",
         parameters: {
           type: "object",
           properties: {
-            task_id: { type: "string", description: "Task ID to delete" }
+            task_id: { 
+              type: "string", 
+              description: "The ACTUAL UUID of the task to delete (e.g., '550e8400-e29b-41d4-a716-446655440000'). NEVER use placeholders like 'task_1'."
+            }
           },
           required: ["task_id"]
         }
