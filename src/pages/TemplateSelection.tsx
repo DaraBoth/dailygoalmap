@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { goalTemplates } from '@/data/goalTemplates/index';
 import type { GoalTemplate } from '@/types/goalTemplate';
-import { Search, ArrowRight } from 'lucide-react';
+import { Search, ArrowRight, ArrowLeft } from 'lucide-react';
 
 export function TemplateSelectionPage() {
   const navigate = useNavigate();
@@ -29,6 +29,18 @@ export function TemplateSelectionPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
+      {/* Back Button */}
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate({ to: '/dashboard' })}
+          className="gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Dashboard
+        </Button>
+      </div>
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -131,7 +143,7 @@ export function TemplateSelectionPage() {
           <CardContent>
             <Button 
               variant="outline"
-              onClick={() => navigate({ to: '/dashboard' })}
+              onClick={() => navigate({ to: '/goal/create-custom' })}
             >
               Create Custom Goal
             </Button>

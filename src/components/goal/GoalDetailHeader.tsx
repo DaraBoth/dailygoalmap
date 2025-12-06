@@ -8,7 +8,6 @@ import { GoalMember } from '@/types/goal'; // Import GoalMember type
 import { GoalSharingButton } from './sharing/GoalSharingButton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeSelector } from './ThemeSelector';
-import { boolean } from 'zod';
 
 interface GoalDetailHeaderProps {
   goalId?: string;
@@ -24,6 +23,8 @@ interface GoalDetailHeaderProps {
   userId?: string;
   currentThemeId?: string;
   onThemeChange?: (themeId: string,isRemove?: boolean) => void;
+  goalData?: any; // Full goal object for editing
+  onGoalUpdate?: () => void;
 }
 
 const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({ 
@@ -39,7 +40,9 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
   onToggleAnalytics,
   userId,
   currentThemeId,
-  onThemeChange
+  onThemeChange,
+  goalData,
+  onGoalUpdate
 }) => {
   const { goToDashboard } = useRouterNavigation();
   const isMobile = useIsMobile();

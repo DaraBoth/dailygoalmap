@@ -34,12 +34,30 @@ const GoalDetail: React.FC = () => {
   const [showAnalytics, setShowAnalytics] = useState<boolean>(false);
   const [autoOpenTaskId, setAutoOpenTaskId] = useState<string | null>(null);
   const [currentTheme, setCurrentTheme] = useState<GoalTheme | null>(goalTheme);
+  const [currentGoalData, setCurrentGoalData] = useState(goalData);
   const { user } = useAuth();
 
   useEffect(() => {
     const taskParam = search?.task || search?.taskId;
     if (taskParam) setAutoOpenTaskId(taskParam);
   }, [search]);
+
+  // Function to refresh goal data
+  const refreshGoalData = async () => {
+    if (!goalId) return;
+    const { data, error } = await supabase
+      .from('goals')
+      .select('*')
+      .eq('id', goalId)
+      .single();
+    if (!error && data) {
+      setCurrentGoalData(data);
+      toast({
+        title: 'Goal updated',
+        description: 'Your goal information has been refreshed',
+      });
+    }
+  };
 
   // Fetch theme when goal data changes
   useEffect(() => {
@@ -221,6 +239,8 @@ const GoalDetail: React.FC = () => {
             userId={user?.id}
             currentThemeId={currentTheme?.id}
             onThemeChange={handleThemeChange}
+            goalData={currentGoalData}
+            onGoalUpdate={refreshGoalData}
           />
 
           <div className="w-full max-w-screen overflow-hidden">

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plane, Sparkles, X } from "lucide-react";
+import { Sparkles, X, ArrowLeft } from "lucide-react";
 import { GoalFormValues, goalSchema, GoalFormProps, GoalType, GoalFormStep } from "./types";
 import BasicInfoStep from "./BasicInfoStep";
 import TravelDetailsStep from "./TravelDetailsStep";
@@ -11,10 +11,13 @@ import AdvancedStep from "./AdvancedStep";
 import { useCreateGoal, CreateGoalPayload, GoalMetadata } from "@/hooks/useCreateGoal";
 import { useUpdateGoal, UpdateGoalPayload } from "@/hooks/useUpdateGoal";
 import { ScrollArea } from "../ui";
+import { useNavigate } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 
 const GoalFormContainer = ({ onSuccess, initialData, compact = false, onClose, refetchGoals, isEdit = false, goalId }: GoalFormProps) => {
   const { createGoal, isLoading: isCreating } = useCreateGoal();
   const { updateGoal, isLoading: isUpdating } = useUpdateGoal();
+  const navigate = useNavigate();
   const isLoading = isCreating || isUpdating;
   const [step, setStep] = useState<GoalFormStep>('basics');
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
@@ -147,19 +150,15 @@ const GoalFormContainer = ({ onSuccess, initialData, compact = false, onClose, r
     }
   };
 
-  // Navigation functions for the new 3-step flow
+  // Navigation functions for the simplified 2-step flow
   const handleNextStep = () => {
     if (step === 'basics') {
-      setStep('structure');
-    } else if (step === 'structure') {
       setStep('advanced');
     }
   };
 
   const handlePrevStep = () => {
     if (step === 'advanced') {
-      setStep('structure');
-    } else if (step === 'structure') {
       setStep('basics');
     }
   };
@@ -167,60 +166,97 @@ const GoalFormContainer = ({ onSuccess, initialData, compact = false, onClose, r
 
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-center justify-center">
-      <div className="relative w-full h-full max-w-4xl bg-card rounded-lg shadow-lg overflow-hidden">
-        <button
-          onClick={onClose}
-          className="absolute z-20 top-4 right-4 text-foreground transition-colors duration-200"
-        >
-          <X className="h-6 w-6" />
-        </button>
-
-        {/* Header with step indicator */}
-        <div className="liquid-glass bg-gradient-to-r from-blue-500 to-purple-600 p-4 text-foreground">
-          <h1 className={`${compact ? "text-xl" : "text-2xl"} font-bold flex items-center gap-2`}>
-            <Sparkles className="h-5 w-5" /> {isEdit ? "Edit Goal" : "Set a New Goal"}
-          </h1>
-          {!compact && (
-            <p className="opacity-90 text-foreground/80">
-              {isEdit ? "Update your goal with structured planning" : "Create your goal with structured planning and optional AI assistance"}
-            </p>
-          )}
-
-          {/* Step Indicator */}
-          <div className="flex items-center gap-2 mt-3">
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${step === 'basics' ? 'liquid-glass text-foreground' : 'bg-white/10 text-foreground/60'
-              }`}>
-              1. Basics
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      {/* Header Bar */}
+      <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+          <div className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate({ to: '/goal/create' })}
+                className="hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
+              <Sparkles className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">
+                  {isEdit ? "Edit Goal" : "Create New Goal"}
+                </h1>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                  {isEdit ? "Update your goal details" : "Set up your goal in just 2 simple steps"}
+                </p>
+              </div>
             </div>
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${step === 'structure' ? 'liquid-glass text-foreground' : 'bg-white/10 text-foreground/60'
+            
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl py-8 sm:py-12">
+        {/* Step Indicator */}
+        <div className="mb-8 sm:mb-12">
+          <div className="flex items-center justify-center gap-3">
+            <div className={`flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-medium transition-all transform ${
+              step === 'basics' 
+                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg scale-105' 
+                : 'bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+            }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                step === 'basics' ? 'bg-white text-blue-600' : 'bg-gray-200 dark:bg-gray-700'
               }`}>
-              2. Structure
+                1
+              </div>
+              <span className="hidden sm:inline">Goal Details</span>
             </div>
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${step === 'advanced' ? 'liquid-glass text-foreground' : 'bg-white/10 text-foreground/60'
+            
+            <div className="w-16 sm:w-24 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
+                style={{ width: step === 'basics' ? '0%' : '100%' }}
+              />
+            </div>
+            
+            <div className={`flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-medium transition-all transform ${
+              step === 'advanced' 
+                ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg scale-105' 
+                : 'bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+            }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                step === 'advanced' ? 'bg-white text-purple-600' : 'bg-gray-200 dark:bg-gray-700'
               }`}>
-              3. Advanced
+                2
+              </div>
+              <span className="hidden sm:inline">AI Assistant</span>
             </div>
           </div>
         </div>
 
-        <div className="p-6 backdrop-blur-sm text-card-foreground ">
-          <ScrollArea className="h-full">
+        {/* Form Content Card */}
+        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-6 sm:p-8 lg:p-10">
             <Form {...form}>
-              <form className="space-y-4">
+              <form className="space-y-6">
                 {step === 'basics' ? (
                   <BasicInfoStep
                     form={form}
                     onNextStep={handleNextStep}
                     selectedGoalType={selectedGoalType}
                   />
-                ) : step === 'structure' ? (
-                  <StructureStep
-                    form={form}
-                    onPrevStep={handlePrevStep}
-                    onNextStep={handleNextStep}
-                  />
-                ) : step === 'advanced' && selectedGoalType === 'travel' ? (
+                ) : selectedGoalType === 'travel' ? (
                   <TravelDetailsStep
                     form={form}
                     onPrevStep={handlePrevStep}
@@ -239,7 +275,16 @@ const GoalFormContainer = ({ onSuccess, initialData, compact = false, onClose, r
                 )}
               </form>
             </Form>
-          </ScrollArea>
+          </div>
+        </div>
+
+        {/* Helper Text */}
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            💡 Tip: {step === 'basics' 
+              ? 'Be specific with your goal details for better AI task generation' 
+              : 'Enable AI to get personalized daily action plans'}
+          </p>
         </div>
       </div>
     </div>

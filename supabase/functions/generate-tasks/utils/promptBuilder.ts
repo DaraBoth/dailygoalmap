@@ -11,7 +11,8 @@ export function buildPrompt(
   travelDetails?: any,
   financialData?: any,
   daysDiff?: number,
-  requestedTaskCount?: number
+  requestedTaskCount?: number,
+  userContext?: any
 ): string {
   const days = daysDiff || 30;
   const complexity = analyzeGoalComplexity(goalTitle, goalDescription, days, goalType);
@@ -26,6 +27,14 @@ ${goalDescription ? `DESCRIPTION: "${goalDescription}"` : ''}
 TIMELINE: ${days} days (${startDate} to ${targetDate})
 COMPLEXITY: ${complexity.level} (${complexity.reasoning})
 
+`;
+
+  // ============ ADD USER CONTEXT SECTION ============
+  if (userContext) {
+    prompt += buildUserContextSection(userContext, goalType);
+  }
+
+  prompt += `
 CRITICAL INSTRUCTIONS:
 1. Create ${taskCount} tasks distributed across ${phases.count} logical phases
 2. Tasks must build progressively toward the goal with realistic timelines
@@ -33,6 +42,8 @@ CRITICAL INSTRUCTIONS:
 4. Include milestone checkpoints and review periods
 5. Factor in rest periods, preparation time, and potential setbacks
 6. Each task should be completable in one focused work session (2-8 hours max)
+${userContext ? '7. NEVER schedule tasks during user\'s busy times, sleep hours, or conflicting commitments' : ''}
+${userContext?.available_time_per_day ? `8. Each task should fit within the user's available time: ${userContext.available_time_per_day}` : ''}
 
 PHASE DISTRIBUTION:
 ${phases.description}
@@ -40,10 +51,11 @@ ${phases.description}
 TASK REQUIREMENTS:
 - Be specific and actionable with clear success criteria
 - Include realistic completion timeframes
-- Specify optimal time of day (MORNING, MIDDAY, AFTERNOON, EVENING)
+- Specify optimal time of day (MORNING, MIDDAY, AFTERNOON, EVENING)${userContext?.preferred_work_times ? ` - prefer ${userContext.preferred_work_times}` : ''}
 - Build logical dependencies between tasks
 - Include buffer time for complex activities
 - Add review/adjustment periods for long-term goals
+${userContext ? '- Respect user\'s schedule constraints and energy levels' : ''}
 
 `;
 
@@ -321,6 +333,165 @@ REQUIREMENTS:
 `;
   
   return prompt;
+}
+
+/**
+ * Build detailed user context section for AI system prompt
+ * This is the KEY function that turns user info into AI instructions
+ */
+function buildUserContextSection(userContext: any, goalType?: string): string {
+  let contextPrompt = `==================== USER PROFILE & CONSTRAINTS ====================
+This is critical information about the goal owner. You MUST respect these constraints when generating tasks.
+
+`;
+
+  // ===== DAILY SCHEDULE =====
+  if (userContext.wake_up_time || userContext.sleep_time || userContext.work_start_time) {
+    contextPrompt += `📅 DAILY SCHEDULE (DO NOT SCHEDULE TASKS OUTSIDE THESE TIMES):
+`;
+    if (userContext.wake_up_time) {
+      contextPrompt += `- Wakes up at: ${userContext.wake_up_time} (no tasks before this time)\n`;
+    }
+    if (userContext.sleep_time) {
+      contextPrompt += `- Goes to sleep at: ${userContext.sleep_time} (no tasks after this time)\n`;
+    }
+    if (userContext.work_start_time && userContext.work_end_time) {
+      contextPrompt += `- Work/School hours: ${userContext.work_start_time} - ${userContext.work_end_time} (BLOCKED - do not schedule tasks during work)\n`;
+    }
+    if (userContext.available_time_per_day) {
+      contextPrompt += `- Available time per day: ${userContext.available_time_per_day} (tasks must fit within this limit)\n`;
+    }
+    if (userContext.preferred_work_times) {
+      contextPrompt += `- Best productivity time: ${userContext.preferred_work_times} (prioritize important tasks during this window)\n`;
+    }
+    contextPrompt += '\n';
+  }
+
+  // ===== BUSY PERIODS & COMMITMENTS =====
+  if (userContext.other_commitments) {
+    contextPrompt += `⏰ REGULAR COMMITMENTS (AVOID THESE TIMES):
+${userContext.other_commitments}
+** DO NOT schedule any tasks that conflict with these commitments **
+
+`;
+  }
+
+  // ===== FINANCIAL CONTEXT (for financial goals) =====
+  if (goalType === 'finance' || goalType === 'financial') {
+    if (userContext.monthly_income || userContext.monthly_expenses) {
+      contextPrompt += `💰 FINANCIAL SITUATION:
+`;
+      if (userContext.monthly_income) {
+        contextPrompt += `- Monthly Income: $${userContext.monthly_income}\n`;
+      }
+      if (userContext.monthly_expenses) {
+        contextPrompt += `- Monthly Expenses: $${userContext.monthly_expenses}\n`;
+      }
+      if (userContext.monthly_income && userContext.monthly_expenses) {
+        const disposable = userContext.monthly_income - userContext.monthly_expenses;
+        contextPrompt += `- Available for savings: $${disposable}/month (${Math.round(disposable/4)}/week)\n`;
+      }
+      if (userContext.current_savings) {
+        contextPrompt += `- Current Savings: $${userContext.current_savings}\n`;
+      }
+      if (userContext.debt_amount) {
+        contextPrompt += `- Debt: $${userContext.debt_amount} (consider debt repayment in plan)\n`;
+      }
+      if (userContext.financial_obligations) {
+        contextPrompt += `- Fixed Obligations: ${userContext.financial_obligations}\n`;
+      }
+      contextPrompt += `** Create REALISTIC savings tasks based on actual disposable income **\n\n`;
+    }
+  }
+
+  // ===== PERSONAL CONTEXT =====
+  const personalInfo = [];
+  if (userContext.age_range) personalInfo.push(`Age: ${userContext.age_range}`);
+  if (userContext.occupation) personalInfo.push(`Occupation: ${userContext.occupation}`);
+  if (userContext.living_situation) personalInfo.push(`Living: ${userContext.living_situation}`);
+  if (userContext.family_responsibilities) personalInfo.push(`Family: ${userContext.family_responsibilities}`);
+  
+  if (personalInfo.length > 0) {
+    contextPrompt += `👤 PERSONAL CONTEXT:
+${personalInfo.join(' | ')}
+`;
+    if (userContext.family_responsibilities) {
+      contextPrompt += `** Account for family time and responsibilities in task scheduling **\n`;
+    }
+    contextPrompt += '\n';
+  }
+
+  // ===== SKILL LEVEL & EXPERIENCE =====
+  if (userContext.current_skill_level || userContext.past_experience) {
+    contextPrompt += `📚 EXPERIENCE LEVEL:
+`;
+    if (userContext.current_skill_level) {
+      contextPrompt += `- Current Level: ${userContext.current_skill_level}\n`;
+      
+      // Add guidance based on skill level
+      if (userContext.current_skill_level.toLowerCase().includes('beginner') || 
+          userContext.current_skill_level.toLowerCase().includes('complete')) {
+        contextPrompt += `  → Provide MORE detailed, step-by-step instructions\n`;
+        contextPrompt += `  → Break complex tasks into smaller sub-tasks\n`;
+        contextPrompt += `  → Include learning resources and guidance\n`;
+      } else if (userContext.current_skill_level.toLowerCase().includes('advanced') || 
+                 userContext.current_skill_level.toLowerCase().includes('expert')) {
+        contextPrompt += `  → User is experienced - can handle complex tasks\n`;
+        contextPrompt += `  → Less hand-holding needed\n`;
+      }
+    }
+    if (userContext.past_experience) {
+      contextPrompt += `- Past Experience: ${userContext.past_experience}\n`;
+    }
+    contextPrompt += '\n';
+  }
+
+  // ===== CHALLENGES & OBSTACLES =====
+  if (userContext.known_obstacles) {
+    contextPrompt += `⚠️ ANTICIPATED CHALLENGES:
+${userContext.known_obstacles}
+** Design tasks to help overcome these specific obstacles **
+
+`;
+  }
+
+  // ===== MOTIVATION & ACCOUNTABILITY =====
+  if (userContext.motivation_level) {
+    contextPrompt += `🎯 MOTIVATION LEVEL: ${userContext.motivation_level}
+`;
+    if (userContext.motivation_level.toLowerCase().includes('low') || 
+        userContext.motivation_level.toLowerCase().includes('need')) {
+      contextPrompt += `** User needs extra support - include more frequent check-ins, smaller wins, motivational milestones **\n`;
+    } else if (userContext.motivation_level.toLowerCase().includes('high') || 
+               userContext.motivation_level.toLowerCase().includes('all in')) {
+      contextPrompt += `** User is highly motivated - can handle ambitious tasks and faster pace **\n`;
+    }
+    contextPrompt += '\n';
+  }
+
+  // ===== SPECIAL NOTES =====
+  if (userContext.special_notes) {
+    contextPrompt += `📝 SPECIAL CONSIDERATIONS:
+${userContext.special_notes}
+** Pay close attention to these user-specific needs **
+
+`;
+  }
+
+  contextPrompt += `==================================================================
+
+IMPORTANT: All tasks MUST respect the above constraints. A task that conflicts with:
+- User's sleep schedule = INVALID TASK
+- User's work hours = INVALID TASK  
+- User's commitments = INVALID TASK
+- User's financial reality = UNREALISTIC TASK
+- User's skill level = FRUSTRATING TASK
+
+Generate tasks that fit THIS SPECIFIC PERSON'S real life, not a generic ideal scenario.
+
+`;
+
+  return contextPrompt;
 }
 
 /**

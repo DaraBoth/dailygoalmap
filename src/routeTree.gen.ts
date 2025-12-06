@@ -17,6 +17,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as GoalCreateCustomRouteImport } from './routes/goal.create-custom'
 import { Route as GoalCreateRouteImport } from './routes/goal.create'
 import { Route as GoalIdRouteImport } from './routes/goal.$id'
 import { Route as GoalCreateFromTemplateTemplateIdRouteImport } from './routes/goal.create-from-template.$templateId'
@@ -61,6 +62,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GoalCreateCustomRoute = GoalCreateCustomRouteImport.update({
+  id: '/goal/create-custom',
+  path: '/goal/create-custom',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GoalCreateRoute = GoalCreateRouteImport.update({
   id: '/goal/create',
   path: '/goal/create',
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/goal/$id': typeof GoalIdRoute
   '/goal/create': typeof GoalCreateRoute
+  '/goal/create-custom': typeof GoalCreateCustomRoute
   '/goal/create-from-template/$templateId': typeof GoalCreateFromTemplateTemplateIdRoute
 }
 export interface FileRoutesByTo {
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/goal/$id': typeof GoalIdRoute
   '/goal/create': typeof GoalCreateRoute
+  '/goal/create-custom': typeof GoalCreateCustomRoute
   '/goal/create-from-template/$templateId': typeof GoalCreateFromTemplateTemplateIdRoute
 }
 export interface FileRoutesById {
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/goal/$id': typeof GoalIdRoute
   '/goal/create': typeof GoalCreateRoute
+  '/goal/create-custom': typeof GoalCreateCustomRoute
   '/goal/create-from-template/$templateId': typeof GoalCreateFromTemplateTemplateIdRoute
 }
 export interface FileRouteTypes {
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/goal/$id'
     | '/goal/create'
+    | '/goal/create-custom'
     | '/goal/create-from-template/$templateId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/goal/$id'
     | '/goal/create'
+    | '/goal/create-custom'
     | '/goal/create-from-template/$templateId'
   id:
     | '__root__'
@@ -157,6 +168,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/goal/$id'
     | '/goal/create'
+    | '/goal/create-custom'
     | '/goal/create-from-template/$templateId'
   fileRoutesById: FileRoutesById
 }
@@ -171,6 +183,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   GoalIdRoute: typeof GoalIdRoute
   GoalCreateRoute: typeof GoalCreateRoute
+  GoalCreateCustomRoute: typeof GoalCreateCustomRoute
   GoalCreateFromTemplateTemplateIdRoute: typeof GoalCreateFromTemplateTemplateIdRoute
 }
 
@@ -232,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/goal/create-custom': {
+      id: '/goal/create-custom'
+      path: '/goal/create-custom'
+      fullPath: '/goal/create-custom'
+      preLoaderRoute: typeof GoalCreateCustomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/goal/create': {
       id: '/goal/create'
       path: '/goal/create'
@@ -267,6 +287,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   GoalIdRoute: GoalIdRoute,
   GoalCreateRoute: GoalCreateRoute,
+  GoalCreateCustomRoute: GoalCreateCustomRoute,
   GoalCreateFromTemplateTemplateIdRoute: GoalCreateFromTemplateTemplateIdRoute,
 }
 export const routeTree = rootRouteImport

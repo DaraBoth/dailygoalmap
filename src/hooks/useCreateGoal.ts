@@ -35,6 +35,55 @@ export interface GoalMetadata {
     monthlySavingsTarget?: number;
     currency?: string;
   };
+  // User Context for AI Task Generation (System Prompt)
+  user_context?: {
+    // Daily Schedule & Time Management
+    wake_up_time?: string; // e.g., "06:00"
+    sleep_time?: string; // e.g., "22:00"
+    work_start_time?: string; // e.g., "09:00"
+    work_end_time?: string; // e.g., "17:00"
+    busy_periods?: Array<{ // Times when user is unavailable
+      day?: string; // "monday", "tuesday", etc., or "weekdays", "weekends"
+      start_time: string;
+      end_time: string;
+      description?: string; // e.g., "Work commute", "Kids pickup"
+    }>;
+    available_time_per_day?: string; // e.g., "2 hours", "30 minutes"
+    preferred_work_times?: string; // e.g., "morning", "evening" (changed from array to string)
+    
+    // Financial Context (for saving/finance goals)
+    monthly_income?: number;
+    monthly_expenses?: number;
+    current_savings?: number;
+    debt_amount?: number;
+    financial_obligations?: string; // e.g., "Rent $1000, Car loan $300"
+    
+    // Personal Context
+    age_range?: string; // e.g., "18-25", "26-35", "36-50", "50+"
+    occupation?: string;
+    education_level?: string;
+    living_situation?: string; // e.g., "Live alone", "With family", "Roommates"
+    family_responsibilities?: string; // e.g., "2 kids", "Elderly care"
+    
+    // Goal-Specific Context
+    current_skill_level?: string; // e.g., "Beginner", "Intermediate", "Advanced"
+    past_experience?: string; // Relevant past attempts or experience
+    known_obstacles?: string; // Challenges they anticipate
+    motivation_level?: string; // "High", "Medium", "Need support"
+    accountability_preference?: string; // "Self-driven", "Need reminders", "Need accountability partner"
+    
+    // Health & Lifestyle
+    health_conditions?: string; // Anything that affects scheduling
+    exercise_routine?: string; // Existing commitments
+    dietary_restrictions?: string; // For health/cooking goals
+    energy_levels?: string; // e.g., "Morning person", "Night owl", "Varies"
+    
+    // Additional Context
+    timezone?: string;
+    language_preference?: string;
+    other_commitments?: string; // Other goals or major life events
+    special_notes?: string; // Anything else AI should know
+  };
   [key: string]: any;
 }
 
@@ -179,7 +228,8 @@ export function useCreateGoal() {
                 transportation: metadata.travel_transportation,
                 budget: metadata.travel_budget,
                 activities: metadata.travel_activities
-              } : undefined
+              } : undefined,
+              userContext: metadata.user_context
             },
             options.requestedTaskCount
           );

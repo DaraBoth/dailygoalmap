@@ -159,12 +159,15 @@ const GoalList: React.FC<GoalListProps> = ({
 
   if (goals.length === 0) {
     return (
-      <Card className="bg-white/40 dark:bg-white/10 backdrop-blur-md border border-white/20 dark:border-white/10 rounded-3xl shadow-xl">
-        <CardContent className="pt-8 pb-8 text-center">
-          <div className="bg-gradient-to-br from-blue-100/60 to-purple-100/60 dark:from-blue-900/30 dark:to-purple-900/30 backdrop-blur-sm rounded-2xl p-6 border border-white/20 dark:border-white/10">
-            <p className="mb-4 text-foreground/80 font-medium">You don't have any goals yet.</p>
-            <p className="text-sm text-muted-foreground">Create your first goal to get started!</p>
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <div className="rounded-full bg-muted p-3 mb-4">
+            <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
           </div>
+          <p className="text-lg font-semibold mb-2">No goals yet</p>
+          <p className="text-sm text-muted-foreground text-center max-w-sm">
+            Create your first goal to start tracking your progress and achieving your dreams.
+          </p>
         </CardContent>
       </Card>
     );
@@ -186,7 +189,7 @@ const GoalList: React.FC<GoalListProps> = ({
         return (
           <Card
             key={goal.id}
-            className={`cursor-pointer group relative ${deadlineStyling.borderColor}`}
+            className={`cursor-pointer group hover:shadow-md transition-all duration-200 overflow-hidden ${deadlineStyling.borderColor}`}
             onClick={(e) => {
               // Prevent navigation when clicking on interactive controls inside the card
               const target = e.target as HTMLElement | null;
@@ -204,40 +207,59 @@ const GoalList: React.FC<GoalListProps> = ({
               goToGoal(goal.id);
             }}
           >
-            <div className=" relative rounded-2xl m-0.5 p-4 " style={backgroundStyle} >
-              <CardHeader className="p-0">
-                <div className="flex items-center justify-between gap-4">
-                  <div className=" flex items-center gap-3 flex-1">
-                    {
-                      goal?.goal_themes && goal?.goal_themes?.goal_profile_image != null ?
-                        <img
-                          src={goal?.goal_themes?.goal_profile_image}
-                          alt="avatar"
-                          className="liquid-glass relative inline-block object-cover object-center w-12 h-12 rounded-xl"
-                        /> :
-                        <div className="liquid-glass-button h-12 w-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-200 to-purple-200 dark:from-blue-900 dark:to-purple-900 text-blue-700 dark:text-blue-200 font-bold text-lg">
-                          {goal.title ? goal.title.charAt(0).toUpperCase() : 'G'}
-                        </div>
-                    }
-                    <div className="flex-1">
-                      <CardTitle className="text-lg font-semibold text-foreground/90 ">{goal.title}</CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge className=" bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-blue-200 dark:text-blue-200 border border-transparent rounded-full px-2 py-0.5 text-xs">
+            {/* Background Image Container */}
+            {backgroundStyle.backgroundImage && (
+              <div 
+                className="absolute inset-0 rounded-lg overflow-hidden"
+                style={backgroundStyle}
+              >
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-background/80 backdrop-blur-[2px]" />
+              </div>
+            )}
+            
+            {/* Content Container */}
+            <div className="relative z-10">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    {goal?.goal_themes && goal?.goal_themes?.goal_profile_image != null ? (
+                      <img
+                        src={goal?.goal_themes?.goal_profile_image}
+                        alt="Goal avatar"
+                        className="relative inline-block object-cover object-center w-12 h-12 rounded-lg flex-shrink-0 ring-2 ring-background"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-primary/10 text-primary font-semibold text-lg flex-shrink-0">
+                        {goal.title ? goal.title.charAt(0).toUpperCase() : 'G'}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base font-semibold text-foreground truncate">
+                        {goal.title}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        <Badge variant="secondary" className="text-xs font-medium">
                           {goal.metadata?.goal_type || 'General'}
                         </Badge>
-                        <DeadlineStatusBadge className="hover:text-blue-200" deadlineInfo={deadlineInfo} size="sm" />
+                        <DeadlineStatusBadge deadlineInfo={deadlineInfo} size="sm" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2" data-ignore-navigation="true">
+                  <div className="flex items-center gap-1 flex-shrink-0" data-ignore-navigation="true">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" aria-label="Open actions" data-ignore-navigation="true">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Open actions" 
+                          data-ignore-navigation="true"
+                        >
                           <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent data-ignore-navigation="true">
+                      <DropdownMenuContent align="end" data-ignore-navigation="true">
                         {currentUser === goal.user_id && onEditGoal && (
                           <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onEditGoal(goal, e as unknown as React.MouseEvent); }}>
                             <Edit className="h-4 w-4 mr-2 text-blue-600" /> Edit
@@ -245,7 +267,7 @@ const GoalList: React.FC<GoalListProps> = ({
                         )}
                         {currentUser === goal.user_id && (
                           <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onDeleteGoal(goal, e as unknown as React.MouseEvent); }}>
-                            <Trash2 className="h-4 w-4 mr-2 text-red-500" /> Delete
+                            <Trash2 className="h-4 w-4 mr-2 text-destructive" /> Delete
                           </DropdownMenuItem>
                         )}
                         {currentUser !== goal.user_id && (
@@ -259,32 +281,47 @@ const GoalList: React.FC<GoalListProps> = ({
                 </div>
               </CardHeader>
 
-              <CardContent className="pt-3 pb-0">
-                <p className="text-sm mb-3 line-clamp-2 text-foreground/80">{goal.description || 'No description provided.'}</p>
+              <CardContent className="pt-0 pb-4">
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                  {goal.description || 'No description provided.'}
+                </p>
 
-                {/* Progress and metadata row */}
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1 pr-4">
-                    <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-green-400 to-emerald-500" style={{ width: `${goal.taskCounts && goal.taskCounts.total > 0 ? Math.round((goal.taskCounts.completed / goal.taskCounts.total) * 100) : 0}%` }} />
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
-                      <span>{goal.taskCounts ? `${goal.taskCounts.completed}/${goal.taskCounts.total} tasks` : 'No tasks'}</span>
-                      <span>Due {format(new Date(goal.target_date), 'MMM dd')}</span>
-                    </div>
+                {/* Progress Bar */}
+                <div className="space-y-2">
+                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary transition-all duration-300" 
+                      style={{ 
+                        width: `${goal.taskCounts && goal.taskCounts.total > 0 
+                          ? Math.round((goal.taskCounts.completed / goal.taskCounts.total) * 100) 
+                          : 0}%` 
+                      }} 
+                    />
                   </div>
+                  
+                  {/* Stats Row */}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="font-medium">
+                      {goal.taskCounts ? `${goal.taskCounts.completed}/${goal.taskCounts.total} tasks` : 'No tasks'}
+                    </span>
+                    <span>Due {format(new Date(goal.target_date), 'MMM dd, yyyy')}</span>
+                  </div>
+                </div>
 
-                  <div className="flex items-center gap-2">
-                    {goal.memberCounts && (
-                      <Badge className="bg-green-100/60 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200/50 dark:border-green-800/50 backdrop-blur-sm rounded-xl flex items-center">
-                        <LucideUsers2 className="h-3 w-3 mr-1" />
-                        {goal.memberCounts.total}
-                      </Badge>
-                    )}
-                    <Badge className={`backdrop-blur-sm rounded-xl capitalize ${goal.status === 'completed' ? 'bg-emerald-100/60 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200/50 dark:border-emerald-800/50' : 'bg-gray-100/60 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300 border-gray-200/50 dark:border-gray-700/50'}`}>
-                      {goal.status}
+                {/* Footer Badges */}
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border">
+                  {goal.memberCounts && (
+                    <Badge variant="outline" className="text-xs">
+                      <LucideUsers2 className="h-3 w-3 mr-1" />
+                      {goal.memberCounts.total} {goal.memberCounts.total === 1 ? 'member' : 'members'}
                     </Badge>
-                  </div>
+                  )}
+                  <Badge 
+                    variant={goal.status === 'completed' ? 'default' : 'secondary'}
+                    className="text-xs capitalize"
+                  >
+                    {goal.status}
+                  </Badge>
                 </div>
               </CardContent>
             </div>

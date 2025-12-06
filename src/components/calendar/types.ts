@@ -51,4 +51,5 @@ export interface TaskGenerationParams {
     budget?: string;
     activities?: string[];
   };
+  userContext?: any; // User context for personalized AI prompts
 }

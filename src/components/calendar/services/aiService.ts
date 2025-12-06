@@ -26,7 +26,8 @@ export async function generateTaskWithAI(
           targetDate: params.targetDate,
           geminiApiKey: params.geminiApiKey,
           goalType: params.goalType,
-          travelDetails: params.travelDetails
+          travelDetails: params.travelDetails,
+          userContext: params.userContext
         },
       });
       

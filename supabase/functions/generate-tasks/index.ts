@@ -25,7 +25,8 @@ serve(async (req) => {
       geminiApiKey,
       goalType,
       travelDetails,
-      requestedTaskCount
+      requestedTaskCount,
+      userContext
     } = await req.json();
     
     console.log("Generate tasks request received:", {
@@ -34,6 +35,7 @@ serve(async (req) => {
       hasDescription: !!goalDescription,
       hasFinancialData: !!financialData,
       hasTravelDetails: !!travelDetails,
+      hasUserContext: !!userContext,
       startDate,
       targetDate,
       requestedTaskCount
@@ -87,7 +89,8 @@ serve(async (req) => {
       travelDetails, 
       financialData,
       daysDiff,
-      taskCount
+      taskCount,
+      userContext
     );
     
     console.log("Using prompt:", prompt);

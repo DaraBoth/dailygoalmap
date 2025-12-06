@@ -66,7 +66,8 @@ export async function generateMultipleTasks(
       transportation?: string;
       budget?: string;
       activities?: string[];
-    }
+    };
+    userContext?: any;
   },
   requestedTaskCount?: number
 ): Promise<Task[]> {
@@ -106,6 +107,7 @@ export async function generateMultipleTasks(
       geminiApiKey,
       goalType: additionalContext?.goalType,
       travelDetails: additionalContext?.travelDetails,
+      userContext: additionalContext?.userContext,
       requestedTaskCount: taskCount // Pass the requested task count
     });
     

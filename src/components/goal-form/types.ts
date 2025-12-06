@@ -33,6 +33,44 @@ export const goalSchema = z.object({
   travel_transportation: z.string().optional(),
   travel_budget: z.string().optional(),
   travel_activities: z.string().optional(),
+  // User Context fields for AI prompt generation
+  user_context: z.object({
+    // Daily Schedule
+    wake_up_time: z.string().optional(),
+    sleep_time: z.string().optional(),
+    work_start_time: z.string().optional(),
+    work_end_time: z.string().optional(),
+    available_time_per_day: z.string().optional(),
+    preferred_work_times: z.string().optional(),
+    other_commitments: z.string().optional(),
+    // Financial Context
+    monthly_income: z.number().optional(),
+    monthly_expenses: z.number().optional(),
+    current_savings: z.number().optional(),
+    debt_amount: z.number().optional(),
+    financial_obligations: z.string().optional(),
+    // Personal Context
+    age_range: z.string().optional(),
+    occupation: z.string().optional(),
+    education_level: z.string().optional(),
+    living_situation: z.string().optional(),
+    family_responsibilities: z.string().optional(),
+    // Goal-Specific
+    current_skill_level: z.string().optional(),
+    past_experience: z.string().optional(),
+    known_obstacles: z.string().optional(),
+    motivation_level: z.string().optional(),
+    accountability_preference: z.string().optional(),
+    // Health & Lifestyle
+    health_conditions: z.string().optional(),
+    exercise_routine: z.string().optional(),
+    dietary_restrictions: z.string().optional(),
+    energy_levels: z.string().optional(),
+    // Additional
+    timezone: z.string().optional(),
+    language_preference: z.string().optional(),
+    special_notes: z.string().optional(),
+  }).optional(),
 });
 
 export type GoalType = "general" | "travel" | "finance" | "education" | "financial";
@@ -59,7 +97,7 @@ export const travelActivities = [
 
 export type GoalFormValues = z.infer<typeof goalSchema>;
 
-export type GoalFormStep = 'basics' | 'structure' | 'advanced';
+export type GoalFormStep = 'basics' | 'user-context' | 'structure' | 'advanced';
 
 export interface GoalFormProps {
   onSuccess: (goal: any) => void;

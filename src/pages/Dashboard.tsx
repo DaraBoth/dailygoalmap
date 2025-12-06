@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGoalStatus } from "@/hooks/useGoalStatus";
 import InstallButton from "@/components/pwa/InstallButton";
 import NotificationSettings from "@/components/pwa/NotificationSettings";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import SearchTrigger from "@/components/search/SearchTrigger";
 import CustomSearchModal from "@/components/search/CustomSearchModal";
@@ -297,20 +297,73 @@ const Dashboard = () => {
                           />
                         </PaginationItem>
 
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                          <PaginationItem key={page}>
+                        {/* Show first page */}
+                        {totalPages > 1 && (
+                          <PaginationItem>
                             <PaginationLink
                               href="#"
                               onClick={(e) => {
                                 e.preventDefault();
-                                setCurrentPage(page);
+                                setCurrentPage(1);
                               }}
-                              isActive={currentPage === page}
+                              isActive={currentPage === 1}
                             >
-                              {page}
+                              1
                             </PaginationLink>
                           </PaginationItem>
-                        ))}
+                        )}
+
+                        {/* Show ellipsis if needed before current page */}
+                        {currentPage > 3 && totalPages > 5 && (
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
+
+                        {/* Show pages around current page */}
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter((page) => {
+                            // Show pages around current page (1 before and 1 after)
+                            if (totalPages <= 5) return page !== 1 && page !== totalPages;
+                            return page > 1 && page < totalPages && Math.abs(page - currentPage) <= 1;
+                          })
+                          .map((page) => (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(page);
+                                }}
+                                isActive={currentPage === page}
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          ))}
+
+                        {/* Show ellipsis if needed after current page */}
+                        {currentPage < totalPages - 2 && totalPages > 5 && (
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
+
+                        {/* Show last page */}
+                        {totalPages > 1 && (
+                          <PaginationItem>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCurrentPage(totalPages);
+                              }}
+                              isActive={currentPage === totalPages}
+                            >
+                              {totalPages}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )}
 
                         <PaginationItem>
                           <PaginationNext
@@ -374,20 +427,73 @@ const Dashboard = () => {
                         />
                       </PaginationItem>
 
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <PaginationItem key={page}>
+                      {/* Show first page */}
+                      {totalPages > 1 && (
+                        <PaginationItem>
                           <PaginationLink
                             href="#"
                             onClick={(e) => {
                               e.preventDefault();
-                              setCurrentPage(page);
+                              setCurrentPage(1);
                             }}
-                            isActive={currentPage === page}
+                            isActive={currentPage === 1}
                           >
-                            {page}
+                            1
                           </PaginationLink>
                         </PaginationItem>
-                      ))}
+                      )}
+
+                      {/* Show ellipsis if needed before current page */}
+                      {currentPage > 3 && totalPages > 5 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+
+                      {/* Show pages around current page */}
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter((page) => {
+                          // Show pages around current page (1 before and 1 after)
+                          if (totalPages <= 5) return page !== 1 && page !== totalPages;
+                          return page > 1 && page < totalPages && Math.abs(page - currentPage) <= 1;
+                        })
+                        .map((page) => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCurrentPage(page);
+                              }}
+                              isActive={currentPage === page}
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+
+                      {/* Show ellipsis if needed after current page */}
+                      {currentPage < totalPages - 2 && totalPages > 5 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+
+                      {/* Show last page */}
+                      {totalPages > 1 && (
+                        <PaginationItem>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(totalPages);
+                            }}
+                            isActive={currentPage === totalPages}
+                          >
+                            {totalPages}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )}
 
                       <PaginationItem>
                         <PaginationNext

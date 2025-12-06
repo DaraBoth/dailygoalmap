@@ -49,9 +49,12 @@ const PaginationLink = ({
     aria-current={isActive ? "page" : undefined}
     className={cn(
       buttonVariants({
-        variant: isActive ? "outline" : "ghost",
+        variant: isActive ? "default" : "ghost",
         size,
       }),
+      isActive && "bg-primary text-primary-foreground hover:bg-primary/90",
+      !isActive && "hover:bg-accent hover:text-accent-foreground",
+      "h-9 min-w-[36px] rounded-md border border-input transition-colors",
       className
     )}
     {...props}
@@ -66,11 +69,11 @@ const PaginationPrevious = ({
   <PaginationLink
     aria-label="Go to previous page"
     size="default"
-    className={cn("gap-1 pl-2.5", className)}
+    className={cn("gap-1 pl-2.5 pr-2.5", className)}
     {...props}
   >
     <ChevronLeft className="h-4 w-4" />
-    <span>Previous</span>
+    <span className="hidden sm:inline">Previous</span>
   </PaginationLink>
 )
 PaginationPrevious.displayName = "PaginationPrevious"
@@ -82,10 +85,10 @@ const PaginationNext = ({
   <PaginationLink
     aria-label="Go to next page"
     size="default"
-    className={cn("gap-1 pr-2.5", className)}
+    className={cn("gap-1 pl-2.5 pr-2.5", className)}
     {...props}
   >
-    <span>Next</span>
+    <span className="hidden sm:inline">Next</span>
     <ChevronRight className="h-4 w-4" />
   </PaginationLink>
 )

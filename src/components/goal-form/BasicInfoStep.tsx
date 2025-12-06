@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui";
-import { ArrowRight, Plane, DollarSign, GraduationCap, Sparkles } from "lucide-react";
+import { ArrowRight, Plane, DollarSign, GraduationCap, Sparkles, Target, Heart, Briefcase } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 import { GoalFormValues, goalTypes } from "./types";
 
@@ -22,36 +22,47 @@ const BasicInfoStep = ({
   selectedGoalType,
   compact = false
 }: BasicInfoStepProps) => {
+  const handleNextStep = async () => {
+    // Validate the basic fields before moving to next step
+    const result = await form.trigger(['title', 'goal_type', 'target_date']);
+    if (result) {
+      onNextStep();
+    }
+  };
+
   return (
-    <div className="rounded-xl ">
+    <div className="space-y-6">
+      {/* Goal Type Selection */}
       <FormField
         control={form.control}
         name="goal_type"
         render={({ field }) => (
-          <FormItem className="mb-4 shadow-none">
-            <FormLabel className="text-base font-semibold text-foreground">Goal Type</FormLabel>
+          <FormItem>
+            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              What type of goal is this?
+            </FormLabel>
             <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <SelectTrigger className="w-full border border-muted rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 liquid-glass text-foreground">
+              <SelectTrigger className="w-full bg-white/80 dark:bg-white/10 border-gray-200 dark:border-white/20 rounded-lg h-11">
                 <SelectValue placeholder="Select goal type" />
               </SelectTrigger>
               <SelectContent>
                 {goalTypes.map((type) => {
                   let IconComponent;
-                  switch (type.icon) {
-                    case "Sparkles":
-                      IconComponent = Sparkles;
-                      break;
-                    case "Plane":
+                  switch (type.value) {
+                    case "travel":
                       IconComponent = Plane;
                       break;
-                    case "Calendar":
-                      IconComponent = type.value === "finance" ? DollarSign : GraduationCap;
+                    case "finance":
+                      IconComponent = DollarSign;
+                      break;
+                    case "education":
+                      IconComponent = GraduationCap;
                       break;
                     default:
-                      IconComponent = Sparkles;
+                      IconComponent = Target;
                   }
                   return (
-                    <SelectItem key={type.value} value={type.value} className="flex items-center gap-2">
+                    <SelectItem key={type.value} value={type.value}>
                       <div className="flex items-center gap-2">
                         <IconComponent className="h-4 w-4" />
                         <span>{type.label}</span>
@@ -66,17 +77,20 @@ const BasicInfoStep = ({
         )}
       />
 
+      {/* Goal Title */}
       <FormField
         control={form.control}
         name="title"
         render={({ field }) => (
-          <FormItem className="mb-4">
-            <FormLabel className="text-base font-semibold text-foreground">Goal Title</FormLabel>
+          <FormItem>
+            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              What's your goal?
+            </FormLabel>
             <FormControl>
               <Input
-                placeholder={selectedGoalType === 'travel' ? "e.g., Trip to Japan, European Adventure" : "e.g., Save for a vacation, Learn to cook"}
+                placeholder={selectedGoalType === 'travel' ? "e.g., Trip to Japan" : "e.g., Learn Spanish"}
                 {...field}
-                className="bg-background border border-muted rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-foreground"
+                className="bg-white/80 dark:bg-white/10 border-gray-200 dark:border-white/20 rounded-lg h-11 text-base"
               />
             </FormControl>
             <FormMessage />
@@ -84,25 +98,32 @@ const BasicInfoStep = ({
         )}
       />
 
+      {/* Description */}
       <FormField
         control={form.control}
         name="description"
         render={({ field }) => (
-          <FormItem className="mb-4">
-            <FormLabel className="text-base font-semibold text-foreground">Description</FormLabel>
+          <FormItem>
+            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              Describe your goal
+            </FormLabel>
             <FormControl>
               <Textarea
-                placeholder={selectedGoalType === 'travel' ? "Describe your travel plans, places you want to visit, and what you want to experience..." : "Describe your goal in more detail..."}
+                placeholder={selectedGoalType === 'travel' ? "Describe your travel plans, places you want to visit..." : "What do you want to achieve and why?"}
                 {...field}
-                className={`${compact ? "h-16" : "h-24"} resize-none bg-background border border-muted rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-foreground`}
+                className="bg-white/80 dark:bg-white/10 border-gray-200 dark:border-white/20 rounded-lg min-h-[100px] resize-none text-base"
               />
             </FormControl>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              💡 Be specific - this helps AI generate better tasks for you
+            </p>
             <FormMessage />
           </FormItem>
         )}
       />
 
-      <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mb-4`}>
+      {/* Date Selection */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField
           control={form.control}
           name="start_date"
@@ -113,11 +134,13 @@ const BasicInfoStep = ({
             }
             return (
               <FormItem>
-                <FormLabel className="text-base font-semibold text-foreground">Start Date</FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  Start Date
+                </FormLabel>
                 <DatePicker
                   date={field.value || today}
                   setDate={field.onChange}
-                  className="w-full border border-muted rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-white/80 dark:bg-white/10 border-gray-200 dark:border-white/20 rounded-lg"
                 />
                 <FormMessage />
               </FormItem>
@@ -129,7 +152,6 @@ const BasicInfoStep = ({
           control={form.control}
           name="target_date"
           render={({ field }) => {
-            // Set default target date to 1 month from today if not set
             const defaultTargetDate = new Date();
             defaultTargetDate.setMonth(defaultTargetDate.getMonth() + 1);
 
@@ -139,11 +161,13 @@ const BasicInfoStep = ({
 
             return (
               <FormItem>
-                <FormLabel className="text-base font-semibold text-foreground">Target Date</FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  Target Date
+                </FormLabel>
                 <DatePicker
                   date={field.value || defaultTargetDate}
                   setDate={field.onChange}
-                  className="w-full border border-muted rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-white/80 dark:bg-white/10 border-gray-200 dark:border-white/20 rounded-lg"
                 />
                 <FormMessage />
               </FormItem>
@@ -152,13 +176,14 @@ const BasicInfoStep = ({
         />
       </div>
 
-      <div className="flex justify-end mt-6">
+      {/* Next Button */}
+      <div className="flex justify-end pt-4">
         <Button
           type="button"
-          onClick={onNextStep}
-          className="rounded-lg px-6 py-2"
+          onClick={handleNextStep}
+          className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 h-11 rounded-lg font-medium"
         >
-          Next: Structure
+          Continue
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>

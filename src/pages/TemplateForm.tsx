@@ -140,26 +140,35 @@ export function TemplateFormPage() {
       const generatedPrompt = template.generatePrompt(formData);
       const generatedDescription = template.generateDescription(formData);
 
-      await createGoal({
-        title: template.name,
-        description: generatedDescription,
-        target_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-        metadata: {
-          version: 1,
-          goal_type: 'general',
-          template_id: template.id,
-          template_name: template.name,
-          template_data: formData,
-          ai_prompt: generatedPrompt,
+      // Automatically enable AI task generation for template-based goals
+      const result = await createGoal(
+        {
+          title: template.name,
+          description: generatedDescription,
+          target_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+          start_date: new Date(), // Start today
+          metadata: {
+            version: 1,
+            goal_type: 'general',
+            template_id: template.id,
+            template_name: template.name,
+            template_data: formData,
+          },
         },
-      });
+        {
+          generateTasksWithAI: true, // Always generate AI tasks for templates
+          aiPrompt: generatedPrompt, // Use the generated prompt from template
+        }
+      );
 
-      toast({
-        title: 'Goal Created!',
-        description: 'Your goal has been created successfully',
-      });
+      if (result.success) {
+        toast({
+          title: 'Goal Created! 🎉',
+          description: 'AI is now generating your daily action plan...',
+        });
 
-      navigate({ to: '/dashboard' });
+        navigate({ to: '/dashboard' });
+      }
     } catch (error) {
       console.error('Error creating goal:', error);
       toast({
@@ -436,114 +445,151 @@ export function TemplateFormPage() {
   const progress = ((currentSection + 1) / template.sections.length) * 100;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Header */}
-      <div className="mb-8">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate({ to: '/goal/create' })}
-          className="mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Templates
-        </Button>
-        <div 
-          className="w-20 h-20 rounded-2xl mb-4 flex items-center justify-center text-5xl shadow-lg"
-          style={{ background: template.color }}
-        >
-          {template.icon}
-        </div>
-        <h1 className="text-4xl font-bold mb-2">{template.name}</h1>
-        <p className="text-muted-foreground text-lg">{template.description}</p>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium">
-            Section {currentSection + 1} of {template.sections.length}
-          </span>
-          <span className="text-sm text-muted-foreground">
-            {Math.round(progress)}% Complete
-          </span>
-        </div>
-        <div className="h-2 bg-secondary rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-primary transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Current Section */}
-      <Card className="mb-8">
-        <CardHeader>
-          <div className="flex items-center gap-3 mb-2">
-            {section.icon && <span className="text-3xl">{section.icon}</span>}
-            <CardTitle className="text-2xl">{section.title}</CardTitle>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      {/* Header Bar */}
+      <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+          <div className="flex items-center justify-between py-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate({ to: '/goal/create' })}
+              className="hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Templates
+            </Button>
+            
+            <div className="flex items-center gap-3">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Step {currentSection + 1} of {template.sections.length}
+              </div>
+              <div className="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {Math.round(progress)}%
+              </div>
+            </div>
           </div>
-          {section.description && (
-            <CardDescription>{section.description}</CardDescription>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {section.fields.map(field => renderField(field))}
-        </CardContent>
-      </Card>
-
-      {/* Navigation */}
-      <div className="flex justify-between items-center">
-        <Button
-          variant="outline"
-          onClick={handlePrevious}
-          disabled={currentSection === 0}
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Previous
-        </Button>
-
-        {currentSection === template.sections.length - 1 ? (
-          <Button
-            onClick={handleSubmit}
-            disabled={isCreating}
-            className="min-w-32"
-          >
-            {isCreating ? (
-              'Creating...'
-            ) : (
-              <>
-                <Check className="w-4 h-4 mr-2" />
-                Create Goal
-              </>
-            )}
-          </Button>
-        ) : (
-          <Button onClick={handleNext}>
-            Next
-            <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
-          </Button>
-        )}
+        </div>
       </div>
 
-      {/* Section Navigation (Mini Map) */}
-      <div className="mt-8 flex gap-2 justify-center flex-wrap">
-        {template.sections.map((sec, idx) => (
-          <button
-            key={sec.id}
-            onClick={() => setCurrentSection(idx)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-              idx === currentSection
-                ? 'bg-primary text-primary-foreground'
-                : idx < currentSection
-                ? 'bg-green-500/20 text-green-700 dark:text-green-400'
-                : 'bg-secondary text-secondary-foreground'
-            }`}
+      {/* Main Content */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl py-8 sm:py-12">
+        {/* Template Header */}
+        <div className="text-center mb-12">
+          <div 
+            className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl mx-auto mb-6 flex items-center justify-center text-6xl sm:text-7xl shadow-2xl transform hover:scale-105 transition-transform"
+            style={{ background: template.color }}
           >
-            {idx < currentSection && <Check className="w-3 h-3 inline mr-1" />}
-            {sec.title}
-          </button>
-        ))}
+            {template.icon}
+          </div>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400">
+            {template.name}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg max-w-2xl mx-auto">
+            {template.description}
+          </p>
+        </div>
+
+        {/* Section Navigation Breadcrumb */}
+        <div className="mb-8">
+          <div className="flex gap-2 justify-center flex-wrap">
+            {template.sections.map((sec, idx) => (
+              <button
+                key={sec.id}
+                onClick={() => setCurrentSection(idx)}
+                disabled={idx > currentSection}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all transform hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed ${
+                  idx === currentSection
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                    : idx < currentSection
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40'
+                    : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
+                }`}
+              >
+                {idx < currentSection && <Check className="w-4 h-4 inline mr-1" />}
+                {sec.icon && <span className="mr-2">{sec.icon}</span>}
+                {sec.title}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Current Section Card */}
+        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
+          {/* Section Header */}
+          <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-500/20 dark:to-purple-500/20 border-b border-gray-200 dark:border-gray-700 px-6 sm:px-8 py-6">
+            <div className="flex items-center gap-4 mb-2">
+              {section.icon && (
+                <span className="text-4xl sm:text-5xl">{section.icon}</span>
+              )}
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
+                  {section.title}
+                </h2>
+                {section.description && (
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">
+                    {section.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Section Fields */}
+          <div className="px-6 sm:px-8 py-8 space-y-6">
+            {section.fields.map(field => renderField(field))}
+          </div>
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center gap-4">
+          <Button
+            variant="outline"
+            onClick={handlePrevious}
+            disabled={currentSection === 0}
+            size="lg"
+            className="min-w-[120px] border-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Previous
+          </Button>
+
+          {currentSection === template.sections.length - 1 ? (
+            <Button
+              onClick={handleSubmit}
+              disabled={isCreating}
+              size="lg"
+              className="min-w-[160px] bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg"
+            >
+              {isCreating ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Check className="w-5 h-5 mr-2" />
+                  Create Goal
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleNext}
+              size="lg"
+              className="min-w-[120px] bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg"
+            >
+              Next
+              <ArrowLeft className="w-5 h-5 ml-2 rotate-180" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
