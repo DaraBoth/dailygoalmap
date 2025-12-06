@@ -285,14 +285,15 @@ const TodaysTasks: React.FC = () => {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed inset-x-0 bottom-0 backdrop-blur-md shadow-lg rounded-t-lg max-h-[80vh] overflow-hidden z-50"
+              className="fixed inset-x-0 bottom-0 liquid-glass-modal shadow-lg rounded-t-2xl max-h-[80vh] overflow-hidden z-50"
             >
-              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 sticky top-0 z-10">
+              <div className="flex items-center justify-between p-4 border-b border-border/40 liquid-glass-subtle sticky top-0 z-10">
                 <h2 className="text-lg font-semibold">Today's Tasks</h2>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setIsTasksVisible(false)}
+                  className="liquid-glass-button"
                 >
                   Close
                 </Button>
@@ -429,7 +430,7 @@ const TodaysTasks: React.FC = () => {
 
       {isMobile && !isTasksVisible && (
         <Button
-          className={`text-foreground fixed inset-x-0 bottom-0 rounded-t-lg p-2 z-50 `}
+          className="liquid-glass-button fixed inset-x-0 bottom-0 rounded-t-2xl p-2 z-50 border-t border-border/40"
           onClick={() => setIsTasksVisible(true)}
         >
           View Today's Tasks
@@ -437,26 +438,26 @@ const TodaysTasks: React.FC = () => {
       )}
 
       {!isMobile && (
-        <Card className="border border-blue/20 dark:border-white/10 rounded-3xl liquid-glass-no-hover">
+        <Card className="border border-border/20 rounded-2xl liquid-glass-card">
           <CardHeader className="pb-4">
             <div className="flex items-center space-x-3 mb-3 flex-row">
-              <div className="p-2 bg-blue-100/60 dark:bg-blue-900/30 backdrop-blur-sm rounded-xl">
-                <ClipboardList className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div className="p-2 liquid-glass-subtle rounded-xl">
+                <ClipboardList className="h-5 w-5 text-primary" />
               </div>
-              <CardTitle className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+              <CardTitle className="text-xl font-bold">
                 Today's Tasks
               </CardTitle>
             </div>
 
-            <CardDescription className="text-foreground/70 font-medium">
+            <CardDescription className="font-medium">
               {format(new Date(), 'EEEE, MMMM d, yyyy')}
             </CardDescription>
-            <div className="text-sm bg-white/40 dark:bg-white/10 backdrop-blur-sm rounded-xl px-3 py-1.5 border border-white/20 dark:border-white/10 inline-block mt-2">
+            <div className="text-sm liquid-glass-subtle rounded-xl px-3 py-1.5 border border-border/20 inline-block mt-2">
               Total Tasks: <span className="font-semibold">{tasksForToday.length}</span>
             </div>
           </CardHeader>
           <CardContent
-            className="bg-white/30 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20 dark:border-white/10 flex flex-col pt-6 min-h-[400px] max-h-[600px] overflow-auto"
+            className="liquid-glass-subtle rounded-2xl border border-border/20 flex flex-col pt-6 min-h-[400px] max-h-[600px] overflow-auto"
           >
             <div className="flex justify-between">
               <div className="flex items-center justify-between mb-6">
@@ -466,7 +467,7 @@ const TodaysTasks: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={handleUndoMarkAllCompleted}
-                    className="bg-red-50/60 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:bg-red-100/60 dark:hover:bg-red-900/30 backdrop-blur-sm rounded-xl transition-all duration-200 flex items-center gap-2"
+                    className="liquid-glass-button text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all duration-200 flex items-center gap-2"
                   >
                     Undo
                   </Button> :
@@ -474,7 +475,7 @@ const TodaysTasks: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={handleMarkAllCompleted}
-                    className="bg-green-50/60 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:bg-green-100/60 dark:hover:bg-green-900/30 backdrop-blur-sm rounded-xl transition-all duration-200 flex items-center gap-2"
+                    className="liquid-glass-button text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:text-green-700 dark:hover:text-green-300 rounded-xl transition-all duration-200 flex items-center gap-2"
                   >
                     <CheckCircle className="h-4 w-4" />
                     Mark All Completed

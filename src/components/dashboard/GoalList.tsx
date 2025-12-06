@@ -189,7 +189,7 @@ const GoalList: React.FC<GoalListProps> = ({
         return (
           <Card
             key={goal.id}
-            className={`cursor-pointer group hover:shadow-md transition-all duration-200 overflow-hidden ${deadlineStyling.borderColor}`}
+            className={`cursor-pointer group hover:shadow-xl transition-all duration-300 overflow-hidden liquid-glass-card ${deadlineStyling.borderColor}`}
             onClick={(e) => {
               // Prevent navigation when clicking on interactive controls inside the card
               const target = e.target as HTMLElement | null;

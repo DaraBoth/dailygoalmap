@@ -245,7 +245,9 @@ const Dashboard = () => {
         <link rel="manifest" href="/manifest.json" />
       </Helmet>
 
-      <div className="min-h-screen no-scrollbar [&::-webkit-scrollbar]:hidden bg-gradient-to-br from-blue-500/50 via-slate-400 to-purple-500/50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/20">
+      <div className="min-h-screen no-scrollbar [&::-webkit-scrollbar]:hidden bg-gradient-to-br from-blue-50/30 via-slate-50/20 to-purple-50/30 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
+        {/* Subtle glass overlay for consistent background */}
+        <div className="fixed inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 dark:from-slate-900/20 dark:via-transparent dark:to-slate-900/10 pointer-events-none" />
         {/* Sticky Navbar */}
         <DashboardHeader
           onOpenSearch={() => setShowSearch(true)}

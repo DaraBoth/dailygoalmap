@@ -46,7 +46,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   
   return (
     <header
-      className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      className="sticky top-0 z-50 w-full border-b border-border/40 liquid-glass-container"
       role="banner"
       aria-label="Dashboard navigation"
     >
@@ -74,7 +74,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <div className="w-full max-w-md">
                 <button
                   onClick={onOpenSearch}
-                  className="group flex h-9 w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="group flex h-9 w-full items-center gap-2 liquid-glass-input text-sm ring-offset-background transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <Search className="h-4 w-4" />
                   <span className="flex-1 text-left">Search goals...</span>
@@ -191,7 +191,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           {isMobileMenuOpen && (
             <motion.div
               id="mobile-menu"
-              className="absolute left-0 right-0 top-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+              className="absolute left-0 right-0 top-full border-b border-border/40 liquid-glass-modal"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
