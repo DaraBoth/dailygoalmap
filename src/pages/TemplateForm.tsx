@@ -41,12 +41,28 @@ export function TemplateFormPage() {
   }
 
   const validateField = (field: FormField, value: unknown): string | null => {
-    if (field.required && (value === undefined || value === null || value === '')) {
-      return field.label + ' is required';
+    // For required fields, check if value is truly empty
+    if (field.required) {
+      if (value === undefined || value === null) {
+        return field.label + ' is required';
+      }
+      
+      // Check for empty string (trim whitespace)
+      if (typeof value === 'string' && value.trim() === '') {
+        return field.label + ' is required';
+      }
+      
+      // Check for empty arrays
+      if (Array.isArray(value) && value.length === 0) {
+        return field.label + ' is required';
+      }
     }
 
-    if (field.type === 'number' && value !== undefined && value !== '') {
+    if (field.type === 'number' && value !== undefined && value !== '' && value !== null) {
       const numValue = Number(value);
+      if (isNaN(numValue)) {
+        return field.label + ' must be a valid number';
+      }
       const numField = field as { min?: number; max?: number };
       if (numField.min !== undefined && numValue < numField.min) {
         return field.label + ' must be at least ' + numField.min;
@@ -181,12 +197,24 @@ export function TemplateFormPage() {
 
   const updateFormData = (fieldId: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [fieldId]: value }));
-    // Clear error for this field
-    setErrors(prev => {
-      const newErrors = { ...prev };
-      delete newErrors[fieldId];
-      return newErrors;
-    });
+    
+    // Clear error for this field when user starts typing
+    if (errors[fieldId]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldId];
+        return newErrors;
+      });
+    }
+    
+    // For text fields, also validate in real-time if there's content
+    if (typeof value === 'string' && value.trim() !== '') {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldId];
+        return newErrors;
+      });
+    }
   };
 
   const renderField = (field: FormField) => {
@@ -305,6 +333,7 @@ export function TemplateFormPage() {
 
       case 'list': {
         const listValue = (value as string[]) || [];
+        const listField = field as ListField;
         return (
           <div key={field.id} className="space-y-2">
             <Label>
@@ -315,7 +344,7 @@ export function TemplateFormPage() {
                 <Input
                   type="text"
                   placeholder={field.placeholder}
-                  value={item}
+                  value={item || ''}
                   onChange={(e) => {
                     const newList = [...listValue];
                     newList[index] = e.target.value;
@@ -326,7 +355,7 @@ export function TemplateFormPage() {
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   onClick={() => {
                     const newList = listValue.filter((_, i) => i !== index);
                     updateFormData(field.id, newList);
