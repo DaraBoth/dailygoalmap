@@ -43,11 +43,11 @@ export function TemplateFormPage() {
   const validateField = (field: FormField, value: unknown): string | null => {
     // For required fields, check if value is truly empty
     if (field.required) {
-      if (value === undefined || value === null) {
+      if (value === undefined || value === null || value === '') {
         return field.label + ' is required';
       }
       
-      // Check for empty string (trim whitespace)
+      // Check for empty string with whitespace for text fields
       if (typeof value === 'string' && value.trim() === '') {
         return field.label + ' is required';
       }
@@ -58,6 +58,7 @@ export function TemplateFormPage() {
       }
     }
 
+    // Additional number validation (min/max)
     if (field.type === 'number' && value !== undefined && value !== '' && value !== null) {
       const numValue = Number(value);
       if (isNaN(numValue)) {
@@ -102,6 +103,17 @@ export function TemplateFormPage() {
     section.fields.forEach(field => {
       const value = formData[field.id];
       const error = validateField(field, value);
+      
+      // Debug log to see what's failing
+      if (error) {
+        console.log(`Validation error for field "${field.id}":`, {
+          label: field.label,
+          required: field.required,
+          value,
+          error
+        });
+      }
+      
       if (error) {
         sectionErrors[field.id] = error;
         hasError = true;
@@ -259,8 +271,18 @@ export function TemplateFormPage() {
               id={field.id}
               type="number"
               placeholder={field.placeholder}
-              value={(value as number) ?? ''}
-              onChange={(e) => updateFormData(field.id, e.target.value ? Number(e.target.value) : '')}
+              value={value !== undefined && value !== null && value !== '' ? String(value) : ''}
+              onChange={(e) => {
+                const inputValue = e.target.value;
+                if (inputValue === '') {
+                  updateFormData(field.id, '');
+                } else {
+                  const numValue = Number(inputValue);
+                  if (!isNaN(numValue)) {
+                    updateFormData(field.id, numValue);
+                  }
+                }
+              }}
               min={numField.min}
               max={numField.max}
               step={numField.step}
