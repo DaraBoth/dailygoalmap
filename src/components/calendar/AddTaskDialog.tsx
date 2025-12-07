@@ -229,7 +229,10 @@ const AddTaskDialog = ({
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2"><Calendar className="h-3 w-3" /> Start Date<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
+                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
+                            Start Date
+                          </Label>
                           <MobileDatePicker
                             date={startDate}
                             minDate={undefined}
@@ -246,7 +249,10 @@ const AddTaskDialog = ({
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2"><Calendar className="h-3 w-3" /> End Date<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
+                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
+                            End Date
+                          </Label>
                           <MobileDatePicker
                             date={endDate}
                             minDate={startDate}
@@ -262,7 +268,10 @@ const AddTaskDialog = ({
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2"><Clock className="h-3 w-3" /> Daily Start<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
+                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
+                            Daily Start
+                          </Label>
                           <MobileTimePicker
                             value={dailyStart}
                             onChange={(value) => {
@@ -285,7 +294,10 @@ const AddTaskDialog = ({
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2"><Clock className="h-3 w-3" /> Daily End<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
+                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
+                            Daily End
+                          </Label>
                           <MobileTimePicker
                             value={dailyEnd}
                             onChange={(value) => {

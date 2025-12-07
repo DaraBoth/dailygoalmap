@@ -48,12 +48,18 @@ export function MobileTimePicker({
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         className={cn(
-          "pl-10 bg-white/50 dark:bg-white/10 backdrop-blur-md border-white/30 dark:border-white/20 rounded-xl",
+          "pl-3 pr-10 bg-white/50 dark:bg-white/10 backdrop-blur-md border-white/30 dark:border-white/20 rounded-xl",
+          "[&::-webkit-calendar-picker-indicator]:opacity-0",
+          "[&::-webkit-calendar-picker-indicator]:absolute",
+          "[&::-webkit-calendar-picker-indicator]:right-3",
+          "[&::-webkit-calendar-picker-indicator]:cursor-pointer",
+          "[&::-webkit-calendar-picker-indicator]:w-5",
+          "[&::-webkit-calendar-picker-indicator]:h-5",
           className
         )}
         placeholder={placeholder}
       />
-      <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-500 dark:text-blue-400 pointer-events-none" />
+      <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-500 dark:text-blue-400 pointer-events-none" />
     </div>
   );
 }

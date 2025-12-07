@@ -208,18 +208,27 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300  flex items-center gap-2"><Calendar className="h-3 w-3" /> Start Date<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
+                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
+                            Start Date
+                          </Label>
                           <MobileDatePicker date={startDate} minDate={undefined} maxDate={endDate} setDate={(d) => { if (!d) return; const next = d; setStartDate(next); if (next > endDate) setEndDate(next); setSelectedDate(next); }} className="w-full dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-300" />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300  flex items-center gap-2"><Calendar className="h-3 w-3" /> End Date<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
+                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
+                            End Date
+                          </Label>
                           <MobileDatePicker date={endDate} minDate={startDate} maxDate={undefined} setDate={(d) => { if (!d) return; setEndDate(d < startDate ? startDate : d); }} className="w-full dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-300" />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300  flex items-center gap-2"><Clock className="h-3 w-3" /> Daily Start<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
+                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
+                            Daily Start
+                          </Label>
                           <MobileTimePicker
                             value={dailyStart}
                             onChange={(value) => setDailyStart(value || taskTime)}
@@ -228,7 +237,10 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300  flex items-center gap-2"><Clock className="h-3 w-3" /> Daily End<div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" /></Label>
+                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
+                            Daily End
+                          </Label>
                           <MobileTimePicker
                             value={dailyEnd}
                             onChange={(value) => setDailyEnd(value || dailyStart)}
