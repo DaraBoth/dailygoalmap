@@ -6,6 +6,7 @@ import { HelmetProvider, Helmet } from "react-helmet-async"
 import { Toaster } from "@/components/ui/sonner"
 import { useIsMobile } from "@/hooks/use-mobile"
 import OfflinePopup from "@/components/ui/OfflinePopup"
+import { UpdateNotification } from "@/components/pwa/UpdateNotification"
 import { setupSyncHandlers } from "@/utils/offlineSync"
 import { authService, type AuthState } from "@/services/authService"
 import React from 'react'
@@ -37,6 +38,7 @@ function RootComponent() {
   const isMobile = useIsMobile()
   const [user, setUser] = React.useState<any>(null)
   const [authState, setAuthState] = React.useState<AuthState>(authService.getAuthState())
+  const [updateAvailable, setUpdateAvailable] = React.useState(false)
 
   // Subscribe to auth service updates and initialize app
   React.useEffect(() => {
@@ -50,6 +52,29 @@ function RootComponent() {
 
     return unsubscribe
   }, [])
+
+  // Listen for service worker messages about new version
+  React.useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data && event.data.type === 'NEW_VERSION') {
+          console.log('New version available:', event.data.newVersion);
+          setUpdateAvailable(true);
+        }
+      };
+
+      navigator.serviceWorker.addEventListener('message', handleMessage);
+
+      return () => {
+        navigator.serviceWorker.removeEventListener('message', handleMessage);
+      };
+    }
+  }, []);
+
+  // Handle refresh button click
+  const handleRefresh = () => {
+    window.location.reload();
+  };
 
   // Show loading screen while initializing auth
   if (authState.isLoading) {
@@ -87,6 +112,8 @@ function RootComponent() {
                 },
               }} 
             />
+            {updateAvailable && <UpdateNotification onRefresh={handleRefresh} />}
+            <OfflinePopup />
             {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools />}
           </QueryClientProvider>
         </HelmetProvider>

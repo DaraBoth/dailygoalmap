@@ -9,6 +9,42 @@ const STATIC_ASSETS = [
   '/icon/maskable_icon_x96.png'
 ];
 
+// Version checking
+let currentVersion = null;
+
+// Check for new version every 10 seconds
+async function checkForNewVersion() {
+  try {
+    const response = await fetch('/version.json', { cache: 'no-store' });
+    const data = await response.json();
+    
+    if (currentVersion === null) {
+      // First time - store the version
+      currentVersion = data.version;
+      console.log('Current app version:', currentVersion);
+    } else if (currentVersion !== data.version) {
+      // Version changed - notify all clients
+      console.log('New version detected:', data.version, '(current:', currentVersion + ')');
+      const clients = await self.clients.matchAll();
+      clients.forEach(client => {
+        client.postMessage({ type: 'NEW_VERSION', newVersion: data.version });
+      });
+      // Update stored version
+      currentVersion = data.version;
+    }
+  } catch (error) {
+    console.error('Error checking version:', error);
+  }
+}
+
+// Start version checking interval
+function startVersionCheck() {
+  // Check immediately
+  checkForNewVersion();
+  // Then check every 10 seconds
+  setInterval(checkForNewVersion, 10000);
+}
+
 // No Firebase imports needed for tinynotie-api
 
 // IndexedDB setup
@@ -176,7 +212,11 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => {
+      // Start version checking after activation
+      startVersionCheck();
+      return self.clients.claim();
+    })
   );
 });
 
