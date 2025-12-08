@@ -364,8 +364,7 @@ export const updateTask = async (taskId: string, updates: any) => {
         updates.completed !== undefined && updates.completed !== originalTask.completed;
 
       if (hasContentChanges || hasCompletionChange) {
-        const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
-        const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
+        const { notifyTaskUpdated } = await import('@/services/notificationService');
         
         // Get goal information
         const { data: goalData } = await supabase
@@ -376,54 +375,22 @@ export const updateTask = async (taskId: string, updates: any) => {
 
         const goalTitle = goalData?.title || 'your goal';
         
-        // Determine the action and title
-        let action: string;
-        let titleText: string;
-        let bodyText: string;
-
+        // Determine the action
+        let action: 'completed' | 'uncompleted' | 'edited';
         if (hasCompletionChange) {
           action = updates.completed ? 'completed' : 'uncompleted';
-          const actionText = updates.completed ? 'completed' : 'marked incomplete';
-          titleText = `Task ${actionText} in "${goalTitle}"`;
-          bodyText = `${originalTask.title} has been ${actionText}`;
         } else {
           action = 'edited';
-          titleText = `Task updated in "${goalTitle}"`;
-          bodyText = `${originalTask.title} has been modified`;
         }
         
-        // Build a deep link to the specific task so recipients can open it directly
-        const deepLink = `/goal/${originalTask.goal_id}?date=${encodeURIComponent((updates.start_date || originalTask.start_date))}&taskId=${encodeURIComponent(taskId)}`;
-
-        await sendNotificationToGoalMembers(
+        await notifyTaskUpdated(
           originalTask.goal_id,
           user.id,
-          titleText,
-          bodyText,
-          {
-            type: 'task_updated',
-            task_id: taskId,
-            goal_id: originalTask.goal_id,
-            task_title: originalTask.title,
-            goal_title: goalTitle,
-            action: action,
-            task_date: updates.start_date || originalTask.start_date,
-            url: deepLink
-          }
-        );
-
-        // Store internal notification
-        await createTaskUpdateNotification(
-          originalTask.goal_id,
-          user.id,
-          'task_updated',
-          {
-            task_title: originalTask.title,
-            task_id: taskId,
-            goal_title: goalTitle,
-            action: action,
-            url: deepLink
-          }
+          originalTask.title,
+          taskId,
+          goalTitle,
+          updates.start_date || originalTask.start_date,
+          action
         );
       }
     } catch (notifError) {
@@ -455,8 +422,7 @@ export const insertTask = async (taskData: any) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user && data && data[0]) {
         const newTask = data[0];
-        const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
-        const { createTaskNotification } = await import('@/services/internalNotifications');
+        const { notifyTaskCreated } = await import('@/services/notificationService');
         
         // Get goal information
         const { data: goalData } = await supabase
@@ -467,39 +433,13 @@ export const insertTask = async (taskData: any) => {
 
         const goalTitle = goalData?.title || 'your goal';
         
-        // Build a deep link to the specific task
-        const deepLink = `/goal/${newTask.goal_id}?date=${encodeURIComponent(newTask.start_date)}&taskId=${encodeURIComponent(newTask.id)}`;
-
-        // Send push notification
-        await sendNotificationToGoalMembers(
+        await notifyTaskCreated(
           newTask.goal_id,
           user.id,
-          `New task in "${goalTitle}"`,
-          `${newTask.title || 'A new task'} has been added`,
-          {
-            type: 'task_created',
-            task_id: newTask.id,
-            goal_id: newTask.goal_id,
-            task_title: newTask.title,
-            goal_title: goalTitle,
-            action: 'created',
-            task_date: newTask.start_date,
-            url: deepLink
-          }
-        );
-
-        // Store internal notification
-        await createTaskNotification(
-          newTask.goal_id,
-          user.id,
-          'task_created',
-          {
-            task_title: newTask.title,
-            task_id: newTask.id,
-            goal_title: goalTitle,
-            action: 'created',
-            url: deepLink
-          }
+          newTask.title || 'A new task',
+          newTask.id,
+          goalTitle,
+          newTask.start_date
         );
       }
     } catch (notifError) {
@@ -539,42 +479,17 @@ export const deleteTaskFromDatabase = async (taskId: string): Promise<void> => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
-          const { createTaskNotification } = await import('@/services/internalNotifications');
+          const { notifyTaskDeleted } = await import('@/services/notificationService');
           
           const goalTitle = taskData.goals?.title || 'your goal';
-          const deepLink = `/goal/${taskData.goal_id}`;
 
-          // Send push notification
-          await sendNotificationToGoalMembers(
+          await notifyTaskDeleted(
             taskData.goal_id,
             user.id,
-            `Task deleted from "${goalTitle}"`,
-            `${taskData.title || 'A task'} has been removed`,
-            {
-              type: 'task_deleted',
-              task_id: taskId,
-              goal_id: taskData.goal_id,
-              task_title: taskData.title,
-              goal_title: goalTitle,
-              action: 'deleted',
-              task_date: taskData.start_date,
-              url: deepLink
-            }
-          );
-
-          // Store internal notification
-          await createTaskNotification(
-            taskData.goal_id,
-            user.id,
-            'task_deleted',
-            {
-              task_title: taskData.title,
-              task_id: taskId,
-              goal_title: goalTitle,
-              action: 'deleted',
-              url: deepLink
-            }
+            taskData.title || 'A task',
+            taskId,
+            goalTitle,
+            taskData.start_date
           );
         }
       } catch (notifError) {

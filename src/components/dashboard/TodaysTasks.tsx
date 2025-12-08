@@ -153,10 +153,9 @@ const TodaysTasks: React.FC = () => {
         )
       );
 
-      // Send notifications for completion status change
+      // Send unified notifications (Toast + Push + Database)
       try {
-        const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
-        const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
+        const { notifyTaskUpdated } = await import('@/services/notificationService');
         
         // Get goal information
         const { data: goalData } = await supabase
@@ -167,41 +166,15 @@ const TodaysTasks: React.FC = () => {
 
         const goalTitle = goalData?.title || 'your goal';
         const action = newStatus ? 'completed' : 'uncompleted';
-        const actionText = newStatus ? 'completed' : 'marked incomplete';
-        
-        // Build a deep link to the specific task
-        const deepLink = `/goal/${taskToUpdate.goal_id}?date=${encodeURIComponent(taskToUpdate.start_date)}&taskId=${encodeURIComponent(taskId)}`;
 
-        // Send push notification
-        await sendNotificationToGoalMembers(
+        await notifyTaskUpdated(
           taskToUpdate.goal_id,
           user.id,
-          `Task ${actionText} in "${goalTitle}"`,
-          `${taskToUpdate.title} has been ${actionText}`,
-          {
-            type: 'task_updated',
-            task_id: taskId,
-            goal_id: taskToUpdate.goal_id,
-            task_title: taskToUpdate.title,
-            goal_title: goalTitle,
-            action: action,
-            task_date: taskToUpdate.start_date,
-            url: deepLink
-          }
-        );
-
-        // Store internal notification
-        await createTaskUpdateNotification(
-          taskToUpdate.goal_id,
-          user.id,
-          'task_updated',
-          {
-            task_title: taskToUpdate.title,
-            task_id: taskId,
-            goal_title: goalTitle,
-            action: action,
-            url: deepLink
-          }
+          taskToUpdate.title,
+          taskId,
+          goalTitle,
+          taskToUpdate.start_date,
+          action
         );
       } catch (notifError) {
         console.error('Error sending task completion notifications:', notifError);
@@ -303,8 +276,7 @@ const TodaysTasks: React.FC = () => {
 
       // Send notifications for each completed task
       try {
-        const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
-        const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
+        const { notifyTaskUpdated } = await import('@/services/notificationService');
         
         // Group tasks by goal to minimize goal queries
         const tasksByGoal = incompleteTasks.reduce((acc, task) => {
@@ -324,41 +296,17 @@ const TodaysTasks: React.FC = () => {
 
           const goalTitle = goalData?.title || 'your goal';
 
-          // Send notification for each task
+          // Send notification for each task using unified service
           for (const task of tasks) {
-            const deepLink = `/goal/${task.goal_id}?date=${encodeURIComponent(task.start_date)}&taskId=${encodeURIComponent(task.id)}`;
-
-            // Send push and internal notifications
-            await Promise.all([
-              sendNotificationToGoalMembers(
-                task.goal_id,
-                user.id,
-                `Task completed in "${goalTitle}"`,
-                `${task.title} has been completed`,
-                {
-                  type: 'task_updated',
-                  task_id: task.id,
-                  goal_id: task.goal_id,
-                  task_title: task.title,
-                  goal_title: goalTitle,
-                  action: 'completed',
-                  task_date: task.start_date,
-                  url: deepLink
-                }
-              ),
-              createTaskUpdateNotification(
-                task.goal_id,
-                user.id,
-                'task_updated',
-                {
-                  task_title: task.title,
-                  task_id: task.id,
-                  goal_title: goalTitle,
-                  action: 'completed',
-                  url: deepLink
-                }
-              )
-            ]);
+            await notifyTaskUpdated(
+              task.goal_id,
+              user.id,
+              task.title,
+              task.id,
+              goalTitle,
+              task.start_date,
+              'completed'
+            );
           }
         }
       } catch (notifError) {
@@ -402,8 +350,7 @@ const TodaysTasks: React.FC = () => {
 
       // Send notifications for undone tasks
       try {
-        const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
-        const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
+        const { notifyTaskUpdated } = await import('@/services/notificationService');
         
         // Group tasks by goal
         const tasksByGoal = previousTasksState.reduce((acc, task) => {
@@ -423,41 +370,17 @@ const TodaysTasks: React.FC = () => {
 
           const goalTitle = goalData?.title || 'your goal';
 
-          // Send notification for each task
+          // Send notification for each task using unified service
           for (const task of tasks) {
-            const deepLink = `/goal/${task.goal_id}?date=${encodeURIComponent(task.start_date)}&taskId=${encodeURIComponent(task.id)}`;
-
-            // Send push and internal notifications
-            await Promise.all([
-              sendNotificationToGoalMembers(
-                task.goal_id,
-                user.id,
-                `Task marked incomplete in "${goalTitle}"`,
-                `${task.title} has been marked incomplete`,
-                {
-                  type: 'task_updated',
-                  task_id: task.id,
-                  goal_id: task.goal_id,
-                  task_title: task.title,
-                  goal_title: goalTitle,
-                  action: 'uncompleted',
-                  task_date: task.start_date,
-                  url: deepLink
-                }
-              ),
-              createTaskUpdateNotification(
-                task.goal_id,
-                user.id,
-                'task_updated',
-                {
-                  task_title: task.title,
-                  task_id: task.id,
-                  goal_title: goalTitle,
-                  action: 'uncompleted',
-                  url: deepLink
-                }
-              )
-            ]);
+            await notifyTaskUpdated(
+              task.goal_id,
+              user.id,
+              task.title,
+              task.id,
+              goalTitle,
+              task.start_date,
+              'uncompleted'
+            );
           }
         }
       } catch (notifError) {

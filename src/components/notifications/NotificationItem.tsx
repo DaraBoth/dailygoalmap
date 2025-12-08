@@ -270,6 +270,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
                 <div className={`text-sm font-semibold ${isUnread ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
                   {n.type === 'task_created' ? 'New Task' :
                     n.type === 'task_deleted' ? 'Task Deleted' :
+                      payload.action === 'completed' ? 'Task Completed' :
+                      payload.action === 'uncompleted' ? 'Task Reopened' :
                       'Task Updated'}
                 </div>
                 {isUnread && <div className="w-1.5 h-1.5 bg-blue-500 rounded-full flex-shrink-0 animate-pulse"></div>}
@@ -278,6 +280,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
                 <span className="font-medium text-gray-900 dark:text-white">{senderName}</span>{' '}
                 {n.type === 'task_created' ? 'added' :
                   n.type === 'task_deleted' ? 'deleted' :
+                    payload.action === 'completed' ? 'completed' :
+                    payload.action === 'uncompleted' ? 'reopened' :
                     'updated'}{' '}
                 {payload.task_title && (
                   <span className="font-medium text-gray-900 dark:text-white">"{payload.task_title}"</span>
