@@ -201,6 +201,17 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
     }
   };
 
+  const handleFilterChange = (newFilter: 'all' | 'unread' | 'invites') => {
+    if (newFilter !== filter) {
+      setFilter(newFilter);
+      setItems([]); // Clear items immediately when changing filter
+      setPaginationState(prev => ({
+        ...prev,
+        [newFilter]: { cursor: undefined, hasMore: true }
+      }));
+    }
+  };
+
   const SegButton: React.FC<{
     active: boolean;
     onClick: () => void;
@@ -232,7 +243,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
   );
 
   return (
-    <div className="w-full sm:w-80 md:w-96 rounded-3xl shadow-2xl flex flex-col max-h-[600px] bg-gradient-to-br from-white/95 to-white/90 dark:from-gray-900/95 dark:to-gray-800/90 backdrop-blur-xl border border-white/20 dark:border-gray-700/30">
+    <div className="w-full sm:w-80 md:w-96 rounded-3xl shadow-2xl flex flex-col max-h-[600px] bg-gradient-to-br from-white/80 to-gray-50/70 dark:from-gray-900/95 dark:to-gray-800/90 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/30">
       <div className="text-sm font-semibold sticky top-0 border-b rounded-t-3xl border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md">
         <div className="px-4 sm:px-5 flex sm:flex-row sm:items-center justify-between pt-4 pb-3 gap-3">
           <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
@@ -249,9 +260,9 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
           </div>
         </div>
         <div className="inline-flex justify-between gap-0 w-full border-t border-gray-200/50 dark:border-gray-700/50" role="tablist" aria-label="Filter notifications">
-          <SegButton className="flex-1 align-middle py-3 hover:bg-gray-100/50 dark:hover:bg-gray-800/50" active={filter === 'all'} onClick={() => setFilter('all')} label="All" count={counts.all} ariaPressed={filter === 'all'} />
-          <SegButton className="flex-1 align-middle py-3 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 border-l border-r border-gray-200/50 dark:border-gray-700/50" active={filter === 'unread'} onClick={() => setFilter('unread')} label="Unread" count={counts.unread} ariaPressed={filter === 'unread'} />
-          <SegButton className="flex-1 align-middle py-3 hover:bg-gray-100/50 dark:hover:bg-gray-800/50" active={filter === 'invites'} onClick={() => setFilter('invites')} label="Invites" count={counts.invites} ariaPressed={filter === 'invites'} />
+          <SegButton className="flex-1 align-middle py-3 hover:bg-gray-100/50 dark:hover:bg-gray-800/50" active={filter === 'all'} onClick={() => handleFilterChange('all')} label="All" count={counts.all} ariaPressed={filter === 'all'} />
+          <SegButton className="flex-1 align-middle py-3 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 border-l border-r border-gray-200/50 dark:border-gray-700/50" active={filter === 'unread'} onClick={() => handleFilterChange('unread')} label="Unread" count={counts.unread} ariaPressed={filter === 'unread'} />
+          <SegButton className="flex-1 align-middle py-3 hover:bg-gray-100/50 dark:hover:bg-gray-800/50" active={filter === 'invites'} onClick={() => handleFilterChange('invites')} label="Invites" count={counts.invites} ariaPressed={filter === 'invites'} />
         </div>
       </div>
       {/* Scrollable area */}

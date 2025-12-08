@@ -75,15 +75,17 @@ function RootComponent() {
               <Outlet />
             </div>
             <Toaster 
-              position={isMobile ? "bottom-center" : "bottom-right"} 
+              position={isMobile ? "top-center" : "top-left"} 
               richColors 
               closeButton 
               toastOptions={{
-                // style: {
-                //   backgroundColor: 'lightblue',
-                //   color: 'white',
-                // },
-                className: 'liquid-glass-container', // for Tailwind or custom CSS class
+                className: 'liquid-glass-card backdrop-blur-xl',
+                style: {
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                },
               }} 
             />
             {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools />}

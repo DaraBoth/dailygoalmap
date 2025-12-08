@@ -340,8 +340,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
     <div
       className={`relative overflow-hidden rounded-xl border transition-all duration-200 ${
         isUnread
-          ? 'bg-gradient-to-br from-blue-50/80 to-purple-50/80 dark:from-blue-950/20 dark:to-purple-950/20 border-blue-200/50 dark:border-blue-800/30 shadow-sm'
-          : 'bg-white/70 dark:bg-gray-900/40 border-gray-200/50 dark:border-gray-800/30'
+          ? 'bg-gradient-to-br from-blue-50/60 to-purple-50/60 dark:from-blue-950/20 dark:to-purple-950/20 border-blue-200/50 dark:border-blue-800/30 shadow-sm'
+          : 'bg-white/50 dark:bg-gray-900/40 border-gray-200/50 dark:border-gray-800/30'
       } ${
         isClickable
           ? 'hover:shadow-md hover:border-blue-300/50 dark:hover:border-blue-700/50 cursor-pointer'
