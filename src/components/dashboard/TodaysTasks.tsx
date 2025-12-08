@@ -133,6 +133,13 @@ const TodaysTasks: React.FC = () => {
     const newStatus = !currentStatus;
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      // Get task data before update for notification
+      const taskToUpdate = tasksForToday.find(t => t.id === taskId);
+      if (!taskToUpdate) throw new Error("Task not found");
+
       const { error } = await supabase
         .from('tasks')
         .update({ completed: newStatus })
@@ -145,6 +152,61 @@ const TodaysTasks: React.FC = () => {
           task.id === taskId ? { ...task, completed: newStatus } : task
         )
       );
+
+      // Send notifications for completion status change
+      try {
+        const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
+        const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
+        
+        // Get goal information
+        const { data: goalData } = await supabase
+          .from('goals')
+          .select('title')
+          .eq('id', taskToUpdate.goal_id)
+          .single();
+
+        const goalTitle = goalData?.title || 'your goal';
+        const action = newStatus ? 'completed' : 'uncompleted';
+        const actionText = newStatus ? 'completed' : 'marked incomplete';
+        
+        // Build a deep link to the specific task
+        const deepLink = `/goal/${taskToUpdate.goal_id}?date=${encodeURIComponent(taskToUpdate.start_date)}&taskId=${encodeURIComponent(taskId)}`;
+
+        // Send push notification
+        await sendNotificationToGoalMembers(
+          taskToUpdate.goal_id,
+          user.id,
+          `Task ${actionText} in "${goalTitle}"`,
+          `${taskToUpdate.title} has been ${actionText}`,
+          {
+            type: 'task_updated',
+            task_id: taskId,
+            goal_id: taskToUpdate.goal_id,
+            task_title: taskToUpdate.title,
+            goal_title: goalTitle,
+            action: action,
+            task_date: taskToUpdate.start_date,
+            url: deepLink
+          }
+        );
+
+        // Store internal notification
+        await createTaskUpdateNotification(
+          taskToUpdate.goal_id,
+          user.id,
+          'task_updated',
+          {
+            task_title: taskToUpdate.title,
+            task_id: taskId,
+            goal_title: goalTitle,
+            action: action,
+            url: deepLink
+          }
+        );
+      } catch (notifError) {
+        console.error('Error sending task completion notifications:', notifError);
+        // Don't throw - task update succeeded
+      }
     } catch (error) {
       console.error("Error updating task completion status:", error);
     }
@@ -216,6 +278,9 @@ const TodaysTasks: React.FC = () => {
 
   const handleMarkAllCompleted = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       const incompleteTasks = tasksForToday.filter(task => !task.completed);
       setPreviousTasksState([...tasksForToday]);
 
@@ -236,6 +301,71 @@ const TodaysTasks: React.FC = () => {
         variant: "default",
       });
 
+      // Send notifications for each completed task
+      try {
+        const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
+        const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
+        
+        // Group tasks by goal to minimize goal queries
+        const tasksByGoal = incompleteTasks.reduce((acc, task) => {
+          if (!acc[task.goal_id]) acc[task.goal_id] = [];
+          acc[task.goal_id].push(task);
+          return acc;
+        }, {} as Record<string, typeof incompleteTasks>);
+
+        // Send notifications for each goal
+        for (const [goalId, tasks] of Object.entries(tasksByGoal)) {
+          // Get goal information once per goal
+          const { data: goalData } = await supabase
+            .from('goals')
+            .select('title')
+            .eq('id', goalId)
+            .single();
+
+          const goalTitle = goalData?.title || 'your goal';
+
+          // Send notification for each task
+          for (const task of tasks) {
+            const deepLink = `/goal/${task.goal_id}?date=${encodeURIComponent(task.start_date)}&taskId=${encodeURIComponent(task.id)}`;
+
+            // Send push and internal notifications
+            await Promise.all([
+              sendNotificationToGoalMembers(
+                task.goal_id,
+                user.id,
+                `Task completed in "${goalTitle}"`,
+                `${task.title} has been completed`,
+                {
+                  type: 'task_updated',
+                  task_id: task.id,
+                  goal_id: task.goal_id,
+                  task_title: task.title,
+                  goal_title: goalTitle,
+                  action: 'completed',
+                  task_date: task.start_date,
+                  url: deepLink
+                }
+              ),
+              createTaskUpdateNotification(
+                task.goal_id,
+                user.id,
+                'task_updated',
+                {
+                  task_title: task.title,
+                  task_id: task.id,
+                  goal_title: goalTitle,
+                  action: 'completed',
+                  url: deepLink
+                }
+              )
+            ]);
+          }
+        }
+      } catch (notifError) {
+        console.error('Error sending bulk completion notifications:', notifError);
+        // Don't throw - task updates succeeded
+      }
+
       if (undoTimeout) clearTimeout(undoTimeout);
       const timeout = setTimeout(() => {
         setPreviousTasksState(incompleteTasks);
@@ -249,6 +379,9 @@ const TodaysTasks: React.FC = () => {
   const handleUndoMarkAllCompleted = async () => {
     try {
       if (previousTasksState.length === 0) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
 
       const { error } = await supabase
         .from('tasks')
@@ -266,13 +399,83 @@ const TodaysTasks: React.FC = () => {
         description: "Tasks have been reverted to their previous state.",
         variant: "success",
       });
+
+      // Send notifications for undone tasks
+      try {
+        const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
+        const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
+        
+        // Group tasks by goal
+        const tasksByGoal = previousTasksState.reduce((acc, task) => {
+          if (!acc[task.goal_id]) acc[task.goal_id] = [];
+          acc[task.goal_id].push(task);
+          return acc;
+        }, {} as Record<string, typeof previousTasksState>);
+
+        // Send notifications for each goal
+        for (const [goalId, tasks] of Object.entries(tasksByGoal)) {
+          // Get goal information once per goal
+          const { data: goalData } = await supabase
+            .from('goals')
+            .select('title')
+            .eq('id', goalId)
+            .single();
+
+          const goalTitle = goalData?.title || 'your goal';
+
+          // Send notification for each task
+          for (const task of tasks) {
+            const deepLink = `/goal/${task.goal_id}?date=${encodeURIComponent(task.start_date)}&taskId=${encodeURIComponent(task.id)}`;
+
+            // Send push and internal notifications
+            await Promise.all([
+              sendNotificationToGoalMembers(
+                task.goal_id,
+                user.id,
+                `Task marked incomplete in "${goalTitle}"`,
+                `${task.title} has been marked incomplete`,
+                {
+                  type: 'task_updated',
+                  task_id: task.id,
+                  goal_id: task.goal_id,
+                  task_title: task.title,
+                  goal_title: goalTitle,
+                  action: 'uncompleted',
+                  task_date: task.start_date,
+                  url: deepLink
+                }
+              ),
+              createTaskUpdateNotification(
+                task.goal_id,
+                user.id,
+                'task_updated',
+                {
+                  task_title: task.title,
+                  task_id: task.id,
+                  goal_title: goalTitle,
+                  action: 'uncompleted',
+                  url: deepLink
+                }
+              )
+            ]);
+          }
+        }
+      } catch (notifError) {
+        console.error('Error sending undo completion notifications:', notifError);
+        // Don't throw - task updates succeeded
+      }
     } catch (error) {
       console.error("Error undoing mark all completed:", error);
     }
   };
 
   const handleTaskClick = (task: any) => {
-    goToGoal(task.goal_id);
+    goToGoal(task.goal_id, {
+      search: {
+        date: task.start_date,
+        taskId: task.id
+      }
+    });
   };
 
   return (
@@ -410,7 +613,7 @@ const TodaysTasks: React.FC = () => {
                               <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
                                 <span>{task.daily_start_time && task.daily_end_time ? `${task.daily_start_time.slice(0, 5)} - ${task.daily_end_time.slice(0, 5)}` : ''}</span>
                                 {task.goals && (
-                                  <SmartLink to={`/goal/${task.goal_id}`} className="truncate">
+                                  <SmartLink to={`/goal/${task.goal_id}?date=${encodeURIComponent(task.start_date)}&taskId=${encodeURIComponent(task.id)}`} className="truncate">
                                     {task.goals.title}
                                   </SmartLink>
                                 )}

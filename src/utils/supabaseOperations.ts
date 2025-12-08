@@ -360,7 +360,10 @@ export const updateTask = async (taskId: string, updates: any) => {
         (updates.start_date && updates.start_date !== originalTask.start_date) ||
         (updates.end_date && updates.end_date !== originalTask.end_date);
 
-      if (hasContentChanges) {
+      const hasCompletionChange = 
+        updates.completed !== undefined && updates.completed !== originalTask.completed;
+
+      if (hasContentChanges || hasCompletionChange) {
         const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
         const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
         
@@ -373,21 +376,37 @@ export const updateTask = async (taskId: string, updates: any) => {
 
         const goalTitle = goalData?.title || 'your goal';
         
+        // Determine the action and title
+        let action: string;
+        let titleText: string;
+        let bodyText: string;
+
+        if (hasCompletionChange) {
+          action = updates.completed ? 'completed' : 'uncompleted';
+          const actionText = updates.completed ? 'completed' : 'marked incomplete';
+          titleText = `Task ${actionText} in "${goalTitle}"`;
+          bodyText = `${originalTask.title} has been ${actionText}`;
+        } else {
+          action = 'edited';
+          titleText = `Task updated in "${goalTitle}"`;
+          bodyText = `${originalTask.title} has been modified`;
+        }
+        
         // Build a deep link to the specific task so recipients can open it directly
         const deepLink = `/goal/${originalTask.goal_id}?date=${encodeURIComponent((updates.start_date || originalTask.start_date))}&taskId=${encodeURIComponent(taskId)}`;
 
         await sendNotificationToGoalMembers(
           originalTask.goal_id,
           user.id,
-          `Task updated in "${goalTitle}"`,
-          `${originalTask.title} has been modified`,
+          titleText,
+          bodyText,
           {
             type: 'task_updated',
             task_id: taskId,
             goal_id: originalTask.goal_id,
             task_title: originalTask.title,
             goal_title: goalTitle,
-            action: 'edited',
+            action: action,
             task_date: updates.start_date || originalTask.start_date,
             url: deepLink
           }
@@ -402,7 +421,7 @@ export const updateTask = async (taskId: string, updates: any) => {
             task_title: originalTask.title,
             task_id: taskId,
             goal_title: goalTitle,
-            action: 'edited',
+            action: action,
             url: deepLink
           }
         );
