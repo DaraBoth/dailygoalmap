@@ -75,13 +75,12 @@ function RootComponent() {
               <Outlet />
             </div>
             <Toaster 
-              position={isMobile ? "top-center" : "top-left"} 
+              position={isMobile ? "top-center" : "top-right"} 
               richColors 
               closeButton 
               toastOptions={{
                 className: 'liquid-glass-card backdrop-blur-xl',
                 style: {
-                  background: 'rgba(255, 255, 255, 0.7)',
                   backdropFilter: 'blur(20px)',
                   border: '1px solid rgba(255, 255, 255, 0.3)',
                   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
