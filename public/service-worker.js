@@ -241,6 +241,8 @@ startVersionCheck();
 
 // Fetch event - Network first, fallback to cache
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
   // Skip cross-origin requests
   if (!event.request.url.startsWith(self.location.origin)) {
     return;
@@ -248,6 +250,26 @@ self.addEventListener('fetch', (event) => {
 
   // Skip Supabase API requests (they should not be cached)
   if (event.request.url.includes('supabase.co')) {
+    return;
+  }
+
+  // Skip service worker script itself
+  if (url.pathname === '/service-worker.js') {
+    return;
+  }
+
+  // Skip version.json (always fetch fresh)
+  if (url.pathname === '/version.json') {
+    return;
+  }
+
+  // For JavaScript modules and chunks, always fetch from network
+  // Don't cache JS files to avoid module loading issues
+  if (event.request.destination === 'script' || 
+      url.pathname.match(/\.(js|mjs|jsx|ts|tsx)$/) ||
+      url.pathname.includes('/@') || // Vite special paths
+      url.pathname.includes('/node_modules/')) {
+    event.respondWith(fetch(event.request));
     return;
   }
 
@@ -262,25 +284,34 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For other requests, try network first, then cache
+  // For static assets (CSS, images, fonts), try network first, then cache
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
-        // If HTML file, don't cache (to avoid stale content)
+        // Only cache successful responses
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          return networkResponse;
+        }
+
+        // Don't cache HTML files (to avoid stale content)
         if (event.request.url.match(/\.(html)$/)) {
           return networkResponse;
         }
 
-        // For other assets like CSS, JS, images, clone and cache response
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME)
-          .then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+        // Cache static assets like CSS, images, fonts
+        if (event.request.url.match(/\.(css|png|jpg|jpeg|svg|gif|webp|woff|woff2|ttf|eot|ico)$/)) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME)
+            .then((cache) => {
+              cache.put(event.request, responseToCache);
+            })
+            .catch(err => console.error('Cache put error:', err));
+        }
+        
         return networkResponse;
       })
       .catch(() => {
-        // Fallback to cache if network fails
+        // Fallback to cache only for static assets
         return caches.match(event.request);
       })
   );
