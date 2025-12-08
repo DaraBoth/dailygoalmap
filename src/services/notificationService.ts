@@ -35,18 +35,19 @@ export async function sendNotificationToUser(
         body: JSON.stringify({
           identifier: userInfo.user.email, // Use email as identifier
           payload: {
-            title: title+` by ${data.userProfile['display_name'] as string}` || 'DailyGoalMap Notification',
+            title: title || 'DailyGoalMap Notification',
             body: body || 'You have a new update!',
             data: {
               // Provide an absolute, clickable URL when possible. Also include original data for context.
               url: fullUrl ?? (data?.url ?? window.location.href.replace(window.location.origin, "")),
               // Use the task_date if present, else fallback to now
               timestamp: (data && data.task_date) ? `${data.task_date}T00:00:00` : new Date().toISOString(),
+              senderName: data.userProfile ? data.userProfile['display_name'] as string : 'Unknown',
               ...data,
             },
-            icon : data.userProfile['avatar_url']
+            icon : data.userProfile ? data.userProfile['avatar_url'] : undefined
           },
-          name: data.userProfile['display_name'],
+          name: data.userProfile ? data.userProfile['display_name'] : 'DailyGoalMap',
           appId: 2
         })
       });

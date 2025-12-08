@@ -212,60 +212,89 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
     <button
       onClick={onClick}
       aria-pressed={ariaPressed}
-      className={`text-sm font-semibold text-foreground/90 dark:text-white/90 hover:underline transition-all duration-300 ease-out bg-inherit py-0 ${active
-        ? 'text-gray-900 dark:text-white underline'
-        : 'text-gray-600 dark:text-gray-300 '
+      className={`text-xs sm:text-sm font-medium transition-all duration-200 ease-out ${active
+        ? 'text-blue-600 dark:text-blue-400 font-semibold'
+        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
         } ${className}`}
     >
-      <span className="font-medium">{label}</span>
+      <div className="flex items-center justify-center gap-1.5">
+        <span>{label}</span>
+        {count !== undefined && count > 0 && (
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${active 
+            ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' 
+            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+          }`}>
+            {count}
+          </span>
+        )}
+      </div>
     </button>
   );
 
   return (
-    <div className="w-full sm:w-80 md:w-96 rounded-3xl shadow-2xl flex flex-col max-h-[600px]">
-      <div className="text-sm font-semibold sticky top-0 border-b rounded-t-3xl border-white/20 flex-shrink-0">
-        <div className="px-4 flex sm:flex-row sm:items-center justify-between pt-3 gap-3">
-          <div className="text-lg font-bold text-foreground">Notifications</div>
+    <div className="w-full sm:w-80 md:w-96 rounded-3xl shadow-2xl flex flex-col max-h-[600px] bg-gradient-to-br from-white/95 to-white/90 dark:from-gray-900/95 dark:to-gray-800/90 backdrop-blur-xl border border-white/20 dark:border-gray-700/30">
+      <div className="text-sm font-semibold sticky top-0 border-b rounded-t-3xl border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md">
+        <div className="px-4 sm:px-5 flex sm:flex-row sm:items-center justify-between pt-4 pb-3 gap-3">
+          <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+            Notifications
+          </div>
           <div className="flex items-center ml-0 sm:ml-4">
             <button
               onClick={handleMarkAllAsRead}
-              className="text-sm font-semibold text-foreground/90 dark:text-white/90 hover:underline"
+              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors duration-200"
               aria-label="Mark all notifications as read"
             >
               Mark all read
             </button>
           </div>
         </div>
-        <div className="inline-flex justify-between gap-0 mt-2 shadow-lg w-full" role="tablist" aria-label="Filter notifications">
-          <SegButton className="flex-1 align-middle liquid-glass" active={filter === 'all'} onClick={() => setFilter('all')} label="All" count={counts.all} ariaPressed={filter === 'all'} />
-          <SegButton className="flex-1 align-middle liquid-glass" active={filter === 'unread'} onClick={() => setFilter('unread')} label="Unread" count={counts.unread} ariaPressed={filter === 'unread'} />
-          <SegButton className="flex-1 align-middle liquid-glass" active={filter === 'invites'} onClick={() => setFilter('invites')} label="Invites" count={counts.invites} ariaPressed={filter === 'invites'} />
+        <div className="inline-flex justify-between gap-0 w-full border-t border-gray-200/50 dark:border-gray-700/50" role="tablist" aria-label="Filter notifications">
+          <SegButton className="flex-1 align-middle py-3 hover:bg-gray-100/50 dark:hover:bg-gray-800/50" active={filter === 'all'} onClick={() => setFilter('all')} label="All" count={counts.all} ariaPressed={filter === 'all'} />
+          <SegButton className="flex-1 align-middle py-3 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 border-l border-r border-gray-200/50 dark:border-gray-700/50" active={filter === 'unread'} onClick={() => setFilter('unread')} label="Unread" count={counts.unread} ariaPressed={filter === 'unread'} />
+          <SegButton className="flex-1 align-middle py-3 hover:bg-gray-100/50 dark:hover:bg-gray-800/50" active={filter === 'invites'} onClick={() => setFilter('invites')} label="Invites" count={counts.invites} ariaPressed={filter === 'invites'} />
         </div>
       </div>
       {/* Scrollable area */}
       <ScrollArea 
-      className={isMobile? `h-[100vh] max-h-[100vh] min-h-[calc(100vh-145px)]` :
-          `h-[90vh] max-h-[75vh] min-h-[200px] shadow-xl hide-scrollbar`
+      className={isMobile? `h-[100vh] max-h-[100vh] min-h-[calc(100vh-165px)]` :
+          `h-[90vh] max-h-[75vh] min-h-[200px] hide-scrollbar`
         } 
         ref={viewportRef}
       >
-        <div className="p-3 space-y-3">
+        <div className="p-3 sm:p-4 space-y-2">
           {items.length === 0 && !loading && (
-            <div className="text-sm text-muted-foreground p-8 text-center">
-              No notifications
+            <div className="text-sm text-muted-foreground p-12 text-center flex flex-col items-center gap-2">
+              <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-2">
+                <svg className="w-8 h-8 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </div>
+              <div className="font-medium text-gray-900 dark:text-gray-100">No notifications</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">You're all caught up!</div>
             </div>
           )}
           {items.map((n) => (
             <NotificationItem key={n.id} n={n} onAfterAction={handleAfterAction} />
           ))}
           {loading && (
-            <div className="text-sm text-muted-foreground p-4 text-center liquid-glass rounded-xl animate-pulse">
-              Loading...
+            <div className="text-sm text-muted-foreground p-4 text-center bg-gray-100/50 dark:bg-gray-800/50 rounded-xl animate-pulse">
+              <div className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Loading...</span>
+              </div>
             </div>
           )}
           {!paginationState[filter].hasMore && items.length > 0 && (
-            <div className="text-xs text-muted-foreground p-3 text-center liquid-glass rounded-xl">
-              No more notifications
+            <div className="text-xs text-gray-500 dark:text-gray-400 p-3 text-center bg-gray-50/50 dark:bg-gray-800/30 rounded-xl">
+              <div className="flex items-center justify-center gap-1">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span>You've reached the end</span>
+              </div>
             </div>
           )}
         </div>

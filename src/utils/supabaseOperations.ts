@@ -364,19 +364,31 @@ export const updateTask = async (taskId: string, updates: any) => {
         const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
         const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
         
+        // Get goal information
+        const { data: goalData } = await supabase
+          .from('goals')
+          .select('title')
+          .eq('id', originalTask.goal_id)
+          .single();
+
+        const goalTitle = goalData?.title || 'your goal';
+        
         // Build a deep link to the specific task so recipients can open it directly
         const deepLink = `/goal/${originalTask.goal_id}?date=${encodeURIComponent((updates.start_date || originalTask.start_date))}&taskId=${encodeURIComponent(taskId)}`;
 
         await sendNotificationToGoalMembers(
           originalTask.goal_id,
           user.id,
-          'Task updated',
+          `Task updated in "${goalTitle}"`,
           `${originalTask.title} has been modified`,
           {
             type: 'task_updated',
             task_id: taskId,
             goal_id: originalTask.goal_id,
+            task_title: originalTask.title,
+            goal_title: goalTitle,
             action: 'edited',
+            task_date: updates.start_date || originalTask.start_date,
             url: deepLink
           }
         );
@@ -389,6 +401,7 @@ export const updateTask = async (taskId: string, updates: any) => {
           {
             task_title: originalTask.title,
             task_id: taskId,
+            goal_title: goalTitle,
             action: 'edited',
             url: deepLink
           }
@@ -417,6 +430,64 @@ export const insertTask = async (taskData: any) => {
       .select();
 
     if (error) throw error;
+
+    // Send notifications for new task creation
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && data && data[0]) {
+        const newTask = data[0];
+        const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
+        const { createTaskNotification } = await import('@/services/internalNotifications');
+        
+        // Get goal information
+        const { data: goalData } = await supabase
+          .from('goals')
+          .select('title')
+          .eq('id', newTask.goal_id)
+          .single();
+
+        const goalTitle = goalData?.title || 'your goal';
+        
+        // Build a deep link to the specific task
+        const deepLink = `/goal/${newTask.goal_id}?date=${encodeURIComponent(newTask.start_date)}&taskId=${encodeURIComponent(newTask.id)}`;
+
+        // Send push notification
+        await sendNotificationToGoalMembers(
+          newTask.goal_id,
+          user.id,
+          `New task in "${goalTitle}"`,
+          `${newTask.title || 'A new task'} has been added`,
+          {
+            type: 'task_created',
+            task_id: newTask.id,
+            goal_id: newTask.goal_id,
+            task_title: newTask.title,
+            goal_title: goalTitle,
+            action: 'created',
+            task_date: newTask.start_date,
+            url: deepLink
+          }
+        );
+
+        // Store internal notification
+        await createTaskNotification(
+          newTask.goal_id,
+          user.id,
+          'task_created',
+          {
+            task_title: newTask.title,
+            task_id: newTask.id,
+            goal_title: goalTitle,
+            action: 'created',
+            url: deepLink
+          }
+        );
+      }
+    } catch (notifError) {
+      console.error('Error sending task creation notifications:', notifError);
+      // Don't throw - task creation succeeded
+    }
+
     return data;
   } catch (error) {
     console.error("Error creating task:", error);
@@ -426,12 +497,72 @@ export const insertTask = async (taskData: any) => {
 
 export const deleteTaskFromDatabase = async (taskId: string): Promise<void> => {
   try {
+    // Get task data before deletion for notification
+    const { data: taskData, error: fetchError } = await supabase
+      .from('tasks')
+      .select('*, goals(title)')
+      .eq('id', taskId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching task for deletion:', fetchError);
+    }
+
     const { error } = await supabase
       .from('tasks')
       .delete()
       .eq('id', taskId);
 
     if (error) throw error;
+
+    // Send notifications for task deletion
+    if (taskData) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { sendNotificationToGoalMembers } = await import('@/services/notificationService');
+          const { createTaskNotification } = await import('@/services/internalNotifications');
+          
+          const goalTitle = taskData.goals?.title || 'your goal';
+          const deepLink = `/goal/${taskData.goal_id}`;
+
+          // Send push notification
+          await sendNotificationToGoalMembers(
+            taskData.goal_id,
+            user.id,
+            `Task deleted from "${goalTitle}"`,
+            `${taskData.title || 'A task'} has been removed`,
+            {
+              type: 'task_deleted',
+              task_id: taskId,
+              goal_id: taskData.goal_id,
+              task_title: taskData.title,
+              goal_title: goalTitle,
+              action: 'deleted',
+              task_date: taskData.start_date,
+              url: deepLink
+            }
+          );
+
+          // Store internal notification
+          await createTaskNotification(
+            taskData.goal_id,
+            user.id,
+            'task_deleted',
+            {
+              task_title: taskData.title,
+              task_id: taskId,
+              goal_title: goalTitle,
+              action: 'deleted',
+              url: deepLink
+            }
+          );
+        }
+      } catch (notifError) {
+        console.error('Error sending task deletion notifications:', notifError);
+        // Don't throw - task deletion succeeded
+      }
+    }
   } catch (error) {
     console.error("Error deleting task:", error);
     throw error;
