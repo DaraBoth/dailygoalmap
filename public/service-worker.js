@@ -11,6 +11,7 @@ const STATIC_ASSETS = [
 
 // Version checking
 let currentVersion = null;
+let versionCheckInterval = null;
 
 // Check for new version every 10 seconds
 async function checkForNewVersion() {
@@ -25,7 +26,8 @@ async function checkForNewVersion() {
     } else if (currentVersion !== data.version) {
       // Version changed - notify all clients
       console.log('New version detected:', data.version, '(current:', currentVersion + ')');
-      const clients = await self.clients.matchAll();
+      const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+      console.log(`Notifying ${clients.length} clients about new version`);
       clients.forEach(client => {
         client.postMessage({ type: 'NEW_VERSION', newVersion: data.version });
       });
@@ -39,10 +41,16 @@ async function checkForNewVersion() {
 
 // Start version checking interval
 function startVersionCheck() {
+  // Clear any existing interval
+  if (versionCheckInterval) {
+    clearInterval(versionCheckInterval);
+  }
+  
+  console.log('Starting version check interval');
   // Check immediately
   checkForNewVersion();
   // Then check every 10 seconds
-  setInterval(checkForNewVersion, 10000);
+  versionCheckInterval = setInterval(checkForNewVersion, 10000);
 }
 
 // No Firebase imports needed for tinynotie-api
@@ -191,17 +199,22 @@ async function deleteSyncedTasks() {
 
 // Install event - Cache static assets
 self.addEventListener('install', (event) => {
+  console.log('Service Worker installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
         return cache.addAll(STATIC_ASSETS);
       })
-      .then(() => self.skipWaiting())
+      .then(() => {
+        console.log('Service Worker installed successfully');
+        return self.skipWaiting();
+      })
   );
 });
 
-// Activate event - Clean up old caches
+// Activate event - Clean up old caches and start version checking
 self.addEventListener('activate', (event) => {
+  console.log('Service Worker activating...');
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -213,12 +226,18 @@ self.addEventListener('activate', (event) => {
         })
       );
     }).then(() => {
+      console.log('Service Worker activated successfully');
       // Start version checking after activation
       startVersionCheck();
       return self.clients.claim();
     })
   );
 });
+
+// Also start version checking when service worker script is first evaluated
+// This ensures version checking works even if activate event doesn't fire
+console.log('Service Worker script loaded');
+startVersionCheck();
 
 // Fetch event - Network first, fallback to cache
 self.addEventListener('fetch', (event) => {
@@ -380,6 +399,10 @@ self.addEventListener('message', (event) => {
   } else if (event.data && event.data.type === 'ATTEMPT_SYNC_NOW') {
     // Attempt immediate sync when requested
     syncTasksWithServer();
+  } else if (event.data && event.data.type === 'CHECK_VERSION_NOW') {
+    // Manually trigger version check
+    console.log('Manual version check requested');
+    checkForNewVersion();
   }
   if (event.data === 'clear-all-notifications') {
     // Get all notifications for this registration
