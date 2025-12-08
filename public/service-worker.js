@@ -49,8 +49,8 @@ function startVersionCheck() {
   console.log('Starting version check interval');
   // Check immediately
   checkForNewVersion();
-  // Then check every 10 seconds
-  versionCheckInterval = setInterval(checkForNewVersion, 10000);
+  // Then check every 60,000 milliseconds (1 minute)
+  versionCheckInterval = setInterval(checkForNewVersion, 60000);
 }
 
 // No Firebase imports needed for tinynotie-api
