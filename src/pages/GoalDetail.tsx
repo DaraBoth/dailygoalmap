@@ -152,29 +152,8 @@ const GoalDetail: React.FC = () => {
             setTasks(data as Task[]);
           }
           
-          // Show appropriate toast message
-          if (payload.eventType === 'INSERT') {
-            const newTask = payload.new as Task;
-            if (toast) toast({ 
-              title: 'New Task Added', 
-              description: `A team member added: "${newTask.description}"`, 
-              variant: 'default' 
-            });
-          } else if (payload.eventType === 'DELETE') {
-            const oldTask = payload.old as Task;
-            if (toast) toast({ 
-              title: 'Task Removed', 
-              description: `Task removed: "${oldTask.description}"`, 
-              variant: 'default' 
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            const updatedTask = payload.new as Task;
-            if (toast) toast({ 
-              title: 'Task Updated', 
-              description: `Task "${updatedTask.description}" was updated`, 
-              variant: 'default' 
-            });
-          }
+          // Real-time updates - toast notifications handled by unified notification service
+          // Just refresh the task list silently
         }
       )
       .subscribe();

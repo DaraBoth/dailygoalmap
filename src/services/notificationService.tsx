@@ -49,6 +49,10 @@ export async function sendUnifiedNotification(options: UnifiedNotificationOption
   } = options;
 
   try {
+    // Get current user to check if they're the sender
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    const isCurrentUserSender = currentUser?.id === senderId;
+
     // Get sender profile
     const { data: senderProfile } = await supabase
       .from('user_profiles')
@@ -64,8 +68,8 @@ export async function sendUnifiedNotification(options: UnifiedNotificationOption
     }
     const senderAvatar = senderProfile?.avatar_url;
 
-    // 1. Show toast notification (local feedback)
-    if (showToast) {
+    // 1. Show toast notification (local feedback) - BUT NOT to the sender
+    if (showToast && !isCurrentUserSender) {
       const finalToastTitle = toastTitle || title;
       const finalToastDescription = toastDescription || body;
 

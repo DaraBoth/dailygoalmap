@@ -4,11 +4,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ThemeProvider } from "@/components/theme/ThemeProvider"
 import { HelmetProvider, Helmet } from "react-helmet-async"
 import { Toaster } from "@/components/ui/sonner"
+import { toast } from "sonner"
 import { useIsMobile } from "@/hooks/use-mobile"
 import OfflinePopup from "@/components/ui/OfflinePopup"
 import { UpdateNotification } from "@/components/pwa/UpdateNotification"
 import { setupSyncHandlers } from "@/utils/offlineSync"
 import { authService, type AuthState } from "@/services/authService"
+import { supabase } from "@/integrations/supabase/client"
 import React from 'react'
 
 // Create React Query client with optimized settings
@@ -52,6 +54,112 @@ function RootComponent() {
 
     return unsubscribe
   }, [])
+
+  // Global real-time listener for notifications to show toasts across all pages
+  React.useEffect(() => {
+    if (!authState.user) return;
+
+    const channel = supabase
+      .channel('global-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `receiver_id=eq.${authState.user.id}`
+        },
+        async (payload) => {
+          const notification = payload.new as any;
+          
+          // Only show toast for certain notification types
+          const toastTypes = ['task_created', 'task_updated', 'task_deleted', 'member_joined', 'member_left'];
+          if (!toastTypes.includes(notification.type)) return;
+
+          // Get sender info
+          const senderId = notification.sender_id;
+          if (!senderId) return;
+
+          const { data: senderProfile } = await supabase
+            .from('user_profiles')
+            .select('display_name, avatar_url')
+            .eq('id', senderId)
+            .single();
+
+          let senderName = senderProfile?.display_name || 'Someone';
+          const senderAvatar = senderProfile?.avatar_url;
+
+          // Get task/goal info from payload
+          const taskTitle = notification.payload?.task_title || 'A task';
+          const goalTitle = notification.payload?.goal_title || 'your goal';
+          const action = notification.payload?.action;
+
+          // Construct title and description based on type
+          let toastTitle = '';
+          let toastDescription = '';
+
+          if (notification.type === 'task_created') {
+            toastTitle = '✓ Task Created';
+            toastDescription = `${taskTitle} has been added to "${goalTitle}"`;
+          } else if (notification.type === 'task_updated') {
+            const actionText = action === 'completed' ? 'completed' : 
+                              action === 'uncompleted' ? 'reopened' : 'updated';
+            toastTitle = action === 'completed' ? '✓ Task Completed' : 
+                        action === 'uncompleted' ? '○ Task Reopened' : '✏ Task Updated';
+            toastDescription = `${taskTitle} has been ${actionText} in "${goalTitle}"`;
+          } else if (notification.type === 'task_deleted') {
+            toastTitle = '🗑 Task Deleted';
+            toastDescription = `${taskTitle} has been deleted from "${goalTitle}"`;
+          } else if (notification.type === 'member_joined') {
+            toastTitle = '👋 Member Joined';
+            toastDescription = `${senderName} joined "${goalTitle}"`;
+          } else if (notification.type === 'member_left') {
+            toastTitle = '👋 Member Left';
+            toastDescription = `${senderName} left "${goalTitle}"`;
+          }
+
+          // Show toast with View button
+          const deepLink = notification.url;
+          toast(toastTitle, {
+            description: (
+              <div className="flex items-center gap-2">
+                {senderAvatar && (
+                  <img 
+                    src={senderAvatar} 
+                    alt={senderName}
+                    className="w-6 h-6 rounded-full ring-2 ring-white/50 dark:ring-gray-700/50 flex-shrink-0"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm">{toastDescription}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">by {senderName}</div>
+                </div>
+              </div>
+            ),
+            action: deepLink ? {
+              label: "View",
+              onClick: () => {
+                const url = new URL(deepLink, window.location.origin);
+                const path = url.pathname;
+                const searchParams = Object.fromEntries(url.searchParams);
+                
+                import('@/router').then(({ router }) => {
+                  router.navigate({ 
+                    to: path as any,
+                    search: searchParams as any
+                  });
+                });
+              }
+            } : undefined,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [authState.user])
 
   // Listen for service worker messages about new version
   React.useEffect(() => {
