@@ -61,8 +61,16 @@ function RootComponent() {
 
     console.log('🔔 Setting up global notification listener for user:', authState.user.id);
 
+    // Track if we've already shown a toast for this notification ID to prevent duplicates
+    const shownNotifications = new Set<string>();
+
     const channel = supabase
-      .channel(`notifications:${authState.user.id}`) // Unique channel per user
+      .channel(`notifications:${authState.user.id}`, {
+        config: {
+          broadcast: { self: false },
+          presence: { key: authState.user.id },
+        },
+      })
       .on(
         'postgres_changes',
         {
@@ -75,6 +83,13 @@ function RootComponent() {
           console.log('🔔 Real-time notification received:', payload);
           const notification = payload.new as any;
           
+          // Prevent duplicate toasts for the same notification
+          if (shownNotifications.has(notification.id)) {
+            console.log('⏭️ Skipping duplicate notification:', notification.id);
+            return;
+          }
+          shownNotifications.add(notification.id);
+
           // Only show toast for certain notification types
           const toastTypes = ['task_created', 'task_updated', 'task_deleted', 'member_joined', 'member_left'];
           if (!toastTypes.includes(notification.type)) {
@@ -95,7 +110,7 @@ function RootComponent() {
             .eq('id', senderId)
             .single();
 
-          let senderName = senderProfile?.display_name || 'Someone';
+          const senderName = senderProfile?.display_name || 'Someone';
           const senderAvatar = senderProfile?.avatar_url;
 
           // Get task/goal info from payload
@@ -165,8 +180,19 @@ function RootComponent() {
           });
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
+        if (err) {
+          console.error('🔔 Channel subscription error:', err);
+        }
         console.log('🔔 Channel subscription status:', status);
+        
+        // If channel closes, try to reconnect
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.log('🔄 Attempting to reconnect...');
+          setTimeout(() => {
+            channel.subscribe();
+          }, 1000);
+        }
       });
 
     return () => {
