@@ -271,8 +271,8 @@ const GoalDetail: React.FC = () => {
       </div>
       
       {/* Goal Chat Widget */}
-      <GoalChatWidgetN8N goalId={goalId} userInfo={user} />
-      {/* <GoalChatWidget goalId={goalId} userInfo={user} /> */}
+      {/* <GoalChatWidgetN8N goalId={goalId} userInfo={user} /> */}
+      <GoalChatWidget goalId={goalId} userInfo={user} />
     </>
   );
 };
