@@ -138,7 +138,7 @@ const TaskDetailsDialog = ({
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       // Remove task ID from URL when closing
-      const currentUrl = new URL(window.location.href);
+      const currentUrl = new URL(window.location.toString());
       currentUrl.searchParams.delete('taskId');
       window.history.replaceState({}, '', currentUrl.toString());
     }

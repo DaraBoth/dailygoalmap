@@ -141,7 +141,7 @@ export const useCalendarTasks = ({
     setSelectedDate(date);
     
     // Update URL when date changes
-    const currentUrl = new URL(window.location.href);
+    const currentUrl = new URL(window.location.toString());
     const existing = currentUrl.searchParams.get('date');
     const newVal = date ? formatYMD(date) : null;
     // Only update history if the date param actually changed to avoid triggering loops
@@ -246,7 +246,7 @@ export const useCalendarTasks = ({
       setSelectedTaskIndex(index);
 
       // Update URL params but only if they actually change
-      const currentUrl = new URL(window.location.href);
+      const currentUrl = new URL(window.location.toString());
       const existingDate = currentUrl.searchParams.get('date');
       const existingTask = currentUrl.searchParams.get('taskId');
       const newDate = formatYMD(date);

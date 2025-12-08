@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { UserContext } from "@/routes/__root";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
+import { router } from "@/router";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet-async";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -595,7 +596,7 @@ const Dashboard = () => {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Stay</AlertDialogCancel>
-                <AlertDialogAction onClick={() => window.location.href = '/'}>
+                <AlertDialogAction onClick={() => router.navigate({ to: '/' as any })}>
                   Leave
                 </AlertDialogAction>
               </AlertDialogFooter>

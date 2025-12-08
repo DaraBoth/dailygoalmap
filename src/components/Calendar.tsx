@@ -95,7 +95,7 @@ const Calendar = ({
     setIsTaskDetailsOpen(false);
 
     // Update URL with new date (local yyyy-MM-dd)
-    const currentUrl = new URL(window.location.href);
+    const currentUrl = new URL(window.location.toString());
     currentUrl.searchParams.set('date', formatYMD(date));
     window.history.replaceState({}, '', currentUrl.toString());
 
@@ -171,7 +171,7 @@ const Calendar = ({
     setIsTaskDetailsOpen(false);
     setSelectedTask(null);
     // Remove taskId from URL when closing
-    const currentUrl = new URL(window.location.href);
+    const currentUrl = new URL(window.location.toString());
     currentUrl.searchParams.delete('taskId');
     window.history.replaceState({}, '', currentUrl.toString());
   };

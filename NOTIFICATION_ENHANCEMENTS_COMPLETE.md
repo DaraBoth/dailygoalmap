@@ -14,6 +14,12 @@ Successfully enhanced the notification system with rich toast UI featuring sende
 
 ### 2. Technical Changes
 
+#### Navigation Without Page Reload
+- **Router Integration**: Toast "View" button now uses TanStack Router's `router.navigate()`
+- **SPA Experience**: No full page reloads - seamless navigation within the app
+- **State Preservation**: Maintains React component state during navigation
+- **Better Performance**: Faster navigation without re-downloading assets
+
 #### File Conversions
 - Renamed `notificationService.ts` → `notificationService.tsx` to support JSX syntax
 - Enabled rich UI components within toast notifications
@@ -38,7 +44,14 @@ description: (
 ),
 action: deepLink ? {
   label: "View",
-  onClick: () => window.location.href = deepLink
+  onClick: () => {
+    // SPA navigation using TanStack Router - no page reload!
+    const url = new URL(deepLink, window.location.origin);
+    router.navigate({ 
+      to: url.pathname,
+      search: Object.fromEntries(url.searchParams)
+    });
+  }
 } : undefined
 ```
 

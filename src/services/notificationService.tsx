@@ -3,6 +3,7 @@ import { supabase, supabaseAdmin } from "@/integrations/supabase/client";
 import { constructNotificationUrl } from "@/utils/urlUtils";
 import { toast } from "sonner";
 import React from "react";
+import { router } from "@/router";
 
 // Unified notification types
 export type NotificationType = 
@@ -55,7 +56,12 @@ export async function sendUnifiedNotification(options: UnifiedNotificationOption
       .eq('id', senderId)
       .single();
 
-    const senderName = senderProfile?.display_name || 'Someone';
+    // If no display name, fetch email from auth as fallback
+    let senderName = senderProfile?.display_name;
+    if (!senderName) {
+      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(senderId);
+      senderName = userData?.user?.email || 'Someone';
+    }
     const senderAvatar = senderProfile?.avatar_url;
 
     // 1. Show toast notification (local feedback)
@@ -82,7 +88,16 @@ export async function sendUnifiedNotification(options: UnifiedNotificationOption
         action: deepLink ? {
           label: "View",
           onClick: () => {
-            window.location.href = deepLink;
+            // Extract path and search params from deepLink
+            const url = new URL(deepLink, window.location.origin);
+            const path = url.pathname;
+            const searchParams = Object.fromEntries(url.searchParams);
+            
+            // Use router.navigate for SPA navigation without page reload
+            router.navigate({ 
+              to: path as any,
+              search: searchParams as any
+            });
           }
         } : undefined,
       });
@@ -233,7 +248,12 @@ export async function notifyGoalInvitation(
     .eq('id', senderId)
     .single();
 
-  const senderName = senderProfile?.display_name || 'Someone';
+  // If no display name, fetch email from auth as fallback
+  let senderName = senderProfile?.display_name;
+  if (!senderName) {
+    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(senderId);
+    senderName = userData?.user?.email || 'Someone';
+  }
 
   // Push notification
   await sendNotificationToUser(
@@ -315,7 +335,12 @@ export async function notifyMemberRemoved(
     .eq('id', removerId)
     .single();
 
-  const removerName = removerProfile?.display_name || 'Someone';
+  // If no display name, fetch email from auth as fallback
+  let removerName = removerProfile?.display_name;
+  if (!removerName) {
+    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(removerId);
+    removerName = userData?.user?.email || 'Someone';
+  }
 
   // Send to the removed user only
   await sendNotificationToUser(
@@ -355,11 +380,13 @@ export async function sendNotificationToUser(
       // Prefer an explicit url provided in `data.url`. If it's relative, convert to absolute.
       let fullUrl: string | undefined;
       try {
-        // Get the relative path from data.url or current location
-        const relativePath = (data?.url as string | undefined) ?? window.location.pathname + window.location.search;
-        fullUrl = constructNotificationUrl(relativePath) || window.location.href;
+        // Get the relative path from data.url
+        const relativePath = (data?.url as string | undefined);
+        if (relativePath) {
+          fullUrl = constructNotificationUrl(relativePath);
+        }
       } catch (e) {
-        // Fallback if window is not available or something goes wrong
+        // Fallback if something goes wrong
         fullUrl = undefined;
       }
 
@@ -371,19 +398,22 @@ export async function sendNotificationToUser(
         body: JSON.stringify({
           identifier: userInfo.user.email, // Use email as identifier
           payload: {
-            title: title || 'DailyGoalMap Notification',
+            // Include sender name in title so user knows who did it from device notification
+            title: data?.userProfile 
+              ? `${data.userProfile['display_name']}: ${title || 'DailyGoalMap Notification'}`
+              : title || 'DailyGoalMap Notification',
             body: body || 'You have a new update!',
             data: {
               // Provide an absolute, clickable URL when possible. Also include original data for context.
-              url: fullUrl ?? (data?.url ?? window.location.href.replace(window.location.origin, "")),
+              url: fullUrl ?? data?.url,
               // Use the task_date if present, else fallback to now
               timestamp: (data && data.task_date) ? `${data.task_date}T00:00:00` : new Date().toISOString(),
-              senderName: data.userProfile ? data.userProfile['display_name'] as string : 'Unknown',
+              senderName: data?.userProfile ? (data.userProfile['display_name'] as string || userInfo.user.email || 'Unknown') : 'Unknown',
               ...data,
             },
-            icon : data.userProfile ? data.userProfile['avatar_url'] : undefined
+            icon : data?.userProfile ? data.userProfile['avatar_url'] : undefined
           },
-          name: data.userProfile ? data.userProfile['display_name'] : 'DailyGoalMap',
+          name: data?.userProfile ? data.userProfile['display_name'] : 'DailyGoalMap',
           appId: 2
         })
       });
