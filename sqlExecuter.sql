@@ -1,4 +1,36 @@
 -- ============================================
+-- UPDATE NOTIFICATIONS TABLE TYPE CONSTRAINT
+-- Add task-related notification types to support real-time notifications
+-- ============================================
+
+-- Drop the old constraint
+ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
+
+-- Add new constraint with additional notification types
+ALTER TABLE notifications ADD CONSTRAINT notifications_type_check 
+CHECK (type IN (
+  'invitation',
+  'removal', 
+  'member_left',
+  'member_joined',
+  'task_created',
+  'task_updated',
+  'task_deleted'
+));
+
+-- ============================================
+-- ENABLE REAL-TIME FOR NOTIFICATIONS TABLE
+-- Required for real-time toast notifications across all pages
+-- ============================================
+
+-- Set replica identity to FULL so Supabase can track all changes
+ALTER TABLE notifications REPLICA IDENTITY FULL;
+
+-- Add notifications table to the supabase_realtime publication
+-- This enables real-time subscriptions in the client
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+
+-- ============================================
 -- CONVERSATION MEMORY TABLE
 -- Stores task ID mappings and conversation context for AI agents
 -- ============================================

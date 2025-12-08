@@ -59,8 +59,10 @@ function RootComponent() {
   React.useEffect(() => {
     if (!authState.user) return;
 
+    console.log('🔔 Setting up global notification listener for user:', authState.user.id);
+
     const channel = supabase
-      .channel('global-notifications')
+      .channel(`notifications:${authState.user.id}`) // Unique channel per user
       .on(
         'postgres_changes',
         {
@@ -70,15 +72,22 @@ function RootComponent() {
           filter: `receiver_id=eq.${authState.user.id}`
         },
         async (payload) => {
+          console.log('🔔 Real-time notification received:', payload);
           const notification = payload.new as any;
           
           // Only show toast for certain notification types
           const toastTypes = ['task_created', 'task_updated', 'task_deleted', 'member_joined', 'member_left'];
-          if (!toastTypes.includes(notification.type)) return;
+          if (!toastTypes.includes(notification.type)) {
+            console.log('⏭️ Skipping notification type:', notification.type);
+            return;
+          }
 
           // Get sender info
           const senderId = notification.sender_id;
-          if (!senderId) return;
+          if (!senderId) {
+            console.log('⚠️ No sender ID found');
+            return;
+          }
 
           const { data: senderProfile } = await supabase
             .from('user_profiles')
@@ -118,6 +127,8 @@ function RootComponent() {
             toastDescription = `${senderName} left "${goalTitle}"`;
           }
 
+          console.log('📢 Showing toast:', toastTitle, toastDescription);
+
           // Show toast with View button
           const deepLink = notification.url;
           toast(toastTitle, {
@@ -154,9 +165,12 @@ function RootComponent() {
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('🔔 Channel subscription status:', status);
+      });
 
     return () => {
+      console.log('🔕 Cleaning up global notification listener');
       supabase.removeChannel(channel);
     };
   }, [authState.user])
