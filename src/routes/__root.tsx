@@ -196,8 +196,8 @@ function RootComponent() {
       });
 
     return () => {
-      // console.log('🔕 Cleaning up global notification listener');
-      // supabase.removeChannel(channel);
+      console.log('🔕 Cleaning up global notification listener');
+      supabase.removeChannel(channel);
     };
   }, [authState.user])
 
