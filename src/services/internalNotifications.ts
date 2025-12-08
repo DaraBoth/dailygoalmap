@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseAdmin } from "@/integrations/supabase/client";
 import { AppNotification } from "@/types/notification";
 import { constructNotificationUrl } from "@/utils/urlUtils";
 
@@ -327,7 +327,7 @@ export async function createTaskNotification(
     }));
     
     if (notifications.length > 0) {
-      const { error: insertError } = await supabase
+      const { error: insertError } = await supabaseAdmin
         .from('notifications')
         .insert(notifications);
       
@@ -372,7 +372,7 @@ export async function createMemberJoinedNotifications(
     }));
     
     if (notifications.length > 0) {
-      const { error: insertError } = await supabase
+      const { error: insertError } = await supabaseAdmin
         .from('notifications')
         .insert(notifications);
       
@@ -426,7 +426,7 @@ export async function createTaskUpdateNotification(
     });
     
     if (notifications.length > 0) {
-      const { error: insertError } = await supabase
+      const { error: insertError } = await supabaseAdmin
         .from('notifications')
         .insert(notifications);
       
