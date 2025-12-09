@@ -369,7 +369,7 @@ export const updateTask = async (taskId: string, updates: any) => {
         // Get goal information
         const { data: goalData } = await supabase
           .from('goals')
-          .select('title')
+          .select('*')
           .eq('id', originalTask.goal_id)
           .single();
 
@@ -427,7 +427,7 @@ export const insertTask = async (taskData: any) => {
         // Get goal information
         const { data: goalData } = await supabase
           .from('goals')
-          .select('title')
+          .select('*')
           .eq('id', newTask.goal_id)
           .single();
 
@@ -459,7 +459,7 @@ export const deleteTaskFromDatabase = async (taskId: string): Promise<void> => {
     // Get task data before deletion for notification
     const { data: taskData, error: fetchError } = await supabase
       .from('tasks')
-      .select('*, goals(title)')
+      .select('*, goals(*)')
       .eq('id', taskId)
       .single();
 
