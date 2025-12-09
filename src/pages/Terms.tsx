@@ -1,5 +1,5 @@
 import React from "react";
-import { Helmet } from "react-helmet-async";
+// ...existing code...
 import { SmartLink } from "@/components/ui/SmartLink";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Shield, FileText, Users, AlertCircle } from "lucide-react";
@@ -10,11 +10,8 @@ import { Link } from "@tanstack/react-router";
 const Terms: React.FC = () => {
   return (
     <>
-      <Helmet>
-        <title>Terms of Service | Goal Completer</title>
-        <meta name="description" content="Terms of Service for Goal Completer - A free, goal tracking platform created by Vong PichdaraBoth." />
-      </Helmet>
-
+      <title>Terms of Service | Goal Completer</title>
+      <meta name="description" content="Terms of Service for Goal Completer - A free, goal tracking platform created by Vong PichdaraBoth." />
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-purple-900/20">
         {/* Header */}
         <header className="relative z-10 p-4 md:p-6">
@@ -179,7 +176,7 @@ const Terms: React.FC = () => {
             </motion.div>
           </div>
         </main>
-      </div>
+      </div >
     </>
   );
 };

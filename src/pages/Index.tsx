@@ -1,5 +1,5 @@
 import React from "react";
-import { Helmet } from "react-helmet-async";
+// ...existing code...
 import FloatingNavigation from "@/components/home/FloatingNavigation";
 import Background from "@/components/home/Background";
 import HeroSection from "@/components/home/HeroSection";
@@ -20,8 +20,6 @@ const Index: React.FC = () => {
     "operatingSystem": "Web",
     "offers": {
       "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
     },
     "author": {
       "@type": "Person",
@@ -32,17 +30,13 @@ const Index: React.FC = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Goal Completer | Goal Tracking Platform</title>
-        <meta name="description" content="A completely free goal tracking platform that uses AI to break down your big goals into small, manageable daily steps. Follow the step-by-step plan until you reach your achievement. Created by Vong PichdaraBoth." />
-        <meta name="keywords" content="goal tracking, AI goal breakdown, step by step goals, daily tasks, goal planner, task management, achievement tracker" />
-        <script type="application/ld+json">
-          {JSON.stringify(structuredData)}
-        </script>
-      </Helmet>
-
-      {/* Revolutionary Full-Screen Layout */}
-      <div className="min-h-screen relative overflow-hidden">
+      <title>Goal Completer | Goal Tracking Platform</title>
+      <meta name="description" content="A completely free goal tracking platform that uses AI to break down your big goals into small, manageable daily steps. Follow the step-by-step plan until you reach your achievement. Created by Vong PichdaraBoth." />
+      <meta name="keywords" content="goal tracking, AI goal breakdown, step by step goals, daily tasks, goal planner, task management, achievement tracker" />
+      <script type="application/ld+json">
+        {JSON.stringify(structuredData)}
+      </script>
+      <div>
         {/* Animated Background */}
         <Background />
 
@@ -55,7 +49,7 @@ const Index: React.FC = () => {
         <TestimonialsSection />
         <CTASection />
         <Footer />
-      </div>
+      </div >
     </>
   );
 };

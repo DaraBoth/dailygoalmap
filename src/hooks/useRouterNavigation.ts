@@ -131,6 +131,18 @@ export function useRouterNavigation() {
     await navigateTo('/')
   }, [navigateTo])
 
+  /**
+   * Navigate to history route if available, else go to dashboard
+   */
+  const goToHistoryOrDashboard = useCallback(async () => {
+    // Check if browser history has previous entries
+    if (window.history.length > 1) {
+      await navigateTo('/history');
+    } else {
+      await goToDashboard();
+    }
+  }, [navigateTo, goToDashboard]);
+
   return {
     // Core navigation
     navigateTo,
@@ -146,6 +158,7 @@ export function useRouterNavigation() {
     goToLogin,
     goToRegister,
     goToHome,
+    goToHistoryOrDashboard,
     
     // Router instance for advanced usage
     router,

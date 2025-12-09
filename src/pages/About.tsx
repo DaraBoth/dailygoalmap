@@ -1,5 +1,5 @@
 import React from "react";
-import { Helmet } from "react-helmet-async";
+// ...existing code...
 import { SmartLink } from "@/components/ui/SmartLink";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Heart, Target, Users, Zap } from "lucide-react";
@@ -9,10 +9,8 @@ import LogoAvatar from "@/components/ui/LogoAvatar";
 const About: React.FC = () => {
   return (
     <>
-      <Helmet>
-        <title>About Goal Completer | Our Story</title>
-        <meta name="description" content="Learn about Goal Completer, a free goal tracking platform created by Vong PichdaraBoth to help people achieve their dreams through AI-powered step-by-step guidance." />
-      </Helmet>
+      <title>About Goal Completer | Our Story</title>
+      <meta name="description" content="Learn about Goal Completer, a free goal tracking platform created by Vong PichdaraBoth to help people achieve their dreams through AI-powered step-by-step guidance." />
 
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-purple-900/20">
         {/* Header */}

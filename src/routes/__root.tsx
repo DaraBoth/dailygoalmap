@@ -2,7 +2,7 @@ import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ThemeProvider } from "@/components/theme/ThemeProvider"
-import { HelmetProvider, Helmet } from "react-helmet-async"
+// ...existing code...
 import { Toaster } from "@/components/ui/sonner"
 import { toast } from "sonner"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -243,11 +243,8 @@ function RootComponent() {
   return (
     <UserContext.Provider value={{ user, setUser }}>
       <ThemeProvider defaultTheme="dark" storageKey="theme-preference">
-        <HelmetProvider>
-          <Helmet>
-            <link rel="manifest" href="/manifest.json" />
-          </Helmet>
-          <QueryClientProvider client={queryClient}>
+        <link rel="manifest" href="/manifest.json" />
+        <QueryClientProvider client={queryClient}>
             <div className="min-h-screen bg-background">
               <Outlet />
             </div>
@@ -268,7 +265,6 @@ function RootComponent() {
             <OfflinePopup />
             {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools />}
           </QueryClientProvider>
-        </HelmetProvider>
       </ThemeProvider>
     </UserContext.Provider>
   )

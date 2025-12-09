@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Helmet } from "react-helmet-async";
+// ...existing code...
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import ProfileForm from "@/components/profile/ProfileForm";
 import ApiKeyManager from "@/components/profile/ApiKeyManager";
@@ -18,7 +18,7 @@ type SettingsTab = 'profile' | 'api-keys' | 'model' | 'notifications' | 'securit
 const Profile = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
-  const { goToLogin, goToDashboard } = useRouterNavigation();
+  const { goToLogin, goToHistoryOrDashboard } = useRouterNavigation();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -30,7 +30,7 @@ const Profile = () => {
       }
       setUser(session.user);
     };
-    
+
     checkAuth();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -50,7 +50,7 @@ const Profile = () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
+
       toast({
         title: "Signed out",
         description: "You have been signed out successfully.",
@@ -80,16 +80,13 @@ const Profile = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Settings | DailyGoalMap</title>
-        <meta name="description" content="Manage your profile settings, API keys, and notification preferences." />
-      </Helmet>
-
+      <title>{navItems.find((item)=>(item.id==activeTab)).label || "Profile" } | DailyGoalMap</title>
+      <meta name="description" content={navItems.find((item)=>(item.id==activeTab)).description || "Manage your profile settings, API keys, and notification preferences."} />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         {/* Header */}
         <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
           <div className="container mx-auto px-4 py-4">
-            <Button variant="ghost" onClick={() => goToDashboard()} className="p-2">
+            <Button variant="ghost" onClick={() => goToHistoryOrDashboard()} className="p-2">
               <ArrowLeft className="mr-2 h-4 w-4" />
               <span>Back to Dashboard</span>
             </Button>
@@ -129,9 +126,9 @@ const Profile = () => {
                 </div>
 
                 {/* Sign Out Button */}
-                <Button 
-                  variant="destructive" 
-                  onClick={handleSignOut} 
+                <Button
+                  variant="destructive"
+                  onClick={handleSignOut}
                   className="w-full mt-4"
                 >
                   <LogOut className="mr-2 h-4 w-4" />

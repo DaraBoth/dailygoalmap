@@ -3,7 +3,7 @@ import { UserContext } from "@/routes/__root";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import { router } from "@/router";
 import { Button } from "@/components/ui/button";
-import { Helmet } from "react-helmet-async";
+// ...existing code...
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import GoalList from "@/components/dashboard/GoalList";
 import TodaysTasks from "@/components/dashboard/TodaysTasks";
@@ -269,11 +269,9 @@ const Dashboard = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Dashboard | Goal Completer</title>
-        <meta name="description" content="Track, manage, and achieve your personal and professional goals with Goal Completer's intuitive dashboard." />
-        <link rel="manifest" href="/manifest.json" />
-      </Helmet>
+      <title>Dashboard | Goal Completer</title>
+      <meta name="description" content="Track, manage, and achieve your personal and professional goals with Goal Completer's intuitive dashboard." />
+      <link rel="manifest" href="/manifest.json" />
 
       <div className="min-h-screen no-scrollbar [&::-webkit-scrollbar]:hidden bg-gradient-to-br from-blue-50/30 via-slate-50/20 to-purple-50/30 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
         {/* Subtle glass overlay for consistent background */}

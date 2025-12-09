@@ -9,7 +9,7 @@ import { GoalMember } from '@/types/goal';
 import { enableRealtimeForTable } from '@/components/calendar/taskDatabase';
 import { useToast } from '@/hooks/use-toast';
 import { Task } from '@/components/calendar/types';
-import { Helmet } from 'react-helmet-async';
+// ...existing code...
 import { GoalTheme } from '@/types/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { GoalChatWidget } from '@/components/goal/GoalChatWidget';
@@ -73,7 +73,7 @@ const GoalDetail: React.FC = () => {
         .select('*,goal_themes(*)')
         .eq('id', goalId)
         .single();
-      
+
       if (!error) {
         setCurrentTheme(data.goal_themes as GoalTheme);
       }
@@ -82,18 +82,18 @@ const GoalDetail: React.FC = () => {
     fetchTheme();
   }, [goalId, goalData?.theme_id]);
 
-  const handleThemeChange = async (themeId="",isRemove=false) => {
+  const handleThemeChange = async (themeId = "", isRemove = false) => {
     if (!goalId) return;
-    
+
     const { data: updatedGoal, error: updateError } = await supabase
       .from('goals')
       .update({ theme_id: themeId })
       .eq('id', goalId)
-      .select() 
+      .select()
       .single();
-      
+
     if (updatedGoal) {
-      if(!isRemove){
+      if (!isRemove) {
         const { data } = await supabase
           .from('goal_themes')
           .select('*')
@@ -114,7 +114,7 @@ const GoalDetail: React.FC = () => {
           description: 'Theme remove successfully',
         });
       }
-      
+
     } else {
       toast({
         title: 'Error',
@@ -129,7 +129,7 @@ const GoalDetail: React.FC = () => {
     if (!goalId) return;
 
     // Enable realtime for tasks table
-    enableRealtimeForTable('tasks').catch(() => {});
+    enableRealtimeForTable('tasks').catch(() => { });
 
     const channel = supabase
       .channel(`task-changes-${goalId}`)
@@ -151,7 +151,7 @@ const GoalDetail: React.FC = () => {
           if (!error && data) {
             setTasks(data as Task[]);
           }
-          
+
           // Real-time updates - toast notifications handled by unified notification service
           // Just refresh the task list silently
         }
@@ -171,12 +171,12 @@ const GoalDetail: React.FC = () => {
     };
     fetchInitialTasks();
 
-    return () => { 
-      try { 
-        supabase.removeChannel(channel); 
-      } catch (e) { 
-        /* ignore errors during cleanup */ 
-      } 
+    return () => {
+      try {
+        supabase.removeChannel(channel);
+      } catch (e) {
+        /* ignore errors during cleanup */
+      }
     };
   }, [goalId, toast]); // FIXED: Removed refreshTasks from dependency array to prevent infinite loop
 
@@ -185,22 +185,19 @@ const GoalDetail: React.FC = () => {
   // Background style with theme or default gradient
   const backgroundStyle = currentTheme?.page_background_image
     ? {
-        backgroundImage: `url(${currentTheme.page_background_image})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }
+      backgroundImage: `url(${currentTheme.page_background_image})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+    }
     : {};
 
   return (
     <>
-      <Helmet>
-        <title>{goalTitle || 'Goal Detail'}</title>
-        <meta name={goalTitle} content={goalDescription} />
-        <link rel="manifest" href="/manifest.json" />
-      </Helmet>
-
-      <div 
+      <title>{goalTitle || 'Goal Detail'}</title>
+      <meta name={goalTitle} content={goalDescription} />
+      <link rel="manifest" href="/manifest.json" />
+      <div
         className="min-h-screen bg-gradient-to-br from-blue-400/50 via-gray-500 to-purple-500/50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/20"
         style={backgroundStyle}
       >
@@ -248,7 +245,7 @@ const GoalDetail: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Goal Chat Widget */}
       {/* <GoalChatWidgetN8N goalId={goalId} userInfo={user} /> */}
       <GoalChatWidget goalId={goalId} userInfo={user} />
