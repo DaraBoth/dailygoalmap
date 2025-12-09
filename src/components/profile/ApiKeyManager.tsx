@@ -429,7 +429,7 @@ const ApiKeyManager = () => {
                         {key.key_name.length > 20 ? `${key.key_name.substring(0, 20)}...` : key.key_name}
                       </h4>
                       {key.is_default && (
-                        <span className="inline-flex items-center text-xs text-amber-600 bg-amber-100 px-2 py-1 rounded-full">
+                        <span className="inline-flex items-center text-xs text-black px-2 py-1">
                           <Star className="h-3 w-3 mr-1 fill-amber-500" />
                           Default
                         </span>

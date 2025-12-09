@@ -100,25 +100,25 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     // Load model preference from database
     const loadModelPreference = async () => {
       if (!userInfo?.id) return;
-      
+
       const { data, error } = await supabase
         .from('user_profiles')
         .select('model_preference')
         .eq('id', userInfo.id)
         .single();
-      
+
       if (!error && data?.model_preference) {
         setSelectedModel(data.model_preference as ModelType);
       }
     };
-    
+
     loadModelPreference();
   }, [goalId, userInfo?.id, SESSION_KEY, CHAT_KEY]);
 
   // Save messages with debounce to avoid excessive localStorage writes
   useEffect(() => {
     if (messages.length === 0) return;
-    
+
     const timeoutId = setTimeout(() => {
       const filtered = messages.filter((m) => !m.isStreaming);
       localStorage.setItem(CHAT_KEY, JSON.stringify(filtered));
@@ -135,7 +135,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     const timeoutId = requestAnimationFrame(() => {
       const el = chatContainerRef.current;
       if (!el) return;
-      
+
       const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
       if (atBottom) {
         scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -152,7 +152,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
       setTimeout(() => {
         textareaRef.current?.focus();
       }, 100);
-      
+
       // Scroll to bottom immediately
       setTimeout(() => {
         scrollRef.current?.scrollIntoView({ behavior: 'auto' });
@@ -231,13 +231,13 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
     try {
       console.log("🤖 Using streaming AI agent...");
-      
+
       // Build conversation history for the agent
       const conversationMessages = messages.map(m => ({
         role: m.role,
         content: m.content
       }));
-      
+
       // Add current user message
       conversationMessages.push({
         role: 'user',
@@ -283,12 +283,12 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
       if (!response.ok) {
         const errorData = await response.json();
-        
+
         // Handle API key errors
         if (errorData?.error === "API_KEY_REQUIRED") {
           const instructions = errorData.setupInstructions;
           let instructionText = "";
-          
+
           if (instructions) {
             instructionText = "\n\n" + instructions.title + "\n" + instructions.steps.join("\n");
           }
@@ -305,7 +305,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
           });
           return;
         }
-        
+
         throw new Error(errorData.error || 'Failed to get response');
       }
 
@@ -337,7 +337,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
         for (const line of lines) {
           if (!line.trim() || !line.startsWith('data: ')) continue;
-          
+
           const data = line.slice(6);
           console.log('📨 Raw data:', data);
 
@@ -404,20 +404,20 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             } else if (parsed.type === 'error') {
               // Handle streaming errors
               let errorMessage = parsed.content ?? parsed.message ?? 'An error occurred';
-              
+
               // Check for rate limit error
               if (errorMessage.includes('429')) {
                 errorMessage = `⚠️ **Rate Limit Reached**\n\nYou've exceeded the API rate limit for ${selectedModel === 'gemini' ? 'Gemini' : selectedModel === 'openai' ? 'OpenAI' : 'Claude'}.\n\n**Solutions:**\n- Wait a few minutes and try again\n- Switch to a different AI model using the dropdown below\n- Upgrade your API key tier for higher limits\n\n**Rate Limits:**\n- Gemini Free: 15 requests/minute\n- OpenAI Free: 3 requests/minute\n- Claude Free: 5 requests/minute`;
               } else if (errorMessage.includes('API error')) {
                 errorMessage = `⚠️ **API Error**\n\n${errorMessage}\n\nPlease check your API key or try switching models.`;
               }
-              
+
               updateAssistantPlaceholder(last => ({
                 ...last,
                 content: errorMessage,
                 isStreaming: false
               }));
-              
+
               return; // Don't throw, just show error message
             }
           } catch (e) {
@@ -595,6 +595,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             >
 
               <ScrollArea className="h-full px-1 lg:p-4 ">
+
+
+
                 <div className="w-full px-1 lg:px-4">
                   {messages.map((msg, i) => (
                     <div
@@ -637,7 +640,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                                 }) {
                                   const match = /language-(\w+)/.exec(className || '');
                                   const isInline = !match;
-                                  
+
                                   return !isInline ? (
                                     <div className="relative group/code my-4">
                                       <div className="absolute right-3 top-3 opacity-0 group-hover/code:opacity-100 transition-opacity z-10">
@@ -646,7 +649,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                                             navigator.clipboard.writeText(String(children).replace(/\n$/, ''));
                                             toast({ title: '✓ Copied!', description: 'Code copied to clipboard.' });
                                           }}
-                                          className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium shadow-lg transition-all flex items-center gap-1.5"
+                                          className="px-3 py-1.5 text-xs bg-blue-700 text-white rounded-md font-medium shadow-lg transition-all flex items-center gap-1.5"
                                         >
                                           <Copy className="w-3 h-3" />
                                           Copy
@@ -719,7 +722,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                                   // Check if cell contains a URL and make it clickable
                                   const content = String(children);
                                   const urlRegex = /(https?:\/\/[^\s]+)/g;
-                                  
+
                                   if (urlRegex.test(content)) {
                                     const parts = content.split(urlRegex);
                                     return (
@@ -743,7 +746,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                                       </td>
                                     );
                                   }
-                                  
+
                                   return (
                                     <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700">
                                       {children}
@@ -799,15 +802,8 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                   ))}
 
                 </div>
-                
-                {/* Temporary status indicator */}
-                {temporaryStatus && (
-                  <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground bg-muted/50 rounded-lg animate-pulse">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>{temporaryStatus}</span>
-                  </div>
-                )}
-                
+
+
                 <div ref={scrollRef} />
               </ScrollArea>
             </div>  {/* end wrapper */}
@@ -832,12 +828,12 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                     selectedModel={selectedModelId}
                     onModelChange={(modelId) => {
                       setSelectedModelId(modelId);
-                      
+
                       // Determine provider from model ID
-                      const provider = modelId.startsWith('gemini') ? 'gemini' : 
-                                     modelId.startsWith('gpt') ? 'openai' : 'claude';
+                      const provider = modelId.startsWith('gemini') ? 'gemini' :
+                        modelId.startsWith('gpt') ? 'openai' : 'claude';
                       setSelectedModel(provider as ModelType);
-                      
+
                       // Update model preference in database
                       if (userInfo?.id) {
                         supabase
@@ -857,14 +853,22 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                       }
                     }}
                   />
-                  
+
                   <KeySelector
                     selectedModel={selectedModelId}
                     selectedKeyIds={selectedKeyIds}
                     onKeySelectionChange={setSelectedKeyIds}
                   />
+                  {/* Temporary status indicator */}
+                  {temporaryStatus && (
+                    <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground bg-muted/50 rounded-lg animate-pulse">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>{temporaryStatus}</span>
+                    </div>
+                  )}
+                  
                 </div>
-                
+
                 {currentApiKey && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
                     <span className="font-medium">🔑</span>

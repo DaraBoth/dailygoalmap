@@ -349,7 +349,7 @@ export async function fetchGeminiApiKey(): Promise<string> {
 }
 
 // Function to enable realtime for a specific table
-export async function enableRealtimeForTable(tableName: "tasks" | "goals" | "goal_members" | "api_keys" | "push_subscriptions" | "user_profiles"): Promise<void> {
+export async function enableRealtimeForTable(tableName: "tasks" | "goals" | "goal_members" | "api_keys" | "push_subscriptions" | "user_profiles" | "notifications"): Promise<void> {
   try {
     // Execute a query to enable realtime
     const { error } = await supabase

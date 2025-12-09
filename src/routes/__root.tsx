@@ -12,6 +12,7 @@ import { setupSyncHandlers } from "@/utils/offlineSync"
 import { authService, type AuthState } from "@/services/authService"
 import { supabase } from "@/integrations/supabase/client"
 import React from 'react'
+import { enableRealtimeForTable } from '@/components/calendar/taskDatabase'
 
 // Create React Query client with optimized settings
 const queryClient = new QueryClient({
@@ -59,8 +60,11 @@ function RootComponent() {
   React.useEffect(() => {
     if (!authState.user) return;
 
-    console.log('🔔 Setting up global notification listener for user:', authState.user.id);
+    console.log('🔔 Setting up global notification listener for user:', authState.user.user_metadata?.name);
 
+    // Enable realtime for tasks table
+    enableRealtimeForTable('notifications').catch(() => {});
+    
     // Track if we've already shown a toast for this notification ID to prevent duplicates
     const shownNotifications = new Set<string>();
 
