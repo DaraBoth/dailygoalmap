@@ -1,6 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Goal, GoalMember, SortOption, GoalMetadata } from "@/types/goal";
+import { saveTaskForOfflineSync, attemptSyncNow } from '@/pwa/offlineTaskSync';
 
 /**
  * Utility functions for Supabase database operations
@@ -330,6 +330,11 @@ export const fetchGoalTasks = async (goalId: string) => {
  */
 export const updateTask = async (taskId: string, updates: any) => {
   try {
+    if (!navigator.onLine) {
+      saveTaskForOfflineSync({ id: taskId, ...updates }, 'update');
+      return { offline: true, taskId, updates };
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
@@ -410,6 +415,12 @@ export const updateTask = async (taskId: string, updates: any) => {
  */
 export const insertTask = async (taskData: any) => {
   try {
+    // Check if offline
+    if (!navigator.onLine) {
+      saveTaskForOfflineSync(taskData, 'create');
+      return { offline: true, taskData };
+    }
+
     const { data, error } = await supabase
       .from('tasks')
       .insert([taskData])
@@ -456,6 +467,11 @@ export const insertTask = async (taskData: any) => {
 
 export const deleteTaskFromDatabase = async (taskId: string): Promise<void> => {
   try {
+    if (!navigator.onLine) {
+      saveTaskForOfflineSync({ id: taskId }, 'delete');
+      return;
+    }
+
     // Get task data before deletion for notification
     const { data: taskData, error: fetchError } = await supabase
       .from('tasks')

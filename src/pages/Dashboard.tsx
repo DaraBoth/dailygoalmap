@@ -24,6 +24,7 @@ import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, Pagi
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import SearchTrigger from "@/components/search/SearchTrigger";
 import CustomSearchModal from "@/components/search/CustomSearchModal";
+import { getDashboardGoals, saveDashboardGoals } from '@/pwa/offlineDashboardCache';
 
 interface ModalContentProps {
   children: React.ReactNode;
@@ -74,6 +75,8 @@ const Dashboard = () => {
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [offline, setOffline] = useState(!navigator.onLine);
+  const [offlineGoals, setOfflineGoals] = useState<Goal[]>([]);
 
   const { goToGoal } = useRouterNavigation();
   const { markGoalAsComplete, archiveGoal } = useGoalStatus();
@@ -120,6 +123,28 @@ const Dashboard = () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, []);
+
+  useEffect(() => {
+    function handleOnlineStatus() {
+      setOffline(!navigator.onLine);
+      if (!navigator.onLine) {
+        setOfflineGoals(getDashboardGoals());
+      }
+    }
+    window.addEventListener('online', handleOnlineStatus);
+    window.addEventListener('offline', handleOnlineStatus);
+    handleOnlineStatus();
+    return () => {
+      window.removeEventListener('online', handleOnlineStatus);
+      window.removeEventListener('offline', handleOnlineStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isLoading && goals && goals.length > 0 && navigator.onLine) {
+      saveDashboardGoals(goals);
+    }
+  }, [goals, isLoading]);
 
   const handleToggleForm = () => {
     // Navigate to template selection page
@@ -274,8 +299,8 @@ const Dashboard = () => {
                 />
 
                 <GoalList
-                  goals={goals}
-                  isLoading={isLoading}
+                  goals={offline ? offlineGoals : goals}
+                  isLoading={offline ? false : isLoading}
                   onDeleteGoal={confirmDelete}
                   onEditGoal={handleEditGoal}
                   isDeleting={isDeleting}
@@ -404,8 +429,8 @@ const Dashboard = () => {
             {/* Goal List below for mobile */}
             <div>
               <GoalList
-                goals={goals}
-                isLoading={isLoading}
+                goals={offline ? offlineGoals : goals}
+                isLoading={offline ? false : isLoading}
                 onDeleteGoal={confirmDelete}
                 onEditGoal={handleEditGoal}
                 isDeleting={isDeleting}
