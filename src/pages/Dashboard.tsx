@@ -234,10 +234,12 @@ const Dashboard = () => {
 
     switch (action) {
       case "Mark as complete":
-        const completeResult = await markGoalAsComplete(goalId);
-        if (completeResult.success) {
-          fetchGoals(); // Refresh the goals list
-        }
+        await markGoalAsComplete(goalId).then((res)=>{
+          if (res.success) {
+            fetchGoals(); // Refresh the goals list
+          }
+          return res;
+        });
         break;
       case "Extend deadline":
         // Open edit dialog for the goal
@@ -245,10 +247,12 @@ const Dashboard = () => {
         setShowEditSlidePanel(true);
         break;
       case "Archive goal":
-        const archiveResult = await archiveGoal(goalId);
-        if (archiveResult.success) {
-          fetchGoals(); // Refresh the goals list
-        }
+        await archiveGoal(goalId).then((res) => {
+          if (res.success) {
+            fetchGoals(); // Refresh the goals list
+          }
+          return res;
+        })
         break;
       case "Focus mode":
         // Navigate to goal detail page
