@@ -11,7 +11,6 @@ import { MobileDatePicker } from "@/components/ui/mobile-date-picker";
 import { MobileTimePicker } from "@/components/ui/mobile-time-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   CalendarClock,
   Clock,
@@ -70,7 +69,6 @@ const AddTaskDialog = ({
   const [dailyEnd, setDailyEnd] = useState<string>(defaultDailyEnd);
 
   const [completed, setCompleted] = useState<boolean>(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [isScrollable, setIsScrollable] = useState(false);
 
   // Refs for scroll detection
