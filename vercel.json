@@ -8,9 +8,6 @@
       "destination": "/index.html"
     },
     {
-      "buildCommand": "npm run build"
-    },
-    {
       "source": "/api/(.*)",
       "headers": [
         {
