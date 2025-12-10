@@ -3,7 +3,6 @@ import { UserContext } from "@/routes/__root";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import { router } from "@/router";
 import { Button } from "@/components/ui/button";
-// ...existing code...
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import GoalList from "@/components/dashboard/GoalList";
 import TodaysTasks from "@/components/dashboard/TodaysTasks";

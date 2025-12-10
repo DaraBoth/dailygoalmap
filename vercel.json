@@ -1,14 +1,16 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build && npm run obfuscate",
   "installCommand": "npm install --legacy-peer-deps",
   "outputDirectory": "dist",
+  "obfuscate": "javascript-obfuscator ./dist --output ./dist --exclude '*.css'",
   "rewrites": [
     {
       "source": "/(.*)",
       "destination": "/index.html"
-    }
-  ],
-  "headers": [
+    },
+    {
+      "buildCommand": "npm run build"
+    },
     {
       "source": "/api/(.*)",
       "headers": [
