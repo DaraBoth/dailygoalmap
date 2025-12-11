@@ -51,7 +51,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   const [isLoading, setIsLoading] = useState(false);
   const [lastMessageTime, setLastMessageTime] = useState(0);
   const [selectedModel, setSelectedModel] = useState<ModelType>("gemini");
-  const [selectedModelId, setSelectedModelId] = useState<string>('gemini-1.5-flash');
+  const [selectedModelId, setSelectedModelId] = useState<string>('gemini-2.5-flash');
   const [selectedKeyIds, setSelectedKeyIds] = useState<string[]>([]);
   const [currentApiKey, setCurrentApiKey] = useState<string>('');
   const [temporaryStatus, setTemporaryStatus] = useState<string>(''); // For status messages that disappear
@@ -598,7 +598,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
               <div
                 ref={chatContainerRef}
-                className="h-full px-1 lg:p-4 overflow-y-auto"
+                className="h-full px-1 lg:p-4 overflow-y-auto no-scrollbar"
                 onScroll={() => {
                   if (!chatContainerRef.current) return;
                   const el = chatContainerRef.current;
@@ -696,18 +696,19 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                                 },
                                 table({ children }) {
                                   return (
-                                    <div className="overflow-x-auto my-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md -mx-4 sm:mx-0">
-                                      <div className="inline-block align-middle w-full">
-                                        <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 border-collapse">
+                                    <div className="overflow-x-auto no-scrollbar rounded-lg border border-gray-200 dark:border-gray-700 shadow-md">
+                                      <div className="inline-block min-w-full align-middle">
+                                        <table className="w-full table-auto border-collapse">
                                           {children}
                                         </table>
                                       </div>
                                     </div>
                                   );
-                                },
+                                }
+                                ,
                                 thead({ children }) {
                                   return (
-                                    <thead className="bg-gradient-to-r liquid-glass">
+                                    <thead className="liquid-glass">
                                       {children}
                                     </thead>
                                   );
@@ -721,46 +722,48 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                                 },
                                 th({ children }) {
                                   return (
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider border border-blue-400/30">
+                                    <th
+                                      className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider
+                                        border border-blue-400/30
+                                        whitespace-nowrap min-w-[120px]"
+                                    >
                                       {children}
                                     </th>
                                   );
-                                },
+                                }
+                                ,
                                 td({ children }) {
-                                  // Check if cell contains a URL and make it clickable
                                   const content = String(children);
                                   const urlRegex = /(https?:\/\/[^\s]+)/g;
 
-                                  if (urlRegex.test(content)) {
-                                    const parts = content.split(urlRegex);
-                                    return (
-                                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700">
-                                        {parts.map((part, i) => {
-                                          if (part.match(urlRegex)) {
-                                            return (
-                                              <a
-                                                key={i}
-                                                href={part}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                                              >
-                                                {part}
-                                              </a>
-                                            );
-                                          }
-                                          return part;
-                                        })}
-                                      </td>
-                                    );
-                                  }
-
                                   return (
-                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700">
-                                      {children}
+                                    <td
+                                      className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 
+                                                  border border-gray-200 dark:border-gray-700
+                                                  whitespace-nowrap min-w-[120px]"
+                                    >
+                                      {/* URL auto-linking */}
+                                      {urlRegex.test(content)
+                                        ? content.split(urlRegex).map((part, i) =>
+                                          urlRegex.test(part) ? (
+                                            <a
+                                              key={i}
+                                              href={part}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                                            >
+                                              {part}
+                                            </a>
+                                          ) : (
+                                            part
+                                          )
+                                        )
+                                        : children}
                                     </td>
                                   );
-                                },
+                                }
+                                ,
                                 tr({ children }) {
                                   return (
                                     <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
@@ -799,10 +802,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                         </div>
                       )}
 
-
                       {/* User Bubble */}
                       {msg.role === "user" && (
-                        <div className="max-w-[85%] sm:max-w-[80%] bg-blue-600 text-white p-3 rounded-xl shadow break-words whitespace-pre-wrap overflow-wrap-anywhere overflow-x-auto">
+                        <div className="max-w-[85%] sm:max-w-[80%] liquid-glass p-3 rounded-xl shadow break-words whitespace-pre-wrap overflow-wrap-anywhere overflow-x-auto">
                           {msg.content}
                         </div>
                       )}
@@ -873,7 +875,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                       <span>{temporaryStatus}</span>
                     </div>
                   )}
-
                 </div>
 
                 {currentApiKey && (
