@@ -116,7 +116,7 @@ const TaskSidebar = ({
 
   // Main render
   return (
-    <div className="w-full h-full flex flex-col liquid-glass-container overflow-hidden rounded-r-3xl">
+    <div className="w-full h-full flex flex-col overflow-hidden rounded-r-3xl">
       <div className="p-4 border-b border-white/20 liquid-glass">
         <h2 className="text-lg font-semibold flex items-center text-foreground">
           <div className="p-2 liquid-glass rounded-xl mr-3">
@@ -130,105 +130,111 @@ const TaskSidebar = ({
 
       {tasksForDate.length > 0 && renderNavButtons()}
 
-      <ScrollArea className="flex-1 p-2 lg:p-4 z-0 ">
+      <ScrollArea className="flex-1 z-0 liquid-glass">
         <LayoutGroup>
           <AnimatePresence mode="popLayout">
             {tasksForDate.length > 0 ? (
               <div className="space-y-4">
-                {tasksForDate.map((task) => (
-                  <motion.div
-                    key={task.id}
-                    layout
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.25 }}
-                    className={`p-4 lg:p-5 rounded-2xl transition-all cursor-pointer liquid-glass ${
-                      selectedTask?.id === task.id
-                        ? "border-2 border-primary"
-                        : task.completed
-                        ? "opacity-70"
-                        : ""
-                    }`}
-                    onClick={() => onTaskClick && onTaskClick(task)}
-                  >
-                    <div className="flex items-center gap-3 lg:gap-4">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className={`w-5 h-5 rounded-full ${
-                          task.completed
-                            ? "text-green-500 dark:text-green-400"
-                            : "text-gray-400 dark:text-gray-500"
-                        } p-0`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleTaskCompletion(task.id);
-                        }}
-                      >
-                        {task.completed ? (
-                          <CheckCircle2 className="h-5 w-5" />
-                        ) : (
-                          <div className="relative" ><div  className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 " /></div>
-                        )}
-                      </Button>
+                {tasksForDate.map((task, index) => {
 
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className={`text-xs lg:text-sm break-words line-clamp-2 text-foreground ${
-                            task.completed
-                              ? "line-through opacity-60"
-                              : ""
-                          }`}
+                  if(index == (tasksForDate.length-1)){
+                    console.log("tast = ",index , "  ",tasksForDate.length-1);
+                    console.log("tasksForDate => ",task.title);
+                  }
+                  
+                  return (
+                    <motion.div
+                      key={task.id}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.25 }}
+                      className={`p-4 lg:p-5 mx-5 rounded-2xl transition-all cursor-pointer liquid-glass ${selectedTask?.id === task.id
+                          ? "border-2 border-primary"
+                          : task.completed
+                            ? "opacity-70"
+                            : ""
+                        } ${index == 0 ? " mt-5" : ""} `}
+                        style={{ borderBottom: index == (tasksForDate.length-1) ? "7px" : "" }}
+                      onClick={() => onTaskClick && onTaskClick(task)}
+                    >
+                      <div className="flex items-center gap-3 lg:gap-4">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className={`w-5 h-5 rounded-full ${task.completed
+                              ? "text-green-500 dark:text-green-400"
+                              : "text-gray-400 dark:text-gray-500"
+                            } p-0`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleTaskCompletion(task.id);
+                          }}
                         >
-                          {task.title || task.description}
-                        </p>
-                        <div className="flex items-center mt-1 text-[10px] lg:text-xs text-muted-foreground">
-                          <Clock className="w-3 h-3 mr-0.5" />
-                          {formatTaskTime(task)}
+                          {task.completed ? (
+                            <CheckCircle2 className="h-5 w-5" />
+                          ) : (
+                            <div className="relative" ><div className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 " /></div>
+                          )}
+                        </Button>
+
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className={`text-xs lg:text-sm break-words line-clamp-2 text-foreground ${task.completed
+                                ? "line-through opacity-60"
+                                : ""
+                              }`}
+                          >
+                            {task.title || task.description}
+                          </p>
+                          <div className="flex items-center mt-1 text-[10px] lg:text-xs text-muted-foreground">
+                            <Clock className="w-3 h-3 mr-0.5" />
+                            {formatTaskTime(task)}
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-0.5">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="w-6 h-6 p-0 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEditTask(task);
-                          }}
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="w-6 h-6 p-0 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteTask(task.id);
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                        {task.completed && (
+                        <div className="flex items-center gap-0.5">
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="w-6 h-6 p-0 text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400"
+                            className="w-6 h-6 p-0 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onToggleTaskCompletion(task.id);
+                              onEditTask(task);
                             }}
                           >
-                            <XCircle className="h-3 w-3" />
+                            <Pencil className="h-3 w-3" />
                           </Button>
-                        )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="w-6 h-6 p-0 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteTask(task.id);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                          {task.completed && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="w-6 h-6 p-0 text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleTaskCompletion(task.id);
+                              }}
+                            >
+                              <XCircle className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  )
+                })}
               </div>
             ) : (
               <motion.div

@@ -520,15 +520,15 @@ Remember:
                         const tasks = (toolResult as any).tasks;
                         const count = Array.isArray(tasks) ? tasks.length : 0;
                         resultMessage = count > 0 
-                          ? `✓ Found ${count} task${count !== 1 ? 's' : ''}`
-                          : `✓ No tasks scheduled for this date`;
+                          ? ` Found ${count} task${count !== 1 ? 's' : ''}`
+                          : ` No tasks scheduled for this date`;
                         console.log(`📈 [AI Agent] Tasks count: ${count}`);
                       } else if (toolName === 'find_by_title' && toolResult && typeof toolResult === 'object' && 'tasks' in toolResult) {
                         const tasks = (toolResult as any).tasks;
                         const count = Array.isArray(tasks) ? tasks.length : 0;
                         resultMessage = count > 0
-                          ? `✓ Found ${count} matching task${count !== 1 ? 's' : ''}`
-                          : `✓ No matching tasks found`;
+                          ? ` Found ${count} matching task${count !== 1 ? 's' : ''}`
+                          : ` No matching tasks found`;
                         console.log(`📈 [AI Agent] Search results: ${count}`);
                       }
                       

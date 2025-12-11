@@ -391,7 +391,7 @@ const Calendar = ({
 
   const renderNavButtons = () => {
     return (
-      <div className="flex items-center justify-center gap-2 mt-3 mb-1">
+      <div className="flex items-center justify-center gap-2 pt-3 pb-3 liquid-glass ">
         <button
           className="h-8 w-8 p-0 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
           onClick={() => handleNavigateTask('prev')}
@@ -429,7 +429,7 @@ const Calendar = ({
       ref={calendarRef}
     >
       {isMobile ? (
-        <div className="h-full overflow-y-auto pb-28 pb-safe-or-6">
+        <div className="h-full overflow-y-auto pb-28 pt-[80px] pb-safe-or-6 no-scrollbar">
           <div className="min-h-[500px]">
             <CalendarContainer
               selectedDate={selectedDate}
@@ -456,7 +456,7 @@ const Calendar = ({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-[280px,1fr] lg:grid-cols-[300px,1fr,320px] xl:grid-cols-[320px,1fr,360px] h-full">
+        <div className="grid grid-cols-1 md:grid-cols-[280px,1fr] lg:grid-cols-[300px,1fr,320px] xl:grid-cols-[320px,1fr,360px] h-full pt-[90px] ">
           <div className="h-full overflow-hidden">
             <TaskSidebar
               tasks={tasks}
@@ -540,7 +540,7 @@ const Calendar = ({
         isDeleting={null}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
-        goalTitle={taskToDelete?.description || "this task"}
+        goalTitle={taskToDelete?.title || "this task"}
       />
     </motion.div>
   );

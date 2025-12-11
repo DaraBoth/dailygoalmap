@@ -42,7 +42,7 @@ export const ThemeSegmentSwitch = () => {
             <motion.div
                 layout
                 animate={{ left: leftPosition }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                transition={{ type: "spring", stiffness: 100, damping: 10 }}
                 className="absolute top-0 bottom-0 w-1/3 liquid-glass-switch pointer-events-none"
             />
 
@@ -60,9 +60,9 @@ export const ThemeSegmentSwitch = () => {
                             setTheme(mode.id as any);
                         }}
                         className={`relative z-10 p-2 flex flex-col items-center justify-center flex-1 
-              transition-all duration-300 ease-out text-foreground h-8
-              ${isActive ? "" : ""}
-            `}
+                                    transition-all duration-300 ease-out text-foreground h-8
+                                        ${isActive ? "" : ""}
+                                    `}
                     >
                         {mode.icon}
                         {/* <span className="text-xs font-semibold  mt-1">{mode.label}</span> */}

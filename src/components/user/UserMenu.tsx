@@ -41,7 +41,8 @@ export const UserMenu = () => {
       authListener.subscription.unsubscribe();
     };
   }, []);
-  const { theme, setTheme } = useTheme(); // Use the global theme hook
+
+  
   const [profileData, setProfileData] = useState<{ avatar_url: string | null, display_name: string | null } | null>(null);
 
   useEffect(() => {
@@ -143,16 +144,15 @@ export const UserMenu = () => {
           <TooltipTrigger asChild>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="relative h-8 w-8 rounded-full hover:ring-2 hover:ring-blue-500 transition-all"
+                <button
+                  className="relative h-8 w-8 rounded-full transition-all liquid-glass"
                   aria-label="User menu"
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={getAvatarUrl()} alt={getDisplayName()} />
                     <AvatarFallback>{getInitials()}</AvatarFallback>
                   </Avatar>
-                </Button>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56x" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
@@ -165,7 +165,7 @@ export const UserMenu = () => {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem className='liquid-glass-button' onClick={() => goToProfile()}>
+                  <DropdownMenuItem className='liquid-glass' onClick={() => goToProfile()}>
                     <UserIcon className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
@@ -174,7 +174,7 @@ export const UserMenu = () => {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
+                <DropdownMenuItem onClick={handleLogout} className='liquid-glass-button'>
                   <LogOut className="text-red-400 mr-2 h-4 w-4" />
                   <span className='text-red-400' >Log out</span>
                 </DropdownMenuItem>

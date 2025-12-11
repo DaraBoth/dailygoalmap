@@ -52,19 +52,19 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200/60 dark:border-white/25 w-full liquid-glass-container">
+    <div className="fixed top-2.5 z-50 w-[calc(100vw-16px)] mx-2 liquid-glass-container">
       <div className="w-full px-2 sm:px-4 py-3 sm:py-4">
         <div className="flex items-center justify-between max-w-[2000px] mx-auto gap-2">
           <div className="flex items-center space-x-2 flex-1 min-w-0 ">
             <button
-              className="p-2 liquid-glass-button w-8 h-8 sm:w-9 sm:h-9 backdrop-blur-sm  transition-all duration-200 rounded-xl"
+              className="p-2 liquid-glass-button w-8 h-8 sm:w-9 sm:h-9 backdrop-blur-sm transition-all duration-200 rounded-xl"
               // style={{ borderRadius: "100%"}}
               onClick={handleGoBack}
             >
               <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
             <div className="min-w-0 flex-1 overflow-hidden">
-              <h1 className="text-base sm:text-xl md:text-2xl font-bold truncate bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+              <h1 className="text-base sm:text-xl md:text-2xl font-bold truncate  bg-clip-text text-transparent">
                 {goalTitle || 'Loading...'}
               </h1>
             </div>
@@ -100,7 +100,7 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
         </div>
         
       </div>
-    </header>
+    </div>
   );
 };
 

@@ -63,8 +63,6 @@ const CalendarContainer = ({
             selectedDate={selectedDate}
             onDateChange={(date) => {
               onDateChange(date);
-              // Do not auto-open task details when a date is selected.
-              // Task details should only open when the user taps a specific task.
             }}
             tasks={tasks}
             getTasksForDate={getTasksForDate}

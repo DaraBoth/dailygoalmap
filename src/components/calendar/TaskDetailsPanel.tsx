@@ -97,7 +97,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   const hasTimeRange = selectedTask.daily_start_time && selectedTask.daily_end_time;
 
   return (
-    <div className="w-full h-full flex flex-col liquid-glass-container overflow-hidden rounded-l-3xl">
+    <div className="w-full h-full flex flex-col overflow-hidden rounded-l-3xl">
       {/* Header */}
       <div className="p-4 lg:p-6 border-b border-white/20 liquid-glass">
         <div className="flex items-center justify-between">
@@ -119,7 +119,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6 liquid-glass">
         <AnimatePresence mode="wait">
           <motion.div
             key={selectedTask.id}

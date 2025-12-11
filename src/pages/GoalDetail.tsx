@@ -201,7 +201,7 @@ const GoalDetail: React.FC = () => {
         className="min-h-screen bg-gradient-to-br from-blue-400/50 via-gray-500 to-purple-500/50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/20"
         style={backgroundStyle}
       >
-        <div className="grid grid-rows-[auto,1fr] h-screen overflow-hidden backdrop-blur-[2px]">
+        <div className="grid grid-rows-[auto,1fr] h-screen overflow-hidden ">
           <GoalDetailHeader
             goalId={goalId}
             members={members}
