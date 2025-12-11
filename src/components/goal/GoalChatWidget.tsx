@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { MessageCircle, X, Send, Loader2, Clipboard, Copy, Pointer, ArrowUp, Bot } from 'lucide-react';
+import { X, Loader2, Copy, ArrowUp, ArrowUpIcon } from 'lucide-react';
+import { IconPlus } from "@tabler/icons-react"
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -20,6 +19,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { KeySelector } from './KeySelector';
 import { ModelVariantPicker } from './ModelVariantPicker';
 import { useAutoResizeTextArea } from '@/hooks/useAutoResizeTextArea';
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupText, InputGroupTextarea } from '../ui/input-group';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { Separator } from '../ui/separator';
 
 type ModelType = 'gemini' | 'openai' | 'claude';
 
@@ -594,10 +596,16 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
               }}
             >
 
-              <ScrollArea className="h-full px-1 lg:p-4 ">
-
-
-
+              <div
+                ref={chatContainerRef}
+                className="h-full px-1 lg:p-4 overflow-y-auto"
+                onScroll={() => {
+                  if (!chatContainerRef.current) return;
+                  const el = chatContainerRef.current;
+                  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+                  setShowScrollButton(!atBottom);
+                }}
+              >
                 <div className="w-full px-1 lg:px-4">
                   {messages.map((msg, i) => (
                     <div
@@ -677,7 +685,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                                       href={href}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 px-3 py-1.5 my-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-all shadow-sm hover:shadow-md no-underline"
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 my-1 liquid-glass-button rounded-md text-sm font-medium transition-all shadow-sm hover:shadow-md no-underline"
                                     >
                                       {children}
                                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -699,7 +707,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                                 },
                                 thead({ children }) {
                                   return (
-                                    <thead className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-800 dark:to-blue-900">
+                                    <thead className="bg-gradient-to-r liquid-glass">
                                       {children}
                                     </thead>
                                   );
@@ -803,9 +811,8 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
                 </div>
 
-
                 <div ref={scrollRef} />
-              </ScrollArea>
+              </div>
             </div>  {/* end wrapper */}
             {showScrollButton && (
               <button
@@ -866,7 +873,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                       <span>{temporaryStatus}</span>
                     </div>
                   )}
-                  
+
                 </div>
 
                 {currentApiKey && (
@@ -878,7 +885,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
               </div>
 
               <div className="relative w-full">
-
                 <textarea
                   ref={textareaRef}
                   value={inputValue}

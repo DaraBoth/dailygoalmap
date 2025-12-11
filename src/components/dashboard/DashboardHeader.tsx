@@ -46,7 +46,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   
   return (
     <header
-      className="sticky top-0 z-50 w-full border-b border-border/40 liquid-glass-container"
+      className="sticky top-2 z-50 w-[calc(100vw-16px)] mx-2 border-b border-border/40 liquid-glass-container"
       role="banner"
       aria-label="Dashboard navigation"
     >
