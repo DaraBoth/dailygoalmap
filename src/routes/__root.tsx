@@ -253,9 +253,9 @@ function RootComponent() {
               richColors 
               closeButton 
               toastOptions={{
-                className: 'liquid-glass-card backdrop-blur-xl',
+                className: 'liquid-glass-container',
                 style: {
-                  backdropFilter: 'blur(20px)',
+                  backdropFilter: 'blur(4)',
                   border: '1px solid rgba(255, 255, 255, 0.3)',
                   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
                 },

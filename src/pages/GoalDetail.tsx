@@ -152,8 +152,69 @@ const GoalDetail: React.FC = () => {
             setTasks(data as Task[]);
           }
 
-          // Real-time updates - toast notifications handled by unified notification service
-          // Just refresh the task list silently
+          // Show toast notification for task changes (styled like root page)
+          const { eventType, new: newTask, old: oldTask } = payload;
+          let toastTitle = '';
+          let toastDescription = '';
+          let senderName = '';
+          let senderAvatar = '';
+          // Try to get sender info (if available)
+          const newUpdatedBy = newTask && typeof newTask === 'object' && 'updated_by' in newTask ? newTask['updated_by'] : undefined;
+          const oldUpdatedBy = oldTask && typeof oldTask === 'object' && 'updated_by' in oldTask ? oldTask['updated_by'] : undefined;
+          if (newUpdatedBy) {
+            const { data: senderProfile } = await supabase
+              .from('user_profiles')
+              .select('display_name, avatar_url')
+              .eq('id', newUpdatedBy)
+              .single();
+            senderName = senderProfile?.display_name || 'Someone';
+            senderAvatar = senderProfile?.avatar_url;
+          } else if (oldUpdatedBy) {
+            const { data: senderProfile } = await supabase
+              .from('user_profiles')
+              .select('display_name, avatar_url')
+              .eq('id', oldUpdatedBy)
+              .single();
+            senderName = senderProfile?.display_name || 'Someone';
+            senderAvatar = senderProfile?.avatar_url;
+          } else {
+            senderName = 'Someone';
+            senderAvatar = '';
+          }
+
+          if (eventType === 'INSERT') {
+            toastTitle = '✓ Task Created';
+            toastDescription = `${newTask?.title || 'A task'} has been added to this goal.`;
+          } else if (eventType === 'UPDATE') {
+            const actionText = newTask?.completed && !oldTask?.completed ? 'completed' :
+                              !newTask?.completed && oldTask?.completed ? 'reopened' : 'updated';
+            toastTitle = newTask?.completed && !oldTask?.completed ? '✓ Task Completed' :
+                        !newTask?.completed && oldTask?.completed ? '○ Task Reopened' : '✏ Task Updated';
+            toastDescription = `${newTask?.title || 'A task'} has been ${actionText}.`;
+          } else if (eventType === 'DELETE') {
+            toastTitle = '🗑 Task Deleted';
+            toastDescription = `${oldTask?.title || 'A task'} has been deleted from this goal.`;
+          }
+          if (toastTitle && toastDescription) {
+            toast({
+              title: toastTitle,
+              description: (
+                <div className="flex items-center gap-2">
+                  {senderAvatar && (
+                    <img
+                      src={senderAvatar}
+                      alt={senderName}
+                      className="w-6 h-6 rounded-full ring-2 ring-white/50 dark:ring-gray-700/50 flex-shrink-0"
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm">{toastDescription}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">by {senderName}</div>
+                  </div>
+                </div>
+              ),
+            });
+          }
         }
       )
       .subscribe();
@@ -178,7 +239,7 @@ const GoalDetail: React.FC = () => {
         /* ignore errors during cleanup */
       }
     };
-  }, [goalId, toast]); // FIXED: Removed refreshTasks from dependency array to prevent infinite loop
+  }, [goalId, toast]);
 
   const completedTasks = tasks.filter(t => t.completed).length;
 
