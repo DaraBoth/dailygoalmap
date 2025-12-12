@@ -137,11 +137,11 @@ export function useRouterNavigation() {
   const goToHistoryOrDashboard = useCallback(async () => {
     // Check if browser history has previous entries
     if (window.history.length > 1) {
-      await navigateTo('/history');
+      await window.history.back();
     } else {
       await goToDashboard();
     }
-  }, [navigateTo, goToDashboard]);
+  }, [goToDashboard]);
 
   return {
     // Core navigation

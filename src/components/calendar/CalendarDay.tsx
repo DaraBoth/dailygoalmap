@@ -4,6 +4,8 @@ import { Task } from "./types";
 import { motion } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
+import useSystemTheme from "@/hooks/use-system-theme";
+import { useTheme } from "@/hooks/use-theme";
 
 interface CalendarDayProps {
   date: Date;
@@ -25,7 +27,9 @@ const CalendarDay = ({
   onTaskClick
 }: CalendarDayProps) => {
   const isMobile = useIsMobile();
-  
+  const { theme } = useTheme();
+  const systemTheme = useSystemTheme();
+  const themeMode = theme == "system" ? systemTheme : theme;
   const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
   const isSelected = selectedDate && isSameDay(date, selectedDate);
   const _isToday = isToday(date);
@@ -34,29 +38,28 @@ const CalendarDay = ({
   const formatTimeDisplay = (task: Task) => {
     const title = task.title || task.description;
     const short = isMobile ? title : title.substring(0, 12) + (title.length > 12 ? "..." : "");
-    // const timeRange = task.daily_start_time && task.daily_end_time
-    //   ? ` ${task.daily_start_time.slice(0,5)}-${task.daily_end_time.slice(0,5)}`
-    //   : "";
     const timeRange = "";
     return `${task.completed ? "✓" : "○"} ${short}${timeRange}`;
   };
 
   const getTaskColor = (date: Date) => {
     const colors = [
-      " bg-blue-800 dark:bg-blue-500", 
-      " bg-pink-800 dark:bg-pink-500", 
-      " bg-teal-800 dark:bg-teal-500", 
-      " bg-orange-800 dark:bg-orange-500", 
-      " bg-purple-800 dark:bg-purple-500", 
+      " bg-blue-800 dark:bg-blue-500",
+      " bg-pink-800 dark:bg-pink-500",
+      " bg-teal-800 dark:bg-teal-500",
+      " bg-orange-800 dark:bg-orange-500",
+      " bg-purple-800 dark:bg-purple-500",
       " bg-green-800 dark:bg-green-500",
-      " bg-red-800 dark:bg-red-500", 
-      " bg-indigo-800 dark:bg-indigo-500", 
+      " bg-red-800 dark:bg-red-500",
+      " bg-indigo-800 dark:bg-indigo-500",
       " bg-yellow-800 dark:bg-yellow-500"
     ];
     const colorIndex = date.getDate() % colors.length;
     return colors[colorIndex];
   };
-  
+
+  console.log({ themeMode, theme });
+
   return (
     <motion.div
       className={`
@@ -89,13 +92,13 @@ const CalendarDay = ({
           {date.getDate()}
         </span>
       </div>
-      
+
       {isCurrentMonth && (
         <>
           {/* Desktop view with fixed height */}
           <div className="flex-1 min-h-0 hidden sm:block">
-            <ScrollArea className="h-full max-h-[50px] sm:max-h-[55px] md:max-h-[65px] lg:max-h-[75px] scrollbar-thin" style={{paddingBottom:"0"}}>
-              <div className="space-y-0.5 pr-1 min-h-[50px] sm:min-h-[55px] md:min-h-[30px] lg:min-h-[30px]" style={{paddingBottom:"0"}}>
+            <ScrollArea className="h-full max-h-[50px] sm:max-h-[55px] md:max-h-[65px] lg:max-h-[75px] no-scrollbar" style={{ paddingBottom: "0" }}>
+              <div className="space-y-0.5 pr-1 min-h-[50px] sm:min-h-[55px] md:min-h-[30px] lg:min-h-[30px] no-scrollbar" style={{ paddingBottom: "0" }}>
                 {dayTasks.length > 0 ? (
                   <>
                     {dayTasks.slice(0, 4).map((task, taskIndex) => {
@@ -104,19 +107,19 @@ const CalendarDay = ({
                       const isLastDay = isRange && isSameDay(new Date(task.end_date!), date);
                       const rounded = isRange
                         ? (isFirstDay && isLastDay ? 'rounded-md' :
-                           isFirstDay ? 'rounded-l-md rounded-r-none' :
-                           isLastDay ? 'rounded-r-md rounded-l-none' : 'rounded-none')
+                          isFirstDay ? 'rounded-l-md rounded-r-none' :
+                            isLastDay ? 'rounded-r-md rounded-l-none' : 'rounded-none')
                         : 'rounded-md';
                       return (
                         <motion.div
                           key={task.id}
                           className={`
                             text-xs py-0.5 px-1.5 leading-tight ${rounded}
-                            ${getTaskColor(date)} truncate shadow-sm text-white dark:text-foreground
+                            ${getTaskColor(date)} truncate shadow-sm text-blue-100 dark:text-foreground
                             ${task.completed ? 'opacity-70' : ''}
                             hover:shadow-md hover:scale-105 p-0 transition-all duration-200 cursor-pointer
                           `}
-                          style={{paddingBottom:"0"}}
+                          style={{ paddingBottom: "0", color: themeMode == "light" ? "white" : "black" }}
                           title={task.title || task.description}
                           initial={{ x: -5, opacity: 0 }}
                           animate={{ x: 0, opacity: 1 }}
@@ -133,7 +136,7 @@ const CalendarDay = ({
                       );
                     })}
                     {dayTasks.length > 4 && (
-                      <div className="text-[9px] text-center text-primary liquid-glass rounded-full py-0.5 mt-0.5 font-medium" style={{paddingBottom:"0"}}>
+                      <div className="text-[9px] text-center text-blue-100 dark:text-foreground liquid-glass rounded-full py-0.5 mt-0.5 font-medium" style={{ paddingBottom: "0" }}>
                         +{dayTasks.length - 4}
                       </div>
                     )}
