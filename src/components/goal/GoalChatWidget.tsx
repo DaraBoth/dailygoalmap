@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { X, Loader2, Copy, ArrowUp, ArrowUpIcon } from 'lucide-react';
+import { X, Loader2, Copy, ArrowUp, ArrowUpIcon, ArrowDown } from 'lucide-react';
 import { IconPlus } from "@tabler/icons-react"
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -524,13 +524,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (!isLoading) handleSendMessage();
-    }
-  };
-
   // === CLEAR CHAT + NEW SESSION ===
   const clearChat = () => {
     setMessages([]);
@@ -549,9 +542,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
         className={`fixed bottom-6 ${isMobile ? 'left-6' : 'right-6'} liquid-glass p-2 rounded-xl z-50`}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        onClick={() => setIsOpen(true)}
+        onClick={() => setIsOpen(!isOpen)}
       >
-        <img className='h-8 w-8' src={chatAIGif} alt="Chat AI Image" />
+        {!isOpen ? <img className='h-8 w-8' src={chatAIGif} alt="Chat AI Image" /> : <X />}
         {/* <MessageCircle className="h-6 w-6" /> */}
       </motion.button>
 
@@ -565,7 +558,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             className="fixed inset-0 lg:inset-auto lg:bottom-24 lg:right-6 lg:left-6 lg:top-auto w-full h-dvh lg:w-[calc(100vw-48px)] lg:h-[calc(100vh-120px)] liquid-glass-container z-50 flex flex-col"
           >
             {/* Header */}
-            <div className="flex-shrink-0 flex items-center justify-between p-4 border-b bg-muted/80">
+            <div className="relative flex-shrink-0 flex items-center justify-between p-4 border-b"
+            // style={{overflow:"visible"}}
+            >
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold">GuoErr AI</h3>
                 <img className='h-6 w-6' src={robot} alt="Chat AI Image" />
@@ -581,31 +576,29 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                   <X className="h-6 w-6" />
                 </Button>
               </div>
+
+              {/* Temporary status indicator */}
+              {temporaryStatus && (
+                <div className="absolute -bottom-9 left-0 z-50 flex items-center min-h-9 gap-2 px-3 py-2 text-sm text-muted-foreground bg-muted/90 animate-pulse">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>{temporaryStatus}</span>
+                </div>
+              )}
+
             </div>
 
             {/* Messages */}
             <div
-              className="flex-1 min-h-0 overflow-y-auto px-2 lg:p-4 backdrop-blur-3xl bg-muted/80 p-4 shadow-sm border"
+              className="flex-1 min-h-0 overflow-y-auto px-2 shadow-sm border no-scrollbar"
               ref={chatContainerRef}
               onScroll={() => {
                 if (!chatContainerRef.current) return;
                 const el = chatContainerRef.current;
                 const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
-
                 setShowScrollButton(!atBottom);
               }}
             >
-
-              <div
-                ref={chatContainerRef}
-                className="h-full px-1 lg:p-4 overflow-y-auto no-scrollbar"
-                onScroll={() => {
-                  if (!chatContainerRef.current) return;
-                  const el = chatContainerRef.current;
-                  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-                  setShowScrollButton(!atBottom);
-                }}
-              >
+              <div>
                 <div className="w-full px-1 lg:px-4">
                   {messages.map((msg, i) => (
                     <div
@@ -696,7 +689,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                                 },
                                 table({ children }) {
                                   return (
-                                    <div className="overflow-x-auto no-scrollbar rounded-lg border border-gray-200 dark:border-gray-700 shadow-md">
+                                    <div className="overflow-x-auto no-scrollbar my-2 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md">
                                       <div className="inline-block min-w-full align-middle">
                                         <table className="w-full table-auto border-collapse">
                                           {children}
@@ -804,7 +797,11 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
                       {/* User Bubble */}
                       {msg.role === "user" && (
-                        <div className="max-w-[85%] sm:max-w-[80%] liquid-glass p-3 rounded-xl shadow break-words whitespace-pre-wrap overflow-wrap-anywhere overflow-x-auto">
+                        <div className="max-w-[85%] sm:max-w-[80%] liquid-glass p-3 rounded-xl shadow break-words whitespace-pre-wrap overflow-wrap-anywhere overflow-x-auto"
+                          style={{
+                            boxShadow: "rgba(0, 0, 0, 0.16) 0px 1px 4px",
+                          }}
+                        >
                           {msg.content}
                         </div>
                       )}
@@ -813,23 +810,13 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
                 </div>
 
-                <div ref={scrollRef} />
               </div>
+              <div ref={scrollRef} />
             </div>  {/* end wrapper */}
-            {showScrollButton && (
-              <button
-                className="absolute bottom-28 right-6 bg-primary text-white px-3 py-2 rounded-full shadow-lg"
-                onClick={() => {
-                  scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-                  setShowScrollButton(false);
-                }}
-              >
-                ↓ scroll down
-              </button>
-            )}
+
 
             {/* Input */}
-            <div className="flex-shrink-0 p-4 border-t bg-muted/80">
+            <div className="relative flex-shrink-0 p-4 border-t">
               {/* Model Selector and API Key Info */}
               <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -868,21 +855,30 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                     selectedKeyIds={selectedKeyIds}
                     onKeySelectionChange={setSelectedKeyIds}
                   />
-                  {/* Temporary status indicator */}
-                  {temporaryStatus && (
-                    <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground bg-muted/50 rounded-lg animate-pulse">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      <span>{temporaryStatus}</span>
-                    </div>
-                  )}
+
                 </div>
 
                 {currentApiKey && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                  <div className="absolute -top-6 right-5 flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
                     <span className="font-medium">🔑</span>
                     <span>{currentApiKey}</span>
                   </div>
                 )}
+
+
+                {showScrollButton && (
+                  <button
+                    className="absolute z-90 -top-16 left-1/2 transform translate-x-[-50%] liquid-glass px-2 py-2 hover:animate-none"
+                    style={{borderRadius:"50%" }}
+                    onClick={() => {
+                      scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+                      setShowScrollButton(false);
+                    }}
+                  >
+                    <ArrowDown />
+                  </button>
+                )}
+
               </div>
 
               <div className="relative w-full">

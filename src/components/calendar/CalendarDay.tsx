@@ -58,8 +58,6 @@ const CalendarDay = ({
     return colors[colorIndex];
   };
 
-  console.log({ themeMode, theme });
-
   return (
     <motion.div
       className={`

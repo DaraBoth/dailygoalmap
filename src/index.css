@@ -1056,6 +1056,8 @@ input[type="time"] {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+.no-shadow { box-shadow: none !important; }
+
 /* ensure long words/URLs break nicely inside table cells */
 .prose td, .prose th { word-break: break-word; overflow-wrap: anywhere; }
 
