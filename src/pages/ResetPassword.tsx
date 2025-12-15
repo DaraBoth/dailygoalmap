@@ -11,6 +11,7 @@ import { ArrowLeft, Eye, EyeOff, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useRouterNavigation } from '@/hooks/useRouterNavigation';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -20,12 +21,12 @@ const ResetPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [logoutFromAllDevices, setLogoutFromAllDevices] = useState(false);
-  
+  const { goToHistoryOrDashboard } = useRouterNavigation();
   const navigate = useNavigate();
   const search = useSearch({ from: '/reset-password' });
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
-  
+
   // Check if this is a token-based reset (from email) or authenticated user reset
   const isTokenReset = !!(search as any)?.access_token;
   const isAuthenticatedReset = isAuthenticated && !isTokenReset;
@@ -41,14 +42,14 @@ const ResetPassword = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long');
       return;
     }
 
@@ -95,6 +96,10 @@ const ResetPassword = () => {
       }
     } catch (error: any) {
       setError(error.message || 'Failed to update password');
+      toast({
+        title: "Error",
+        description: error.message,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -105,7 +110,7 @@ const ResetPassword = () => {
   };
 
   const handleBackToDashboard = () => {
-    navigate({ to: '/dashboard' });
+    goToHistoryOrDashboard()
   };
 
   return (
@@ -119,7 +124,7 @@ const ResetPassword = () => {
             {isAuthenticatedReset ? 'Change Password' : 'Reset Password'}
           </h1>
           <p className="text-muted-foreground">
-            {isAuthenticatedReset 
+            {isAuthenticatedReset
               ? 'Set a new password for your account'
               : 'Enter your new password below'
             }
@@ -132,9 +137,9 @@ const ResetPassword = () => {
               {isAuthenticatedReset ? 'New Password' : 'Set New Password'}
             </CardTitle>
             <CardDescription>
-              {isAuthenticatedReset 
+              {isAuthenticatedReset
                 ? 'Choose a strong password that you haven\'t used before'
-                : 'Your new password must be at least 6 characters long'
+                : 'Your new password must be at least 8 characters long'
               }
             </CardDescription>
             {isAuthenticatedReset && (
@@ -143,7 +148,7 @@ const ResetPassword = () => {
               </Badge>
             )}
           </CardHeader>
-          
+
           <CardContent className="space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
@@ -249,7 +254,7 @@ const ResetPassword = () => {
                 className="text-sm text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                {isAuthenticatedReset ? 'Back to Dashboard' : 'Back to Sign In'}
+                {isAuthenticatedReset ? 'Back' : 'Back to Sign In'}
               </Button>
             </div>
           </CardContent>

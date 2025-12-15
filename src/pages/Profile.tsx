@@ -88,7 +88,7 @@ const Profile = () => {
           <div className="container mx-auto px-4 py-4">
             <Button variant="ghost" onClick={() => goToHistoryOrDashboard()} className="p-2">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              <span>Back to Dashboard</span>
+              <span>Back</span>
             </Button>
           </div>
         </div>

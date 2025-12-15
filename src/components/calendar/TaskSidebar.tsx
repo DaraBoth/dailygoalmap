@@ -136,12 +136,6 @@ const TaskSidebar = ({
             {tasksForDate.length > 0 ? (
               <div className="space-y-4">
                 {tasksForDate.map((task, index) => {
-
-                  if(index == (tasksForDate.length-1)){
-                    console.log("tast = ",index , "  ",tasksForDate.length-1);
-                    console.log("tasksForDate => ",task.title);
-                  }
-                  
                   return (
                     <motion.div
                       key={task.id}

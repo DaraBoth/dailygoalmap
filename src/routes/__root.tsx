@@ -86,6 +86,27 @@ function RootComponent() {
         async (payload) => {
           console.log('🔔 Real-time notification received:', payload);
           const notification = payload.new as any;
+
+          // Check if on goal detail page and notification is a task type
+          const isGoalDetailPage = window.location.pathname.startsWith('/goal/');
+          // Extract goalId from URL if on goal detail page
+          let currentGoalId = null;
+          if (isGoalDetailPage) {
+            const match = window.location.pathname.match(/^\/goal\/(.+?)(?:\/|$)/);
+            if (match) {
+              currentGoalId = match[1];
+            }
+          }
+          // If on goal detail page and notification is a task type, and goal ids match, skip
+          if (
+            isGoalDetailPage &&
+            notification.type.includes('task') &&
+            notification.payload?.goal_id &&
+            currentGoalId &&
+            String(notification.payload.goal_id) === String(currentGoalId)
+          ) {
+            return;
+          }
           
           // Prevent duplicate toasts for the same notification
           if (shownNotifications.has(notification.id)) {
@@ -145,8 +166,6 @@ function RootComponent() {
             toastTitle = '👋 Member Left';
             toastDescription = `${senderName} left "${goalTitle}"`;
           }
-
-          console.log('📢 Showing toast:', toastTitle, toastDescription);
 
           // Show toast with View button
           const deepLink = notification.url;

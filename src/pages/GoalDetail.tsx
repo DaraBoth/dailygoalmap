@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import moment from 'moment';
 import { useLoaderData, useSearch, useParams } from '@tanstack/react-router';
-import { useRouterNavigation } from '@/hooks/useRouterNavigation';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, supabaseAdmin } from '@/integrations/supabase/client';
 import GoalDetailHeader from '@/components/goal/GoalDetailHeader';
 import Calendar from '@/components/Calendar';
 import GoalAnalytics from '@/components/goal/GoalAnalytics';
@@ -9,18 +9,14 @@ import { GoalMember } from '@/types/goal';
 import { enableRealtimeForTable } from '@/components/calendar/taskDatabase';
 import { useToast } from '@/hooks/use-toast';
 import { Task } from '@/components/calendar/types';
-// ...existing code...
 import { GoalTheme } from '@/types/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { GoalChatWidget } from '@/components/goal/GoalChatWidget';
-import GoalChatWidgetN8N from '@/components/goal/GoalChatWidgetN8N';
+// import GoalChatWidgetN8N from '@/components/goal/GoalChatWidgetN8N';
 
 const GoalDetail: React.FC = () => {
   const { id: goalId } = useParams({ from: '/goal/$id' });
-  // loader data shape is dynamic from the route loader; keep any here intentionally
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const loaderData = useLoaderData({ from: '/goal/$id' }) as any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const search = useSearch({ strict: false }) as any;
   const { toast } = useToast();
 
@@ -153,7 +149,8 @@ const GoalDetail: React.FC = () => {
           }
 
           // Show toast notification for task changes (styled like root page)
-          const { eventType, new: newTask, old: oldTask } = payload;
+          const { eventType, new: newTaskRaw, old: oldTask } = payload;
+          const newTask = newTaskRaw as Task;
           let toastTitle = '';
           let toastDescription = '';
           let senderName = '';
@@ -161,16 +158,17 @@ const GoalDetail: React.FC = () => {
           // Try to get sender info (if available)
           const newUpdatedBy = newTask && typeof newTask === 'object' && 'updated_by' in newTask ? newTask['updated_by'] : undefined;
           const oldUpdatedBy = oldTask && typeof oldTask === 'object' && 'updated_by' in oldTask ? oldTask['updated_by'] : undefined;
+
           if (newUpdatedBy) {
-            const { data: senderProfile } = await supabase
+            const { data: senderProfile } = await supabaseAdmin
               .from('user_profiles')
               .select('display_name, avatar_url')
-              .eq('id', newUpdatedBy)
+              .eq('id', newUpdatedBy as string)
               .single();
             senderName = senderProfile?.display_name || 'Someone';
             senderAvatar = senderProfile?.avatar_url;
           } else if (oldUpdatedBy) {
-            const { data: senderProfile } = await supabase
+            const { data: senderProfile } = await supabaseAdmin
               .from('user_profiles')
               .select('display_name, avatar_url')
               .eq('id', oldUpdatedBy)
@@ -187,14 +185,25 @@ const GoalDetail: React.FC = () => {
             toastDescription = `${newTask?.title || 'A task'} has been added to this goal.`;
           } else if (eventType === 'UPDATE') {
             const actionText = newTask?.completed && !oldTask?.completed ? 'completed' :
-                              !newTask?.completed && oldTask?.completed ? 'reopened' : 'updated';
+              !newTask?.completed && oldTask?.completed ? 'reopened' : 'updated';
             toastTitle = newTask?.completed && !oldTask?.completed ? '✓ Task Completed' :
-                        !newTask?.completed && oldTask?.completed ? '○ Task Reopened' : '✏ Task Updated';
+              !newTask?.completed && oldTask?.completed ? '○ Task Reopened' : '✏ Task Updated';
             toastDescription = `${newTask?.title || 'A task'} has been ${actionText}.`;
           } else if (eventType === 'DELETE') {
             toastTitle = '🗑 Task Deleted';
             toastDescription = `${oldTask?.title || 'A task'} has been deleted from this goal.`;
           }
+          
+          // Build deepLink: /goal/{goalId}?date={created_at}&task={task_id}
+          let deepLink = "";
+          if (newTask?.id && newTask?.created_at) {
+            const url = new URL(window.location.origin + `/goal/${goalId}`);
+            const formattedDate = moment(newTask.created_at).format('YYYY-MM-DD');
+            url.searchParams.set('date', formattedDate);
+            url.searchParams.set('task', newTask.id);
+            deepLink = url.pathname + url.search;
+          }
+
           if (toastTitle && toastDescription) {
             toast({
               title: toastTitle,
@@ -213,6 +222,21 @@ const GoalDetail: React.FC = () => {
                   </div>
                 </div>
               ),
+              action: deepLink ? {
+                label: "View",
+                onClick: () => {
+                  const url = new URL(deepLink, window.location.origin);
+                  const path = url.pathname;
+                  const searchParams = Object.fromEntries(url.searchParams);
+
+                  import('@/router').then(({ router }) => {
+                    router.navigate({
+                      to: path as any,
+                      search: searchParams as any
+                    });
+                  });
+                }
+              } : undefined,
             });
           }
         }
