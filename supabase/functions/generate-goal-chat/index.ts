@@ -1,6 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined;
+  };
+};
+
 const SYSTEM_PROMPTS = {
   collecting: `You are a helpful Goal Planning Assistant. Your task is to help the user create a personalized goal with tasks.
 
@@ -50,7 +56,12 @@ type GoalData = {
   };
 };
 
-serve(async (req) => {
+interface Message {
+  role: string;
+  content: string;
+}
+
+serve(async (req: Request) => {
   // Handle CORS preflight request
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -74,7 +85,7 @@ serve(async (req) => {
     }
 
     // Count meaningful user interactions
-    const userMessageCount = messages.filter((msg: any) => msg.role === "user").length;
+    const userMessageCount = messages.filter((msg: Message) => msg.role === "user").length;
 
     // Use cached conversation context for faster responses
     const cacheKey = `conversation:${conversationId}`;
@@ -99,7 +110,7 @@ serve(async (req) => {
     // Prepare messages for Gemini API
     const geminiPrompt = [
       { role: "user", parts: [{ text: systemPrompt }] },
-      ...messages.slice(-10).map((msg: any) => ({
+      ...messages.slice(-10).map((msg: Message) => ({
         role: msg.role === "user" ? "user" : "model",
         parts: [{ text: msg.content }]
       }))
@@ -170,9 +181,10 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in chat API:", error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -251,11 +263,11 @@ function extractGoalData(response: string, userMessageCount: number): { goalData
 /**
  * Cache conversation context in Deno KV
  */
-async function setConversationContext(key: string, context: any): Promise<void> {
+async function setConversationContext(_key: string, _context: unknown): Promise<void> {
   try {
     // In a real implementation, this would use Deno KV or another storage mechanism
     // For now we're just logging it
-    console.log(`Would cache conversation context for key: ${key.substring(0, 15)}...`);
+    console.log(`Would cache conversation context`);
   } catch (error) {
     console.error("Error caching conversation context:", error);
   }
@@ -264,7 +276,7 @@ async function setConversationContext(key: string, context: any): Promise<void> 
 /**
  * Get cached conversation context
  */
-async function getConversationContext(key: string): Promise<any | null> {
+async function getConversationContext(_key: string): Promise<unknown | null> {
   try {
     // In a real implementation, this would retrieve from Deno KV or another storage mechanism
     return null;

@@ -1,11 +1,34 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "./utils/dbClient.ts";
 import { generateTasksForGoal } from "./utils/taskGenerator.ts";
 import { getCurrentApiKey, rotateApiKey, hasMoreKeysToTry, resetAttemptedKeys } from "./utils/apiKeyManager.ts";
 
-serve(async (req) => {
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined;
+  };
+};
+
+interface Goal {
+  id: string;
+  title: string;
+  description?: string;
+  target_date?: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface Task {
+  goal_id: string;
+  created_at: string;
+}
+
+interface GeneratedTask {
+  description: string;
+  date: string;
+}
+
+serve(async (req: Request) => {
   // Handle CORS preflight request
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -63,8 +86,8 @@ serve(async (req) => {
     }
 
     // Filter for specific goal if provided
-    const targetGoals = specificGoalId 
-      ? goals.filter(goal => goal.id === specificGoalId) 
+    const targetGoals: Goal[] = specificGoalId 
+      ? goals.filter((goal: Goal) => goal.id === specificGoalId) 
       : goals;
 
     if (targetGoals.length === 0) {
@@ -94,10 +117,10 @@ serve(async (req) => {
     }
 
     // Find goals that don't already have tasks for today
-    const existingGoalIds = new Set(existingTasks?.map(task => task.goal_id) || []);
+    const existingGoalIds = new Set((existingTasks as Task[] || []).map((task: Task) => task.goal_id));
     const goalsNeedingTasks = forceGenerate 
       ? targetGoals 
-      : targetGoals.filter(goal => !existingGoalIds.has(goal.id));
+      : targetGoals.filter((goal: Goal) => !existingGoalIds.has(goal.id));
 
     if (goalsNeedingTasks.length === 0 && !forceGenerate) {
       return new Response(
@@ -109,7 +132,7 @@ serve(async (req) => {
     }
 
     // Get Gemini API key for task generation
-    let geminiApiKey;
+    let geminiApiKey: string | undefined;
     
     // First, try to use the API key provided in the request
     if (apiKey) {
@@ -132,18 +155,18 @@ serve(async (req) => {
     resetAttemptedKeys();
 
     // Generate and insert tasks for each goal
-    const tasksCreated = [];
+    const tasksCreated: unknown[] = [];
     for (const goal of goalsNeedingTasks) {
       let retryCount = 0;
       let success = false;
       
       while (!success && (retryCount < 3 || hasMoreKeysToTry())) {
         try {
-          const generatedTasks = await generateTasksForGoal(goal, geminiApiKey);
+          const generatedTasks: GeneratedTask[] = await generateTasksForGoal(goal, geminiApiKey);
           
           // Insert tasks into the database
           if (generatedTasks.length > 0) {
-            const tasksToInsert = generatedTasks.map(task => ({
+            const tasksToInsert = generatedTasks.map((task: GeneratedTask) => ({
               goal_id: goal.id,
               user_id: user.id,
               description: task.description,
@@ -166,8 +189,9 @@ serve(async (req) => {
           
           success = true;
         } catch (goalError) {
+          const errorMessage = goalError instanceof Error ? goalError.message : String(goalError);
           // If we get a rate limit error, try with a different API key
-          if (goalError.message?.includes("429") || goalError.message?.includes("quota")) {
+          if (errorMessage.includes("429") || errorMessage.includes("quota")) {
             geminiApiKey = rotateApiKey();
             console.log(`Rate limit hit, rotating to next API key. Retry ${retryCount + 1}`);
             retryCount++;
@@ -190,9 +214,10 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error generating daily tasks:", error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

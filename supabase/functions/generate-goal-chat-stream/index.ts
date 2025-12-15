@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 // CORS headers for all responses
@@ -8,8 +7,26 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined;
+    toObject(): Record<string, string>;
+  };
+};
+
+interface Message {
+  role: string;
+  content: string;
+}
+
+interface RequestData {
+  messages: Message[];
+  stage?: string;
+  conversationId?: string;
+}
+
 // Main serve handler
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest();
@@ -33,12 +50,13 @@ serve(async (req) => {
     return createStreamingResponse(formattedMessages, geminiApiKey);
   } catch (error) {
     console.error("Error in generate-goal-chat-stream function:", error);
-    return createErrorResponse(`Processing error: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return createErrorResponse(`Processing error: ${errorMessage}`);
   }
 });
 
 // Handle CORS preflight requests
-function handleCorsPreflightRequest() {
+function handleCorsPreflightRequest(): Response {
   return new Response(null, { 
     status: 204, 
     headers: corsHeaders 
@@ -46,7 +64,7 @@ function handleCorsPreflightRequest() {
 }
 
 // Parse request data
-async function parseRequestData(req) {
+async function parseRequestData(req: Request): Promise<RequestData> {
   const { messages, stage, conversationId } = await req.json();
   
   // Log the request
@@ -60,7 +78,7 @@ async function parseRequestData(req) {
 }
 
 // Create error response
-function createErrorResponse(message) {
+function createErrorResponse(message: string): Response {
   return new Response(
     JSON.stringify({ error: message }),
     { 
@@ -73,8 +91,13 @@ function createErrorResponse(message) {
   );
 }
 
+interface GeminiMessage {
+  role: string;
+  parts: Array<{ text: string }>;
+}
+
 // Create streaming response
-function createStreamingResponse(formattedMessages, geminiApiKey) {
+function createStreamingResponse(formattedMessages: GeminiMessage[], geminiApiKey: string): Response {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -112,7 +135,7 @@ function createStreamingResponse(formattedMessages, geminiApiKey) {
 }
 
 // Call Gemini API
-async function callGeminiApi(formattedMessages, geminiApiKey) {
+async function callGeminiApi(formattedMessages: GeminiMessage[], geminiApiKey: string): Promise<Response> {
   return await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key=${geminiApiKey}`, {
     method: 'POST',
     headers: {
@@ -124,14 +147,18 @@ async function callGeminiApi(formattedMessages, geminiApiKey) {
         temperature: 0.7,
         topP: 0.95,
         topK: 40,
-        maxOutputTokens: 800, // Limiting output length to encourage brevity
+        maxOutputTokens: 800,
       },
     }),
   });
 }
 
 // Process Gemini stream
-async function processGeminiStream(responseBody, controller, encoder) {
+async function processGeminiStream(
+  responseBody: ReadableStream<Uint8Array>, 
+  controller: ReadableStreamDefaultController, 
+  encoder: TextEncoder
+): Promise<void> {
   const reader = responseBody.getReader();
   const decoder = new TextDecoder();
 
@@ -144,7 +171,7 @@ async function processGeminiStream(responseBody, controller, encoder) {
     
     try {
       // Gemini streams JSON objects, so we need to parse and extract text
-      const lines = chunk.split("\n").filter(line => line.trim());
+      const lines = chunk.split("\n").filter((line: string) => line.trim());
       
       for (const line of lines) {
         if (line.startsWith('data: ')) {
@@ -164,9 +191,9 @@ async function processGeminiStream(responseBody, controller, encoder) {
           controller.enqueue(encoder.encode(line));
         }
       }
-    } catch (parseError) {
+    } catch {
       // If we can't parse JSON, just forward the raw chunk
-      console.error("Error parsing chunk:", parseError);
+      console.error("Error parsing chunk");
       controller.enqueue(value);
     }
   }
@@ -175,7 +202,11 @@ async function processGeminiStream(responseBody, controller, encoder) {
 }
 
 // Handle streaming error
-function handleStreamingError(error, controller, encoder) {
+function handleStreamingError(
+  error: unknown, 
+  controller: ReadableStreamDefaultController, 
+  encoder: TextEncoder
+): void {
   console.error("Error streaming Gemini API response:", error);
   // Send error message
   const errorMessage = "I'm having trouble processing your request. Please try again.";
@@ -184,7 +215,7 @@ function handleStreamingError(error, controller, encoder) {
 }
 
 // Helper function to get the Gemini API key
-async function getGeminiApiKey() {
+async function getGeminiApiKey(): Promise<string> {
   try {
     // Check for environment variable
     const envApiKey = Deno.env.get('GEMINI_API_KEY');
@@ -197,17 +228,14 @@ async function getGeminiApiKey() {
     ];
     
     // Attempt to get API key from database
-    const { SUPABASE_URL, SUPABASE_ANON_KEY } = Deno.env.toObject();
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+    
     if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-      const supabaseClient = {
-        url: SUPABASE_URL,
-        key: SUPABASE_ANON_KEY,
-      };
-
-      const response = await fetch(`${supabaseClient.url}/rest/v1/api_keys?key_type=eq.gemini&is_default=eq.true`, {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/api_keys?key_type=eq.gemini&is_default=eq.true`, {
         headers: {
-          'ApiKey': supabaseClient.key,
-          'Authorization': `Bearer ${supabaseClient.key}`,
+          'ApiKey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         },
       });
 
@@ -223,12 +251,12 @@ async function getGeminiApiKey() {
     return fallbackKeys[0];
   } catch (error) {
     console.error("Error fetching API key:", error);
-    return "AIzaSyBKFsXn9J02iATYPlmDjWN0EmNmTHbVhL0"; // Default fallback
+    return "AIzaSyBKFsXn9J02iATYPlmDjWN0EmNmTHbVhL0";
   }
 }
 
 // Helper function to get appropriate prompt based on conversation stage
-function getPromptForStage(stage) {
+function getPromptForStage(stage: string): string {
   if (stage === "confirming") {
     return `You are helping a user finalize a goal they're planning. Help refine their goal or answer questions. If they confirm, extract the goal information in JSON format. 
     
@@ -268,8 +296,8 @@ function getPromptForStage(stage) {
 }
 
 // Helper function to format messages for Gemini API
-function formatMessagesForGemini(clientMessages, prompt) {
-  const formattedMessages = [];
+function formatMessagesForGemini(clientMessages: Message[], prompt: string): GeminiMessage[] {
+  const formattedMessages: GeminiMessage[] = [];
   
   // Add system prompt as user message at the beginning
   formattedMessages.push({

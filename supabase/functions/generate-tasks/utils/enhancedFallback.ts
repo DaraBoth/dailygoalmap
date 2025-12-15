@@ -1,6 +1,38 @@
 import { addDays } from "https://esm.sh/date-fns@3.6.0";
 import { v4 as uuidv4 } from "https://esm.sh/uuid@9.0.1";
 
+interface Task {
+  id?: string;
+  description: string;
+  date: string;
+  timeOfDay?: string;
+  completed?: boolean;
+  currency?: string;
+}
+
+interface TaskTemplate {
+  phase: string;
+  description: string;
+  timeOfDay: string;
+}
+
+interface GoalAnalysis {
+  type: string;
+  isLearning: boolean;
+  isCreative: boolean;
+  isPhysical: boolean;
+  isFinancial: boolean;
+  isProject: boolean;
+  complexity: string;
+  duration: number;
+}
+
+interface PhaseDistribution {
+  foundation: { start: number; duration: number };
+  execution: { start: number; duration: number };
+  completion: { start: number; duration: number };
+}
+
 /**
  * Enhanced fallback task generation with intelligent planning
  */
@@ -10,13 +42,13 @@ export function createEnhancedFallbackTasks(
   goalTitle: string,
   goalType?: string,
   requestedCount: number = 15
-): any[] {
+): Task[] {
   const start = new Date(startDate);
   const end = new Date(targetDate);
   const daysDiff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   
   // Analyze goal to determine appropriate task structure
-  const goalAnalysis = analyzeGoalForFallback(goalTitle, goalType, daysDiff);
+  const goalAnalysis = analyzeGoalForFallback(goalTitle, goalType || 'general', daysDiff);
   const taskTemplates = selectTaskTemplates(goalAnalysis);
   
   // Generate intelligent task sequence
@@ -35,7 +67,7 @@ export function createEnhancedFallbackTasks(
 /**
  * Analyze goal characteristics for fallback generation
  */
-function analyzeGoalForFallback(goalTitle: string, goalType?: string, days: number) {
+function analyzeGoalForFallback(goalTitle: string, goalType: string, days: number): GoalAnalysis {
   const title = goalTitle.toLowerCase();
   
   return {
@@ -53,8 +85,8 @@ function analyzeGoalForFallback(goalTitle: string, goalType?: string, days: numb
 /**
  * Select appropriate task templates based on goal analysis
  */
-function selectTaskTemplates(analysis: any) {
-  const templates = [];
+function selectTaskTemplates(analysis: GoalAnalysis): TaskTemplate[] {
+  const templates: TaskTemplate[] = [];
   
   // Foundation phase templates
   templates.push(
@@ -112,17 +144,23 @@ function selectTaskTemplates(analysis: any) {
   return templates;
 }
 
+interface TaskWithPhase {
+  description: string;
+  timeOfDay: string;
+  phase: string;
+}
+
 /**
  * Generate intelligent task sequence with proper distribution
  */
 function generateIntelligentTaskSequence(
-  templates: any[],
+  templates: TaskTemplate[],
   goalTitle: string,
   start: Date,
   end: Date,
   daysDiff: number,
   requestedCount: number
-) {
+): Task[] {
   // Distribute phases across timeline
   const phaseDistribution = calculatePhaseDistribution(daysDiff);
   
@@ -136,7 +174,7 @@ function generateIntelligentTaskSequence(
 /**
  * Calculate how to distribute phases across the timeline
  */
-function calculatePhaseDistribution(days: number) {
+function calculatePhaseDistribution(days: number): PhaseDistribution {
   if (days <= 7) {
     return {
       foundation: { start: 0, duration: 2 },
@@ -161,16 +199,20 @@ function calculatePhaseDistribution(days: number) {
 /**
  * Select and customize tasks based on count and goal
  */
-function selectAndCustomizeTasks(templates: any[], count: number, goalTitle: string) {
-  const tasks = [];
-  const phases = ['foundation', 'execution', 'completion'];
+function selectAndCustomizeTasks(templates: TaskTemplate[], count: number, goalTitle: string): TaskWithPhase[] {
+  const tasks: TaskWithPhase[] = [];
+  const phases = ['foundation', 'execution', 'completion'] as const;
   
   // Distribute task count across phases
   const foundationTasks = Math.max(2, Math.ceil(count * 0.2));
   const executionTasks = Math.max(3, Math.ceil(count * 0.7));
   const completionTasks = Math.max(1, count - foundationTasks - executionTasks);
   
-  const phaseTaskCounts = { foundation: foundationTasks, execution: executionTasks, completion: completionTasks };
+  const phaseTaskCounts: Record<string, number> = { 
+    foundation: foundationTasks, 
+    execution: executionTasks, 
+    completion: completionTasks 
+  };
   
   phases.forEach(phase => {
     const phaseTemplates = templates.filter(t => t.phase === phase);
@@ -212,15 +254,15 @@ function customizeTaskDescription(template: string, goalTitle: string, index: nu
  * Distribute tasks across timeline with phase awareness
  */
 function distributeTasksWithPhases(
-  tasks: any[],
+  tasks: TaskWithPhase[],
   start: Date,
   end: Date,
-  phaseDistribution: any,
-  daysDiff: number
-) {
-  const distributedTasks = [];
+  phaseDistribution: PhaseDistribution,
+  _daysDiff: number
+): Task[] {
+  const distributedTasks: Task[] = [];
   
-  Object.keys(phaseDistribution).forEach(phase => {
+  (Object.keys(phaseDistribution) as Array<keyof PhaseDistribution>).forEach(phase => {
     const phaseTasks = tasks.filter(t => t.phase === phase);
     const phaseInfo = phaseDistribution[phase];
     

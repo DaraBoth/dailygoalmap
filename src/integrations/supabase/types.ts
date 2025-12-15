@@ -47,6 +47,53 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_memory: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          goal_id: string | null
+          id: string
+          memory_key: string
+          memory_type: string
+          memory_value: Json
+          session_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          goal_id?: string | null
+          id?: string
+          memory_key: string
+          memory_type: string
+          memory_value: Json
+          session_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          goal_id?: string | null
+          id?: string
+          memory_key?: string
+          memory_type?: string
+          memory_value?: Json
+          session_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_memory_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goal_members: {
         Row: {
           goal_id: string | null
@@ -252,6 +299,42 @@ export type Database = {
         }
         Relationships: []
       }
+      rag_chunks: {
+        Row: {
+          chunk_index: number | null
+          content: string | null
+          created_at: string | null
+          embedding: string | null
+          end_pos: number | null
+          filename: string | null
+          id: string
+          metadata: Json | null
+          start_pos: number | null
+        }
+        Insert: {
+          chunk_index?: number | null
+          content?: string | null
+          created_at?: string | null
+          embedding?: string | null
+          end_pos?: number | null
+          filename?: string | null
+          id?: string
+          metadata?: Json | null
+          start_pos?: number | null
+        }
+        Update: {
+          chunk_index?: number | null
+          content?: string | null
+          created_at?: string | null
+          embedding?: string | null
+          end_pos?: number | null
+          filename?: string | null
+          id?: string
+          metadata?: Json | null
+          start_pos?: number | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           completed: boolean
@@ -308,6 +391,36 @@ export type Database = {
           },
         ]
       }
+      user_api_keys: {
+        Row: {
+          api_key: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          provider: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          api_key: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          provider: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          provider?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_profiles: {
         Row: {
           avatar_url: string | null
@@ -350,6 +463,7 @@ export type Database = {
         Args: { p_goal_id: string; p_user_id: string }
         Returns: boolean
       }
+      cleanup_expired_conversation_memory: { Args: never; Returns: undefined }
       delete_push_subscription: {
         Args: { user_id_param: string }
         Returns: undefined
@@ -400,8 +514,8 @@ export type Database = {
       }
       has_device_id: { Args: { user_id_param: string }; Returns: boolean }
       is_goal_creator:
-        | { Args: { p_goal_id: string; p_user_id: string }; Returns: boolean }
         | { Args: { p_goal_id: string }; Returns: boolean }
+        | { Args: { p_goal_id: string; p_user_id: string }; Returns: boolean }
       join_goal: {
         Args: { p_goal_id: string; p_role: string; p_user_id: string }
         Returns: undefined
