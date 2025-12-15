@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { STANDARD_FUNCTION_SCHEMA, TRAVEL_FUNCTION_SCHEMA } from "./schemas/functionSchemas.ts";
 import { buildPrompt } from "./utils/promptBuilder.ts";
@@ -8,7 +7,22 @@ import { createFallbackTasks } from "./utils/fallbackTasks.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { v4 as uuidv4 } from "https://esm.sh/uuid@9.0.1";
 
-serve(async (req) => {
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined;
+  };
+};
+
+interface Task {
+  id?: string;
+  description: string;
+  date: string;
+  completed?: boolean;
+  currency?: string;
+  timeOfDay?: string;
+}
+
+serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -76,7 +90,7 @@ serve(async (req) => {
     const daysDiff = Math.round((new Date(processTargetDate).getTime() - new Date(processStartDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
     // Enhanced task count calculation - let the prompt builder handle this
-    const taskCount = requestedTaskCount; // Will be calculated in buildPrompt based on complexity
+    const taskCount = requestedTaskCount;
 
     // Select the appropriate function schema based on goal type
     const functionSchema = goalType === 'travel' ? TRAVEL_FUNCTION_SCHEMA : STANDARD_FUNCTION_SCHEMA;
@@ -121,8 +135,8 @@ serve(async (req) => {
             }
           },
           generationConfig: {
-            temperature: 0.8, // Slightly more creative for better task variety
-            maxOutputTokens: 4096, // Increased for complex long-term goals
+            temperature: 0.8,
+            maxOutputTokens: 4096,
           },
         }),
       });
@@ -137,19 +151,19 @@ serve(async (req) => {
       console.log("Gemini API response:", JSON.stringify(data).substring(0, 200) + "...");
       
       // Extract the function call from the response
-      const generatedTasks = extractTasksFromResponse(data, goalType);
+      const generatedTasks: Task[] = extractTasksFromResponse(data, goalType);
       
       if (generatedTasks.length === 0) {
         throw new Error("No tasks were generated");
       }
 
       // Process tasks ensuring they match our database schema
-      let formattedTasks = [];
+      let formattedTasks: Task[] = [];
       
       // For short travel periods, preserve all generated tasks with their dates
       if (goalType === 'travel' && daysDiff <= 7) {
         const enhancedTasks = enhanceTravelTasks(generatedTasks, processStartDate, processTargetDate);
-        formattedTasks = enhancedTasks.map(task => ({
+        formattedTasks = enhancedTasks.map((task: Task) => ({
           id: task.id || uuidv4(),
           description: task.description,
           date: task.date,
@@ -160,7 +174,7 @@ serve(async (req) => {
       } else {
         // For regular goals or longer travel periods, distribute tasks evenly
         const distributedTasks = distributeTasks(generatedTasks, processStartDate, processTargetDate);
-        formattedTasks = distributedTasks.map(task => ({
+        formattedTasks = distributedTasks.map((task: Task) => ({
           id: task.id || uuidv4(),
           description: task.description,
           date: task.date,
@@ -185,11 +199,11 @@ serve(async (req) => {
         processTargetDate, 
         goalTitle, 
         goalType,
-        requestedTaskCount || 15 // Use a reasonable default
+        requestedTaskCount || 15
       );
       
       // Ensure fallback tasks match our schema too
-      const formattedFallbackTasks = fallbackTasks.map(task => ({
+      const formattedFallbackTasks = fallbackTasks.map((task: Task) => ({
         id: task.id || uuidv4(),
         description: task.description,
         date: task.date,
@@ -207,9 +221,10 @@ serve(async (req) => {
     }
   } catch (error) {
     console.error("Error generating tasks:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to generate tasks";
     
     return new Response(
-      JSON.stringify({ error: error.message || "Failed to generate tasks" }),
+      JSON.stringify({ error: errorMessage }),
       { 
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" } 

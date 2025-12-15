@@ -3,10 +3,8 @@
  * Multi-model AI assistant with fallback support
  */
 
-// @ts-expect-error - Deno std library
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-// @ts-expect-error - ESM.sh import for Deno
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 import { AgentContext, Message, ModelType, ToolParams } from './types.ts';
@@ -429,309 +427,99 @@ PARAMS: {"title_search":"meeting","limit":20}
 **CORRECT WORKFLOW for updating/deleting tasks:**
 1. User says: "Delete the workout task"
 2. You call: get_tasks_by_start_date or find_by_title to get the task
-3. Result contains: {"tasks": [{"id": "550e8400-e29b-41d4-a716-446655440000", "title": "Workout", ...}]}
-4. You extract the ACTUAL ID: "550e8400-e29b-41d4-a716-446655440000"
-5. You call: delete_task with {"task_id": "550e8400-e29b-41d4-a716-446655440000"}
+3. You receive task data with ACTUAL UUIDs in the "id" field
+4. You extract the real UUID from the response
+5. You use that exact UUID in your delete_task call
 
-**WRONG WORKFLOW (will always fail):**
+**WRONG WORKFLOW (will fail):**
 1. User says: "Delete the workout task"
-2. You call: delete_task with {"task_id": "task_1"} ❌ WRONG! This ID doesn't exist!
-3. You call: delete_task with {"task_id": "workout"} ❌ WRONG! Not a valid UUID!
+2. You immediately call delete_task with an invented ID ❌
 
-Remember:
-- Task IDs are UUIDs like "550e8400-e29b-41d4-a716-446655440000"
-- ALWAYS get tasks first to obtain their real IDs
-- The conversation memory system helps map "task 1" → real UUID automatically
-- For multiple tasks, use batch operations (move_tasks_batch, delete_tasks_batch) instead of loops
-4. Always provide ALL required time parameters (daily_start_time, daily_end_time) when moving tasks`;
+ALWAYS fetch first, then act with the real ID!`;
 
-    // ALWAYS use streaming with tool execution support
-    if (stream) {
-      // Create SSE stream with tool execution
-      const encoder = new TextEncoder();
-      const stream = new ReadableStream({
-        async start(controller) {
-          const sendEvent = (type: string, data: StreamPayload) => {
-            const message = `data: ${JSON.stringify({ type, ...data })}\n\n`;
-            controller.enqueue(encoder.encode(message));
-          };
+    // Prepare messages for API call
+    const formattedMessages = [
+      {
+        role: 'user',
+        parts: [{
+          text: `${systemInstruction}
 
-          try {
-            const MAX_LOOPS = 30;
-            let loopCount = 0;
-            const conversationHistory = [...aiMessages];
-            const toolsUsed: string[] = [];
+Conversation history:
+${aiMessages.map((m: Message) => `${m.role}: ${m.content}`).join('\n')}`
+        }]
+      }
+    ];
 
-            // Try each API key until one succeeds
-            for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
-              try {
-                const keyData = apiKeys[keyIndex];
-                const keyLabel = keyData.key_name || keyData.id || 'API key';
-                sendEvent('key_info', { content: keyLabel, message: keyLabel });
-                sendEvent('status', { message: `Using API key: ${keyLabel}`, content: `Using API key: ${keyLabel}` });
+    // Make the AI call
+    const apiKey = apiKeys[0].key_value;
+    const aiResponseText = await callAIModel(targetModel, apiKey, formattedMessages);
 
-                // Tool execution loop
-                while (loopCount < MAX_LOOPS) {
-                  loopCount++;
-
-                  const aiResponseText = await callAIModel(targetModel, keyData.key_value, conversationHistory, systemInstruction);
-
-                  // Check for tool usage
-                    const toolMatch = aiResponseText.match(/TOOL: (\w+)\nPARAMS: ({.*?})/s);
-
-                  if (toolMatch) {
-                    const toolName = toolMatch[1];
-                      let params: ToolParams;
-
-                    try {
-                      params = JSON.parse(toolMatch[2]);
-                    } catch (parseError) {
-                      sendEvent('error', { message: 'Tool parameter parsing failed', content: 'Tool parameter parsing failed' });
-                      conversationHistory.push({
-                        role: 'user',
-                        content: `Tool parameter parsing failed. Please check your PARAMS format and try again.`
-                      });
-                      continue;
-                    }
-
-                    // Notify user about tool execution with friendly name
-                    const displayName = getToolDisplayName(toolName);
-                    console.log(`\n🔧 [AI Agent] Executing tool: ${toolName}`);
-                    console.log(`📋 [AI Agent] Params:`, JSON.stringify(params, null, 2));
-                    console.log(`🎯 [AI Agent] Context:`, { goalId: context.goalId, userId: context.userId });
-                    
-                    sendEvent('status', { message: displayName, content: displayName });
-                    toolsUsed.push(toolName);
-
-                    // Execute tool
-                    let toolResult: unknown;
-                    try {
-                      toolResult = await executeTool(toolName, params, context, supabase);
-                      
-                      console.log(`✅ [AI Agent] Tool ${toolName} succeeded`);
-                      console.log(`📊 [AI Agent] Result:`, JSON.stringify(toolResult, null, 2));
-                      
-                      // Create user-friendly completion message
-                      const displayName = getToolDisplayName(toolName);
-                      let resultMessage = `✓ ${displayName} completed`;
-                      
-                      // For data retrieval tools, show count if available
-                      if (toolName === 'get_tasks_by_start_date' && toolResult && typeof toolResult === 'object' && 'tasks' in toolResult) {
-                        const tasks = (toolResult as any).tasks;
-                        const count = Array.isArray(tasks) ? tasks.length : 0;
-                        resultMessage = count > 0 
-                          ? ` Found ${count} task${count !== 1 ? 's' : ''}`
-                          : ` No tasks scheduled for this date`;
-                        console.log(`📈 [AI Agent] Tasks count: ${count}`);
-                      } else if (toolName === 'find_by_title' && toolResult && typeof toolResult === 'object' && 'tasks' in toolResult) {
-                        const tasks = (toolResult as any).tasks;
-                        const count = Array.isArray(tasks) ? tasks.length : 0;
-                        resultMessage = count > 0
-                          ? ` Found ${count} matching task${count !== 1 ? 's' : ''}`
-                          : ` No matching tasks found`;
-                        console.log(`📈 [AI Agent] Search results: ${count}`);
-                      }
-                      
-                      sendEvent('tool_result', { name: toolName, success: true, message: resultMessage, content: resultMessage });
-                    } catch (toolError) {
-                      console.error(`❌ [AI Agent] Tool ${toolName} failed:`, toolError);
-                      const displayName = getToolDisplayName(toolName);
-                      sendEvent('tool_result', { 
-                        name: toolName, 
-                        success: false, 
-                        message: `✗ ${displayName} failed: ${toolError instanceof Error ? toolError.message : String(toolError)}`,
-                        content: `✗ ${displayName} failed: ${toolError instanceof Error ? toolError.message : String(toolError)}` 
-                      });
-                      toolResult = {
-                        error: toolError instanceof Error ? toolError.message : String(toolError),
-                        success: false
-                      };
-                    }
-
-                    // Add tool result to conversation with task ID mappings if available
-                    let contextMessage = `Tool ${toolName} executed. Result:\n${JSON.stringify(toolResult, null, 2)}`;
-                    
-                    // If this was a task query, include the ID mappings explicitly
-                    if (toolName === 'get_tasks_by_start_date' || toolName === 'find_by_title') {
-                      if (toolResult && typeof toolResult === 'object' && 'tasks' in toolResult) {
-                        const tasks = (toolResult as any).tasks;
-                        if (Array.isArray(tasks) && tasks.length > 0) {
-                          contextMessage += '\n\n**CRITICAL - TASK ID MAPPINGS:**\n';
-                          tasks.forEach((task: any, index: number) => {
-                            contextMessage += `- Task ${index + 1}: "${task.title}" → ID: ${task.id}\n`;
-                          });
-                          contextMessage += '\n**When user asks to update/move/delete tasks, use these EXACT IDs above.**';
-                        }
-                      }
-                    }
-                    
-                    contextMessage += '\n\nAnalyze this result and provide a natural response to the user.';
-                    
-                    conversationHistory.push({
-                      role: 'user',
-                      content: contextMessage
-                    });
-
-                    // Continue loop
-                    continue;
-                  }
-
-                  // No tool request - AI provided final response
-                  // Stream the final response word by word for better UX
-                  const words = aiResponseText.split(' ');
-                  for (const word of words) {
-                    const chunk = `${word} `;
-                    sendEvent('content', { delta: chunk, content: chunk });
-                    await new Promise(resolve => setTimeout(resolve, 30)); // Small delay for streaming effect
-                  }
-
-                  sendEvent('done', { 
-                    toolsUsed: toolsUsed,
-                    keyUsed: keyData.key_name,
-                    content: aiResponseText
-                  });
-                  controller.close();
-                  return;
-                }
-
-                // Max loops reached
-                sendEvent('error', { message: 'Maximum iterations reached without completing request', content: 'Maximum iterations reached without completing request' });
-                controller.close();
-                return;
-
-              } catch (keyError) {
-                console.error(`Key ${keyIndex + 1} failed:`, keyError);
-                if (keyIndex === apiKeys.length - 1) {
-                  const failureMessage = `All API keys failed: ${keyError instanceof Error ? keyError.message : String(keyError)}`;
-                  sendEvent('error', { message: failureMessage, content: failureMessage });
-                  controller.close();
-                  return;
-                }
-                sendEvent('status', { message: 'Trying next API key...', content: 'Trying next API key...' });
-              }
-            }
-          } catch (error) {
-            const genericError = error instanceof Error ? error.message : String(error);
-            sendEvent('error', { message: genericError, content: genericError });
-            controller.close();
-          }
-        }
-      });
-
-      return new Response(stream, {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive'
-        }
-      });
-    }
-
-    // Non-streaming path with tool looping (max 30 iterations)
-    const MAX_LOOPS = 30;
-    let loopCount = 0;
-    const conversationHistory = [...aiMessages];
-    const toolsUsed: string[] = [];
+    // Check if AI is requesting tool usage
+    const toolMatch = aiResponseText.match(/TOOL: (\w+)\nPARAMS: ({.*?})/s);
     
-    for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
+    if (toolMatch) {
+      const toolName = toolMatch[1];
+      let params: ToolParams;
+      
       try {
-        const keyData = apiKeys[keyIndex];
-        console.log(`Using key ${keyIndex + 1}/${apiKeys.length}: ${keyData.key_name}`);
-        
-        // Tool execution loop
-        while (loopCount < MAX_LOOPS) {
-          loopCount++;
-          console.log(`\n🔄 Loop iteration ${loopCount}/${MAX_LOOPS}`);
-          
-          const aiResponseText = await callAIModel(targetModel, keyData.key_value, conversationHistory, systemInstruction);
-          console.log(`AI response (full):`, aiResponseText);
-          console.log(`AI response (preview):`, aiResponseText.substring(0, 200));
-          
-          // Check for tool usage
-          const toolMatch = aiResponseText.match(/TOOL: (\w+)\nPARAMS: ({.*?})/s);
-          console.log(`Tool match result:`, toolMatch);
-          
-          if (toolMatch) {
-            const toolName = toolMatch[1];
-            let params: ToolParams;
-            
-            try {
-              params = JSON.parse(toolMatch[2]);
-            } catch (parseError) {
-              console.error("Failed to parse tool params:", toolMatch[2]);
-              // Add error to conversation and continue
-              conversationHistory.push({
-                role: 'user',
-                content: `Tool parameter parsing failed. Please check your PARAMS format and try again.`
-              });
-              continue;
-            }
-            
-            console.log(`🔧 Executing tool: ${toolName}`);
-            toolsUsed.push(toolName);
-            
-            // Execute tool
-            let toolResult: unknown;
-            try {
-              toolResult = await executeTool(toolName, params, context, supabase);
-              console.log(`✅ Tool result:`, JSON.stringify(toolResult).substring(0, 200));
-            } catch (toolError) {
-              console.error(`❌ Tool ${toolName} failed:`, toolError);
-              toolResult = { 
-                error: toolError instanceof Error ? toolError.message : String(toolError),
-                success: false
-              };
-            }
-            
-            // Add tool result to conversation history (in unified format)
-            conversationHistory.push({
-              role: 'user',
-              content: `Tool ${toolName} executed. Result:\n${JSON.stringify(toolResult, null, 2)}\n\nAnalyze this result. If you need to use another tool, do so. Otherwise, provide a natural response to the user. Remember: NO technical details, IDs, or tool names in your final response.`
-            });
-            
-            // Continue loop - AI will decide if it needs another tool
-            continue;
-          }
-          
-          // No tool request - AI provided final response
-          console.log(`✅ Final response received after ${loopCount} iterations`);
-          return new Response(
-            JSON.stringify({ 
-              message: aiResponseText.replace(/TOOL:.*?PARAMS:.*?}/gs, '').trim(),
-              toolsUsed: toolsUsed,
-              iterations: loopCount,
-              keyUsed: keyData.key_name
-            }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        
-        // Max loops reached
-        console.log(`⚠️ Max loops (${MAX_LOOPS}) reached`);
+        params = JSON.parse(toolMatch[2]);
+      } catch {
         return new Response(
           JSON.stringify({ 
-            message: "I've completed the task, but it required many steps. The operation was successful.",
-            toolsUsed: toolsUsed,
-            iterations: loopCount,
-            maxLoopsReached: true,
-            keyUsed: keyData.key_name
+            message: "I understood what you want, but had trouble executing it. Could you rephrase your request?"
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
-        
-      } catch (keyError) {
-        console.error(`Key ${keyIndex + 1} failed:`, keyError);
-        
-        if (keyIndex === apiKeys.length - 1) {
-          throw keyError;
+      }
+      
+      // Execute tool
+      let toolResult;
+      try {
+        console.log(`Executing tool: ${toolName} with params:`, JSON.stringify(params));
+        toolResult = await executeTool(toolName, params, context, supabase);
+        console.log(`Tool ${toolName} result:`, JSON.stringify(toolResult).substring(0, 300));
+      } catch (error) {
+        console.error(`Tool ${toolName} execution failed:`, error);
+        toolResult = { error: error instanceof Error ? error.message : String(error) };
+      }
+
+      // Get AI to process the tool result
+      const followUpMessages = [
+        ...formattedMessages,
+        {
+          role: 'user',
+          parts: [{
+            text: `Tool ${toolName} executed. Result:\n${JSON.stringify(toolResult, null, 2)}\n\nPlease provide a natural response to the user based on this data. Remember: NO technical details, IDs, or tool names in your response.`
+          }]
         }
-        
-        console.log(`Trying next key...`);
+      ];
+
+      try {
+        const followUpResponse = await callAIModel(targetModel, apiKey, followUpMessages);
+
+        return new Response(
+          JSON.stringify({ 
+            message: followUpResponse.replace(/TOOL:.*?PARAMS:.*?}/gs, '').trim(),
+            toolUsed: toolName
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch {
+        return new Response(
+          JSON.stringify({ 
+            message: `Action completed successfully.`,
+            toolUsed: toolName
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     }
 
-    throw new Error('All API keys failed');
+    // Return direct response if no tools needed
+    return new Response(
+      JSON.stringify({ message: aiResponseText }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
 
   } catch (error) {
     console.error("Error in AI agent:", error);
@@ -749,7 +537,7 @@ Remember:
 });
 
 // Non-streaming AI calls
-async function callAIModel(modelId: ModelType, apiKey: string, messages: Message[], systemInstruction: string): Promise<string> {
+async function callAIModel(modelId: ModelType, apiKey: string, messages: Array<{role: string; parts: Array<{text: string}>}>): Promise<string> {
   const modelInfo = getModelInfo(modelId);
   if (!modelInfo) {
     throw new Error(`Unknown model: ${modelId}`);
@@ -757,186 +545,46 @@ async function callAIModel(modelId: ModelType, apiKey: string, messages: Message
 
   switch (modelInfo.provider) {
     case 'gemini':
-      return await callGemini(modelId, apiKey, messages, systemInstruction);
+      return await callGemini(modelId, apiKey, messages);
     case 'openai':
-      return await callOpenAI(modelId, apiKey, messages, systemInstruction);
+      return await callOpenAI(modelId, apiKey, messages);
     case 'claude':
-      return await callClaude(modelId, apiKey, messages, systemInstruction);
+      return await callClaude(modelId, apiKey, messages);
     default:
       throw new Error(`Unsupported provider: ${modelInfo.provider}`);
   }
 }
 
-async function callGemini(modelId: ModelType, apiKey: string, messages: Message[], systemInstruction: string): Promise<string> {
-  // Gemini currently expects only model/user roles, so strip anything else
-  const geminiMessages = messages
-    .filter((m) => m.role === 'assistant' || m.role === 'user')
-    .map((m) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }]
-    }));
-
-  const basePayload: Record<string, unknown> = {
-    contents: geminiMessages,
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 8192,
+async function callGemini(modelId: ModelType, apiKey: string, messages: Array<{role: string; parts: Array<{text: string}>}>): Promise<string> {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1/models/${modelId}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: messages,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 8192,
+        }
+      })
     }
-  };
+  );
 
-  if (systemInstruction.trim().length > 0) {
-    basePayload.systemInstruction = {
-      role: 'system',
-      parts: [{ text: systemInstruction }]
-    };
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${errorText.substring(0, 100)}`);
   }
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1/models/${modelId}:generateContent?key=${apiKey}`;
-
-  const executeRequest = async (payload: Record<string, unknown>) => {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} - ${errorText.substring(0, 200)}`);
-    }
-
-    return response.json();
-  };
-
-  try {
-    const data = await executeRequest(basePayload);
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    // Gemini sometimes rejects systemInstruction for experimental models. Retry without it.
-    if (message.includes('Unknown name "system"') || message.includes('systemInstruction')) {
-      console.warn('⚠️ Gemini rejected systemInstruction, retrying without it');
-      const fallbackPayload: Record<string, unknown> = {
-        ...basePayload,
-      };
-      delete fallbackPayload.systemInstruction;
-
-      // Prepend the system prompt as an implicit first user turn
-      fallbackPayload.contents = [
-        {
-          role: 'user',
-          parts: [{ text: `Follow these instructions carefully:
-${systemInstruction}` }]
-        },
-        ...((basePayload.contents as unknown[]) ?? [])
-      ];
-
-      const data = await executeRequest(fallbackPayload);
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
-    }
-
-    throw error;
-  }
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated";
 }
 
-async function callOpenAI(modelId: ModelType, apiKey: string, messages: Message[], systemInstruction: string): Promise<string> {
-  const openAIMessages = [
-    { role: 'system', content: systemInstruction },
-    ...messages.map((m) => ({ role: m.role, content: m.content }))
-  ];
-
-  // Define OpenAI function calling tools
-  const tools = [
-    {
-      type: "function",
-      function: {
-        name: "get_tasks_by_start_date",
-        description: "Get tasks scheduled within a date range",
-        parameters: {
-          type: "object",
-          properties: {
-            start_date: { type: "string", description: "Start date in YYYY-MM-DD format" },
-            end_date: { type: "string", description: "End date in YYYY-MM-DD format" },
-            limit: { type: "number", description: "Optional limit on number of tasks" }
-          },
-          required: ["start_date", "end_date"]
-        }
-      }
-    },
-    {
-      type: "function",
-      function: {
-        name: "insert_new_task",
-        description: "Create a new task",
-        parameters: {
-          type: "object",
-          properties: {
-            title: { type: "string", description: "Task title" },
-            description: { type: "string", description: "Task description" },
-            start_date: { type: "string", description: "Start date in YYYY-MM-DD format" },
-            end_date: { type: "string", description: "End date in YYYY-MM-DD format" },
-            daily_start_time: { type: "string", description: "Start time in HH:MM:SS format (24-hour)" },
-            daily_end_time: { type: "string", description: "End time in HH:MM:SS format (24-hour)" }
-          },
-          required: ["title", "start_date", "end_date", "daily_start_time", "daily_end_time"]
-        }
-      }
-    },
-    {
-      type: "function",
-      function: {
-        name: "update_task_info",
-        description: "Update task information (title, description, or completion status). CRITICAL: task_id must be the actual UUID from the database, not a placeholder like 'task_1'.",
-        parameters: {
-          type: "object",
-          properties: {
-            task_id: { 
-              type: "string", 
-              description: "The ACTUAL UUID of the task from the database (e.g., '550e8400-e29b-41d4-a716-446655440000'). NEVER use placeholders like 'task_1'."
-            },
-            title: { type: "string", description: "New title (optional)" },
-            description: { type: "string", description: "New description (optional)" },
-            completed: { type: "string", description: "Completion status: 'true' or 'false' (optional)" }
-          },
-          required: ["task_id"]
-        }
-      }
-    },
-    {
-      type: "function",
-      function: {
-        name: "delete_task",
-        description: "Delete a single task. CRITICAL: task_id must be the actual UUID from the database, not a placeholder.",
-        parameters: {
-          type: "object",
-          properties: {
-            task_id: { 
-              type: "string", 
-              description: "The ACTUAL UUID of the task to delete (e.g., '550e8400-e29b-41d4-a716-446655440000'). NEVER use placeholders like 'task_1'."
-            }
-          },
-          required: ["task_id"]
-        }
-      }
-    },
-    {
-      type: "function",
-      function: {
-        name: "google_search",
-        description: "Search Google for current information",
-        parameters: {
-          type: "object",
-          properties: {
-            query: { type: "string", description: "Search query" },
-            country: { type: "string", description: "Country code (e.g., 'us')" },
-            language: { type: "string", description: "Language code (e.g., 'en')" }
-          },
-          required: ["query"]
-        }
-      }
-    }
-  ];
+async function callOpenAI(modelId: ModelType, apiKey: string, messages: Array<{role: string; parts: Array<{text: string}>}>): Promise<string> {
+  const openAIMessages = messages.map(msg => ({
+    role: msg.role === 'user' ? 'user' : 'assistant',
+    content: msg.parts ? msg.parts[0].text : ''
+  }));
 
   const response = await fetch(
     'https://api.openai.com/v1/chat/completions',
@@ -949,8 +597,6 @@ async function callOpenAI(modelId: ModelType, apiKey: string, messages: Message[
       body: JSON.stringify({
         model: modelId,
         messages: openAIMessages,
-        tools: tools,
-        tool_choice: "auto",
         temperature: 0.7,
         max_tokens: 4096
       })
@@ -963,26 +609,23 @@ async function callOpenAI(modelId: ModelType, apiKey: string, messages: Message[
   }
 
   const data = await response.json();
-  const message = data.choices?.[0]?.message;
-  
-  // Check if OpenAI wants to call a function
-  if (message?.tool_calls && message.tool_calls.length > 0) {
-    const toolCall = message.tool_calls[0];
-    const functionName = toolCall.function.name;
-    const functionArgs = JSON.parse(toolCall.function.arguments);
-    
-    // Return in the same TOOL format that our loop expects
-    return `TOOL: ${functionName}\nPARAMS: ${JSON.stringify(functionArgs)}`;
-  }
-  
-  return message?.content || "No response generated";
+  return data.choices?.[0]?.message?.content || "No response generated";
 }
 
-async function callClaude(modelId: ModelType, apiKey: string, messages: Message[], systemInstruction: string): Promise<string> {
-  const claudeMessages = messages.map((m) => ({
-    role: m.role === 'assistant' ? 'assistant' : 'user',
-    content: [{ type: 'text', text: m.content }]
+async function callClaude(modelId: ModelType, apiKey: string, messages: Array<{role: string; parts: Array<{text: string}>}>): Promise<string> {
+  const claudeMessages = messages.map(msg => ({
+    role: msg.role === 'user' ? 'user' : 'assistant',
+    content: msg.parts ? msg.parts[0].text : ''
   }));
+
+  let systemMessage = '';
+  const userMessages = claudeMessages.filter(msg => {
+    if (msg.content.includes('SYSTEM_PROMPT')) {
+      systemMessage = msg.content;
+      return false;
+    }
+    return true;
+  });
 
   const response = await fetch(
     'https://api.anthropic.com/v1/messages',
@@ -997,8 +640,8 @@ async function callClaude(modelId: ModelType, apiKey: string, messages: Message[
         model: modelId,
         max_tokens: 8192,
         temperature: 0.7,
-        system: systemInstruction,
-        messages: claudeMessages
+        system: systemMessage || undefined,
+        messages: userMessages.length > 0 ? userMessages : claudeMessages
       })
     }
   );

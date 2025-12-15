@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 // Set up CORS headers
@@ -10,7 +9,14 @@ const corsHeaders = {
 // In-memory cache for suggestions to reduce API calls
 const suggestionCache: Record<string, {suggestions: string[], timestamp: number}> = {};
 
-serve(async (req) => {
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined;
+    toObject(): Record<string, string>;
+  };
+};
+
+serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -18,7 +24,7 @@ serve(async (req) => {
 
   try {
     const { message, dedicatedCall = false } = await req.json();
-    const cacheKey = message.trim().toLowerCase();
+    const cacheKey = message?.trim()?.toLowerCase() || '';
     
     // Check cache for recent suggestions (less than 10 minutes old)
     const cachedResult = suggestionCache[cacheKey];
@@ -63,11 +69,12 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error generating suggestions:", error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     return new Response(
       JSON.stringify({ 
-        suggestions: getDefaultSuggestions(message),
-        error: error.message 
+        suggestions: getDefaultSuggestions(),
+        error: errorMessage 
       }),
       { 
         status: 500,
@@ -92,19 +99,16 @@ async function getGeminiApiKey(dedicatedCall: boolean): Promise<string> {
     if (envApiKey) return envApiKey;
     
     // Attempt to get API key from database
-    const { SUPABASE_URL, SUPABASE_ANON_KEY } = Deno.env.toObject();
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+    
     if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-      const supabaseClient = {
-        url: SUPABASE_URL,
-        key: SUPABASE_ANON_KEY,
-      };
-
       // Try getting a dedicated suggestions API key first
       if (dedicatedCall) {
-        const response = await fetch(`${supabaseClient.url}/rest/v1/api_keys?key_type=eq.gemini&key_name=ilike.*suggestion*`, {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/api_keys?key_type=eq.gemini&key_name=ilike.*suggestion*`, {
           headers: {
-            'ApiKey': supabaseClient.key,
-            'Authorization': `Bearer ${supabaseClient.key}`,
+            'ApiKey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
           },
         });
 
@@ -118,10 +122,10 @@ async function getGeminiApiKey(dedicatedCall: boolean): Promise<string> {
       }
 
       // Fall back to default Gemini key
-      const response = await fetch(`${supabaseClient.url}/rest/v1/api_keys?key_type=eq.gemini&is_default=eq.true`, {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/api_keys?key_type=eq.gemini&is_default=eq.true`, {
         headers: {
-          'ApiKey': supabaseClient.key,
-          'Authorization': `Bearer ${supabaseClient.key}`,
+          'ApiKey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         },
       });
 
@@ -134,10 +138,10 @@ async function getGeminiApiKey(dedicatedCall: boolean): Promise<string> {
     }
     
     // Fallback key as last resort
-    return "AIzaSyBKFsXn9J02iATYPlmDjWN0EmNmTHbVhL0"; // This is just a placeholder
+    return "AIzaSyBKFsXn9J02iATYPlmDjWN0EmNmTHbVhL0";
   } catch (error) {
     console.error("Error fetching API key:", error);
-    return "AIzaSyBKFsXn9J02iATYPlmDjWN0EmNmTHbVhL0"; // Default fallback
+    return "AIzaSyBKFsXn9J02iATYPlmDjWN0EmNmTHbVhL0";
   }
 }
 
@@ -203,8 +207,8 @@ FORMAT: Return ONLY a JSON array of strings without any explanation.
         return Array.isArray(suggestions) ? suggestions : getDefaultSuggestions(message);
       }
       return getDefaultSuggestions(message);
-    } catch (err) {
-      console.error("Error parsing suggestions:", err);
+    } catch {
+      console.error("Error parsing suggestions");
       return getDefaultSuggestions(message);
     }
   } catch (error) {
