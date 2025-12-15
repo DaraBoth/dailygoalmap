@@ -45,6 +45,7 @@ const MIN_MESSAGE_INTERVAL = 3000;
 
 export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo }) => {
   const [isOpen, setIsOpen] = useState(false);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
@@ -69,6 +70,17 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const [chatWindow, setChatWindow] = useState<Window | null>(null);
+  const isWindows = typeof window !== 'undefined' && navigator.platform.startsWith('Win');
+
+  const handleOpenChatWindow = () => {
+    if (!isWindows) return;
+    // Pass params via query string
+    const params = new URLSearchParams({ goalId: goalId || '', userInfo: userInfo ? encodeURIComponent(JSON.stringify(userInfo)) : '' });
+    const chatWin = window.open(`/chat-popup?${params.toString()}`, '_blank', 'width=500,height=700');
+    setChatWindow(chatWin);
+  };
 
   // Auto-resize textarea with performance optimization
   useAutoResizeTextArea(textareaRef, inputValue, { minRows: 1, maxRows: 6 });
@@ -572,6 +584,15 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                     Clear
                   </Button>
                 )}
+                {/* Open in new window button, only on Windows */}
+                {/* {isWindows && (
+                  <button
+                    className={`fixed bottom-24 ${isMobile ? 'left-6' : 'right-6'} z-50 px-4 py-2 rounded-lg bg-blue-600 text-white shadow-lg hover:bg-blue-700`}
+                    onClick={handleOpenChatWindow}
+                  >
+                    Open Chat in New Window
+                  </button>
+                )} */}
                 <Button variant="ghost" className='z-999' size="icon" onClick={() => setIsOpen(false)}>
                   <X className="h-6 w-6" />
                 </Button>
@@ -867,7 +888,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                 {showScrollButton && (
                   <button
                     className="absolute z-90 -top-16 left-1/2 transform translate-x-[-50%] liquid-glass px-2 py-2 hover:animate-none"
-                    style={{borderRadius:"50%" }}
+                    style={{ borderRadius: "50%" }}
                     onClick={() => {
                       scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
                       setShowScrollButton(false);
