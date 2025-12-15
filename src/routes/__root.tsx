@@ -105,6 +105,7 @@ function RootComponent() {
             currentGoalId &&
             String(notification.payload.goal_id) === String(currentGoalId)
           ) {
+            console.log("true");
             return;
           }
           

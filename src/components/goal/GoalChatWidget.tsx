@@ -814,7 +814,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
               <div ref={scrollRef} />
             </div>  {/* end wrapper */}
 
-
             {/* Input */}
             <div className="relative flex-shrink-0 p-4 border-t">
               {/* Model Selector and API Key Info */}
@@ -864,7 +863,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                     <span>{currentApiKey}</span>
                   </div>
                 )}
-
 
                 {showScrollButton && (
                   <button

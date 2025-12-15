@@ -1,22 +1,18 @@
 /**
- * AI Agent Edge Function - New Version
- * Multi-model AI assistant with streaming support
+ * AI Agent Edge Function - Refactored Version
+ * Multi-model AI assistant with fallback support
  */
 
+// @ts-expect-error - Deno std library
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+// @ts-expect-error - ESM.sh import for Deno
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 import { AgentContext, Message, ModelType } from './types.ts';
 import { getModelInfo, getModelsByProvider } from './models.ts';
 import { streamAIResponse } from './streaming.ts';
 import { executeTool } from './tools.ts';
-
-declare const Deno: {
-  env: {
-    get(key: string): string | undefined;
-  };
-};
 
 const SYSTEM_PROMPT = `You are **GuoErrAI**, a personal AI assistant helping users manage their goals, tasks, and daily schedules.
 
@@ -32,9 +28,85 @@ const SYSTEM_PROMPT = `You are **GuoErrAI**, a personal AI assistant helping use
 - NEVER mention technical details (IDs, tool names, database fields)
 - Use "you" and "your" (not "the user")
 - Provide clear, actionable responses
-- Use Markdown formatting`;
+- Use Markdown formatting
 
-serve(async (req: Request) => {
+## FORMATTING GUIDELINES
+**When showing tasks/schedules:**
+- ALWAYS format as markdown tables with columns: Task | Description | Date | Time | Status
+- Make dates and times easy to read (e.g., "Dec 5, 2024" instead of "2024-12-05")
+- Include clickable links where relevant
+- Show task descriptions to give full context
+- Keep descriptions concise (truncate if too long)
+- Example table format:
+
+| Task | Description | Date | Time | Status |
+|------|-------------|------|------|--------|
+| Morning workout | 30 min cardio | Dec 5 | 06:00 - 07:00 | ✅ Done |
+| Team meeting | Discuss project updates | Dec 5 | 10:00 - 11:00 | ⏳ Pending |
+
+**When showing links:**
+- Format as clickable buttons: [Button Text](url)
+- For task management: [View Task](/goal/task-id)
+- For external resources: [Read Article](https://example.com)
+
+**When listing multiple items:**
+- Use tables for structured data (tasks, schedules, comparisons)
+- Use bullet points for simple lists
+- Use numbered lists for sequential steps
+
+## DATABASE SCHEMA KNOWLEDGE
+Tasks table structure:
+- start_date: DATE (format: "YYYY-MM-DD") - the day the task is scheduled
+- end_date: DATE (format: "YYYY-MM-DD") - the day the task ends
+- daily_start_time: TIME (format: "HH:MM:SS") - time of day the task starts (e.g., "14:30:00" for 2:30 PM)
+- daily_end_time: TIME (format: "HH:MM:SS") - time of day the task ends (e.g., "15:30:00" for 3:30 PM)
+
+CRITICAL TIME FORMAT RULES:
+- NEVER use timestamp format for daily_start_time or daily_end_time
+- Use 24-hour format: "09:00:00" (9 AM), "15:30:00" (3:30 PM), "22:00:00" (10 PM)
+- Always include seconds: "HH:MM:SS"
+- start_date and end_date are just dates: "2024-12-04", NOT timestamps
+
+Examples:
+✅ CORRECT: start_date="2024-12-04", daily_start_time="14:30:00"
+❌ WRONG: start_date="2024-12-04T14:30:00", daily_start_time="2024-12-04T14:30:00"
+
+## IMPORTANT: HANDLING MULTIPLE TASKS
+When user asks to move/delete/update MULTIPLE tasks:
+1. Use batch operations tools when available (move_tasks_batch, delete_tasks_batch)
+2. For single operations, process one at a time and inform the user
+3. ALWAYS confirm before batch deletes
+
+## AVAILABLE TOOLS
+You can request tool usage by responding with tool requests in this format:
+TOOL: tool_name
+PARAMS: {"param": "value"}
+
+Available tools:
+- get_user_profile: Get user information
+- get_goal_detail: Get goal information  
+- get_tasks_by_start_date: Get tasks in date range
+  * Params: start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), limit (optional)
+- insert_new_task: Create ONE new task
+  * Params: title, description, start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), daily_start_time (HH:MM:SS), daily_end_time (HH:MM:SS)
+- update_task_info: Update ONE task (needs task_id)
+- move_task: Reschedule ONE task
+  * Params: task_id, start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), daily_start_time (HH:MM:SS), daily_end_time (HH:MM:SS)
+- move_tasks_batch: Move MULTIPLE tasks at once
+  * Params: task_ids (array), new_start_date (YYYY-MM-DD), new_end_date (optional)
+- delete_task: Delete ONE task (needs task_id)
+- delete_tasks_batch: Delete MULTIPLE tasks at once (needs task_ids array)
+- find_by_title: Search tasks by title
+- google_search: Search Google for information
+  * Params: query (search query), country (optional, e.g., 'us'), language (optional, e.g., 'en')
+  * Use this when user asks questions requiring current information, facts, or web search
+- send_notification: Send push notification to user
+  * Params: title, message, url (optional)
+  * Use this to remind users about important tasks or updates
+
+For batch operations, use the batch tools to handle multiple items efficiently.`;
+
+serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -70,7 +142,7 @@ serve(async (req: Request) => {
     }
 
     // Determine which model to use
-    const targetModel: ModelType = modelId || 'gemini-2.0-flash-exp';
+    let targetModel: ModelType = modelId || 'gemini-2.0-flash-exp';
     
     // Get model info to determine provider
     const modelInfo = getModelInfo(targetModel);
@@ -79,17 +151,10 @@ serve(async (req: Request) => {
     }
 
     // Get API keys for this provider
-    interface ApiKeyData {
-      id: string;
-      key_value: string;
-      key_label?: string;
-      key_type?: string;
-      is_default?: boolean;
-    }
-    
-    let apiKeys: ApiKeyData[] = [];
+    let apiKeys: any[] = [];
     
     if (selectedKeyIds && selectedKeyIds.length > 0) {
+      // Use specific selected keys
       const { data, error } = await supabase
         .from('api_keys')
         .select('id, key_value, key_label, key_type')
@@ -101,6 +166,7 @@ serve(async (req: Request) => {
         apiKeys = data;
       }
     } else {
+      // Get all keys for this provider (for fallback)
       const { data, error } = await supabase
         .from('api_keys')
         .select('id, key_value, key_label, key_type, is_default')
@@ -177,11 +243,10 @@ ${messages.map((m: Message) => `${m.role}: ${m.content}`).join('\n')}`
             targetModel,
             keyData.key_value,
             aiMessages,
-            SYSTEM_PROMPT,
             keyData.key_label
           );
 
-          return new Response(streamResponse.body, {
+          return new Response(streamResponse, {
             headers: {
               ...corsHeaders,
               'Content-Type': 'text/event-stream',
@@ -192,16 +257,18 @@ ${messages.map((m: Message) => `${m.role}: ${m.content}`).join('\n')}`
         } catch (streamError) {
           console.error(`Key ${i + 1} failed:`, streamError);
           
+          // If this was the last key, return error
           if (i === apiKeys.length - 1) {
             throw streamError;
           }
           
+          // Otherwise continue to next key
           console.log(`Trying next key...`);
         }
       }
     }
 
-    // Non-streaming path
+    // Non-streaming path - try each key for tool execution
     for (let i = 0; i < apiKeys.length; i++) {
       try {
         const keyData = apiKeys[i];
@@ -218,10 +285,11 @@ ${messages.map((m: Message) => `${m.role}: ${m.content}`).join('\n')}`
           
           const toolResult = await executeTool(toolName, params, context, supabase);
           
+          // Get AI to format the result
           const followUpMessages = [{
             role: 'user',
             parts: [{
-              text: `Tool ${toolName} executed. Result:\n${JSON.stringify(toolResult, null, 2)}\n\nPlease provide a natural response.`
+              text: `Tool ${toolName} executed. Result:\n${JSON.stringify(toolResult, null, 2)}\n\nPlease provide a natural response to the user based on this data. Remember: NO technical details, IDs, or tool names in your response.`
             }]
           }];
 
@@ -237,6 +305,7 @@ ${messages.map((m: Message) => `${m.role}: ${m.content}`).join('\n')}`
           );
         }
 
+        // Return direct response
         return new Response(
           JSON.stringify({ 
             message: aiResponseText,
@@ -273,16 +342,8 @@ ${messages.map((m: Message) => `${m.role}: ${m.content}`).join('\n')}`
   }
 });
 
-interface MessagePart {
-  text: string;
-}
-
-interface AIMessage {
-  role: string;
-  parts: MessagePart[];
-}
-
-async function callAIModel(modelId: ModelType, apiKey: string, messages: AIMessage[]): Promise<string> {
+// Non-streaming AI calls
+async function callAIModel(modelId: ModelType, apiKey: string, messages: any[]): Promise<string> {
   const modelInfo = getModelInfo(modelId);
   if (!modelInfo) {
     throw new Error(`Unknown model: ${modelId}`);
@@ -300,7 +361,7 @@ async function callAIModel(modelId: ModelType, apiKey: string, messages: AIMessa
   }
 }
 
-async function callGemini(modelId: ModelType, apiKey: string, messages: AIMessage[]): Promise<string> {
+async function callGemini(modelId: ModelType, apiKey: string, messages: any[]): Promise<string> {
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1/models/${modelId}:generateContent?key=${apiKey}`,
     {
@@ -325,10 +386,10 @@ async function callGemini(modelId: ModelType, apiKey: string, messages: AIMessag
   return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated";
 }
 
-async function callOpenAI(modelId: ModelType, apiKey: string, messages: AIMessage[]): Promise<string> {
+async function callOpenAI(modelId: ModelType, apiKey: string, messages: any[]): Promise<string> {
   const openAIMessages = messages.map(msg => ({
     role: msg.role === 'user' ? 'user' : 'assistant',
-    content: msg.parts ? msg.parts[0].text : ''
+    content: msg.parts ? msg.parts[0].text : msg.content
   }));
 
   const response = await fetch(
@@ -357,10 +418,10 @@ async function callOpenAI(modelId: ModelType, apiKey: string, messages: AIMessag
   return data.choices?.[0]?.message?.content || "No response generated";
 }
 
-async function callClaude(modelId: ModelType, apiKey: string, messages: AIMessage[]): Promise<string> {
+async function callClaude(modelId: ModelType, apiKey: string, messages: any[]): Promise<string> {
   const claudeMessages = messages.map(msg => ({
     role: msg.role === 'user' ? 'user' : 'assistant',
-    content: msg.parts ? msg.parts[0].text : ''
+    content: msg.parts ? msg.parts[0].text : msg.content
   }));
 
   let systemMessage = '';

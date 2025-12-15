@@ -5,16 +5,11 @@
 import { ModelType } from './types.ts';
 import { getApiEndpoint, getModelInfo } from './models.ts';
 
-interface AIMessage {
-  role: string;
-  content: string;
-}
-
 export async function streamAIResponse(
   modelId: ModelType,
   apiKey: string,
-  messages: AIMessage[],
-  systemInstruction: string,
+  messages: any[], // Conversation messages
+  systemInstruction: string, // System prompt
   keyLabel?: string
 ): Promise<Response> {
   const encoder = new TextEncoder();
@@ -78,19 +73,13 @@ export async function streamAIResponse(
     }
   });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
-    }
-  });
+  return stream;
 }
 
 async function streamGemini(
   modelId: ModelType,
   apiKey: string,
-  messages: AIMessage[],
+  messages: any[],
   systemInstruction: string,
   controller: ReadableStreamDefaultController,
   encoder: TextEncoder
@@ -98,7 +87,7 @@ async function streamGemini(
   console.log(`🔵 Starting Gemini stream (${modelId})...`);
   
   // Convert messages to Gemini format
-  const geminiMessages = messages.map((m: AIMessage) => ({
+  const geminiMessages = messages.map((m: any) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }]
   }));
@@ -166,8 +155,8 @@ async function streamGemini(
             content: text
           })}\n\n`));
         }
-      } catch {
-        console.error('🔵 Gemini parse error, line:', trimmed.substring(0, 100));
+      } catch (e) {
+        console.error('🔵 Gemini parse error:', e, 'Line:', trimmed.substring(0, 100));
       }
     }
   }
@@ -176,7 +165,7 @@ async function streamGemini(
 async function streamOpenAI(
   modelId: ModelType,
   apiKey: string,
-  messages: AIMessage[],
+  messages: any[],
   systemInstruction: string,
   controller: ReadableStreamDefaultController,
   encoder: TextEncoder
@@ -253,8 +242,8 @@ async function streamOpenAI(
             content: text
           })}\n\n`));
         }
-      } catch {
-        console.error('🟢 OpenAI parse error');
+      } catch (e) {
+        console.error('🟢 OpenAI parse error:', e);
       }
     }
   }
@@ -263,7 +252,7 @@ async function streamOpenAI(
 async function streamClaude(
   modelId: ModelType,
   apiKey: string,
-  messages: AIMessage[],
+  messages: any[],
   systemInstruction: string,
   controller: ReadableStreamDefaultController,
   encoder: TextEncoder
@@ -338,8 +327,8 @@ async function streamClaude(
             })}\n\n`));
           }
         }
-      } catch {
-        console.error('🟣 Claude parse error');
+      } catch (e) {
+        console.error('🟣 Claude parse error:', e);
       }
     }
   }
