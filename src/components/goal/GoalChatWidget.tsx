@@ -628,7 +628,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
             {/* Messages */}
             <div
-              className="flex-1 min-h-0 overflow-y-auto px-2 shadow-sm border no-scrollbar"
+              className="flex-1 min-h-0 overflow-y-auto p-2 shadow-sm border no-scrollbar"
               ref={chatContainerRef}
               onScroll={() => {
                 if (!chatContainerRef.current) return;
@@ -932,6 +932,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                   disabled={isLoading}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey && !isMobile) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }else if(e.key === "Enter" && e.shiftKey && isMobile) {
                       e.preventDefault();
                       handleSendMessage();
                     }
