@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { X, Loader2, Copy, ArrowUp, ArrowUpIcon, ArrowDown } from 'lucide-react';
+import { X, Loader2, Copy, ArrowUp, ArrowUpIcon, ArrowDown, ExternalLink } from 'lucide-react';
 import { IconPlus } from "@tabler/icons-react"
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -39,12 +39,13 @@ interface GoalChatWidgetProps {
     email?: string;
     display_name?: string;
   } | null;
+  isPopupMode?: boolean; // When true, renders in full-screen popup mode
 }
 
 const MIN_MESSAGE_INTERVAL = 3000;
 
-export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo }) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo, isPopupMode = false }) => {
+  const [isOpen, setIsOpen] = useState(isPopupMode); // Auto-open in popup mode
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -71,16 +72,16 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const [chatWindow, setChatWindow] = useState<Window | null>(null);
-  const isWindows = typeof window !== 'undefined' && navigator.platform.startsWith('Win');
-
-  const handleOpenChatWindow = () => {
-    if (!isWindows) return;
-    // Pass params via query string
-    const params = new URLSearchParams({ goalId: goalId || '', userInfo: userInfo ? encodeURIComponent(JSON.stringify(userInfo)) : '' });
-    const chatWin = window.open(`/chat-popup?${params.toString()}`, '_blank', 'width=500,height=700');
-    setChatWindow(chatWin);
-  };
+  // Import window manager functions
+  const handleOpenChatWindow = useCallback(() => {
+    // Dynamic import to avoid circular dependencies
+    import('@/utils/chatWindowManager').then(({ openOrFocusChatWindow }) => {
+      openOrFocusChatWindow(goalId, userInfo, () => {
+        // Close the chat widget in current tab after opening popup
+        setIsOpen(false);
+      });
+    });
+  }, [goalId, userInfo]);
 
   // Auto-resize textarea with performance optimization
   useAutoResizeTextArea(textareaRef, inputValue, { minRows: 1, maxRows: 6 });
@@ -548,6 +549,127 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     toast({ title: 'Cleared', description: 'Chat reset successfully.' });
   };
 
+  // Scroll to bottom helper
+  const scrollToBottom = useCallback(() => {
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setShowScrollButton(false);
+  }, []);
+
+  // In popup mode, render full-screen without toggle button
+  if (isPopupMode) {
+    return (
+      <div className="w-full h-full flex flex-col liquid-glass-container" style={{ minWidth: '300px' }}>
+        {/* Header */}
+        <div className="relative flex-shrink-0 flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold">GuoErr AI</h3>
+            <img className='h-6 w-6' src={robot} alt="Chat AI Image" />
+          </div>
+
+          <div className="flex items-center gap-2">
+            {messages.length > 0 && (
+              <Button className='z-999' variant="ghost" size="sm" onClick={clearChat}>
+                Clear
+              </Button>
+            )}
+          </div>
+
+          {temporaryStatus && (
+            <div className="absolute -bottom-9 left-0 z-50 flex items-center min-h-9 gap-2 px-3 py-2 text-sm text-muted-foreground bg-muted/90 animate-pulse">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>{temporaryStatus}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Messages */}
+        <div
+          className="flex-1 min-h-0 overflow-y-auto px-2 shadow-sm border no-scrollbar"
+          ref={chatContainerRef}
+          onScroll={() => {
+            if (!chatContainerRef.current) return;
+            const el = chatContainerRef.current;
+            const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
+            setShowScrollButton(!atBottom);
+          }}
+        >
+          <div>
+            <div className="w-full px-1 lg:px-4">
+              {messages.map((msg, i) => (
+                <div key={i} className={`mb-4 w-full flex ${msg.role === "assistant" ? "" : "justify-end"}`}>
+                  {msg.role === "assistant" && (
+                    <div className="group relative w-full min-w-0 rounded-xl overflow-hidden">
+                      <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-x-auto">
+                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeHighlight]}>
+                          {msg.content}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  )}
+                  {msg.role === "user" && (
+                    <div className="max-w-[85%] sm:max-w-[80%] liquid-glass p-3 rounded-xl shadow break-words whitespace-pre-wrap">
+                      {msg.content}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div ref={scrollRef} />
+        </div>
+
+        {showScrollButton && (
+          <button
+            className="absolute bottom-24 right-4 z-50 p-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
+            onClick={scrollToBottom}
+          >
+            <ArrowDown className="h-4 w-4" />
+          </button>
+        )}
+
+        {/* Input */}
+        <div className="relative flex-shrink-0 p-4 border-t">
+          <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <ModelVariantPicker
+                selectedModel={selectedModelId}
+                onModelChange={(modelId) => {
+                  setSelectedModelId(modelId);
+                  const provider = modelId.startsWith('gemini') ? 'gemini' : modelId.startsWith('gpt') ? 'openai' : 'claude';
+                  setSelectedModel(provider as ModelType);
+                }}
+              />
+              <KeySelector selectedModel={selectedModelId} selectedKeyIds={selectedKeyIds} onKeySelectionChange={setSelectedKeyIds} />
+            </div>
+          </div>
+          <div className="relative w-full">
+            <textarea
+              ref={textareaRef}
+              value={inputValue}
+              onChange={handleInputChange}
+              placeholder="Type your message..."
+              rows={1}
+              disabled={isLoading}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+              className="w-full resize-none overflow-hidden p-4 pr-14 rounded-2xl border bg-background max-h-40 outline-none"
+            />
+            <motion.div className="absolute bottom-3 right-3">
+              <Button
+                size="icon"
+                onClick={isLoading ? stopStreaming : handleSendMessage}
+                disabled={!isLoading && !inputValue.trim()}
+                className="rounded-full h-10 w-10 shadow-md"
+                variant={isLoading ? "destructive" : "default"}
+              >
+                {isLoading ? <X className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
+              </Button>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <motion.button
@@ -557,7 +679,6 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
         onClick={() => setIsOpen(!isOpen)}
       >
         {!isOpen ? <img className='h-8 w-8' src={chatAIGif} alt="Chat AI Image" /> : <X />}
-        {/* <MessageCircle className="h-6 w-6" /> */}
       </motion.button>
 
       <AnimatePresence>
@@ -570,9 +691,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             className="fixed inset-0 lg:inset-auto lg:bottom-24 lg:right-6 lg:left-6 lg:top-auto w-full h-dvh lg:w-[calc(100vw-48px)] lg:h-[calc(100vh-120px)] liquid-glass-container z-50 flex flex-col"
           >
             {/* Header */}
-            <div className="relative flex-shrink-0 flex items-center justify-between p-4 border-b"
-            // style={{overflow:"visible"}}
-            >
+            <div className="relative flex-shrink-0 flex items-center justify-between p-4 border-b">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold">GuoErr AI</h3>
                 <img className='h-6 w-6' src={robot} alt="Chat AI Image" />
@@ -584,15 +703,15 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                     Clear
                   </Button>
                 )}
-                {/* Open in new window button, only on Windows */}
-                {/* {isWindows && (
-                  <button
-                    className={`fixed bottom-24 ${isMobile ? 'left-6' : 'right-6'} z-50 px-4 py-2 rounded-lg bg-blue-600 text-white shadow-lg hover:bg-blue-700`}
-                    onClick={handleOpenChatWindow}
-                  >
-                    Open Chat in New Window
-                  </button>
-                )} */}
+                {/* Open in new window button */}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={handleOpenChatWindow}
+                  title="Open in new window"
+                >
+                  <ExternalLink className="h-5 w-5" />
+                </Button>
                 <Button variant="ghost" className='z-999' size="icon" onClick={() => setIsOpen(false)}>
                   <X className="h-6 w-6" />
                 </Button>
