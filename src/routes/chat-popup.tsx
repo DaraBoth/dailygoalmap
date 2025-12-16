@@ -11,15 +11,13 @@ const ChatPopupLoading = () => (
 );
 
 type ChatPopupSearch = {
-  goalId?: string;
-  userInfo?: string;
+  g?: string; // goalId - shortened for cleaner URL
 };
 
 export const Route = createFileRoute('/chat-popup')({
   validateSearch: (search: Record<string, unknown>): ChatPopupSearch => {
     return {
-      goalId: typeof search.goalId === 'string' ? search.goalId : undefined,
-      userInfo: typeof search.userInfo === 'string' ? search.userInfo : undefined,
+      g: typeof search.g === 'string' ? search.g : undefined,
     };
   },
   component: () => (
