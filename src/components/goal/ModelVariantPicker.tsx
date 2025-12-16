@@ -144,7 +144,7 @@ export function ModelVariantPicker({ selectedModel, onModelChange }: ModelVarian
             </p>
           </div>
 
-          <div className="space-y-4 max-h-[400px] overflow-y-auto">
+          <div className="space-y-4 max-h-[400px] overflow-y-auto no-scrollbar">
             {/* Gemini Group */}
             <div className="space-y-2">
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -158,7 +158,7 @@ export function ModelVariantPicker({ selectedModel, onModelChange }: ModelVarian
                     setOpen(false);
                   }}
                   className={`w-full text-left p-2 rounded-md hover:bg-accent transition-colors ${
-                    selectedModel === model.id ? 'bg-accent ring-1 ring-primary' : ''
+                    selectedModel === model.id ? 'bg-accent' : ''
                   }`}
                 >
                   <div className="font-medium text-sm">{model.name}</div>
@@ -180,7 +180,7 @@ export function ModelVariantPicker({ selectedModel, onModelChange }: ModelVarian
                     setOpen(false);
                   }}
                   className={`w-full text-left p-2 rounded-md hover:bg-accent transition-colors ${
-                    selectedModel === model.id ? 'bg-accent ring-1 ring-primary' : ''
+                    selectedModel === model.id ? 'bg-accent ' : ''
                   }`}
                 >
                   <div className="font-medium text-sm">{model.name}</div>
@@ -202,7 +202,7 @@ export function ModelVariantPicker({ selectedModel, onModelChange }: ModelVarian
                     setOpen(false);
                   }}
                   className={`w-full text-left p-2 rounded-md hover:bg-accent transition-colors ${
-                    selectedModel === model.id ? 'bg-accent ring-1 ring-primary' : ''
+                    selectedModel === model.id ? 'bg-accent ' : ''
                   }`}
                 >
                   <div className="font-medium text-sm">{model.name}</div>

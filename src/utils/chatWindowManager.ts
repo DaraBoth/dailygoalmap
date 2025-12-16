@@ -81,7 +81,9 @@ export const isChatWindowOpen = (goalId: string): boolean => {
 export const openOrFocusChatWindow = (
   goalId: string,
   userInfo: any,
-  onOpenSuccess?: () => void
+  onOpenSuccess?: () => void,
+  onNotExisted?: () => void,
+  justCheck?: boolean
 ): Window | null => {
   const windowName = getWindowName(goalId);
   const registry = getWindowRegistry();
@@ -103,6 +105,11 @@ export const openOrFocusChatWindow = (
       // Window might be closed or inaccessible, continue to open new one
       console.log('Could not focus existing window, opening new one');
     }
+  }
+
+  if(justCheck){
+    onNotExisted?.();
+    return;
   }
   
   // Open new window with cleaner URL (only goalId)

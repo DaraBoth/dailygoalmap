@@ -1061,6 +1061,42 @@ input[type="time"] {
 /* ensure long words/URLs break nicely inside table cells */
 .prose td, .prose th { word-break: break-word; overflow-wrap: anywhere; }
 
+.ai-screen-glow {
+  --angle: 0deg;
+  inset: -40px; /* allow glow to breathe */
+  background:
+    conic-gradient(
+      from var(--angle),
+      #ff9f9f,
+      #ffe29a,
+      #9fc4ff,
+      #a6f3c0,
+      #ff9f9f
+    );
+  animation: siri-rotate 14s linear infinite;
+}
+
+@keyframes siri-rotate {
+  to {
+    --angle: 360deg;
+  }
+}
+
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-screen-glow {
+    animation: none;
+  }
+}
+
+
+
+
 /* Make table look normal on desktop */
 .responsive-table {
   width: 100%;

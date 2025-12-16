@@ -555,128 +555,19 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     setShowScrollButton(false);
   }, []);
 
-  // In popup mode, render full-screen without toggle button
-  if (isPopupMode) {
-    return (
-      <div className="w-full h-full flex flex-col liquid-glass-container" style={{ minWidth: '300px' }}>
-        {/* Header */}
-        <div className="relative flex-shrink-0 flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold">GuoErr AI</h3>
-            <img className='h-6 w-6' src={robot} alt="Chat AI Image" />
-          </div>
-
-          <div className="flex items-center gap-2">
-            {messages.length > 0 && (
-              <Button className='z-999' variant="ghost" size="sm" onClick={clearChat}>
-                Clear
-              </Button>
-            )}
-          </div>
-
-          {temporaryStatus && (
-            <div className="absolute -bottom-9 left-0 z-50 flex items-center min-h-9 gap-2 px-3 py-2 text-sm text-muted-foreground bg-muted/90 animate-pulse">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              <span>{temporaryStatus}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Messages */}
-        <div
-          className="flex-1 min-h-0 overflow-y-auto px-2 shadow-sm border no-scrollbar"
-          ref={chatContainerRef}
-          onScroll={() => {
-            if (!chatContainerRef.current) return;
-            const el = chatContainerRef.current;
-            const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
-            setShowScrollButton(!atBottom);
-          }}
-        >
-          <div>
-            <div className="w-full px-1 lg:px-4">
-              {messages.map((msg, i) => (
-                <div key={i} className={`mb-4 w-full flex ${msg.role === "assistant" ? "" : "justify-end"}`}>
-                  {msg.role === "assistant" && (
-                    <div className="group relative w-full min-w-0 rounded-xl overflow-hidden">
-                      <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-x-auto">
-                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeHighlight]}>
-                          {msg.content}
-                        </ReactMarkdown>
-                      </div>
-                    </div>
-                  )}
-                  {msg.role === "user" && (
-                    <div className="max-w-[85%] sm:max-w-[80%] liquid-glass p-3 rounded-xl shadow break-words whitespace-pre-wrap">
-                      {msg.content}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div ref={scrollRef} />
-        </div>
-
-        {showScrollButton && (
-          <button
-            className="absolute bottom-24 right-4 z-50 p-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
-            onClick={scrollToBottom}
-          >
-            <ArrowDown className="h-4 w-4" />
-          </button>
-        )}
-
-        {/* Input */}
-        <div className="relative flex-shrink-0 p-4 border-t">
-          <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-            <div className="flex items-center gap-2 flex-wrap">
-              <ModelVariantPicker
-                selectedModel={selectedModelId}
-                onModelChange={(modelId) => {
-                  setSelectedModelId(modelId);
-                  const provider = modelId.startsWith('gemini') ? 'gemini' : modelId.startsWith('gpt') ? 'openai' : 'claude';
-                  setSelectedModel(provider as ModelType);
-                }}
-              />
-              <KeySelector selectedModel={selectedModelId} selectedKeyIds={selectedKeyIds} onKeySelectionChange={setSelectedKeyIds} />
-            </div>
-          </div>
-          <div className="relative w-full">
-            <textarea
-              ref={textareaRef}
-              value={inputValue}
-              onChange={handleInputChange}
-              placeholder="Type your message..."
-              rows={1}
-              disabled={isLoading}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
-              className="w-full resize-none overflow-hidden p-4 pr-14 rounded-2xl border bg-background max-h-40 outline-none"
-            />
-            <motion.div className="absolute bottom-3 right-3">
-              <Button
-                size="icon"
-                onClick={isLoading ? stopStreaming : handleSendMessage}
-                disabled={!isLoading && !inputValue.trim()}
-                className="rounded-full h-10 w-10 shadow-md"
-                variant={isLoading ? "destructive" : "default"}
-              >
-                {isLoading ? <X className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
-              </Button>
-            </motion.div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
       <motion.button
         className={`fixed bottom-6 ${isMobile ? 'left-6' : 'right-6'} liquid-glass p-2 rounded-xl z-50`}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          import('@/utils/chatWindowManager').then(({ openOrFocusChatWindow }) => {
+            openOrFocusChatWindow(goalId, userInfo, () => { }, () => {
+              setIsOpen(!isOpen)
+            }, true);
+          });
+        }}
       >
         {!isOpen ? <img className='h-8 w-8' src={chatAIGif} alt="Chat AI Image" /> : <X />}
       </motion.button>
@@ -688,8 +579,12 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 lg:inset-auto lg:bottom-24 lg:right-6 lg:left-6 lg:top-auto w-full h-dvh lg:w-[calc(100vw-48px)] lg:h-[calc(100vh-120px)] liquid-glass-container z-50 flex flex-col"
+            className="fixed  inset-0 lg:inset-auto lg:bottom-24 lg:right-6 lg:left-6 lg:top-auto w-full h-dvh lg:w-[calc(100vw-48px)] lg:h-[calc(100vh-120px)] liquid-glass-container z-50 flex flex-col "
+            style={{
+              borderRadius: (isPopupMode || isMobile) ? "0px" : ""
+            }}
           >
+
             {/* Header */}
             <div className="relative flex-shrink-0 flex items-center justify-between p-4 border-b">
               <div className="flex items-center gap-2">
@@ -704,17 +599,21 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                   </Button>
                 )}
                 {/* Open in new window button */}
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={handleOpenChatWindow}
-                  title="Open in new window"
-                >
-                  <ExternalLink className="h-5 w-5" />
-                </Button>
-                <Button variant="ghost" className='z-999' size="icon" onClick={() => setIsOpen(false)}>
-                  <X className="h-6 w-6" />
-                </Button>
+                {!isPopupMode && <>
+                  {!isMobile && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleOpenChatWindow}
+                      title="Open in new window"
+                    >
+                      <ExternalLink className="h-5 w-5" />
+                    </Button>
+                  )}
+                  <Button variant="ghost" className='z-999' size="icon" onClick={() => setIsOpen(false)}>
+                    <X className="h-6 w-6" />
+                  </Button>
+                </>}
               </div>
 
               {/* Temporary status indicator */}
@@ -958,42 +857,46 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             <div className="relative flex-shrink-0 p-4 border-t">
               {/* Model Selector and API Key Info */}
               <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <ModelVariantPicker
-                    selectedModel={selectedModelId}
-                    onModelChange={(modelId) => {
-                      setSelectedModelId(modelId);
+                <div className="flex items-center gap-2 flex-wrap ">
+                  <div>
+                    <ModelVariantPicker
+                      selectedModel={selectedModelId}
+                      onModelChange={(modelId) => {
+                        setSelectedModelId(modelId);
 
-                      // Determine provider from model ID
-                      const provider = modelId.startsWith('gemini') ? 'gemini' :
-                        modelId.startsWith('gpt') ? 'openai' : 'claude';
-                      setSelectedModel(provider as ModelType);
+                        // Determine provider from model ID
+                        const provider = modelId.startsWith('gemini') ? 'gemini' :
+                          modelId.startsWith('gpt') ? 'openai' : 'claude';
+                        setSelectedModel(provider as ModelType);
 
-                      // Update model preference in database
-                      if (userInfo?.id) {
-                        supabase
-                          .from('user_profiles')
-                          .update({ model_preference: provider })
-                          .eq('id', userInfo.id)
-                          .then(({ error }) => {
-                            if (error) {
-                              console.error('Failed to update model preference:', error);
-                            } else {
-                              toast({
-                                title: "Model updated",
-                                description: `Switched to ${modelId}`,
-                              });
-                            }
-                          });
-                      }
-                    }}
-                  />
+                        // Update model preference in database
+                        if (userInfo?.id) {
+                          supabase
+                            .from('user_profiles')
+                            .update({ model_preference: provider })
+                            .eq('id', userInfo.id)
+                            .then(({ error }) => {
+                              if (error) {
+                                console.error('Failed to update model preference:', error);
+                              } else {
+                                toast({
+                                  title: "Model updated",
+                                  description: `Switched to ${modelId}`,
+                                });
+                              }
+                            });
+                        }
+                      }}
+                    />
+                  </div>
 
-                  <KeySelector
-                    selectedModel={selectedModelId}
-                    selectedKeyIds={selectedKeyIds}
-                    onKeySelectionChange={setSelectedKeyIds}
-                  />
+                  <div>
+                    <KeySelector
+                      selectedModel={selectedModelId}
+                      selectedKeyIds={selectedKeyIds}
+                      onKeySelectionChange={setSelectedKeyIds}
+                    />
+                  </div>
 
                 </div>
 
@@ -1019,16 +922,16 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
               </div>
 
-              <div className="relative w-full">
+              <div className="relative w-full mb-5">
                 <textarea
                   ref={textareaRef}
                   value={inputValue}
                   onChange={handleInputChange}
                   placeholder="Type your message..."
-                  rows={1}
+                  rows={2}
                   disabled={isLoading}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
+                    if (e.key === "Enter" && !e.shiftKey && !isMobile) {
                       e.preventDefault();
                       handleSendMessage();
                     }
@@ -1064,7 +967,7 @@ export default GoalChatWidget;
 
 
 const TypingLoader = () => (
-  <div className="flex items-center gap-1 mt-1">
+  <div className="flex items-center gap-1 mt-1 p-2">
     <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></span>
     <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-150"></span>
     <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-300"></span>
