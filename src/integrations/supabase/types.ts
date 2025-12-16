@@ -349,6 +349,7 @@ export type Database = {
           tags: string[] | null
           title: string
           updated_at: string
+          updated_by: string | null
           user_id: string
         }
         Insert: {
@@ -364,6 +365,7 @@ export type Database = {
           tags?: string[] | null
           title: string
           updated_at?: string
+          updated_by?: string | null
           user_id: string
         }
         Update: {
@@ -379,6 +381,7 @@ export type Database = {
           tags?: string[] | null
           title?: string
           updated_at?: string
+          updated_by?: string | null
           user_id?: string
         }
         Relationships: [
@@ -387,6 +390,13 @@ export type Database = {
             columns: ["goal_id"]
             isOneToOne: false
             referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
