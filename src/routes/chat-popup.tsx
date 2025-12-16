@@ -10,13 +10,17 @@ const ChatPopupLoading = () => (
   </div>
 );
 
+type ChatPopupSearch = {
+  goalId?: string;
+  userInfo?: string;
+};
+
 export const Route = createFileRoute('/chat-popup')({
-  loader: async ({ location }) => {
-    // Extract goalId and userInfo from query params
-    const url = new URL(location.href, window.location.origin);
-    const goalId = url.searchParams.get('goalId') || '';
-    const userInfo = url.searchParams.get('userInfo') || '';
-    return { goalId, userInfo };
+  validateSearch: (search: Record<string, unknown>): ChatPopupSearch => {
+    return {
+      goalId: typeof search.goalId === 'string' ? search.goalId : undefined,
+      userInfo: typeof search.userInfo === 'string' ? search.userInfo : undefined,
+    };
   },
   component: () => (
     <Suspense fallback={<ChatPopupLoading />}>
