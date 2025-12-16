@@ -159,7 +159,7 @@ const Login = () => {
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6 }}
+        transition={{ duration: 0.2 }}
         className="absolute top-6 left-6 right-6 z-50"
       >
         <div className="flex justify-between items-center">
@@ -184,7 +184,7 @@ const Login = () => {
         <motion.div
           initial={{ x: -100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 1, ease: "easeOut" }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
           className="relative flex flex-col justify-center px-8 lg:px-16 py-12 bg-gradient-to-br from-slate-900/90 via-blue-900/90 to-purple-900/90 backdrop-blur-xl"
         >
           {/* Content Overlay */}
@@ -195,7 +195,7 @@ const Login = () => {
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
+              transition={{ delay: 0.3, duration: 0.2 }}
               className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20"
             >
               <LogoAvatar size={28} />
@@ -206,7 +206,7 @@ const Login = () => {
             <motion.div
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5, duration: 0.8 }}
+              transition={{ delay: 0.3, duration: 0.3 }}
               className="space-y-6"
             >
               <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight">
@@ -238,7 +238,7 @@ const Login = () => {
             <motion.div
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.8, duration: 0.6 }}
+              transition={{ delay: 0.4, duration: 0.2 }}
               className="space-y-4"
             >
               {[
@@ -265,7 +265,7 @@ const Login = () => {
             <motion.div
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 1.2, duration: 0.6 }}
+              transition={{ delay: 0.5, duration: 0.2 }}
               className="grid grid-cols-3 gap-6 pt-8 border-t border-white/10"
             >
               {[
@@ -299,7 +299,7 @@ const Login = () => {
         <motion.div
           initial={{ x: 100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.4, duration: 1, ease: "easeOut" }}
+          transition={{ delay: 0.2, duration: 0.4, ease: "easeOut" }}
           className="relative flex items-center justify-center px-8 lg:px-16 py-12"
         >
           {/* Floating Form Container */}
@@ -307,7 +307,7 @@ const Login = () => {
             <motion.div
               initial={{ y: 50, scale: 0.9, opacity: 0 }}
               animate={{ y: 0, scale: 1, opacity: 1 }}
-              transition={{ delay: 0.6, duration: 0.8, ease: "easeOut" }}
+              transition={{ delay: 0.2, duration: 0.3, ease: "easeOut" }}
               className="relative"
             >
               {/* Glow Effect */}
@@ -323,7 +323,7 @@ const Login = () => {
                   <motion.div
                     initial={{ scale: 0.5, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.8, duration: 0.6, type: "spring", stiffness: 200 }}
+                    transition={{ delay: 0.4, duration: 0.2, type: "spring", stiffness: 200 }}
                     className="mx-auto relative"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-purple-500/30 rounded-3xl blur-xl"></div>
@@ -339,7 +339,7 @@ const Login = () => {
                   <motion.div
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 1, duration: 0.6 }}
+                    transition={{ delay: 0.5, duration: 0.2 }}
                     className="space-y-2"
                   >
                     <CardTitle className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -359,7 +359,7 @@ const Login = () => {
                         <motion.div
                           initial={{ y: 20, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.8, duration: 0.5 }}
+                          transition={{ delay: 0.3, duration: 0.2 }}
                           className="space-y-2"
                         >
                           <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</Label>
@@ -380,7 +380,7 @@ const Login = () => {
                         <motion.div
                           initial={{ y: 20, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.9, duration: 0.5 }}
+                          transition={{ delay: 0.2, duration: 0.2 }}
                           className="space-y-2"
                         >
                           <Label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">Password</Label>
@@ -432,7 +432,7 @@ const Login = () => {
                         <motion.div
                           initial={{ y: 20, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 1.0, duration: 0.5 }}
+                          transition={{ delay: 0.4, duration: 0.2 }}
                         >
                           <Button
                             type="submit"
