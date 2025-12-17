@@ -58,7 +58,8 @@ export interface Goal {
   };
   memberCounts?: {
     total: number;
-  }
+  };
+  members: GoalMember[]
   goal_themes?: {
     card_background_image?: string
     created_at?: string
@@ -77,7 +78,7 @@ export interface GoalMember {
   user_id: string;
   joined_at: string;
   role: 'creator' | 'member';
-  user_profile?: {
+  user_profiles?: {
     avatar_url?: string;
     display_name?: string;
   }

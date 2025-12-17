@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import { createMemberLeftNotifications } from "@/services/internalNotifications";
-import { Avatar, AvatarImage } from "../ui";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 export interface GoalListProps {
@@ -69,7 +69,6 @@ const GoalList: React.FC<GoalListProps> = ({
 
       // Notify remaining members (excluding leaver) BEFORE leaving to avoid RLS issues
       await createMemberLeftNotifications(goalId, userData.user.id);
-
 
       const { error } = await supabase
         .from('goal_members')
@@ -209,14 +208,14 @@ const GoalList: React.FC<GoalListProps> = ({
           >
             {/* Background Image Container */}
             {backgroundStyle.backgroundImage && (
-              <div 
+              <div
                 className="absolute inset-0 rounded-lg overflow-hidden"
                 style={backgroundStyle}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-background/80 backdrop-blur-[2px]" />
               </div>
             )}
-            
+
             {/* Content Container */}
             <div className="relative z-10">
               <CardHeader className="pb-3">
@@ -249,11 +248,11 @@ const GoalList: React.FC<GoalListProps> = ({
                   <div className="flex items-center gap-1 flex-shrink-0" data-ignore-navigation="true">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                          aria-label="Open actions" 
+                          aria-label="Open actions"
                           data-ignore-navigation="true"
                         >
                           <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
@@ -289,16 +288,16 @@ const GoalList: React.FC<GoalListProps> = ({
                 {/* Progress Bar */}
                 <div className="space-y-2">
                   <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary transition-all duration-300" 
-                      style={{ 
-                        width: `${goal.taskCounts && goal.taskCounts.total > 0 
-                          ? Math.round((goal.taskCounts.completed / goal.taskCounts.total) * 100) 
-                          : 0}%` 
-                      }} 
+                    <div
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{
+                        width: `${goal.taskCounts && goal.taskCounts.total > 0
+                          ? Math.round((goal.taskCounts.completed / goal.taskCounts.total) * 100)
+                          : 0}%`
+                      }}
                     />
                   </div>
-                  
+
                   {/* Stats Row */}
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span className="font-medium">
@@ -311,12 +310,22 @@ const GoalList: React.FC<GoalListProps> = ({
                 {/* Footer Badges */}
                 <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border">
                   {goal.memberCounts && (
-                    <Badge variant="outline" className="text-xs">
-                      <LucideUsers2 className="h-3 w-3 mr-1" />
+                    <Badge variant="outline" className="text-xs pl-0">
+                      <div className="*:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:data-[slot=avatar]:grayscale">
+                        {goal.members.map((mem,_) => {
+                          const displayName = mem.user_profiles?.display_name.toUpperCase() || "User"
+                          return (
+                            <Avatar className="w-5 h-5" key={_} >
+                              <AvatarImage src={mem.user_profiles?.avatar_url} alt={displayName} />
+                              <AvatarFallback>{displayName.slice(0,1)}</AvatarFallback>
+                            </Avatar>
+                          )
+                        })}
+                      </div>
                       {goal.memberCounts.total} {goal.memberCounts.total === 1 ? 'member' : 'members'}
                     </Badge>
                   )}
-                  <Badge 
+                  <Badge
                     variant={goal.status === 'completed' ? 'default' : 'secondary'}
                     className="text-xs capitalize"
                   >

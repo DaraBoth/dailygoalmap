@@ -12,7 +12,7 @@ export const useGoals = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [sortOption, setSortOption] = useState<SortOption>({
     field: "created_at",
-    direction: "desc"
+    direction: "desc",
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(4);
@@ -22,7 +22,8 @@ export const useGoals = () => {
     setIsLoading(true);
     try {
       // Get the current user's ID
-      const { data: userData, error: userError } = await supabase.auth.getUser();
+      const { data: userData, error: userError } =
+        await supabase.auth.getUser();
       if (userError || !userData?.user) {
         throw new Error("Failed to fetch user information");
       }
@@ -30,120 +31,135 @@ export const useGoals = () => {
 
       // Fetch goals created by the user
       const { data: createdGoals, error: createdGoalsError } = await supabase
-        .from('goals')
-        .select(`
+        .from("goals")
+        .select(
+          `
           *,
           goal_themes(*)
-        `)
-        .eq('user_id', userId);
+        `
+        )
+        .eq("user_id", userId);
 
       if (createdGoalsError) throw createdGoalsError;
 
       // Fetch goals the user has joined
       const { data: joinedGoals, error: joinedGoalsError } = await supabase
-        .from('goal_members')
-        .select('goal_id, goals(*,goal_themes(*))')
-        .eq('user_id', userId);
+        .from("goal_members")
+        .select("goal_id, goals(*,goal_themes(*))")
+        .eq("user_id", userId);
 
       if (joinedGoalsError) throw joinedGoalsError;
 
       // Combine created and joined goals, avoiding duplicates
-      const joinedGoalsList = (joinedGoals?.map((member) => member.goals) || []).filter(Boolean);
+      const joinedGoalsList = (
+        joinedGoals?.map((member) => member.goals) || []
+      ).filter(Boolean);
       const createdGoalsList = createdGoals || [];
-      
+
       // Remove duplicates by filtering out joined goals that are already in created goals
       const uniqueJoinedGoals = joinedGoalsList.filter(
-        joinedGoal => joinedGoal && !createdGoalsList.some(createdGoal => createdGoal.id === joinedGoal.id)
+        (joinedGoal) =>
+          joinedGoal &&
+          !createdGoalsList.some(
+            (createdGoal) => createdGoal.id === joinedGoal.id
+          )
       );
-      
-      const allGoals = [
-        ...createdGoalsList,
-        ...uniqueJoinedGoals,
-      ];
-      
+
+      const allGoals = [...createdGoalsList, ...uniqueJoinedGoals];
+
       // Convert the Supabase data to Goal objects with proper metadata typing
-      const typedGoals: Goal[] = (allGoals || []).map(goal => ({
+      const typedGoals: Goal[] = (allGoals || []).map((goal) => ({
         ...goal,
-        metadata: typeof goal.metadata === 'string'
-          ? JSON.parse(goal.metadata)
-          : goal.metadata || {
-              goal_type: 'general',
-              start_date: new Date().toISOString().split('T')[0]
-            },
+        metadata:
+          typeof goal.metadata === "string"
+            ? JSON.parse(goal.metadata)
+            : goal.metadata || {
+                goal_type: "general",
+                start_date: new Date().toISOString().split("T")[0],
+              },
         taskCounts: { total: 0, completed: 0, incomplete: 0 }, // Initialize task counts
-        memberCounts: { total: 0 } // Initialize member counts
+        memberCounts: { total: 0 }, // Initialize member counts
+        members: [],
       }));
 
       // Sort goals by creation date (newest first) as default
-      typedGoals.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      typedGoals.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
 
       // OPTIMIZED: Fetch task counts for ALL goals in one query instead of loop
       if (typedGoals.length > 0) {
-        const goalIds = typedGoals.map(goal => goal.id);
-        
+        const goalIds = typedGoals.map((goal) => goal.id);
+
         // Fetch all tasks for all goals in a single query
         const { data: allTasks, error: taskError } = await supabase
-          .from('tasks')
-          .select('goal_id, completed')
-          .in('goal_id', goalIds);
+          .from("tasks")
+          .select("goal_id, completed")
+          .in("goal_id", goalIds);
 
         if (!taskError && allTasks) {
           // Group tasks by goal_id
-          const tasksByGoal = allTasks.reduce((acc, task) => {
-            if (!acc[task.goal_id]) {
-              acc[task.goal_id] = { total: 0, completed: 0 };
-            }
-            acc[task.goal_id].total++;
-            if (task.completed) {
-              acc[task.goal_id].completed++;
-            }
-            return acc;
-          }, {} as Record<string, { total: number; completed: number }>);
+          const tasksByGoal = allTasks.reduce(
+            (acc, task) => {
+              if (!acc[task.goal_id]) {
+                acc[task.goal_id] = { total: 0, completed: 0 };
+              }
+              acc[task.goal_id].total++;
+              if (task.completed) {
+                acc[task.goal_id].completed++;
+              }
+              return acc;
+            },
+            {} as Record<string, { total: number; completed: number }>
+          );
 
           // Assign task counts to each goal
-          typedGoals.forEach(goal => {
+          typedGoals.forEach((goal) => {
             const counts = tasksByGoal[goal.id] || { total: 0, completed: 0 };
             goal.taskCounts = {
               total: counts.total,
               completed: counts.completed,
-              incomplete: counts.total - counts.completed
+              incomplete: counts.total - counts.completed,
             };
           });
         }
 
-        // Fetch all goal members in a single query
         const { data: allMembers, error: memberError } = await supabase
-          .from('goal_members')
-          .select('goal_id')
-          .in('goal_id', goalIds);
+          .from("goal_members")
+          .select("*, user_profiles(*)")
+          .in("goal_id", goalIds);
 
         if (!memberError && allMembers) {
-          // Count members by goal_id
+          // Group by goal_id
           const membersByGoal = allMembers.reduce((acc, member) => {
-            acc[member.goal_id] = (acc[member.goal_id] || 0) + 1;
+            const gid = member.goal_id;
+            if (!acc[gid]) acc[gid] = [];
+            acc[gid].push(member);
             return acc;
-          }, {} as Record<string, number>);
+          }, {});
 
           // Assign member counts to each goal
-          typedGoals.forEach(goal => {
+          typedGoals.forEach((goal) => {
             goal.memberCounts = {
-              total: membersByGoal[goal.id] || 0
+              total: membersByGoal[goal.id].length || 0,
             };
+            goal.members = membersByGoal[goal.id];
           });
         }
       }
 
       setAllGoals(typedGoals);
-      
+
       // Calculate pagination
       const totalPages = Math.ceil(typedGoals.length / itemsPerPage);
       setTotalPages(totalPages);
-      
+
       // Get paginated goals
       const startIndex = (currentPage - 1) * itemsPerPage;
       const endIndex = startIndex + itemsPerPage;
       const paginatedGoals = typedGoals.slice(startIndex, endIndex);
-      
+
       setGoals(paginatedGoals);
     } catch (error) {
       console.error("Error fetching goals:", error);
@@ -186,36 +202,36 @@ export const useGoals = () => {
     try {
       // First, remove any local storage data associated with this goal
       localStorage.removeItem(`tasks-${goalId}`);
-      
-      const financialDataStr = localStorage.getItem('financialData');
+
+      const financialDataStr = localStorage.getItem("financialData");
       if (financialDataStr) {
         const financialData = JSON.parse(financialDataStr);
         const updatedFinancialData = financialData.filter(
           (data: any) => data.goalId !== goalId
         );
-        localStorage.setItem('financialData', JSON.stringify(updatedFinancialData));
+        localStorage.setItem(
+          "financialData",
+          JSON.stringify(updatedFinancialData)
+        );
       }
-      
+
       // First delete all associated tasks to prevent foreign key constraint error
       const { error: tasksError } = await supabase
-        .from('tasks')
+        .from("tasks")
         .delete()
-        .eq('goal_id', goalId);
-      
+        .eq("goal_id", goalId);
+
       if (tasksError) throw tasksError;
-      
+
       // Then delete the goal itself
-      const { error } = await supabase
-        .from('goals')
-        .delete()
-        .eq('id', goalId);
-      
+      const { error } = await supabase.from("goals").delete().eq("id", goalId);
+
       if (error) throw error;
-      
+
       // Update local state
       setAllGoals((prevGoals) => prevGoals.filter((g) => g.id !== goalId));
       setGoals((prevGoals) => prevGoals.filter((g) => g.id !== goalId));
-      
+
       toast({
         title: "Goal deleted",
         description: "Your goal has been successfully deleted.",
@@ -237,7 +253,7 @@ export const useGoals = () => {
   const confirmDelete = (goal: Goal, event: React.MouseEvent) => {
     event.stopPropagation();
     console.log(goal);
-    
+
     setGoalToDelete(goal);
     setShowDeleteDialog(true);
   };
