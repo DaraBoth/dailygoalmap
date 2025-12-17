@@ -125,7 +125,7 @@ export const taskTools: Tool[] = [
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
-        .eq('id', params.task_id)
+        .eq('id', params.task_id as string)
         .eq('goal_id', context.goalId)
         .single();
 
@@ -169,7 +169,7 @@ export const taskTools: Tool[] = [
       const { data, error } = await supabase
         .from('tasks')
         .update(updates)
-        .eq('id', params.task_id)
+        .eq('id', params.task_id as string)
         .select()
         .single();
 
@@ -211,12 +211,12 @@ export const taskTools: Tool[] = [
       const { data, error } = await supabase
         .from('tasks')
         .update({
-          start_date: params.start_date,
-          end_date: params.end_date,
-          daily_start_time: params.daily_start_time,
-          daily_end_time: params.daily_end_time
+          start_date: params.start_date as string,
+          end_date: params.end_date as string,
+          daily_start_time: params.daily_start_time as string,
+          daily_end_time: params.daily_end_time as string
         })
-        .eq('id', params.task_id)
+        .eq('id', params.task_id as string)
         .eq('goal_id', context.goalId)
         .select()
         .single();
@@ -243,11 +243,11 @@ export const taskTools: Tool[] = [
       const { error } = await supabase
         .from('tasks')
         .delete()
-        .eq('id', params.task_id)
+        .eq('id', params.task_id as string)
         .eq('goal_id', context.goalId);
 
       if (error) throw error;
-      return { success: true, deleted_task_id: params.task_id };
+      return { success: true, deleted_task_id: params.task_id as string };
     }
   },
   

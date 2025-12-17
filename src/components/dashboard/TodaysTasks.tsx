@@ -297,7 +297,7 @@ const TodaysTasks: React.FC = () => {
           const goalTitle = goalData?.title || 'your goal';
 
           // Send notification for each task using unified service
-          for (const task of tasks) {
+          for (const task of tasks as typeof incompleteTasks) {
             await notifyTaskUpdated(
               task.goal_id,
               user.id,
@@ -371,7 +371,7 @@ const TodaysTasks: React.FC = () => {
           const goalTitle = goalData?.title || 'your goal';
 
           // Send notification for each task using unified service
-          for (const task of tasks) {
+          for (const task of tasks as typeof previousTasksState) {
             await notifyTaskUpdated(
               task.goal_id,
               user.id,
