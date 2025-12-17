@@ -17,6 +17,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ChatPopupRouteImport } from './routes/chat-popup'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GoalCreateCustomRouteImport } from './routes/goal.create-custom'
 import { Route as GoalCreateRouteImport } from './routes/goal.create'
@@ -63,6 +64,11 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -92,6 +98,7 @@ const GoalCreateFromTemplateTemplateIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/about': typeof AboutRoute
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/about': typeof AboutRoute
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
@@ -123,6 +131,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/about': typeof AboutRoute
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$'
     | '/about'
     | '/chat-popup'
     | '/dashboard'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$'
     | '/about'
     | '/chat-popup'
     | '/dashboard'
@@ -170,6 +181,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/$'
     | '/about'
     | '/chat-popup'
     | '/dashboard'
@@ -186,6 +198,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SplatRoute: typeof SplatRoute
   AboutRoute: typeof AboutRoute
   ChatPopupRoute: typeof ChatPopupRoute
   DashboardRoute: typeof DashboardRoute
@@ -258,6 +271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -298,6 +318,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SplatRoute: SplatRoute,
   AboutRoute: AboutRoute,
   ChatPopupRoute: ChatPopupRoute,
   DashboardRoute: DashboardRoute,
