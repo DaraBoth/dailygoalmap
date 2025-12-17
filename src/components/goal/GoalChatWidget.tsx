@@ -130,17 +130,44 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     loadModelPreference();
   }, [goalId, userInfo?.id, SESSION_KEY, CHAT_KEY]);
 
-  // Save messages with debounce to avoid excessive localStorage writes
+  // Subscribe to message updates from other windows/tabs
+  useEffect(() => {
+    // Import dynamically to avoid circular deps
+    import('@/utils/chatWindowManager').then(({ subscribeToMessageUpdates }) => {
+      const unsubscribe = subscribeToMessageUpdates(goalId, (incomingMessages) => {
+        // Only update if we're not currently streaming (to avoid conflicts)
+        setMessages(prev => {
+          const isStreaming = prev.some(m => m.isStreaming);
+          if (isStreaming) return prev; // Don't overwrite during streaming
+          
+          // Only update if incoming has more or different messages
+          if (incomingMessages.length >= prev.filter(m => !m.isStreaming).length) {
+            return incomingMessages;
+          }
+          return prev;
+        });
+      });
+      
+      return unsubscribe;
+    });
+  }, [goalId]);
+
+  // Save messages with debounce and broadcast to other windows
   useEffect(() => {
     if (messages.length === 0) return;
 
     const timeoutId = setTimeout(() => {
       const filtered = messages.filter((m) => !m.isStreaming);
       localStorage.setItem(CHAT_KEY, JSON.stringify(filtered));
+      
+      // Broadcast to other windows
+      import('@/utils/chatWindowManager').then(({ broadcastMessages }) => {
+        broadcastMessages(goalId, filtered);
+      });
     }, 500); // Debounce 500ms
 
     return () => clearTimeout(timeoutId);
-  }, [messages, CHAT_KEY]);
+  }, [messages, CHAT_KEY, goalId]);
 
   // Autoscroll (single optimized effect)
   useEffect(() => {

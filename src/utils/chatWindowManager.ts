@@ -2,6 +2,7 @@
 
 const CHAT_WINDOWS_KEY = 'chat_windows_registry';
 const CHAT_DATA_KEY_PREFIX = 'chat_window_data_';
+const CHAT_MESSAGES_CHANNEL = 'chat_messages_channel';
 
 interface ChatWindowData {
   goalId: string;
@@ -14,6 +15,30 @@ interface WindowRegistry {
     timestamp: number;
   };
 }
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+  isStreaming?: boolean;
+}
+
+interface ChatMessageBroadcast {
+  type: 'CHAT_MESSAGES_UPDATE';
+  goalId: string;
+  messages: ChatMessage[];
+  sourceId: string;
+}
+
+interface ChatWindowBroadcast {
+  type: 'CHAT_WINDOW_CLOSED' | 'CHAT_WINDOW_OPENED';
+  goalId: string;
+}
+
+type BroadcastMessage = ChatMessageBroadcast | ChatWindowBroadcast;
+
+// Unique ID for this window/tab instance
+const windowInstanceId = crypto.randomUUID();
 
 // Get window registry from localStorage
 const getWindowRegistry = (): WindowRegistry => {
@@ -109,7 +134,7 @@ export const openOrFocusChatWindow = (
 
   if(justCheck){
     onNotExisted?.();
-    return;
+    return null;
   }
   
   // Open new window with cleaner URL (only goalId)
@@ -136,21 +161,79 @@ export const openOrFocusChatWindow = (
   return newWindow;
 };
 
-// Broadcast channel for cross-tab communication
-let broadcastChannel: BroadcastChannel | null = null;
+// Broadcast channel for cross-tab communication (window events)
+let windowBroadcastChannel: BroadcastChannel | null = null;
 
-export const initBroadcastChannel = (onMessage: (data: any) => void) => {
+export const initBroadcastChannel = (onMessage: (data: BroadcastMessage) => void) => {
   if (typeof BroadcastChannel !== 'undefined') {
-    broadcastChannel = new BroadcastChannel('chat_window_channel');
-    broadcastChannel.onmessage = (event) => onMessage(event.data);
+    windowBroadcastChannel = new BroadcastChannel('chat_window_channel');
+    windowBroadcastChannel.onmessage = (event) => onMessage(event.data);
   }
-  return broadcastChannel;
+  return windowBroadcastChannel;
 };
 
 export const broadcastChatClosed = (goalId: string) => {
-  broadcastChannel?.postMessage({ type: 'CHAT_WINDOW_CLOSED', goalId });
+  windowBroadcastChannel?.postMessage({ type: 'CHAT_WINDOW_CLOSED', goalId });
 };
 
 export const broadcastChatOpened = (goalId: string) => {
-  broadcastChannel?.postMessage({ type: 'CHAT_WINDOW_OPENED', goalId });
+  windowBroadcastChannel?.postMessage({ type: 'CHAT_WINDOW_OPENED', goalId });
 };
+
+// ============= Message Sync via BroadcastChannel =============
+
+// Broadcast channel specifically for message syncing
+let messagesBroadcastChannel: BroadcastChannel | null = null;
+const messageListeners: Map<string, (messages: ChatMessage[]) => void> = new Map();
+
+// Initialize messages broadcast channel
+export const initMessagesBroadcastChannel = () => {
+  if (typeof BroadcastChannel === 'undefined') return null;
+  
+  if (!messagesBroadcastChannel) {
+    messagesBroadcastChannel = new BroadcastChannel(CHAT_MESSAGES_CHANNEL);
+    messagesBroadcastChannel.onmessage = (event: MessageEvent<ChatMessageBroadcast>) => {
+      const data = event.data;
+      if (data.type === 'CHAT_MESSAGES_UPDATE' && data.sourceId !== windowInstanceId) {
+        // Notify listeners for this goalId
+        const listener = messageListeners.get(data.goalId);
+        if (listener) {
+          listener(data.messages);
+        }
+      }
+    };
+  }
+  return messagesBroadcastChannel;
+};
+
+// Subscribe to message updates for a specific goal
+export const subscribeToMessageUpdates = (
+  goalId: string, 
+  callback: (messages: ChatMessage[]) => void
+): (() => void) => {
+  initMessagesBroadcastChannel();
+  messageListeners.set(goalId, callback);
+  
+  // Return unsubscribe function
+  return () => {
+    messageListeners.delete(goalId);
+  };
+};
+
+// Broadcast messages to other windows/tabs
+export const broadcastMessages = (goalId: string, messages: ChatMessage[]) => {
+  initMessagesBroadcastChannel();
+  
+  // Filter out streaming messages before broadcasting
+  const filteredMessages = messages.filter(m => !m.isStreaming);
+  
+  messagesBroadcastChannel?.postMessage({
+    type: 'CHAT_MESSAGES_UPDATE',
+    goalId,
+    messages: filteredMessages,
+    sourceId: windowInstanceId,
+  } as ChatMessageBroadcast);
+};
+
+// Get window instance ID (useful for debugging)
+export const getWindowInstanceId = () => windowInstanceId;
