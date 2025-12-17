@@ -4,13 +4,16 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
-import { Calendar, CheckSquare, Goal, Search, Loader2 } from "lucide-react";
+import { Calendar, CheckSquare, Goal, Search, Loader2, Square } from "lucide-react";
 import { SearchResult } from "@/types/notifications";
 import { debounce } from "lodash";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import moment from "moment";
+import { formatDistance, formatRelative, subDays } from "date-fns"
+import { Avatar, AvatarImage } from "../ui";
 
 interface CustomSearchModalProps {
   open: boolean;
@@ -81,8 +84,9 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
       // Search for goals - owned by user or user is a member
       let goalQuery = supabase
         .from('goals')
-        .select('id, title, description, user_id')
-        .or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+        .select('id, title, description, user_id, user_profiles!goals_user_id_profiles_fkey(*)')
+        .or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+        .order('title', { ascending: true });
 
       if (memberGoalIds.length > 0) {
         goalQuery = goalQuery.or(`user_id.eq.${user.id},id.in.(${memberGoalIds.join(',')})`);
@@ -90,16 +94,17 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
         goalQuery = goalQuery.eq('user_id', user.id);
       }
 
-      const { data: goals, error: goalsError } = await goalQuery.limit(8);
-      
+      const { data: goals, error: goalsError } = await goalQuery;
+
+
       if (goalsError) {
         console.error("Goals search error:", goalsError);
       }
-      
+
       // Get all tasks across user's goals (include both owned and joined goals)
       const { data: ownGoals } = await supabase
         .from('goals')
-        .select('id')
+        .select('id, title, description, user_id, user_profiles!goals_user_id_profiles_fkey(*)')
         .eq('user_id', user.id);
 
       const ownGoalIds = ownGoals?.map(g => g.id) || [];
@@ -108,15 +113,16 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
       // Search for tasks - from user's goals or shared goals
       let taskQuery = supabase
         .from('tasks')
-        .select('id, title, description, start_date, end_date, created_at, completed, goal_id')
-        .ilike('description', `%${searchQuery}%`);
+        .select('*, user_profiles!tasks_user_id_profiles_fkey(*)')
+        .or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+        .order('start_date', { ascending: false });
 
       if (allGoalIds.length > 0) {
         taskQuery = taskQuery.in('goal_id', allGoalIds);
       }
 
-      const { data: tasks, error: tasksError } = await taskQuery.limit(8);
-      
+      const { data: tasks, error: tasksError } = await taskQuery;
+
       if (tasksError) {
         console.error("Tasks search error:", tasksError);
       }
@@ -129,21 +135,23 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
         description: goal.description,
         path: `/goal/${goal.id}`
       })) || [];
-      
+
       const taskResults: SearchResult[] = tasks?.map((task: any) => {
-        const dateIso = (task.start_date || task.end_date || task.created_at || new Date().toISOString());
-        const dateOnly = new Date(dateIso).toISOString().split('T')[0];
+
+        const taskTime = task?.daily_start_time.split(":") || task?.daily_end_time.split(":") || "00:00:00".split(":");
+        const dateWithTime = moment(task.start_date).set({ hour: taskTime[0], minute: taskTime[1], second: taskTime[2] });
         return {
           type: 'task' as const,
           id: task.id,
           title: task.title || task.description,
-          path: `/goal/${task.goal_id}?task=${task.id}&date=${dateOnly}`,
-          date: new Date(dateIso).toLocaleDateString(),
+          path: `/goal/${task.goal_id}?task=${task.id}&date=${moment(task.start_date).format("YYYY-MM-DD")}`,
+          date: formatDistance(moment(dateWithTime).toDate(), moment().toDate(), { addSuffix: true }),
           goalId: task.goal_id,
           completed: !!task.completed,
+          user_profiles: task?.user_profiles || undefined
         };
       }) || [];
-      
+
       setResults([...goalResults, ...taskResults]);
     } catch (error) {
       console.error('Search error:', error);
@@ -184,7 +192,7 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
+      <DialogContent
         className={`${isMobile ? 'w-[95vw] max-w-md' : 'max-w-2xl'} max-h-[80vh] p-0`}
         onKeyDown={handleKeyDown}
       >
@@ -194,7 +202,7 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
             Search through your goals and tasks to quickly find what you're looking for.
           </DialogDescription>
         </VisuallyHidden>
-        
+
         {/* Search Header */}
         <div className="flex items-center border-b px-4 py-3">
           <Input
@@ -205,7 +213,7 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
             autoFocus
           />
           {isLoading && (
-            <Loader2 className="ml-2 h-4 w-4 animate-spin opacity-50" />
+            <Loader2 className="ml-2 h-4 w-4 animate-spin opacity-90" />
           )}
         </div>
 
@@ -252,9 +260,8 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
                       <Button
                         key={`goal-${item.id}`}
                         variant="ghost"
-                        className={`w-full justify-start h-auto p-3 ${
-                          selectedIndex === globalIndex ? 'bg-accent' : ''
-                        }`}
+                        className={`w-full justify-start h-auto p-3 ${selectedIndex === globalIndex ? 'bg-accent' : ''
+                          }`}
                         onClick={() => handleSelectItem(item.path)}
                       >
                         <Goal className={`mr-3 h-4 w-4 text-primary flex-shrink-0 ${isMobile ? 'h-5 w-5' : ''}`} />
@@ -285,17 +292,16 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
                 <div className="space-y-1">
                   {taskResults.map((item, index) => {
                     const globalIndex = goalResults.length + index;
+
                     return (
                       <Button
                         key={`task-${item.id}`}
                         variant="ghost"
-                        className={`w-full justify-start h-auto p-3 ${
-                          selectedIndex === globalIndex ? 'bg-accent' : ''
-                        }`}
+                        className={`w-full flex liquid-glass-button justify-start h-auto p-3 ${selectedIndex === globalIndex ? 'bg-accent' : ''
+                          }`}
                         onClick={() => handleSelectItem(item.path)}
                       >
-                        <CheckSquare className={`mr-3 h-4 w-4 text-secondary flex-shrink-0 ${isMobile ? 'h-5 w-5' : ''}`} />
-                        <div className="flex flex-col items-start text-left min-w-0 flex-1">
+                        <div className="flex flex-col items-start text-left min-w-0 flex-1 gap-1">
                           <span className={`font-medium truncate w-full ${isMobile ? 'text-base' : 'text-sm'}`}>
                             {item.title}
                           </span>
@@ -305,11 +311,23 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
                               <span>{item.date}</span>
                             </div>
                           )}
-                          {typeof item.completed !== 'undefined' && (
-                            <div className={`mt-1 inline-flex items-center rounded-full px-2 py-0.5 ${item.completed ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} ${isMobile ? 'text-xs' : 'text-[10px]'}`}>
-                              {item.completed ? 'Completed' : 'Open'}
-                            </div>
-                          )}
+                          <div className="inline-flex items-center gap-1" >
+                            {typeof item.completed !== 'undefined' && (
+                              <Badge 
+                                variant={item.completed ? "success" : "default"}
+                                className={`${isMobile ? 'text-xs' : 'text-[10px]'}`}>
+                                {item.completed ? 'Completed' : 'Open'}
+                              </Badge>
+                            )}
+                            <Badge variant="info" className={`relative pr-6 ${isMobile ? 'text-xs' : 'text-[10px]'}`}>
+                              {"created by " + (item?.user_profiles?.display_name || "")}  {item?.user_profiles?.avatar_url && (
+                              <Avatar className="w-5 h-5 absolute right-0">
+                                <AvatarImage src={item.user_profiles.avatar_url} />
+                              </Avatar>
+                            )}
+                            </Badge>
+                           
+                          </div>
                         </div>
                       </Button>
                     );

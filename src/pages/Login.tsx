@@ -169,7 +169,7 @@ const Login = () => {
           </SmartLink>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-xl border border-white/30 dark:border-white/20">
+            <div className="hidden liquid-glass sm:flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-xl border border-white/30 dark:border-white/20">
               <LogoAvatar size={24} />
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Goal Completer</span>
             </div>
@@ -191,16 +191,6 @@ const Login = () => {
           <div className="absolute inset-0 bg-gradient-to-br from-black/50 to-transparent"></div>
 
           <div className="relative z-10 space-y-8 max-w-lg">
-            {/* Brand Badge */}
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.2 }}
-              className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20"
-            >
-              <LogoAvatar size={28} />
-              <span className="text-sm font-semibold text-white">Goal Completer</span>
-            </motion.div>
 
             {/* Dynamic Headlines */}
             <motion.div
@@ -364,14 +354,14 @@ const Login = () => {
                         >
                           <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</Label>
                           <div className="relative group">
-                            <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                            <Mail className="absolute z-10 left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-800 group-focus-within:text-blue-900 transition-colors" />
                             <Input
                               id="email"
                               type="email"
                               placeholder="Enter your email"
                               value={email}
                               onChange={(e) => setEmail(e.target.value)}
-                              className="h-14 pl-12 pr-4 bg-white/50 dark:bg-white/10 backdrop-blur-sm border border-white/30 dark:border-white/20 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300"
+                              className="h-14 pl-12 pr-4 bg-white/50 dark:bg-white/10 backdrop-blur-sm border border-white/30 dark:border-white/20 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-900 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300"
                               required
                             />
                           </div>
@@ -385,14 +375,17 @@ const Login = () => {
                         >
                           <Label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">Password</Label>
                           <div className="relative group">
-                            <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                            <Lock className="absolute z-10 left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-900 group-focus-within:text-blue-900 transition-colors"
+                            style={{
+                            }}
+                            />
                             <Input
                               id="password"
                               type={showPassword ? "text" : "password"}
                               placeholder="Enter your password"
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}
-                              className="h-14 pl-12 pr-12 bg-white/50 dark:bg-white/10 backdrop-blur-sm border border-white/30 dark:border-white/20 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300"
+                              className="h-14 pl-12 pr-12 bg-white/50 dark:bg-white/10 backdrop-blur-sm border border-white/30 dark:border-white/20 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-900 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300"
                               required
                             />
                             <button

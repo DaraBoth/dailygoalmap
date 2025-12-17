@@ -1,4 +1,3 @@
-
 // Device registration data for tinynotie-api integration
 export interface DeviceRegistration {
   deviceId: string;
@@ -23,7 +22,7 @@ export interface NotificationPayload {
 
 // Search result type for the command palette
 export interface SearchResult {
-  type: 'task' | 'goal';
+  type: "task" | "goal";
   id: string;
   title: string;
   description?: string;
@@ -31,4 +30,14 @@ export interface SearchResult {
   date?: string;
   goalId?: string;
   completed?: boolean;
+  user_profiles?: {
+    avatar_url: string | null;
+    bio: string | null;
+    created_at: string;
+    device_id: string | null;
+    display_name: string | null;
+    id: string;
+    model_preference: string | null;
+    updated_at: string;
+  };
 }

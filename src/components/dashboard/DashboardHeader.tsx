@@ -74,7 +74,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <div className="w-full max-w-md">
                 <button
                   onClick={onOpenSearch}
-                  className="group flex h-9 w-full items-center gap-2 liquid-glass-input text-sm ring-offset-background transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="group flex h-9 w-full items-center gap-2 liquid-glass-input px-12 text-sm ring-offset-background transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <Search className="h-4 w-4" />
                   <span className="flex-1 text-left">Search goals...</span>
