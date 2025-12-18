@@ -7,6 +7,7 @@ import { TaskTags } from "./TaskTags";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { openCalendarOptionsDialog } from "@/utils/calendarIntegration";
+import { MarkdownRenderer } from "../ui/MarkdownRenderer";
 
 interface TaskDetailsSidebarProps {
   isOpen: boolean;
@@ -59,6 +60,13 @@ const TaskDetailsSidebar = ({
     }
   };
 
+  function normalizeMarkdown(md: string) {
+    return md
+      .replace(/(\*\*.+?\*\*)\n(\*\*)/g, '$1\n\n$2')
+      .replace(/(#+ .+)\n([^])/g, '$1\n\n$2');
+  }
+
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -108,9 +116,8 @@ const TaskDetailsSidebar = ({
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {/* Top row: status */}
                 <div className="flex items-center gap-3">
-                  <div className={`px-3 py-1 rounded-full text-sm font-medium liquid-glass ${
-                    selectedTask.completed ? 'text-success' : 'text-primary'
-                  }`}>
+                  <div className={`px-3 py-1 rounded-full text-sm font-medium liquid-glass ${selectedTask.completed ? 'text-success' : 'text-primary'
+                    }`}>
                     {selectedTask.completed ? 'Completed' : 'In Progress'}
                   </div>
                 </div>
@@ -124,7 +131,7 @@ const TaskDetailsSidebar = ({
 
                   <div className="liquid-glass-card p-3">
                     <div className="text-xs text-muted-foreground font-medium">Time</div>
-                    <div className="text-sm text-foreground">{selectedTask.daily_start_time ? `${selectedTask.daily_start_time.slice(0,5)} - ${selectedTask.daily_end_time?.slice(0,5) ?? ''}` : '—'}</div>
+                    <div className="text-sm text-foreground">{selectedTask.daily_start_time ? `${selectedTask.daily_start_time.slice(0, 5)} - ${selectedTask.daily_end_time?.slice(0, 5) ?? ''}` : '—'}</div>
                   </div>
                 </div>
 
@@ -132,6 +139,11 @@ const TaskDetailsSidebar = ({
                 <div className="liquid-glass-card p-4">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
                   <p className="text-sm text-foreground whitespace-pre-wrap">{selectedTask.description}</p>
+                  <MarkdownRenderer
+                    content={normalizeMarkdown(selectedTask.description)}
+                    isStreaming={false}
+                    isLoading={false}
+                  />
                 </div>
 
                 {/* Progress & Tags */}

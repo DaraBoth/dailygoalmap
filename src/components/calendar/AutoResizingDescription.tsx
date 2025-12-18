@@ -36,7 +36,7 @@ export function AutoResizingDescription({
       placeholder={placeholder}
       autoFocus={autoFocus}
       className={cn(
-        "resize-none leading-6 transition-[height] duration-150 ease-in-out scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent",
+        "resize-y leading-6 transition-[height] duration-150 ease-in-out scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-black",
         className
       )}
       rows={row}

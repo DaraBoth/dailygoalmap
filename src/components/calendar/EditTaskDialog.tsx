@@ -145,7 +145,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
             <button
               onClick={onClose}
-              className="absolute right-4 top-4 p-2 rounded-xl bg-white/80 dark:bg-white/20 backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/30 transition-all duration-200 shadow-lg z-10"
+              className="absolute liquid-glass-button right-4 top-4 p-2 rounded-xl bg-white/80 dark:bg-white/20 backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/30 transition-all duration-200 shadow-lg z-10"
             >
               <X className="h-5 w-5" />
               <span className="sr-only">Close</span>
@@ -161,13 +161,13 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
           </div>
 
           {/* Scrollable content area with enhanced UX */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto no-scrollbar">
             <div
               ref={scrollAreaRef}
               className="px-4"
               style={{
                 minHeight: 'calc(100% + 8rem)',
-                paddingBottom: 'min(8rem, max(20vh, 6rem))'
+                paddingBottom: 'min(3rem, max(20vh, 6rem))'
               }}
             >
               <div ref={contentRef} className="py-4 space-y-4">
@@ -185,7 +185,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="Short title"
                         autoFocus
-                        className="bg-slate-50/50 dark:bg-slate-800/50 border-slate-700 text-black dark:text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20 transition-all h-8 sm:h-10 text-sm"
+                        className="bg-slate-50/50 dark:bg-slate-800/50 border-slate-700 text-black dark:text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20 transition-all h-8 sm:h-10 sm:py-1 text-sm"
                       />
                     </div>
                     <div className="space-y-1.5 sm:space-y-2">
@@ -198,10 +198,9 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                         value={taskDescription}
                         onChange={(v) => setTaskDescription(v)}
                         placeholder="Enter task description"
-                        maxRows={isMobile ? 10 : 3}
-                        minRows={isMobile ? 5 : 1}
+                        minRows={isMobile ? 5 : 8}
                         row={5}
-                        className="dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-300 placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20 transition-all"
+                        className="dark:bg-slate-800/50 p-3 border-slate-700 text-gray-800 dark:text-gray-300 placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20 transition-all"
                       />
                     </div>
 

@@ -78,14 +78,14 @@ const CalendarDay = ({
       {/* Compact date display */}
       <div className="flex justify-center mb-0.5 ">
         <span className={`
-          w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 flex items-center justify-center rounded-lg text-xs sm:text-sm font-semibold
-          ${!isCurrentMonth ? 'text-muted-foreground opacity-50' : ''}
-          ${isWeekend && isCurrentMonth && date.getDay() === 0 ? 'text-destructive' : ''}
-          ${isWeekend && isCurrentMonth && date.getDay() === 6 ? 'text-primary' : ''}
-          ${isSelected ? 'bg-primary text-primary-foreground' : ''}
-          ${_isToday && !isSelected ? 'liquid-glass text-success border border-success/30' : ''}
-          ${isCurrentMonth && !isWeekend && !isSelected && !_isToday ? 'text-foreground' : ''}
-          transition-all duration-300
+          w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 flex items-center justify-center rounded-lg text-xs sm:text-sm font-semibold 
+          ${!isCurrentMonth ? ' opacity-50' : ''}
+          ${isWeekend && isCurrentMonth && date.getDay() === 0 ? ' text-red-700' : ''}
+          ${isWeekend && isCurrentMonth && date.getDay() === 6 ? ' text-blue-800' : ''}
+          ${isSelected ? isWeekend ? ' bg-primary text-white' : ' bg-primary text-primary-foreground' : ''}
+          ${_isToday && !isSelected ? ' liquid-glass text-success border border-success/30' : ''}
+          ${isCurrentMonth && !isWeekend && !isSelected && !_isToday ? ' text-foreground' : ''}
+           transition-all duration-300
         `}>
           {date.getDate()}
         </span>
