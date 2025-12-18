@@ -217,6 +217,8 @@ export async function executeTool(
       return await findByTitle(params, context, supabase);
     case 'google_search':
       return await googleSearch(params, context, supabase);
+    case 'crawl_webpage':
+      return await crawlWebpage(params, context, supabase);
     case 'send_notification':
       return await sendNotification(params, context, supabase);
     default:
@@ -761,6 +763,171 @@ async function sendNotification(params: ToolParams, context: AgentContext, supab
     return {
       success: false,
       error: notifError instanceof Error ? notifError.message : 'Failed to send notification'
+    };
+  }
+}
+
+/**
+ * Crawl a webpage and extract content
+ * Uses a simple fetch-based approach with HTML parsing
+ */
+async function crawlWebpage(params: ToolParams, context: AgentContext, supabase: any) {
+  const url = params.url;
+  const formats = params.formats || ['markdown'];
+  
+  if (!url) {
+    return {
+      success: false,
+      error: 'URL is required for crawling'
+    };
+  }
+  
+  // Validate URL format
+  let formattedUrl = url.trim();
+  if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+    formattedUrl = `https://${formattedUrl}`;
+  }
+  
+  try {
+    new URL(formattedUrl);
+  } catch (e) {
+    return {
+      success: false,
+      error: `Invalid URL format: ${url}`
+    };
+  }
+  
+  console.log('🌐 [crawlWebpage] Fetching:', formattedUrl);
+  
+  try {
+    // First, try to use Firecrawl if API key is available
+    const { data: firecrawlKeyData } = await supabase
+      .from('api_keys')
+      .select('key_value')
+      .eq('user_id', context.userId)
+      .eq('key_type', 'firecrawl')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (firecrawlKeyData?.key_value) {
+      console.log('🔥 [crawlWebpage] Using Firecrawl API');
+      
+      const firecrawlResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${firecrawlKeyData.key_value}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: formattedUrl,
+          formats: formats.includes('summary') ? ['markdown'] : formats,
+          onlyMainContent: true,
+        }),
+      });
+      
+      if (firecrawlResponse.ok) {
+        const firecrawlData = await firecrawlResponse.json();
+        console.log('✅ [crawlWebpage] Firecrawl success');
+        
+        return {
+          success: true,
+          url: formattedUrl,
+          title: firecrawlData.data?.metadata?.title || 'Unknown',
+          description: firecrawlData.data?.metadata?.description || '',
+          content: firecrawlData.data?.markdown || firecrawlData.data?.html || '',
+          links: firecrawlData.data?.links || [],
+          metadata: firecrawlData.data?.metadata || {}
+        };
+      } else {
+        console.warn('⚠️ [crawlWebpage] Firecrawl failed, falling back to basic fetch');
+      }
+    }
+    
+    // Fallback: Basic fetch with HTML parsing
+    console.log('📄 [crawlWebpage] Using basic fetch');
+    
+    const response = await fetch(formattedUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; DailyGoalMapBot/1.0; +https://dailygoalmap.com)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const html = await response.text();
+    
+    // Extract basic content from HTML
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const title = titleMatch ? titleMatch[1].trim() : 'Unknown';
+    
+    const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) ||
+                      html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i);
+    const description = descMatch ? descMatch[1].trim() : '';
+    
+    // Extract main text content (basic approach)
+    let textContent = html
+      // Remove script and style tags with their content
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '')
+      // Remove HTML comments
+      .replace(/<!--[\s\S]*?-->/g, '')
+      // Remove all HTML tags
+      .replace(/<[^>]+>/g, ' ')
+      // Decode HTML entities
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      // Clean up whitespace
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Limit content length to avoid huge responses
+    if (textContent.length > 10000) {
+      textContent = textContent.substring(0, 10000) + '... [truncated]';
+    }
+    
+    // Extract links
+    const linkRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>([^<]*)<\/a>/gi;
+    const links: Array<{url: string, text: string}> = [];
+    let linkMatch;
+    while ((linkMatch = linkRegex.exec(html)) !== null && links.length < 20) {
+      const linkUrl = linkMatch[1];
+      const linkText = linkMatch[2].trim();
+      if (linkUrl && !linkUrl.startsWith('#') && !linkUrl.startsWith('javascript:')) {
+        links.push({ url: linkUrl, text: linkText });
+      }
+    }
+    
+    console.log('✅ [crawlWebpage] Basic fetch success:', { title, contentLength: textContent.length, linksFound: links.length });
+    
+    return {
+      success: true,
+      url: formattedUrl,
+      title,
+      description,
+      content: textContent,
+      links: formats.includes('links') ? links : [],
+      metadata: {
+        sourceURL: formattedUrl,
+        title,
+        description
+      }
+    };
+  } catch (crawlError) {
+    console.error('❌ [crawlWebpage] Error:', crawlError);
+    return {
+      success: false,
+      url: formattedUrl,
+      error: crawlError instanceof Error ? crawlError.message : 'Failed to crawl webpage'
     };
   }
 }
