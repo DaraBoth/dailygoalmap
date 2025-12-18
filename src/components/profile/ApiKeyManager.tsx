@@ -32,6 +32,8 @@ const getApiKeyLink = (keyType: string): string | null => {
       return "https://serpapi.com/manage-api-key";
     case "firecrawl":
       return "https://www.firecrawl.dev/app/api-keys";
+    case "openweathermap":
+      return "https://home.openweathermap.org/api_keys";
     default:
       return null;
   }
@@ -359,6 +361,7 @@ const ApiKeyManager = () => {
                     <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
                     <SelectItem value="serpapi">SerpAPI (Google Search)</SelectItem>
                     <SelectItem value="firecrawl">Firecrawl (Web Scraping)</SelectItem>
+                    <SelectItem value="openweathermap">OpenWeatherMap (Weather)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -439,7 +442,7 @@ const ApiKeyManager = () => {
                       )}
                     </div>
                     <span className="text-xs text-gray-500 capitalize">
-                      {key.key_type === 'serpapi' ? 'SerpAPI' : key.key_type === 'openai' ? 'OpenAI' : key.key_type === 'anthropic' ? 'Anthropic' : key.key_type === 'firecrawl' ? 'Firecrawl' : 'Gemini'}
+                      {key.key_type === 'serpapi' ? 'SerpAPI' : key.key_type === 'openai' ? 'OpenAI' : key.key_type === 'anthropic' ? 'Anthropic' : key.key_type === 'firecrawl' ? 'Firecrawl' : key.key_type === 'openweathermap' ? 'OpenWeatherMap' : 'Gemini'}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">

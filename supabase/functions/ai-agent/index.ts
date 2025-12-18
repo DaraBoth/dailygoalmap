@@ -42,7 +42,8 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   'google_search': 'Searching the web',
   'crawl_webpage': 'Reading webpage content',
   'send_notification': 'Sending notification',
-  'mark_notification_read': 'Updating notification'
+  'mark_notification_read': 'Updating notification',
+  'check_weather': 'Checking weather'
 };
 
 function getToolDisplayName(toolName: string): string {
@@ -186,6 +187,9 @@ Available tools:
 - send_notification: Send push notification to user
   * Params: title, message, url (optional)
   * Use this to remind users about important tasks or updates
+- check_weather: Check current weather and forecast for a location
+  * Params: location (city name, e.g., 'Tokyo', 'New York'), units (optional: 'metric' for Celsius, 'imperial' for Fahrenheit)
+  * Use this when user asks about weather conditions for planning outdoor activities or travel
 
 For batch operations, use the batch tools to handle multiple items efficiently.
 
