@@ -221,6 +221,8 @@ export async function executeTool(
       return await crawlWebpage(params, context, supabase);
     case 'send_notification':
       return await sendNotification(params, context, supabase);
+    case 'check_weather':
+      return await checkWeather(params, context, supabase);
     default:
       throw new Error(`Unknown tool: ${toolName}`);
   }
@@ -928,6 +930,105 @@ async function crawlWebpage(params: ToolParams, context: AgentContext, supabase:
       success: false,
       url: formattedUrl,
       error: crawlError instanceof Error ? crawlError.message : 'Failed to crawl webpage'
+    };
+  }
+}
+
+async function checkWeather(params: ToolParams, context: AgentContext, supabase: any) {
+  const location = params.location;
+  const units = params.units || 'metric'; // metric (Celsius) or imperial (Fahrenheit)
+  
+  if (!location) {
+    return {
+      success: false,
+      error: 'Location is required for weather check'
+    };
+  }
+  
+  console.log('🌤️ [checkWeather] Checking weather for:', location);
+  
+  // Get OpenWeatherMap API key from database
+  const { data: weatherKeyData, error: weatherKeyError } = await supabase
+    .from('api_keys')
+    .select('key_value')
+    .eq('user_id', context.userId)
+    .eq('key_type', 'openweathermap')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+  
+  if (weatherKeyError || !weatherKeyData) {
+    return {
+      success: false,
+      error: 'OpenWeatherMap API key not found. Please add your OpenWeatherMap API key in Profile > API Key Management to use weather check.'
+    };
+  }
+  
+  const apiKey = weatherKeyData.key_value;
+  
+  try {
+    // Get current weather
+    const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&appid=${apiKey}&units=${units}`;
+    const weatherResponse = await fetch(weatherUrl);
+    
+    if (!weatherResponse.ok) {
+      if (weatherResponse.status === 404) {
+        return {
+          success: false,
+          error: `Location "${location}" not found. Please try a different city name.`
+        };
+      }
+      throw new Error(`OpenWeatherMap API returned status ${weatherResponse.status}`);
+    }
+    
+    const weatherData = await weatherResponse.json();
+    
+    // Get 5-day forecast
+    const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(location)}&appid=${apiKey}&units=${units}&cnt=40`;
+    const forecastResponse = await fetch(forecastUrl);
+    
+    let forecast = null;
+    if (forecastResponse.ok) {
+      const forecastData = await forecastResponse.json();
+      // Get one forecast per day (every 8th item = 24 hours)
+      forecast = forecastData.list?.filter((_: any, index: number) => index % 8 === 0).slice(0, 5).map((item: any) => ({
+        date: item.dt_txt,
+        temp: item.main.temp,
+        feels_like: item.main.feels_like,
+        humidity: item.main.humidity,
+        description: item.weather[0]?.description,
+        icon: item.weather[0]?.icon
+      }));
+    }
+    
+    const unitSymbol = units === 'metric' ? '°C' : '°F';
+    
+    console.log('✅ [checkWeather] Success:', { location, temp: weatherData.main?.temp });
+    
+    return {
+      success: true,
+      location: weatherData.name,
+      country: weatherData.sys?.country,
+      current: {
+        temperature: weatherData.main?.temp,
+        feels_like: weatherData.main?.feels_like,
+        humidity: weatherData.main?.humidity,
+        pressure: weatherData.main?.pressure,
+        description: weatherData.weather?.[0]?.description,
+        icon: weatherData.weather?.[0]?.icon,
+        wind_speed: weatherData.wind?.speed,
+        visibility: weatherData.visibility,
+        clouds: weatherData.clouds?.all
+      },
+      forecast: forecast,
+      units: unitSymbol,
+      timestamp: new Date().toISOString()
+    };
+  } catch (weatherError) {
+    console.error('❌ [checkWeather] Error:', weatherError);
+    return {
+      success: false,
+      error: weatherError instanceof Error ? weatherError.message : 'Weather check failed'
     };
   }
 }
