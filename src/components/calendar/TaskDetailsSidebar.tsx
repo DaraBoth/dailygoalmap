@@ -138,7 +138,6 @@ const TaskDetailsSidebar = ({
                 {/* Description */}
                 <div className="liquid-glass-card p-4">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
-                  <p className="text-sm text-foreground whitespace-pre-wrap">{selectedTask.description}</p>
                   <MarkdownRenderer
                     content={normalizeMarkdown(selectedTask.description)}
                     isStreaming={false}

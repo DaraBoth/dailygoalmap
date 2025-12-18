@@ -20,6 +20,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { openCalendarOptionsDialog } from "@/utils/calendarIntegration";
 import { useToast } from "@/hooks/use-toast";
+import { MarkdownRenderer } from "../ui/MarkdownRenderer";
 
 interface TaskDetailsPanelProps {
   selectedTask: Task | null;
@@ -137,23 +138,11 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                 </h3>
                 {selectedTask.title && selectedTask.description && selectedTask.title !== selectedTask.description && (
                   <div className="mt-3 p-4 liquid-glass-card">
-                    <p className="text-sm text-foreground leading-relaxed">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          a: ({ node, ...props }) => (
-                            <a
-                              {...props}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 dark:text-blue-400 underline break-words"
-                            />
-                          ),
-                        }}
-                      >
-                        {selectedTask.description}
-                      </ReactMarkdown>
-                    </p>
+                    <MarkdownRenderer
+                      content={selectedTask.description}
+                      isStreaming={false}
+                      isLoading={false}
+                    />
                   </div>
                 )}
               </div>

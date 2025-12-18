@@ -684,7 +684,12 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
                             boxShadow: "rgba(0, 0, 0, 0.16) 0px 1px 4px",
                           }}
                         >
-                          {msg.content}
+                          <MarkdownRenderer
+                            content={msg.content}
+                            isStreaming={false}
+                            isLoading={false}
+                            noCopy={true}
+                          />
                         </div>
                       )}
                     </div>

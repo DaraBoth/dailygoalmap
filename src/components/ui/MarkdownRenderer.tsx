@@ -11,6 +11,7 @@ interface MarkdownRendererProps {
     content: string;
     isStreaming?: boolean;
     isLoading?: boolean;
+    noCopy?: boolean;
     TypingLoader?: React.ReactNode;
 }
 
@@ -18,12 +19,14 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     content,
     isStreaming = false,
     isLoading = false,
+    noCopy = false,
     TypingLoader,
 }) => {
 
     // === COPY-TO-CLIPBOARD ===
-    const copyMessage = (text: string) => {
-        navigator.clipboard.writeText(text);
+    const copyMessage = (e: React.MouseEvent<HTMLButtonElement, MouseEvent> ) => {
+        e.preventDefault();
+        navigator.clipboard.writeText(content);
         toast({ title: 'Copied!', description: 'Message copied to clipboard.' });
     };
 
@@ -33,32 +36,32 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             {/* MARKDOWN CONTAINER */}
             <div
                 className="
-          prose prose-sm dark:prose-invert max-w-none break-words overflow-x-auto
-          prose-pre:bg-[#1e1e1e] prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded-xl prose-pre:overflow-x-auto prose-pre:shadow-lg
-          prose-code:bg-gray-800/80 prose-code:text-emerald-400 prose-code:px-2 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
-          prose-p:my-3 prose-p:leading-relaxed prose-p:text-base prose-p:break-words
-          prose-headings:font-bold prose-headings:mt-6 prose-headings:mb-3 prose-headings:text-foreground
-          prose-h1:text-3xl prose-h1:border-b prose-h1:pb-2 prose-h2:text-2xl prose-h3:text-xl
-          prose-ul:my-3 prose-ul:space-y-1 prose-ol:my-3 prose-ol:space-y-1
-          prose-li:my-1 prose-li:leading-relaxed
-          prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:pl-4 prose-blockquote:italic
-          prose-blockquote:text-gray-600 dark:prose-blockquote:text-gray-400
-          prose-blockquote:bg-blue-50/50 dark:prose-blockquote:bg-blue-950/20
-          prose-blockquote:py-2 prose-blockquote:rounded-r-lg
-          prose-table:border-collapse prose-table:w-full prose-table:my-4 prose-table:shadow-md prose-table:rounded-lg prose-table:overflow-hidden
-          prose-thead:bg-gradient-to-r prose-thead:from-blue-600 prose-thead:to-blue-700
-          dark:prose-thead:from-blue-800 dark:prose-thead:to-blue-900
-          prose-th:border prose-th:border-blue-400/30 prose-th:p-3 prose-th:font-bold
-          prose-th:text-white prose-th:text-left prose-th:text-sm prose-th:uppercase prose-th:tracking-wide
-          prose-tr:border-b prose-tr:border-gray-200 dark:prose-tr:border-gray-700
-          prose-tr:transition-colors hover:prose-tr:bg-gray-50 dark:hover:prose-tr:bg-gray-800/50
-          prose-td:border prose-td:border-gray-200 dark:prose-td:border-gray-700 prose-td:p-3 prose-td:text-sm
-          prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline prose-a:font-medium
-          prose-strong:font-bold prose-strong:text-foreground
-          prose-em:italic
-          prose-img:rounded-xl prose-img:shadow-lg prose-img:my-4
-          prose-hr:border-gray-300 dark:prose-hr:border-gray-700 prose-hr:my-6
-        "
+                    prose prose-sm dark:prose-invert max-w-none break-words overflow-x-auto
+                    prose-pre:bg-[#1e1e1e] prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded-xl prose-pre:overflow-x-auto prose-pre:shadow-lg
+                    prose-code:bg-gray-800/80 prose-code:text-emerald-400 prose-code:px-2 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
+                    prose-p:my-3 prose-p:leading-relaxed prose-p:text-base prose-p:break-words
+                    prose-headings:font-bold prose-headings:mt-6 prose-headings:mb-3 prose-headings:text-foreground
+                    prose-h1:text-3xl prose-h1:border-b prose-h1:pb-2 prose-h2:text-2xl prose-h3:text-xl
+                    prose-ul:my-3 prose-ul:space-y-1 prose-ol:my-3 prose-ol:space-y-1
+                    prose-li:my-1 prose-li:leading-relaxed
+                    prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:pl-4 prose-blockquote:italic
+                    prose-blockquote:text-gray-600 dark:prose-blockquote:text-gray-400
+                    prose-blockquote:bg-blue-50/50 dark:prose-blockquote:bg-blue-950/20
+                    prose-blockquote:py-2 prose-blockquote:rounded-r-lg
+                    prose-table:border-collapse prose-table:w-full prose-table:my-4 prose-table:shadow-md prose-table:rounded-lg prose-table:overflow-hidden
+                    prose-thead:bg-gradient-to-r prose-thead:from-blue-600 prose-thead:to-blue-700
+                    dark:prose-thead:from-blue-800 dark:prose-thead:to-blue-900
+                    prose-th:border prose-th:border-blue-400/30 prose-th:p-3 prose-th:font-bold
+                    prose-th:text-white prose-th:text-left prose-th:text-sm prose-th:uppercase prose-th:tracking-wide
+                    prose-tr:border-b prose-tr:border-gray-200 dark:prose-tr:border-gray-700
+                    prose-tr:transition-colors hover:prose-tr:bg-gray-50 dark:hover:prose-tr:bg-gray-800/50
+                    prose-td:border prose-td:border-gray-200 dark:prose-td:border-gray-700 prose-td:p-3 prose-td:text-sm
+                    prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline prose-a:font-medium
+                    prose-strong:font-bold prose-strong:text-foreground
+                    prose-em:italic
+                    prose-img:rounded-xl prose-img:shadow-lg prose-img:my-4
+                    prose-hr:border-gray-300 dark:prose-hr:border-gray-700 prose-hr:my-6
+                    "
             >
                 <ReactMarkdown
                     remarkPlugins={[remarkGfm, remarkMath]}
@@ -120,10 +123,10 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="
-                    inline-flex items-center gap-1 px-3 py-1.5 my-1
-                    liquid-glass-button rounded-md text-sm font-medium
-                    transition-all shadow-sm hover:shadow-md no-underline
-                  "
+                                        inline-flex items-center gap-1 px-3 py-1.5 my-1
+                                        liquid-glass-button rounded-md text-sm font-medium
+                                        transition-all shadow-sm hover:shadow-md no-underline
+                                    "
                                 >
                                     {children}
                                     <svg
@@ -172,9 +175,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                             return (
                                 <th
                                     className="
-                    px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider
-                    border border-blue-400/30 whitespace-nowrap min-w-[120px]
-                  "
+                                        px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider
+                                        border border-blue-400/30 whitespace-nowrap min-w-[120px]
+                                    "
                                 >
                                     {children}
                                 </th>
@@ -188,10 +191,10 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                             return (
                                 <td
                                     className="
-                    px-4 py-3 text-sm text-gray-900 dark:text-gray-100
-                    border border-gray-200 dark:border-gray-700
-                    whitespace-nowrap min-w-[120px]
-                  "
+                                        px-4 py-3 text-sm text-gray-900 dark:text-gray-100
+                                        border border-gray-200 dark:border-gray-700
+                                        whitespace-nowrap min-w-[120px]
+                                    "
                                 >
                                     {urlRegex.test(content)
                                         ? content.split(urlRegex).map((part, i) =>
@@ -231,17 +234,14 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             {isStreaming && TypingLoader}
 
             {/* COPY MESSAGE BUTTON */}
-            {!isLoading && !isStreaming && copyMessage && (
+            {!noCopy && !isLoading && !isStreaming && copyMessage && (
                 <button
-                    onClick={()=>copyMessage}
+                    onClick={(e)=>copyMessage(e)}
                     className="
-            opacity-0 group-hover:opacity-100
-            transition-opacity duration-200
-            text-xs px-2 py-1 rounded-md
-            bg-gray-200 hover:bg-gray-300
-            dark:bg-gray-700 dark:hover:bg-gray-600
-            md:opacity-0 mobile:opacity-100
-          "
+                        text-xs px-2 py-1 rounded-md
+                        bg-gray-300
+                        dark:bg-gray-700 dark:hover:bg-gray-600
+                    "
                 >
                     <Copy className="w-5 h-5" />
                 </button>
