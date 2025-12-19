@@ -87,13 +87,11 @@ export const GoalMembersList = ({ goalId, isCreator }: GoalMembersListProps) => 
                 <p className="text-xs text-muted-foreground capitalize">
                   {member.role}
                 </p>
-                {/* Show last seen only to creator */}
-                {isCreator && member.role !== 'creator' && (
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {formatLastSeen(member.last_seen)}
-                  </span>
-                )}
+                {/* Show last seen to all members */}
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  {formatLastSeen(member.last_seen)}
+                </span>
               </div>
             </div>
           </div>
