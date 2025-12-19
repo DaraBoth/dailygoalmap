@@ -78,6 +78,7 @@ export interface GoalMember {
   user_id: string;
   joined_at: string;
   role: 'creator' | 'member';
+  last_seen?: string | null;
   user_profiles?: {
     avatar_url?: string;
     display_name?: string;

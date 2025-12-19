@@ -34,6 +34,21 @@ const GoalDetail: React.FC = () => {
   const [currentGoalData, setCurrentGoalData] = useState(goalData);
   const { user } = useAuth();
 
+  // Update last seen when user views this goal
+  useEffect(() => {
+    if (!goalId || !user?.id) return;
+    
+    const updateLastSeen = async () => {
+      try {
+        await supabase.rpc('update_member_last_seen', { p_goal_id: goalId });
+      } catch (error) {
+        console.error('Failed to update last seen:', error);
+      }
+    };
+    
+    updateLastSeen();
+  }, [goalId, user?.id]);
+
   useEffect(() => {
     const taskParam = search?.task || search?.taskId;
     if (taskParam) setAutoOpenTaskId(taskParam);
