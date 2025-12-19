@@ -167,7 +167,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
               className="px-4"
               style={{
                 minHeight: 'calc(100% + 8rem)',
-                paddingBottom: 'min(3rem, max(20vh, 6rem))'
+                paddingBottom: 'min(8rem, max(20vh, 6rem))'
               }}
             >
               <div ref={contentRef} className="py-4 space-y-4">
