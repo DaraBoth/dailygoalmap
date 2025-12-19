@@ -12,6 +12,7 @@ import { Task } from '@/components/calendar/types';
 import { GoalTheme } from '@/types/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { GoalChatWidget } from '@/components/goal/GoalChatWidget';
+import GoalChatWidgetN8N from '@/components/goal/GoalChatWidgetN8N';
 // import GoalChatWidgetN8N from '@/components/goal/GoalChatWidgetN8N';
 
 const GoalDetail: React.FC = () => {
@@ -347,8 +348,8 @@ const GoalDetail: React.FC = () => {
       </div>
 
       {/* Goal Chat Widget */}
-      {/* <GoalChatWidgetN8N goalId={goalId} userInfo={user} /> */}
-      <GoalChatWidget goalId={goalId} userInfo={user} />
+      <GoalChatWidgetN8N goalId={goalId} userInfo={user} />
+      {/* <GoalChatWidget goalId={goalId} userInfo={user} /> */}
     </>
   );
 };
