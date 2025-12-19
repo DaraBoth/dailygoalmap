@@ -105,7 +105,8 @@ export const useGoalSharing = (goalId: string) => {
         user_id: member.user_id,
         joined_at: member.joined_at,
         role: member.role as 'creator' | 'member',
-        user_profile: {
+        last_seen: member.last_seen,
+        user_profiles: {
           avatar_url: member.avatar_url,
           display_name: member.display_name || 'User'
         }

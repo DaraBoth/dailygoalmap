@@ -4,8 +4,9 @@ import { useGoalSharing } from "@/hooks/useGoalSharing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserX } from "lucide-react";
+import { UserX, Clock } from "lucide-react";
 import { createRemovalNotification } from "@/services/internalNotifications";
+import { formatDistanceToNow } from "date-fns";
 
 interface GoalMembersListProps {
   goalId: string;
@@ -31,6 +32,15 @@ export const GoalMembersList = ({ goalId, isCreator }: GoalMembersListProps) => 
   const handleRemove = async (memberId: string, removedUserId: string) => {
     await removeMember(memberId);
     await createRemovalNotification(goalId, removedUserId);
+  };
+
+  const formatLastSeen = (lastSeen: string | null | undefined) => {
+    if (!lastSeen) return "Never";
+    try {
+      return formatDistanceToNow(new Date(lastSeen), { addSuffix: true });
+    } catch {
+      return "Unknown";
+    }
   };
 
   if (isLoadingMembers) {
@@ -64,18 +74,27 @@ export const GoalMembersList = ({ goalId, isCreator }: GoalMembersListProps) => 
           <div className="flex items-center gap-3">
             <Avatar>
               <AvatarImage
-                src={member.user_profile?.avatar_url || ''}
-                alt={member.user_profile?.display_name || 'User'}
+                src={member.user_profiles?.avatar_url || ''}
+                alt={member.user_profiles?.display_name || 'User'}
               />
               <AvatarFallback>
-                {getInitials(member.user_profile?.display_name || 'User')}
+                {getInitials(member.user_profiles?.display_name || 'User')}
               </AvatarFallback>
             </Avatar>
             <div className="space-y-1">
-              <p className="text-sm font-medium">{member.user_profile?.display_name || 'User'}</p>
-              <p className="text-xs text-muted-foreground capitalize">
-                {member.role}
-              </p>
+              <p className="text-sm font-medium">{member.user_profiles?.display_name || 'User'}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground capitalize">
+                  {member.role}
+                </p>
+                {/* Show last seen only to creator */}
+                {isCreator && member.role !== 'creator' && (
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    {formatLastSeen(member.last_seen)}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

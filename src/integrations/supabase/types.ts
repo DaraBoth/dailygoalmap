@@ -99,6 +99,7 @@ export type Database = {
           goal_id: string | null
           id: string
           joined_at: string | null
+          last_seen: string | null
           role: string | null
           user_id: string | null
         }
@@ -106,6 +107,7 @@ export type Database = {
           goal_id?: string | null
           id?: string
           joined_at?: string | null
+          last_seen?: string | null
           role?: string | null
           user_id?: string | null
         }
@@ -113,6 +115,7 @@ export type Database = {
           goal_id?: string | null
           id?: string
           joined_at?: string | null
+          last_seen?: string | null
           role?: string | null
           user_id?: string | null
         }
@@ -534,6 +537,7 @@ export type Database = {
           goal_id: string
           id: string
           joined_at: string
+          last_seen: string
           role: string
           user_id: string
         }[]
@@ -577,6 +581,10 @@ export type Database = {
       toggle_goal_public: {
         Args: { p_goal_id: string; p_is_public: boolean }
         Returns: boolean
+      }
+      update_member_last_seen: {
+        Args: { p_goal_id: string }
+        Returns: undefined
       }
       update_user_device_id: {
         Args: { device_id_param: string; user_id_param: string }
