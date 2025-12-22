@@ -1,64 +1,70 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from '@tanstack/react-router';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { getTemplateById } from '@/data/goalTemplates/index';
-import type { FormField, FormSection, CompoundField, ListField } from '@/types/goalTemplate';
-import { Plus, Trash2, ArrowLeft, Check, AlertCircle } from 'lucide-react';
-import { useCreateGoal } from '@/hooks/useCreateGoal';
+import type { FormField, FormSection, CompoundField, ListField, GoalTemplate } from '@/types/goalTemplate';
+import { Plus, Trash2, AlertCircle, Check, FileEdit } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { generateMultipleTasks } from '@/components/calendar/services/taskGenerator';
+import { v4 as uuidv4 } from 'uuid';
+import { format } from 'date-fns';
 
-export function TemplateFormPage() {
-  const { templateId } = useParams({ from: '/goal/create-from-template/$templateId' });
-  const navigate = useNavigate();
+interface EditTemplateDataModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  goalId: string;
+  goalData: any;
+  onSuccess?: () => void;
+}
+
+export function EditTemplateDataModal({
+  isOpen,
+  onClose,
+  goalId,
+  goalData,
+  onSuccess
+}: EditTemplateDataModalProps) {
   const { toast } = useToast();
-  const { createGoal, isLoading: isCreating } = useCreateGoal();
-  
-  const template = getTemplateById(templateId);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentSection, setCurrentSection] = useState(0);
 
+  const templateId = goalData?.metadata?.template_id;
+  const template = templateId ? getTemplateById(templateId) : null;
+  const existingTemplateData = goalData?.metadata?.template_data || {};
+
+  // Initialize form data from existing template data
+  useEffect(() => {
+    if (isOpen && existingTemplateData) {
+      setFormData(existingTemplateData);
+      setCurrentSection(0);
+      setErrors({});
+    }
+  }, [isOpen, JSON.stringify(existingTemplateData)]);
+
   if (!template) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="max-w-md mx-auto">
-          <CardHeader>
-            <CardTitle>Template Not Found</CardTitle>
-            <CardDescription>The requested template could not be found.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => navigate({ to: '/goal/create' })}>
-              Back to Templates
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return null;
   }
 
   const validateField = (field: FormField, value: unknown): string | null => {
-    // For required fields, check if value is truly empty
     if (field.required) {
       if (value === undefined || value === null || value === '') {
         return field.label + ' is required';
       }
-      
-      // Check for empty string with whitespace for text fields
       if (typeof value === 'string' && value.trim() === '') {
         return field.label + ' is required';
       }
-      
-      // Check for empty arrays
       if (Array.isArray(value) && value.length === 0) {
         return field.label + ' is required';
       }
     }
 
-    // Additional number validation (min/max)
     if (field.type === 'number' && value !== undefined && value !== '' && value !== null) {
       const numValue = Number(value);
       if (isNaN(numValue)) {
@@ -83,16 +89,6 @@ export function TemplateFormPage() {
       }
     }
 
-    if (field.type === 'compound' && Array.isArray(value)) {
-      const compoundField = field as CompoundField;
-      if (compoundField.minItems !== undefined && value.length < compoundField.minItems) {
-        return field.label + ' must have at least ' + compoundField.minItems + ' items';
-      }
-      if (compoundField.maxItems !== undefined && value.length > compoundField.maxItems) {
-        return field.label + ' can have at most ' + compoundField.maxItems + ' items';
-      }
-    }
-
     return null;
   };
 
@@ -103,17 +99,6 @@ export function TemplateFormPage() {
     section.fields.forEach(field => {
       const value = formData[field.id];
       const error = validateField(field, value);
-      
-      // Debug log to see what's failing
-      if (error) {
-        console.log(`Validation error for field "${field.id}":`, {
-          label: field.label,
-          required: field.required,
-          value,
-          error
-        });
-      }
-      
       if (error) {
         sectionErrors[field.id] = error;
         hasError = true;
@@ -124,102 +109,18 @@ export function TemplateFormPage() {
     return !hasError;
   };
 
-  const handleNext = () => {
-    if (validateSection(template.sections[currentSection])) {
-      if (currentSection < template.sections.length - 1) {
-        setCurrentSection(currentSection + 1);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+  const validateAllSections = (): boolean => {
+    let allValid = true;
+    template.sections.forEach(section => {
+      if (!validateSection(section)) {
+        allValid = false;
       }
-    } else {
-      toast({
-        title: 'Validation Error',
-        description: 'Please fill in all required fields correctly',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentSection > 0) {
-      setCurrentSection(currentSection - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handleSubmit = async (skipTemplateData: boolean = false) => {
-    // If not skipping, validate all sections
-    if (!skipTemplateData) {
-      let allValid = true;
-      template.sections.forEach(section => {
-        if (!validateSection(section)) {
-          allValid = false;
-        }
-      });
-
-      if (!allValid) {
-        toast({
-          title: 'Validation Error',
-          description: 'Please complete all sections correctly',
-          variant: 'destructive',
-        });
-        return;
-      }
-    }
-
-    try {
-      const generatedPrompt = skipTemplateData ? '' : template.generatePrompt(formData);
-      const generatedDescription = skipTemplateData ? template.description : template.generateDescription(formData);
-
-      // Create goal - if skipping, don't generate AI tasks yet
-      const result = await createGoal(
-        {
-          title: template.name,
-          description: generatedDescription,
-          target_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-          start_date: new Date(), // Start today
-          metadata: {
-            version: 1,
-            goal_type: 'general',
-            template_id: template.id,
-            template_name: template.name,
-            template_data: skipTemplateData ? {} : formData,
-            template_completed: !skipTemplateData,
-          },
-        },
-        {
-          generateTasksWithAI: !skipTemplateData, // Only generate AI tasks if template was filled
-          aiPrompt: generatedPrompt,
-        }
-      );
-
-      if (result.success) {
-        toast({
-          title: skipTemplateData ? 'Goal Created!' : 'Goal Created! 🎉',
-          description: skipTemplateData 
-            ? 'You can fill in the template details later from the goal page.'
-            : 'AI is now generating your daily action plan...',
-        });
-
-        navigate({ to: '/dashboard' });
-      }
-    } catch (error) {
-      console.error('Error creating goal:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create goal. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleSkipAndCreate = () => {
-    handleSubmit(true);
+    });
+    return allValid;
   };
 
   const updateFormData = (fieldId: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [fieldId]: value }));
-    
-    // Clear error for this field when user starts typing
     if (errors[fieldId]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -227,14 +128,112 @@ export function TemplateFormPage() {
         return newErrors;
       });
     }
-    
-    // For text fields, also validate in real-time if there's content
-    if (typeof value === 'string' && value.trim() !== '') {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[fieldId];
-        return newErrors;
+  };
+
+  const handleSave = async (generateTasks: boolean = false) => {
+    if (!validateAllSections()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please complete all required fields correctly',
+        variant: 'destructive',
       });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const generatedPrompt = template.generatePrompt(formData);
+      const generatedDescription = template.generateDescription(formData);
+
+      // Update goal metadata with new template data
+      const updatedMetadata = {
+        ...goalData.metadata,
+        template_data: formData,
+        template_completed: true,
+      };
+
+      const { error: updateError } = await supabase
+        .from('goals')
+        .update({
+          description: generatedDescription,
+          metadata: updatedMetadata,
+        })
+        .eq('id', goalId);
+
+      if (updateError) throw updateError;
+
+      // Generate AI tasks if requested
+      if (generateTasks) {
+        try {
+          const { data: userData } = await supabase.auth.getUser();
+          if (!userData.user) throw new Error('No authenticated user');
+
+          const startDate = new Date();
+          const targetDate = goalData.target_date ? new Date(goalData.target_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+          const generatedTasks = await generateMultipleTasks(
+            startDate,
+            targetDate,
+            goalId,
+            goalData.title,
+            generatedDescription,
+            {
+              goalType: updatedMetadata.goal_type,
+              userContext: updatedMetadata.user_context
+            }
+          );
+
+          if (generatedTasks.length > 0) {
+            const tasksToInsert = generatedTasks.map((task: any) => ({
+              id: task.id || uuidv4(),
+              title: (task.description || task.title || '').length > 80 ? (task.description || task.title || '').substring(0, 80) + '...' : (task.description || task.title || ''),
+              description: task.description || task.title || '',
+              start_date: task.start_date || format(new Date(task.date || new Date()), 'yyyy-MM-dd') + 'T09:00:00',
+              end_date: task.end_date || format(new Date(task.date || new Date()), 'yyyy-MM-dd') + 'T10:00:00',
+              daily_start_time: task.daily_start_time || '09:00',
+              daily_end_time: task.daily_end_time || '10:00',
+              completed: false,
+              goal_id: goalId,
+              user_id: userData.user.id,
+            }));
+
+            const batchSize = 10;
+            for (let i = 0; i < tasksToInsert.length; i += batchSize) {
+              const batch = tasksToInsert.slice(i, i + batchSize);
+              await supabase.from('tasks').insert(batch);
+            }
+          }
+
+          toast({
+            title: 'Template Updated! 🎉',
+            description: `Template data saved and ${generatedTasks.length} tasks generated.`,
+          });
+        } catch (taskError) {
+          console.error('Error generating tasks:', taskError);
+          toast({
+            title: 'Template Updated',
+            description: 'Template data saved, but task generation failed.',
+          });
+        }
+      } else {
+        toast({
+          title: 'Template Updated',
+          description: 'Your template data has been saved.',
+        });
+      }
+
+      onSuccess?.();
+      onClose();
+    } catch (error) {
+      console.error('Error updating template data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update template data. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -336,20 +335,26 @@ export function TemplateFormPage() {
           </div>
         );
 
-      case 'time':
+      case 'select': {
+        const selectField = field as { options: { label: string; value: string }[] };
         return (
           <div key={field.id} className="space-y-2">
             <Label htmlFor={field.id}>
               {field.label} {field.required && <span className="text-destructive">*</span>}
             </Label>
-            <Input
+            <select
               id={field.id}
-              type="time"
-              placeholder={field.placeholder}
               value={(value as string) || ''}
               onChange={(e) => updateFormData(field.id, e.target.value)}
-              className={error ? 'border-destructive' : ''}
-            />
+              className={`w-full rounded-md border bg-background px-3 py-2 text-sm ${error ? 'border-destructive' : 'border-input'}`}
+            >
+              <option value="">Select...</option>
+              {selectField.options.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
             {field.helperText && !error && (
               <p className="text-xs text-muted-foreground italic">{field.helperText}</p>
             )}
@@ -361,10 +366,54 @@ export function TemplateFormPage() {
             )}
           </div>
         );
+      }
+
+      case 'time':
+        return (
+          <div key={field.id} className="space-y-2">
+            <Label htmlFor={field.id}>
+              {field.label} {field.required && <span className="text-destructive">*</span>}
+            </Label>
+            <Input
+              id={field.id}
+              type="time"
+              value={(value as string) || ''}
+              onChange={(e) => updateFormData(field.id, e.target.value)}
+              className={error ? 'border-destructive' : ''}
+            />
+            {error && (
+              <p className="text-xs text-destructive flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                {error}
+              </p>
+            )}
+          </div>
+        );
+
+      case 'date':
+        return (
+          <div key={field.id} className="space-y-2">
+            <Label htmlFor={field.id}>
+              {field.label} {field.required && <span className="text-destructive">*</span>}
+            </Label>
+            <Input
+              id={field.id}
+              type="date"
+              value={(value as string) || ''}
+              onChange={(e) => updateFormData(field.id, e.target.value)}
+              className={error ? 'border-destructive' : ''}
+            />
+            {error && (
+              <p className="text-xs text-destructive flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                {error}
+              </p>
+            )}
+          </div>
+        );
 
       case 'list': {
         const listValue = (value as string[]) || [];
-        const listField = field as ListField;
         return (
           <div key={field.id} className="space-y-2">
             <Label>
@@ -404,11 +453,8 @@ export function TemplateFormPage() {
               className="w-full"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add {field.label}
+              Add Item
             </Button>
-            {field.helperText && !error && (
-              <p className="text-xs text-muted-foreground italic">{field.helperText}</p>
-            )}
             {error && (
               <p className="text-xs text-destructive flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
@@ -483,9 +529,6 @@ export function TemplateFormPage() {
               <Plus className="w-4 h-4 mr-2" />
               Add {field.label}
             </Button>
-            {field.helperText && !error && (
-              <p className="text-xs text-muted-foreground italic">{field.helperText}</p>
-            )}
             {error && (
               <p className="text-xs text-destructive flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
@@ -503,165 +546,122 @@ export function TemplateFormPage() {
 
   const section = template.sections[currentSection];
   const progress = ((currentSection + 1) / template.sections.length) * 100;
+  const wasSkipped = !goalData?.metadata?.template_completed;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      {/* Header Bar */}
-      <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-          <div className="flex items-center justify-between py-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate({ to: '/goal/create' })}
-              className="hover:bg-gray-100 dark:hover:bg-gray-800"
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3">
+            <div 
+              className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+              style={{ background: template.color }}
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Templates
-            </Button>
-            
-            <div className="flex items-center gap-3">
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                Step {currentSection + 1} of {template.sections.length}
-              </div>
-              <div className="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {Math.round(progress)}%
-              </div>
+              {template.icon}
+            </div>
+            <div>
+              <div className="text-lg font-semibold">Edit Template Data</div>
+              <div className="text-sm text-muted-foreground font-normal">{template.name}</div>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+
+        {wasSkipped && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-4">
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+              <FileEdit className="w-4 h-4" />
+              <span className="text-sm font-medium">Template data was skipped during creation. Fill it now to generate AI tasks.</span>
             </div>
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl py-8 sm:py-12">
-        {/* Template Header */}
-        <div className="text-center mb-12">
-          <div 
-            className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl mx-auto mb-6 flex items-center justify-center text-6xl sm:text-7xl shadow-2xl transform hover:scale-105 transition-transform"
-            style={{ background: template.color }}
-          >
-            {template.icon}
+        {/* Progress indicator */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="text-sm text-muted-foreground">
+            Section {currentSection + 1} of {template.sections.length}
           </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400">
-            {template.name}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg max-w-2xl mx-auto">
-            {template.description}
-          </p>
-        </div>
-
-        {/* Section Navigation Breadcrumb */}
-        <div className="mb-8">
-          <div className="flex gap-2 justify-center flex-wrap">
-            {template.sections.map((sec, idx) => (
-              <button
-                key={sec.id}
-                onClick={() => setCurrentSection(idx)}
-                disabled={idx > currentSection}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all transform hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed ${
-                  idx === currentSection
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                    : idx < currentSection
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40'
-                    : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
-                }`}
-              >
-                {idx < currentSection && <Check className="w-4 h-4 inline mr-1" />}
-                {sec.icon && <span className="mr-2">{sec.icon}</span>}
-                {sec.title}
-              </button>
-            ))}
+          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-primary transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
           </div>
         </div>
 
-        {/* Current Section Card */}
-        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
-          {/* Section Header */}
-          <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-500/20 dark:to-purple-500/20 border-b border-gray-200 dark:border-gray-700 px-6 sm:px-8 py-6">
-            <div className="flex items-center gap-4 mb-2">
-              {section.icon && (
-                <span className="text-4xl sm:text-5xl">{section.icon}</span>
+        {/* Section navigation */}
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {template.sections.map((sec, idx) => (
+            <button
+              key={sec.id}
+              onClick={() => setCurrentSection(idx)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                idx === currentSection
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted hover:bg-muted/80'
+              }`}
+            >
+              {sec.icon && <span className="mr-1">{sec.icon}</span>}
+              {sec.title}
+            </button>
+          ))}
+        </div>
+
+        {/* Current section */}
+        <div className="border rounded-lg p-4">
+          <div className="flex items-center gap-3 mb-4">
+            {section.icon && <span className="text-2xl">{section.icon}</span>}
+            <div>
+              <h3 className="font-semibold">{section.title}</h3>
+              {section.description && (
+                <p className="text-sm text-muted-foreground">{section.description}</p>
               )}
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
-                  {section.title}
-                </h2>
-                {section.description && (
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    {section.description}
-                  </p>
-                )}
-              </div>
             </div>
           </div>
-
-          {/* Section Fields */}
-          <div className="px-6 sm:px-8 py-8 space-y-6">
+          <div className="space-y-4">
             {section.fields.map(field => renderField(field))}
           </div>
         </div>
 
-        {/* Navigation Buttons */}
-        <div className="flex justify-between items-center gap-4">
+        {/* Navigation and action buttons */}
+        <div className="flex justify-between items-center gap-4 pt-4">
           <Button
             variant="outline"
-            onClick={handlePrevious}
+            onClick={() => currentSection > 0 && setCurrentSection(currentSection - 1)}
             disabled={currentSection === 0}
-            size="lg"
-            className="min-w-[120px] border-2 hover:bg-gray-50 dark:hover:bg-gray-800"
           >
-            <ArrowLeft className="w-5 h-5 mr-2" />
             Previous
           </Button>
 
-          {currentSection === template.sections.length - 1 ? (
           <div className="flex gap-2">
-            <Button
-              onClick={handleSkipAndCreate}
-              disabled={isCreating}
-              size="lg"
-              variant="outline"
-              className="min-w-[140px] border-2"
-            >
-              Skip & Create
-            </Button>
-            <Button
-              onClick={() => handleSubmit(false)}
-              disabled={isCreating}
-              size="lg"
-              className="min-w-[160px] bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg"
-            >
-              {isCreating ? (
-                <>
-                  <span className="animate-spin mr-2">⏳</span>
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Check className="w-5 h-5 mr-2" />
-                  Create Goal
-                </>
-              )}
-            </Button>
+            {currentSection === template.sections.length - 1 ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => handleSave(false)}
+                  disabled={isLoading}
+                >
+                  Save Only
+                </Button>
+                <Button
+                  onClick={() => handleSave(true)}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <span className="animate-spin mr-2">⏳</span>
+                  ) : (
+                    <Check className="w-4 h-4 mr-2" />
+                  )}
+                  Save & Generate Tasks
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => setCurrentSection(currentSection + 1)}>
+                Next
+              </Button>
+            )}
           </div>
-          ) : (
-            <Button
-              onClick={handleNext}
-              size="lg"
-              className="min-w-[120px] bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg"
-            >
-              Next
-              <ArrowLeft className="w-5 h-5 ml-2 rotate-180" />
-            </Button>
-          )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
