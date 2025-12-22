@@ -23,8 +23,10 @@ export interface GoalDeadlineInfo {
  * Calculate deadline status and information for a goal
  */
 export const calculateGoalDeadlineInfo = (goal: Goal): GoalDeadlineInfo => {
-  const targetDate = parseISO(goal.target_date);
-  const startDate = parseISO(goal.metadata.start_date);
+  const targetDateStr = goal.target_date || new Date().toISOString().split('T')[0];
+  const targetDate = parseISO(targetDateStr);
+  const startDateStr = goal.metadata?.start_date || new Date().toISOString().split('T')[0];
+  const startDate = parseISO(startDateStr);
   const today = new Date();
   
   // Calculate days

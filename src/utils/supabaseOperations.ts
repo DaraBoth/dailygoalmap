@@ -20,18 +20,41 @@ export const fetchUserGoals = async (sortOption: SortOption): Promise<Goal[]> =>
 
     const userId = userData.user.id;
 
+    // Fetch goals created by the user
+    const { data: createdGoals, error: createdGoalsError } = await supabase
+      .from('goals')
+      .select(`
+        *,
+        goal_themes(*)
+      `)
+      .eq('user_id', userId);
+
+    if (createdGoalsError) throw createdGoalsError;
+
     // Fetch goals the user has joined
     const { data: joinedGoals, error: joinedGoalsError } = await supabase
       .from('goal_members')
-      .select('goal_id, goals(*)')
+      .select('goal_id, goals(*,goal_themes(*))')
       .eq('user_id', userId);
 
     if (joinedGoalsError) throw joinedGoalsError;
 
-    // Combine created and joined goals
-    const allGoals = [
-      ...(joinedGoals?.map((member) => member.goals) || []),
-    ];
+    // Combine created and joined goals, avoiding duplicates
+    const joinedGoalsList = (
+      joinedGoals?.map((member) => member.goals) || []
+    ).filter(Boolean);
+    const createdGoalsList = createdGoals || [];
+
+    // Remove duplicates by filtering out joined goals that are already in created goals
+    const uniqueJoinedGoals = joinedGoalsList.filter(
+      (joinedGoal) =>
+        joinedGoal &&
+        !createdGoalsList.some(
+          (createdGoal) => createdGoal.id === joinedGoal.id
+        )
+    );
+
+    const allGoals = [...createdGoalsList, ...uniqueJoinedGoals];
 
     // Convert the Supabase data to Goal objects with proper metadata typing
     const typedGoals: Goal[] = (allGoals || []).map(goal => ({
@@ -42,7 +65,9 @@ export const fetchUserGoals = async (sortOption: SortOption): Promise<Goal[]> =>
             goal_type: 'general',
             start_date: new Date().toISOString().split('T')[0]
           }) as GoalMetadata,
-      taskCounts: { total: 0, completed: 0, incomplete: 0 } // Initialize task counts
+      taskCounts: { total: 0, completed: 0, incomplete: 0 }, // Initialize task counts
+      memberCounts: { total: 0 }, // Initialize member counts
+      members: []
     }));
 
     // Fetch task counts for each goal
@@ -60,6 +85,18 @@ export const fetchUserGoals = async (sortOption: SortOption): Promise<Goal[]> =>
           total: totalTasks,
           completed: completedTasks,
           incomplete: totalTasks - completedTasks
+        };
+      }
+
+      // Fetch member counts
+      const { data: memberData, error: memberError } = await supabase
+        .from('goal_members')
+        .select('id')
+        .eq('goal_id', goal.id);
+
+      if (!memberError && memberData) {
+        goal.memberCounts = {
+          total: memberData.length
         };
       }
     }

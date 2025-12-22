@@ -138,7 +138,7 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
 
       const taskResults: SearchResult[] = tasks?.map((task: any) => {
 
-        const taskTime = task?.daily_start_time.split(":") || task?.daily_end_time.split(":") || "00:00:00".split(":");
+        const taskTime = task?.daily_start_time?.split(":") || task?.daily_end_time?.split(":") || "00:00:00".split(":");
         const dateWithTime = moment(task.start_date).set({ hour: taskTime[0], minute: taskTime[1], second: taskTime[2] });
         return {
           type: 'task' as const,
