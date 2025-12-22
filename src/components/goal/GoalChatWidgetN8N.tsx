@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { X, Loader2, Copy, ArrowUp, ArrowDown } from 'lucide-react';
+import { X, Loader2, Copy, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -382,18 +382,18 @@ export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userI
             {/* Header */}
             <div className="flex-shrink-0 flex items-center justify-between p-4 border-b">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold">GuoErr AI</h3>
+                <h3 className="font-semibold">Goal Chat AI</h3>
                 <img className='h-6 w-6' src={robot} alt="Chat AI Image" />
               </div>
 
               <div className="flex items-center gap-2">
                 {messages.length > 0 && (
-                  <Button className='z-999' variant="ghost" size="sm" onClick={clearChat}>
+                  <Button className='z-999' variant="ghost" size="sm" onClick={clearChat} disabled={isLoading}>
                     Clear
                   </Button>
                 )}
                 <Button variant="ghost" className='z-999' size="icon" onClick={() => setIsOpen(false)}>
-                  <X className="h-6 w-6" />
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -487,6 +487,17 @@ export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userI
 
         )}
       </AnimatePresence>
+
+      {showScrollButton && (
+        <motion.button
+          className={`fixed bottom-24 ${isMobile ? 'left-6' : 'right-6'} liquid-glass p-2 rounded-xl z-40`}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={scrollToBottom}
+        >
+          <ChevronDown className="h-5 w-5" />
+        </motion.button>
+      )}
     </>
   );
 };
