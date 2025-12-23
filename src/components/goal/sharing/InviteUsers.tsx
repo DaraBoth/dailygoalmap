@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { searchUsers, sendInvitation } from "@/services/internalNotifications";
+import { searchUsers } from "@/services/internalNotifications";
+import { notifyGoalInvitation } from "@/services/notificationService";
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
 
 interface InviteUsersProps {
@@ -37,11 +39,24 @@ export const InviteUsers: React.FC<InviteUsersProps> = ({ goalId, goalTitle }) =
 
   const handleInvite = async (userId: string) => {
     setPendingId(userId);
-    const { ok, error } = await sendInvitation(goalId, userId, { goal_title: goalTitle });
-    if (ok) {
-      toast({ title: "Invitation sent", description: "The user was invited to this goal." });
-    } else {
-      toast({ title: "Unable to invite", description: error || "Please try again.", variant: "destructive" });
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: 'Not authenticated', description: 'Please sign in to invite users.', variant: 'destructive' });
+        setPendingId(null);
+        return;
+      }
+
+      // notifyGoalInvitation will send a push notification and persist the invitation
+      const ok = await notifyGoalInvitation(goalId, user.id, goalTitle, userId);
+      if (ok) {
+        toast({ title: "Invitation sent", description: "The user was invited to this goal." });
+      } else {
+        toast({ title: "Unable to invite", description: "Please try again.", variant: "destructive" });
+      }
+    } catch (e) {
+      console.error('invite error', e);
+      toast({ title: 'Error', description: 'Failed to send invitation.', variant: 'destructive' });
     }
     setPendingId(null);
   };
