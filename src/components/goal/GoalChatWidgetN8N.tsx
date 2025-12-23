@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { X, Loader2, Copy, ArrowUp, ArrowDown, ChevronDown, ExternalLink } from 'lucide-react';
+import { X, Loader2, Copy, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -46,16 +46,6 @@ export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userI
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const isMobile = useIsMobile();
-
-  // Import window manager functions (open chat in separate window)
-  const handleOpenChatWindow = useCallback(() => {
-    import('@/utils/chatWindowManager').then(({ openOrFocusChatWindow }) => {
-      openOrFocusChatWindow(goalId, userInfo, () => {
-        // Close the chat widget in current tab after opening popup
-        setIsOpen(false);
-      });
-    });
-  }, [goalId, userInfo]);
 
   const SESSION_KEY = useMemo(() => `goal_chat_session_${goalId}_${userInfo?.id}`, [goalId, userInfo?.id]);
   const CHAT_KEY = useMemo(() => `goal_chat_${goalId}`, [goalId]);
@@ -375,13 +365,7 @@ export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userI
         className={`fixed bottom-6 ${isMobile ? 'left-6' : 'right-6'} liquid-glass p-2 rounded-xl z-50`}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        onClick={() => {
-          if (!isOpen) {
-            handleOpenChatWindow();
-          } else {
-            setIsOpen(false);
-          }
-        }}
+        onClick={() => setIsOpen(!isOpen)}
       >
         {!isOpen ? <img className='h-8 w-8' src={chatAIGif} alt="Chat AI Image" /> : <X />}
       </motion.button>
@@ -403,9 +387,6 @@ export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userI
               </div>
 
               <div className="flex items-center gap-2">
-                <Button className='z-999' variant="ghost" size="icon" onClick={handleOpenChatWindow}>
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
                 {messages.length > 0 && (
                   <Button className='z-999' variant="ghost" size="sm" onClick={clearChat} disabled={isLoading}>
                     Clear
