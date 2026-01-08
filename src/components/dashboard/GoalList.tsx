@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 import { Goal, SortOption } from "@/types/goal";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarDays, CheckCircle2, Clock, Edit, MoreHorizontal, Trash2, ArrowRight, LucideUsers2 } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, Edit, MoreHorizontal, Trash2, ArrowRight, LucideUsers2, AlertCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -241,6 +241,12 @@ const GoalList: React.FC<GoalListProps> = ({
                           {goal.metadata?.goal_type || 'General'}
                         </Badge>
                         <DeadlineStatusBadge deadlineInfo={deadlineInfo} size="sm" />
+                        {goal.metadata?.template_id && goal.metadata?.template_completed === false && (
+                          <Badge variant="outline" className="text-xs font-medium text-amber-600 border-amber-400 bg-amber-50 dark:bg-amber-950/50 dark:border-amber-600 dark:text-amber-400">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Template Incomplete
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
