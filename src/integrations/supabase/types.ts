@@ -318,37 +318,25 @@ export type Database = {
       }
       rag_chunks: {
         Row: {
-          chunk_index: number | null
-          content: string | null
+          content: string
           created_at: string | null
-          embedding: string | null
-          end_pos: number | null
-          filename: string | null
+          embedding: string
           id: string
           metadata: Json | null
-          start_pos: number | null
         }
         Insert: {
-          chunk_index?: number | null
-          content?: string | null
+          content: string
           created_at?: string | null
-          embedding?: string | null
-          end_pos?: number | null
-          filename?: string | null
+          embedding: string
           id?: string
           metadata?: Json | null
-          start_pos?: number | null
         }
         Update: {
-          chunk_index?: number | null
-          content?: string | null
+          content?: string
           created_at?: string | null
-          embedding?: string | null
-          end_pos?: number | null
-          filename?: string | null
+          embedding?: string
           id?: string
           metadata?: Json | null
-          start_pos?: number | null
         }
         Relationships: []
       }
@@ -554,6 +542,15 @@ export type Database = {
       join_goal: {
         Args: { p_goal_id: string; p_role: string; p_user_id: string }
         Returns: undefined
+      }
+      match_documents: {
+        Args: { filter?: Json; match_count: number; query_embedding: string }
+        Returns: {
+          content: string
+          id: string
+          metadata: Json
+          similarity: number
+        }[]
       }
       regenerate_goal_share_code: {
         Args: { p_goal_id: string }
