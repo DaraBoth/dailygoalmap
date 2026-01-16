@@ -76,6 +76,7 @@ Since you have AI-powered features (task generation, chat assistant):
 - **One-time creation, infinite sales** - perfect digital product
 - **Good customer acquisition funnel**: free → premium templates → subscription
 - Low maintenance, high profit margin
+- **⚠️ Current Challenge**: Each premium template requires a separate n8n workflow (not scalable)
 
 ### 4. Enterprise/B2B - Growth Potential
 - Higher price point with more stable, long-term contracts
@@ -215,6 +216,495 @@ Allows users to customize their plan and increases ARPU (Average Revenue Per Use
    - Stripe Products for each template
    - Unlock purchased templates for user
    - Track template purchases and usage
+
+4. **🔧 N8N Workflow Automation (Critical)**
+   - See "N8N Premium Template Automation" section below
+   - Implement dynamic workflow routing instead of separate workflows per template
+
+---
+
+## 🤖 N8N Premium Template Automation Solutions
+
+### Current Problem
+Each premium template requires creating a separate n8n workflow manually with its own AI agent logic. This doesn't scale when you want to offer 10, 20, or 100+ premium templates.
+
+### Solution 1: Dynamic Master Workflow (Recommended) ⭐
+
+**Architecture:**
+```
+User purchases template 
+  → Webhook to n8n with template metadata
+    → Master workflow receives: {templateId, templateType, userGoal, userId}
+      → Route to appropriate AI agent based on templateType
+        → Generate customized tasks/content
+          → Send back to DailyGoalMap API
+```
+
+**Implementation:**
+
+1. **Create one master n8n workflow with conditional routing:**
+
+```json
+{
+  "name": "Master Premium Template Processor",
+  "nodes": [
+    {
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "path": "premium-template",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "name": "Parse Template Request",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "// Extract template metadata\nconst templateId = $input.item.json.templateId;\nconst templateType = $input.item.json.templateType;\nconst userGoal = $input.item.json.userGoal;\nconst userId = $input.item.json.userId;\n\nreturn {\n  json: {\n    templateId,\n    templateType,\n    userGoal,\n    userId,\n    // Load template config from database or static config\n    templateConfig: getTemplateConfig(templateType)\n  }\n};"
+      }
+    },
+    {
+      "name": "Route By Template Type",
+      "type": "n8n-nodes-base.switch",
+      "parameters": {
+        "rules": {
+          "rules": [
+            {"output": 0, "conditions": {"templateType": "fitness"}},
+            {"output": 1, "conditions": {"templateType": "finance"}},
+            {"output": 2, "conditions": {"templateType": "career"}},
+            {"output": 3, "conditions": {"templateType": "learning"}},
+            {"output": 4, "conditions": {"templateType": "default"}}
+          ]
+        }
+      }
+    },
+    {
+      "name": "Fitness AI Agent",
+      "type": "n8n-nodes-base.openAi",
+      "parameters": {
+        "systemPrompt": "You are a fitness coach...",
+        "prompt": "Create a 12-week fitness plan for: {{$json.userGoal}}"
+      }
+    },
+    {
+      "name": "Finance AI Agent",
+      "type": "n8n-nodes-base.openAi",
+      "parameters": {
+        "systemPrompt": "You are a financial advisor...",
+        "prompt": "Create a FIRE plan for: {{$json.userGoal}}"
+      }
+    }
+    // ... other agents
+  ]
+}
+```
+
+2. **Store template configurations in database:**
+
+```sql
+-- Add to Supabase migrations
+CREATE TABLE premium_template_configs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  template_id TEXT UNIQUE NOT NULL,
+  template_type TEXT NOT NULL,
+  template_name TEXT NOT NULL,
+  n8n_agent_prompt TEXT NOT NULL,
+  system_instructions JSONB,
+  default_tasks JSONB,
+  customization_options JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Example data
+INSERT INTO premium_template_configs (template_id, template_type, template_name, n8n_agent_prompt, system_instructions) VALUES
+(
+  'fitness-12week-transformation',
+  'fitness',
+  '12-Week Fitness Transformation',
+  'You are an expert fitness coach. Create a detailed 12-week transformation plan...',
+  '{
+    "workoutsPerWeek": 4,
+    "progressionModel": "linear",
+    "includeNutrition": true
+  }'
+);
+```
+
+3. **Update your DailyGoalMap to send template metadata:**
+
+```typescript
+// In your template purchase/application logic
+async function applyPremiumTemplate(templateId: string, userGoal: Goal) {
+  // Get template config
+  const template = await supabase
+    .from('premium_template_configs')
+    .select('*')
+    .eq('template_id', templateId)
+    .single();
+
+  // Send to n8n master workflow
+  const response = await fetch('https://your-n8n.app/webhook/premium-template', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      templateId: template.data.template_id,
+      templateType: template.data.template_type,
+      templateName: template.data.template_name,
+      systemInstructions: template.data.system_instructions,
+      userGoal: {
+        id: userGoal.id,
+        title: userGoal.title,
+        description: userGoal.description,
+        targetDate: userGoal.target_date
+      },
+      userId: userGoal.user_id,
+      agentPrompt: template.data.n8n_agent_prompt
+    })
+  });
+
+  return response.json();
+}
+```
+
+**Benefits:**
+- ✅ One workflow handles all templates
+- ✅ Add new templates without touching n8n
+- ✅ Centralized monitoring and logging
+- ✅ Easy to update AI prompts via database
+
+---
+
+### Solution 2: Config-Driven Generic AI Agent
+
+**Architecture:**
+Create one ultra-flexible AI agent that adapts based on JSON configuration.
+
+**Template Configuration File (`src/data/premiumTemplateConfigs.ts`):**
+
+```typescript
+export interface PremiumTemplateConfig {
+  id: string;
+  type: 'fitness' | 'finance' | 'career' | 'learning' | 'custom';
+  name: string;
+  price: number;
+  aiAgent: {
+    systemPrompt: string;
+    userPromptTemplate: string;
+    outputFormat: 'tasks' | 'milestones' | 'mixed';
+    examples?: string[];
+  };
+  taskGeneration: {
+    minTasks: number;
+    maxTasks: number;
+    taskTypes: string[];
+    includeSubtasks: boolean;
+  };
+  customFields?: Record<string, any>;
+}
+
+export const premiumTemplateConfigs: PremiumTemplateConfig[] = [
+  {
+    id: 'fitness-12week-transformation',
+    type: 'fitness',
+    name: '12-Week Fitness Transformation',
+    price: 9.99,
+    aiAgent: {
+      systemPrompt: `You are an expert fitness coach specializing in body transformations.
+        Create detailed, progressive workout plans with proper periodization.
+        Include rest days, deload weeks, and progressive overload principles.`,
+      userPromptTemplate: `Create a 12-week fitness transformation plan for:
+        Goal: {{goal.title}}
+        Description: {{goal.description}}
+        Target Date: {{goal.targetDate}}
+        
+        Structure the plan into 3 phases (Foundation, Building, Peak).
+        Each week should have 4-5 workout days.
+        Include nutrition guidelines and recovery protocols.`,
+      outputFormat: 'mixed',
+      examples: [
+        'Week 1-4: Foundation Phase (3x10 reps, focus on form)',
+        'Week 5-8: Building Phase (4x8 reps, increase weight 5-10%)',
+        'Week 9-12: Peak Phase (5x5 reps, maximum intensity)'
+      ]
+    },
+    taskGeneration: {
+      minTasks: 36,
+      maxTasks: 60,
+      taskTypes: ['workout', 'meal_prep', 'recovery', 'progress_check'],
+      includeSubtasks: true
+    },
+    customFields: {
+      includeNutrition: true,
+      trackBodyMetrics: true,
+      workoutsPerWeek: 4
+    }
+  },
+  {
+    id: 'finance-fire-plan',
+    type: 'finance',
+    name: 'FIRE Financial Independence Plan',
+    price: 14.99,
+    aiAgent: {
+      systemPrompt: `You are a certified financial planner specializing in FIRE (Financial Independence, Retire Early).
+        Create detailed financial roadmaps with realistic savings rates and investment strategies.
+        Include emergency fund building, debt payoff, and investment allocation.`,
+      userPromptTemplate: `Create a FIRE financial plan for:
+        Goal: {{goal.title}}
+        Description: {{goal.description}}
+        Target Date: {{goal.targetDate}}
+        
+        Include monthly milestones for:
+        - Emergency fund (3-6 months expenses)
+        - Debt elimination
+        - Investment contributions (401k, IRA, taxable accounts)
+        - Net worth tracking
+        - Savings rate progression`,
+      outputFormat: 'milestones'
+    },
+    taskGeneration: {
+      minTasks: 12,
+      maxTasks: 24,
+      taskTypes: ['savings', 'investment', 'budget_review', 'net_worth_check'],
+      includeSubtasks: true
+    },
+    customFields: {
+      trackNetWorth: true,
+      investmentAllocation: '80/20 stocks/bonds',
+      savingsRateTarget: 0.5
+    }
+  }
+  // Add more templates here...
+];
+```
+
+**N8N Generic Workflow:**
+
+```javascript
+// In n8n Code node
+const config = $input.item.json.templateConfig;
+const userGoal = $input.item.json.userGoal;
+
+// Build dynamic prompt
+let prompt = config.aiAgent.userPromptTemplate
+  .replace('{{goal.title}}', userGoal.title)
+  .replace('{{goal.description}}', userGoal.description)
+  .replace('{{goal.targetDate}}', userGoal.targetDate);
+
+// Add examples if provided
+if (config.aiAgent.examples?.length > 0) {
+  prompt += '\n\nExamples:\n' + config.aiAgent.examples.join('\n');
+}
+
+return [{
+  json: {
+    systemPrompt: config.aiAgent.systemPrompt,
+    userPrompt: prompt,
+    outputFormat: config.aiAgent.outputFormat,
+    taskConfig: config.taskGeneration,
+    userId: $input.item.json.userId,
+    goalId: userGoal.id
+  }
+}];
+```
+
+**Benefits:**
+- ✅ Add new templates by editing TypeScript config (no n8n changes)
+- ✅ Version control for all template logic
+- ✅ Easy to test and iterate on prompts
+- ✅ Reusable across different AI providers
+
+---
+
+### Solution 3: Workflow Template Generator (Advanced)
+
+**Concept:** Programmatically generate n8n workflow JSON from template definitions.
+
+**Implementation:**
+
+```typescript
+// tools/generateN8NWorkflow.ts
+interface WorkflowTemplate {
+  templateId: string;
+  agentConfig: {
+    systemPrompt: string;
+    model: 'gpt-4' | 'claude-3-opus';
+    temperature: number;
+  };
+}
+
+function generateN8NWorkflow(template: WorkflowTemplate): any {
+  return {
+    name: `Premium Template: ${template.templateId}`,
+    nodes: [
+      {
+        name: 'Webhook Trigger',
+        type: 'n8n-nodes-base.webhook',
+        parameters: {
+          path: `premium-template/${template.templateId}`
+        }
+      },
+      {
+        name: 'AI Agent',
+        type: 'n8n-nodes-base.openAi',
+        parameters: {
+          model: template.agentConfig.model,
+          systemPrompt: template.agentConfig.systemPrompt,
+          temperature: template.agentConfig.temperature
+        }
+      },
+      {
+        name: 'Send to Supabase',
+        type: 'n8n-nodes-base.supabase',
+        parameters: {
+          operation: 'insert',
+          table: 'tasks'
+        }
+      }
+    ],
+    connections: {
+      'Webhook Trigger': {
+        main: [[{ node: 'AI Agent', type: 'main', index: 0 }]]
+      },
+      'AI Agent': {
+        main: [[{ node: 'Send to Supabase', type: 'main', index: 0 }]]
+      }
+    }
+  };
+}
+
+// Generate and upload to n8n via API
+async function deployWorkflow(template: WorkflowTemplate) {
+  const workflow = generateN8NWorkflow(template);
+  
+  const response = await fetch('https://your-n8n.app/api/v1/workflows', {
+    method: 'POST',
+    headers: {
+      'X-N8N-API-KEY': process.env.N8N_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(workflow)
+  });
+  
+  return response.json();
+}
+```
+
+**Benefits:**
+- ✅ Programmatically create workflows
+- ✅ Can use CI/CD to deploy workflows automatically
+- ✅ Version control for workflow definitions
+
+---
+
+### Solution 4: Template Registry + Router Pattern
+
+**Architecture:**
+
+1. **Central Template Registry** (in your app):
+
+```typescript
+// src/services/templateRegistry.ts
+export class PremiumTemplateRegistry {
+  private templates = new Map<string, TemplateHandler>();
+
+  register(templateId: string, handler: TemplateHandler) {
+    this.templates.set(templateId, handler);
+  }
+
+  async process(templateId: string, userGoal: Goal): Promise<Task[]> {
+    const handler = this.templates.get(templateId);
+    if (!handler) throw new Error(`Template ${templateId} not found`);
+    
+    return handler.generate(userGoal);
+  }
+}
+
+interface TemplateHandler {
+  generate(goal: Goal): Promise<Task[]>;
+}
+```
+
+2. **N8N Router Workflow** (one workflow that routes to sub-workflows):
+
+```
+Webhook → Parse Request → Query Template Config → 
+  → If fitness: Execute fitness sub-workflow
+  → If finance: Execute finance sub-workflow
+  → If custom: Execute generic AI workflow with config
+```
+
+3. **Sub-workflows as reusable modules:**
+   - Create sub-workflows for common patterns (fitness, finance, career)
+   - Main workflow calls sub-workflows via "Execute Workflow" node
+   - Sub-workflows can be reused and composed
+
+**Benefits:**
+- ✅ Modular and maintainable
+- ✅ Reuse common patterns
+- ✅ Easy to debug individual components
+
+---
+
+## 📋 Recommended Approach: Hybrid Solution
+
+**Combine Solution 1 + 2** for maximum flexibility:
+
+1. **Database-driven template configs** (Solution 1)
+   - Store all template metadata in Supabase
+   - Easy to update without code deploys
+
+2. **TypeScript config for complex logic** (Solution 2)
+   - Use for templates with complex branching logic
+   - Better IDE support and type safety
+
+3. **One master n8n workflow** (Solution 1)
+   - Receives template config from database
+   - Routes to appropriate AI agent
+   - Falls back to generic agent if no specific logic needed
+
+### Implementation Steps:
+
+1. **Week 1: Database Schema**
+   ```sql
+   CREATE TABLE premium_template_configs (
+     id UUID PRIMARY KEY,
+     template_id TEXT UNIQUE,
+     template_type TEXT,
+     ai_system_prompt TEXT,
+     ai_user_prompt_template TEXT,
+     task_generation_rules JSONB,
+     custom_config JSONB
+   );
+   ```
+
+2. **Week 2: Master N8N Workflow**
+   - Create webhook endpoint
+   - Add template config fetching
+   - Implement switch/router logic
+   - Add 3-4 specialized agents (fitness, finance, career)
+   - Add one generic fallback agent
+
+3. **Week 3: Integration**
+   - Update `applyPremiumTemplate` in your app
+   - Send requests to master workflow
+   - Handle responses (tasks, milestones, etc.)
+   - Add error handling and retries
+
+4. **Week 4: Testing & Optimization**
+   - Test each template type
+   - Monitor AI costs per template
+   - Optimize prompts for quality/cost balance
+   - Add caching for similar requests
+
+### Cost Optimization:
+- Cache common template structures
+- Use GPT-4 only for initial generation, GPT-3.5 for refinements
+- Implement rate limiting per user
+- Pre-generate templates for popular goals (cache results)
+
+---
+
+## 🎯 Updated Phase 3 Roadmap
 
 ### Phase 4: Advanced Features (Week 7-8)
 1. **AI credit packs**
