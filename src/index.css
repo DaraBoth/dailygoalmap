@@ -1109,3 +1109,49 @@ input[type="time"] {
     font-size: 13px;
   }
 }
+
+/* Force calendar table to display properly */
+.rdp table,
+[data-radix-popper-content-wrapper] table,
+[role="dialog"] table:not(.responsive-table) {
+  display: table !important;
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.rdp thead,
+[data-radix-popper-content-wrapper] thead,
+[role="dialog"] thead:not(.responsive-table thead) {
+  display: table-header-group !important;
+}
+
+.rdp tbody,
+[data-radix-popper-content-wrapper] tbody,
+[role="dialog"] tbody:not(.responsive-table tbody) {
+  display: table-row-group !important;
+}
+
+.rdp tr,
+[data-radix-popper-content-wrapper] tr,
+[role="dialog"] tr:not(.responsive-table tr) {
+  display: table-row !important;
+}
+
+.rdp th,
+.rdp td,
+[data-radix-popper-content-wrapper] th,
+[data-radix-popper-content-wrapper] td,
+[role="dialog"] th:not(.responsive-table th),
+[role="dialog"] td:not(.responsive-table td) {
+  display: table-cell !important;
+  vertical-align: middle;
+  text-align: center;
+  border: none !important;
+}
+
+.rdp button {
+  width: 100%;
+  height: 100%;
+}
+

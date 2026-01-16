@@ -704,9 +704,661 @@ Webhook → Parse Request → Query Template Config →
 
 ---
 
-## 🎯 Updated Phase 3 Roadmap
+## 🔑 API Key Management & AI Cost Control
 
-### Phase 4: Advanced Features (Week 7-8)
+### The Problem
+AI API calls (OpenAI, Anthropic) are expensive. If you use your API key for all users:
+- **Free tier users** drain your budget
+- **Abuse risk**: Users could spam AI generation
+- **Unpredictable costs**: Hard to forecast expenses
+
+### Solution: Tiered API Key Strategy
+
+#### **Free Tier: BYOK (Bring Your Own Key)**
+Users must provide their own OpenAI/Anthropic API key.
+
+**Benefits:**
+- ✅ Zero AI costs for you
+- ✅ Users understand AI isn't free
+- ✅ Prevents abuse (they pay for their usage)
+- ✅ Educational (users learn about AI costs)
+
+**Implementation:**
+
+1. **Database Schema:**
+```sql
+CREATE TABLE user_ai_keys (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+  encrypted_openai_key TEXT,
+  encrypted_anthropic_key TEXT,
+  key_name TEXT, -- Optional: user-friendly name
+  is_valid BOOLEAN DEFAULT true,
+  last_validated_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Track usage even for user keys
+CREATE TABLE ai_usage_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  key_source TEXT CHECK (key_source IN ('user', 'platform')),
+  model TEXT, -- 'gpt-4', 'gpt-3.5-turbo', 'claude-3-opus'
+  tokens_used INTEGER,
+  cost_estimate DECIMAL(10,4),
+  request_type TEXT, -- 'task_generation', 'chat', 'template_application'
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_ai_usage_user_date ON ai_usage_logs(user_id, created_at);
+```
+
+2. **Settings Page for API Key:**
+
+```typescript
+// src/components/settings/AIKeySettings.tsx
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Eye, EyeOff, Key, Shield } from 'lucide-react';
+
+export function AIKeySettings() {
+  const [apiKey, setApiKey] = useState('');
+  const [showKey, setShowKey] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [keyStatus, setKeyStatus] = useState<'valid' | 'invalid' | null>(null);
+
+  const handleValidateAndSave = async () => {
+    setIsValidating(true);
+    
+    // Validate key by making a test API call
+    const isValid = await validateOpenAIKey(apiKey);
+    
+    if (isValid) {
+      // Store encrypted in Supabase
+      const { error } = await supabase
+        .from('user_ai_keys')
+        .upsert({
+          encrypted_openai_key: apiKey, // Encrypt on server-side
+          is_valid: true,
+          last_validated_at: new Date().toISOString()
+        });
+      
+      if (!error) {
+        setKeyStatus('valid');
+        toast.success('API key saved successfully!');
+      }
+    } else {
+      setKeyStatus('invalid');
+      toast.error('Invalid API key. Please check and try again.');
+    }
+    
+    setIsValidating(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Key className="w-5 h-5" />
+        <h3 className="text-lg font-semibold">AI API Key</h3>
+      </div>
+
+      <Alert>
+        <Shield className="w-4 h-4" />
+        <AlertDescription>
+          Free tier requires your own OpenAI API key. Your key is encrypted and only used for your AI requests.
+          Upgrade to Pro to use our platform key with unlimited AI generation.
+        </AlertDescription>
+      </Alert>
+
+      <div className="space-y-2">
+        <Label htmlFor="api-key">OpenAI API Key</Label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Input
+              id="api-key"
+              type={showKey ? 'text' : 'password'}
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="sk-..."
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowKey(!showKey)}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+            >
+              {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          <Button 
+            onClick={handleValidateAndSave}
+            disabled={isValidating || !apiKey}
+          >
+            {isValidating ? 'Validating...' : 'Save'}
+          </Button>
+        </div>
+        
+        <p className="text-sm text-muted-foreground">
+          Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" className="underline">OpenAI Dashboard</a>
+        </p>
+      </div>
+
+      {keyStatus === 'valid' && (
+        <Alert className="border-green-500">
+          <AlertDescription>✅ API key validated and saved</AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+}
+
+async function validateOpenAIKey(key: string): Promise<boolean> {
+  try {
+    const response = await fetch('https://api.openai.com/v1/models', {
+      headers: { 'Authorization': `Bearer ${key}` }
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+```
+
+3. **N8N Workflow: Dynamic API Key Selection:**
+
+```javascript
+// In n8n "Prepare AI Request" Code Node
+const userId = $input.item.json.userId;
+const userSubscription = $input.item.json.userSubscription; // From previous node
+
+let apiKey;
+let keySource;
+
+if (userSubscription?.tier === 'pro' || userSubscription?.tier === 'team') {
+  // Paid users: use platform key
+  apiKey = $env.PLATFORM_OPENAI_KEY;
+  keySource = 'platform';
+} else {
+  // Free users: use their own key
+  const userKey = await $supabase
+    .from('user_ai_keys')
+    .select('encrypted_openai_key')
+    .eq('user_id', userId)
+    .single();
+  
+  if (!userKey.data?.encrypted_openai_key) {
+    throw new Error('NO_API_KEY: User must provide API key in settings');
+  }
+  
+  apiKey = decrypt(userKey.data.encrypted_openai_key);
+  keySource = 'user';
+}
+
+return [{
+  json: {
+    ...($input.item.json),
+    apiKey,
+    keySource,
+    model: userSubscription?.tier === 'pro' ? 'gpt-4' : 'gpt-3.5-turbo'
+  }
+}];
+```
+
+4. **Supabase Edge Function (Alternative to N8N):**
+
+```typescript
+// supabase/functions/ai-generate/index.ts
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+serve(async (req) => {
+  const { userId, prompt, requestType } = await req.json();
+  
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  );
+  
+  // Get user subscription
+  const { data: subscription } = await supabase
+    .from('user_subscriptions')
+    .select('tier')
+    .eq('user_id', userId)
+    .single();
+  
+  let apiKey: string;
+  let keySource: 'user' | 'platform';
+  
+  if (subscription?.tier === 'pro' || subscription?.tier === 'team') {
+    // Pro users: use platform key
+    apiKey = Deno.env.get('OPENAI_API_KEY')!;
+    keySource = 'platform';
+  } else {
+    // Free users: use their key
+    const { data: userKey } = await supabase
+      .from('user_ai_keys')
+      .select('encrypted_openai_key')
+      .eq('user_id', userId)
+      .single();
+    
+    if (!userKey?.encrypted_openai_key) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'NO_API_KEY',
+          message: 'Please add your OpenAI API key in settings to use AI features'
+        }),
+        { status: 400 }
+      );
+    }
+    
+    apiKey = decrypt(userKey.encrypted_openai_key);
+    keySource = 'user';
+  }
+  
+  // Make OpenAI request
+  const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: subscription?.tier === 'pro' ? 'gpt-4' : 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  
+  const data = await openaiResponse.json();
+  
+  // Log usage
+  await supabase.from('ai_usage_logs').insert({
+    user_id: userId,
+    key_source: keySource,
+    model: data.model,
+    tokens_used: data.usage?.total_tokens,
+    cost_estimate: calculateCost(data.model, data.usage?.total_tokens),
+    request_type: requestType
+  });
+  
+  return new Response(JSON.stringify(data), {
+    headers: { 'Content-Type': 'application/json' }
+  });
+});
+```
+
+---
+
+#### **Pro Tier: Platform API Key (Included)**
+
+**Benefits:**
+- ✅ Seamless UX (no setup required)
+- ✅ Use better models (GPT-4 vs GPT-3.5)
+- ✅ Marketing: "Unlimited AI generation included"
+- ✅ You control costs with usage limits
+
+**Cost Management:**
+
+1. **Soft Limits per User:**
+```typescript
+// Check before AI request
+const monthlyLimit = {
+  pro: 1000, // 1000 AI requests/month (~$20 cost)
+  team: 5000 // 5000 AI requests/month (~$100 cost)
+};
+
+const usage = await supabase
+  .from('ai_usage_logs')
+  .select('count')
+  .eq('user_id', userId)
+  .eq('key_source', 'platform')
+  .gte('created_at', startOfMonth())
+  .single();
+
+if (usage.count >= monthlyLimit[subscription.tier]) {
+  return { 
+    error: 'LIMIT_REACHED',
+    message: 'Monthly AI limit reached. Resets on 1st of next month.'
+  };
+}
+```
+
+2. **Cost Monitoring Dashboard (Admin):**
+```typescript
+// Track platform AI costs
+SELECT 
+  DATE_TRUNC('day', created_at) as date,
+  COUNT(*) as requests,
+  SUM(tokens_used) as total_tokens,
+  SUM(cost_estimate) as total_cost,
+  AVG(cost_estimate) as avg_cost_per_request
+FROM ai_usage_logs
+WHERE key_source = 'platform'
+GROUP BY date
+ORDER BY date DESC;
+```
+
+3. **Alert when costs spike:**
+```typescript
+// Daily cron job in Supabase
+if (dailyAICost > budget * 1.5) {
+  sendAlert('AI costs exceeded budget by 50%!');
+  // Auto-downgrade to GPT-3.5 or pause AI features
+}
+```
+
+---
+
+#### **Hybrid Model: AI Credits (Recommended)** ⭐
+
+**Best of both worlds:**
+- Free tier: 10 AI credits/month (BYOK for more)
+- Pro tier: 500 AI credits/month (included)
+- Pay-as-you-go: Buy credit packs ($4.99 for 100 credits)
+
+**Implementation:**
+
+```sql
+CREATE TABLE ai_credit_balance (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  credits_remaining INTEGER DEFAULT 0,
+  credits_included INTEGER DEFAULT 0, -- Monthly allowance from subscription
+  credits_purchased INTEGER DEFAULT 0, -- One-time purchased credits
+  next_reset_date DATE,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Reset monthly credits (run via cron)
+CREATE OR REPLACE FUNCTION reset_monthly_ai_credits()
+RETURNS void AS $$
+BEGIN
+  UPDATE ai_credit_balance
+  SET 
+    credits_remaining = credits_included,
+    next_reset_date = DATE_TRUNC('month', NOW() + INTERVAL '1 month')
+  WHERE next_reset_date <= CURRENT_DATE;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**Credit Usage:**
+```typescript
+// Before AI request
+const creditCost = {
+  'gpt-3.5-turbo': 1,
+  'gpt-4': 5,
+  'claude-3-opus': 7
+};
+
+const { data: balance } = await supabase
+  .from('ai_credit_balance')
+  .select('credits_remaining')
+  .eq('user_id', userId)
+  .single();
+
+const cost = creditCost[model];
+
+if (balance.credits_remaining < cost) {
+  // Fallback to user's own API key if available
+  const { data: userKey } = await supabase
+    .from('user_ai_keys')
+    .select('encrypted_openai_key')
+    .eq('user_id', userId)
+    .single();
+  
+  if (userKey?.encrypted_openai_key) {
+    // Use user's key
+    apiKey = decrypt(userKey.encrypted_openai_key);
+  } else {
+    return { 
+      error: 'INSUFFICIENT_CREDITS',
+      message: 'Add your API key or purchase credits to continue'
+    };
+  }
+} else {
+  // Deduct credits
+  await supabase.rpc('deduct_ai_credits', { 
+    user_id: userId, 
+    amount: cost 
+  });
+}
+```
+
+---
+
+### Security Best Practices
+
+1. **Encrypt User API Keys:**
+```typescript
+// Use Supabase Vault or encrypt before storing
+import { createCipheriv, createDecipheriv } from 'crypto';
+
+function encrypt(text: string): string {
+  const cipher = createCipheriv('aes-256-cbc', ENCRYPTION_KEY, IV);
+  return cipher.update(text, 'utf8', 'hex') + cipher.final('hex');
+}
+
+function decrypt(encrypted: string): string {
+  const decipher = createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, IV);
+  return decipher.update(encrypted, 'hex', 'utf8') + decipher.final('utf8');
+}
+```
+
+2. **Never Log API Keys:**
+```typescript
+// In ai_usage_logs table, never store the actual key
+await supabase.from('ai_usage_logs').insert({
+  user_id: userId,
+  key_source: keySource, // 'user' or 'platform', not the actual key
+  // ... other fields
+});
+```
+
+3. **Validate User Keys Periodically:**
+```typescript
+// Cron job to check if stored keys are still valid
+async function validateAllUserKeys() {
+  const { data: keys } = await supabase
+    .from('user_ai_keys')
+    .select('*')
+    .eq('is_valid', true);
+  
+  for (const key of keys) {
+    const isValid = await validateOpenAIKey(decrypt(key.encrypted_openai_key));
+    if (!isValid) {
+      await supabase
+        .from('user_ai_keys')
+        .update({ is_valid: false })
+        .eq('id', key.id);
+      
+      // Notify user their key is invalid
+      await sendNotification(key.user_id, 'Your OpenAI API key is no longer valid');
+    }
+  }
+}
+```
+
+4. **Rate Limiting:**
+```typescript
+// Prevent abuse even with user's own key
+const rateLimits = {
+  free: { requests: 50, window: '1 hour' },
+  pro: { requests: 500, window: '1 hour' }
+};
+
+// Use Redis or Supabase to track requests
+const recentRequests = await countRecentRequests(userId, '1 hour');
+if (recentRequests >= rateLimits[tier].requests) {
+  return { error: 'RATE_LIMIT_EXCEEDED' };
+}
+```
+
+---
+
+### N8N Implementation: Complete Flow
+
+```javascript
+// Master N8N Workflow with API Key Management
+
+// Node 1: Webhook Receive
+const { userId, goalId, templateId } = $input.item.json;
+
+// Node 2: Fetch User Subscription & Keys
+const userData = await Promise.all([
+  $supabase.from('user_subscriptions').select('*').eq('user_id', userId).single(),
+  $supabase.from('user_ai_keys').select('*').eq('user_id', userId).single(),
+  $supabase.from('ai_credit_balance').select('*').eq('user_id', userId).single()
+]);
+
+const [subscription, userKey, credits] = userData;
+
+// Node 3: Determine API Key & Model
+let apiKey, keySource, model;
+
+if (subscription.tier === 'pro' || subscription.tier === 'team') {
+  // Check credits first
+  if (credits.credits_remaining > 0) {
+    apiKey = $env.PLATFORM_OPENAI_KEY;
+    keySource = 'platform';
+    model = 'gpt-4';
+    // Will deduct credits after successful request
+  } else if (userKey.encrypted_openai_key) {
+    // Fallback to user key
+    apiKey = decrypt(userKey.encrypted_openai_key);
+    keySource = 'user';
+    model = 'gpt-3.5-turbo';
+  } else {
+    throw new Error('NO_CREDITS_OR_KEY');
+  }
+} else {
+  // Free tier: must have their own key
+  if (!userKey.encrypted_openai_key) {
+    throw new Error('API_KEY_REQUIRED');
+  }
+  apiKey = decrypt(userKey.encrypted_openai_key);
+  keySource = 'user';
+  model = 'gpt-3.5-turbo';
+}
+
+// Node 4: Rate Limit Check
+const recentRequests = await $supabase
+  .from('ai_usage_logs')
+  .select('count')
+  .eq('user_id', userId)
+  .gte('created_at', oneHourAgo());
+
+if (recentRequests.count > getRateLimit(subscription.tier)) {
+  throw new Error('RATE_LIMIT_EXCEEDED');
+}
+
+// Node 5: Make OpenAI Request
+const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+  method: 'POST',
+  headers: { 
+    'Authorization': `Bearer ${apiKey}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    model,
+    messages: [{ role: 'user', content: prompt }]
+  })
+});
+
+const result = await openaiResponse.json();
+
+// Node 6: Log Usage & Deduct Credits
+await Promise.all([
+  $supabase.from('ai_usage_logs').insert({
+    user_id: userId,
+    key_source: keySource,
+    model,
+    tokens_used: result.usage.total_tokens,
+    cost_estimate: calculateCost(model, result.usage.total_tokens),
+    request_type: 'template_application'
+  }),
+  
+  // Deduct credits if using platform key
+  keySource === 'platform' 
+    ? $supabase.rpc('deduct_ai_credits', { user_id: userId, amount: creditCost[model] })
+    : null
+]);
+
+// Node 7: Return Result
+return { json: result };
+```
+
+---
+
+## 📊 Cost Analysis per Tier
+
+### Free Tier (BYOK)
+- **Your cost**: $0
+- **User cost**: ~$0.002 per request (GPT-3.5)
+- **Limit**: User-controlled (their API budget)
+
+### Pro Tier ($9.99/mo with 500 credits)
+- **Your cost per user/month**: ~$10-15 (500 requests × $0.002-0.03)
+- **Margin**: Break-even to slight loss
+- **Strategy**: Make up margin with:
+  - Annual subscriptions (upfront cash)
+  - Credit upsells
+  - Premium templates
+  - Fewer users will max out credits
+
+### Team Tier ($19.99/mo with 5000 credits)
+- **Your cost per team/month**: ~$50-100
+- **Margin**: Negative if fully utilized
+- **Strategy**: 
+  - Most teams won't use full allowance
+  - Charge overages ($0.99 per 10 credits)
+  - Cross-subsidize with unused credits from other users
+
+### Reality Check
+- Only 20-30% of users will use >50% of their credits
+- Average usage: ~100-200 credits/month
+- Your actual cost per Pro user: ~$2-5/mo
+- Healthy margin: $5-8 per user
+
+---
+
+## 🎯 Recommended Strategy
+
+**Implement the Hybrid AI Credits Model:**
+
+1. **Free tier**: 
+   - 10 credits/month (platform key)
+   - BYOK for unlimited usage
+   - Forces upgrade for heavy users
+
+2. **Pro tier ($9.99/mo)**:
+   - 500 credits/month (platform key, GPT-4 access)
+   - Can add BYOK for extra usage
+   - Buy credit packs if needed
+
+3. **Team tier ($19.99/mo)**:
+   - 5000 credits/month shared
+   - Priority support
+   - Admin dashboard
+
+4. **Credit packs**: 
+   - $4.99 for 100 credits
+   - Never expire
+   - Good for power users
+
+This model:
+- ✅ Lets you test free → paid conversion
+- ✅ Gives free users a taste without draining budget
+- ✅ Pro users get real value (don't manage API keys)
+- ✅ You can adjust credit pricing based on costs
+- ✅ Creates upsell opportunities
+
+---
+
+## 🎯 Updated Phase 3 Roadmap
 1. **AI credit packs**
    - Purchase additional credits
    - Credit balance display
