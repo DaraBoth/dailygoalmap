@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { differenceInCalendarDays } from 'date-fns';
 import { calculateGoalDeadlineInfo, getDeadlineStatusStyling } from "@/utils/goalDeadlineUtils";
@@ -173,7 +174,8 @@ const GoalList: React.FC<GoalListProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2">
+    <TooltipProvider delayDuration={300}>
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2">
       {goals.map((goal) => {
         const deadlineInfo = calculateGoalDeadlineInfo(goal);
         const deadlineStyling = getDeadlineStatusStyling(deadlineInfo.status, deadlineInfo.urgencyLevel);
@@ -188,7 +190,7 @@ const GoalList: React.FC<GoalListProps> = ({
         return (
           <Card
             key={goal.id}
-            className={`cursor-pointer group hover:shadow-xl transition-all duration-300 overflow-hidden liquid-glass-card ${deadlineStyling.borderColor}`}
+            className={`cursor-pointer group hover:shadow-xl transition-all duration-300 overflow-visible liquid-glass-card ${deadlineStyling.borderColor}`}
             onClick={(e) => {
               // Prevent navigation when clicking on interactive controls inside the card
               const target = e.target as HTMLElement | null;
@@ -209,7 +211,7 @@ const GoalList: React.FC<GoalListProps> = ({
             {/* Background Image Container */}
             {backgroundStyle.backgroundImage && (
               <div
-                className="absolute inset-0 rounded-lg overflow-hidden"
+                className="absolute inset-0 rounded-lg overflow-hidden -z-10"
                 style={backgroundStyle}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-background/80 backdrop-blur-[2px]" />
@@ -252,36 +254,56 @@ const GoalList: React.FC<GoalListProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1 flex-shrink-0" data-ignore-navigation="true">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                          aria-label="Open actions"
-                          data-ignore-navigation="true"
-                        >
-                          <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" data-ignore-navigation="true">
-                        {currentUser === goal.user_id && onEditGoal && (
-                          <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onEditGoal(goal, e as unknown as React.MouseEvent); }}>
-                            <Edit className="h-4 w-4 mr-2 text-blue-600" /> Edit
-                          </DropdownMenuItem>
-                        )}
-                        {currentUser === goal.user_id && (
-                          <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onDeleteGoal(goal, e as unknown as React.MouseEvent); }}>
+                    {/* Show direct Leave icon button for members, dropdown for owners */}
+                    {currentUser !== goal.user_id ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); setLeavingGoalId(goal.id); }}
+                            className="h-8 w-8 rounded-xl liquid-glass-button transition-all hover:scale-105"
+                            data-ignore-navigation="true"
+                          >
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="z-[100]">
+                          <p>Leave goal</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <DropdownMenu>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-xl liquid-glass-button transition-all hover:scale-105"
+                                aria-label="Open actions"
+                                data-ignore-navigation="true"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent className="z-[100]">
+                            <p>Goal actions</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <DropdownMenuContent align="end" className="liquid-glass-modal border-border/50" data-ignore-navigation="true">
+                          {onEditGoal && (
+                            <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onEditGoal(goal, e as unknown as React.MouseEvent); }} className="liquid-glass-button rounded-lg mb-1 cursor-pointer">
+                              <Edit className="h-4 w-4 mr-2 text-blue-600" /> Edit
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onDeleteGoal(goal, e as unknown as React.MouseEvent); }} className="liquid-glass-button rounded-lg cursor-pointer">
                             <Trash2 className="h-4 w-4 mr-2 text-destructive" /> Delete
                           </DropdownMenuItem>
-                        )}
-                        {currentUser !== goal.user_id && (
-                          <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); setLeavingGoalId(goal.id); }}>
-                            <ArrowRight className="h-4 w-4 mr-2 text-orange-500" /> Leave
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -357,6 +379,7 @@ const GoalList: React.FC<GoalListProps> = ({
         );
       })}
     </div>
+    </TooltipProvider>
   );
 };
 

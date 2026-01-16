@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Search, UserPlus, Key, Download, MoreHorizontal, Menu, X, Target, Bell, Settings, Home, ChevronDown } from "lucide-react";
 import SearchTrigger from "@/components/search/SearchTrigger";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserMenu } from "../user/UserMenu";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { motion, AnimatePresence } from "framer-motion";
@@ -45,249 +46,289 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   }, [mobileMenuUnread, isMobile]);
   
   return (
-    <header
-      className="sticky top-2 z-50 w-[calc(100vw-16px)] mx-2 border-b border-border/40 liquid-glass-container"
-      role="banner"
-      aria-label="Dashboard navigation"
-    >
-      {/* Desktop Header - GitHub/Vercel Style */}
-      <div className="hidden lg:block">
-        <div className="container mx-auto px-4 lg:px-6">
-          <div className="flex h-16 items-center justify-between gap-4">
-            {/* Left Section: Logo & Brand */}
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-3">
-                <LogoAvatar size={32} />
-                <div className="flex items-center gap-2">
-                  <h1 className="text-lg font-semibold tracking-tight">
-                    Goal Dashboard
-                  </h1>
-                  <span className="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-950 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300 ring-1 ring-inset ring-blue-700/10 dark:ring-blue-300/20">
-                    PWA
-                  </span>
-                </div>
-              </div>
+    <TooltipProvider delayDuration={300}>
+      <header
+        className="sticky top-4 z-50 mx-auto max-w-6xl px-4"
+        role="banner"
+        aria-label="Dashboard navigation"
+      >
+        {/* Desktop Header - Minimalist Floating Bar */}
+        <motion.div 
+          className="hidden lg:block"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="flex h-14 items-center justify-between gap-6 rounded-2xl liquid-glass-container px-4">
+            {/* Left: Logo */}
+            <div className="flex items-center gap-3">
+              <LogoAvatar size={28} />
+              <div className="h-6 w-px bg-border/50" />
             </div>
 
-            {/* Center Section: Search */}
-            <div className="flex flex-1 items-center justify-center px-6">
-              <div className="w-full max-w-md">
-                <button
-                  onClick={onOpenSearch}
-                  className="group flex h-9 w-full items-center gap-2 liquid-glass-input px-12 text-sm ring-offset-background transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <Search className="h-4 w-4" />
-                  <span className="flex-1 text-left">Search goals...</span>
-                  <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-                    <span className="text-xs">⌘</span>K
-                  </kbd>
-                </button>
-              </div>
+            {/* Center: Search */}
+            <div className="flex-1 max-w-md">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={onOpenSearch}
+                    className="group flex h-10 w-full items-center gap-3 rounded-xl liquid-glass-input px-4 text-sm text-muted-foreground transition-all hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Search className="h-4 w-4 transition-transform group-hover:scale-110" />
+                    <span className="flex-1 text-left">Search...</span>
+                    <kbd className="hidden items-center gap-0.5 rounded bg-background/50 px-1.5 py-0.5 font-mono text-[10px] font-medium opacity-60 sm:inline-flex">
+                      ⌘K
+                    </kbd>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Search goals and tasks</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
 
-            {/* Right Section: Actions & User */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onOpenJoinGoal}
-                className="h-9 px-3 text-sm font-medium"
-              >
-                <UserPlus className="mr-2 h-4 w-4" />
-                Join Goal
-              </Button>
+            {/* Right: Actions */}
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onOpenJoinGoal}
+                    className="h-10 w-10 rounded-xl liquid-glass-button transition-all hover:scale-105"
+                  >
+                    <UserPlus className="h-[18px] w-[18px]" />
+                    <span className="sr-only">Join Goal</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Join a shared goal</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <div className="h-6 w-px bg-border/50 mx-1" />
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={onAddGoal}
+                    size="icon"
+                    className="h-10 w-10 rounded-xl liquid-glass-button transition-all hover:scale-105"
+                  >
+                    <PlusCircle className="h-[18px] w-[18px]" />
+                    <span className="sr-only">New Goal</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Create a new goal</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <div className="h-6 w-px bg-border/50 mx-1" />
+
+              <NotificationBell onUnreadChange={(count) => setMobileMenuUnread(count)} />
               
-              <Button
-                onClick={onAddGoal}
-                size="sm"
-                className="h-9 px-4 text-sm font-medium"
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                New Goal
-              </Button>
-
-              <div className="ml-2 flex items-center gap-1">
-                <NotificationBell onUnreadChange={(count) => setMobileMenuUnread(count)} />
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-9 w-9 px-0">
-                      <Settings className="h-4 w-4" />
-                      <span className="sr-only">Settings</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuItem onClick={onOpenApiKeyGuide} className="cursor-pointer">
-                      <Key className="mr-2 h-4 w-4" />
-                      <span>API Configuration</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onOpenInstallButton} className="cursor-pointer">
-                      <Download className="mr-2 h-4 w-4" />
-                      <span>Install as App</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={onOpenNotificationSettings} className="cursor-pointer">
-                      <Bell className="mr-2 h-4 w-4" />
-                      <span>Notifications</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                
-                <UserMenu />
-              </div>
+              <DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl liquid-glass-button transition-all hover:scale-105">
+                        <Settings className="h-[18px] w-[18px]" />
+                        <span className="sr-only">Settings</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Settings & preferences</p>
+                  </TooltipContent>
+                </Tooltip>
+                <DropdownMenuContent align="end" className="w-56 liquid-glass-modal border-border/50">
+                  <DropdownMenuItem onClick={onOpenApiKeyGuide} className="cursor-pointer liquid-glass-button rounded-lg mb-1">
+                    <Key className="mr-2 h-4 w-4" />
+                    <span>API Configuration</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onOpenInstallButton} className="cursor-pointer liquid-glass-button rounded-lg mb-1">
+                    <Download className="mr-2 h-4 w-4" />
+                    <span>Install as App</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border/30" />
+                  <DropdownMenuItem onClick={onOpenNotificationSettings} className="cursor-pointer liquid-glass-button rounded-lg">
+                    <Bell className="mr-2 h-4 w-4" />
+                    <span>Notifications</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <div className="h-6 w-px bg-border/50 mx-1" />
+              
+              <UserMenu />
             </div>
           </div>
-        </div>
-      </div>
+        </motion.div>
 
-      {/* Mobile Header */}
-      <div className="lg:hidden">
-        <div className="flex h-14 items-center justify-between gap-3 px-4 border-b border-border/40">
-          {/* Left: Menu Toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleMobileMenu}
-            className="h-9 w-9 p-0 relative"
-            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-            aria-expanded={isMobileMenuOpen}
-            aria-controls="mobile-menu"
+        {/* Mobile Header - Clean & Minimal */}
+        <div className="lg:hidden">
+          <motion.div 
+            className="flex h-16 items-center justify-between gap-4 rounded-2xl liquid-glass-container px-4"
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.3 }}
           >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            {mobileMenuUnread > 0 && !isMobileMenuOpen && (
-              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
-                {mobileMenuUnread}
-              </span>
-            )}
-          </Button>
-
-          {/* Center: App Branding */}
-          <div className="flex flex-1 items-center justify-center gap-2">
-            <LogoAvatar size={28} />
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-base font-semibold tracking-tight">Goals</h1>
-              <span className="inline-flex items-center rounded bg-blue-50 dark:bg-blue-950 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
-                PWA
-              </span>
-            </div>
-          </div>
-
-          {/* Right: Add Goal */}
-          <Button
-            onClick={() => {
-              onAddGoal();
-              closeMobileMenu();
-            }}
-            size="sm"
-            className="h-9 w-9 p-0"
-          >
-            <PlusCircle className="h-5 w-5" />
-            <span className="sr-only">New Goal</span>
-          </Button>
-        </div>
-
-        {/* Mobile Menu Slide Panel */}
-        <AnimatePresence>
-          {isMobileMenuOpen && (
-            <motion.div
-              id="mobile-menu"
-              className="absolute left-0 right-0 top-full border-b border-border/40 liquid-glass-modal"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
+            {/* Left: Menu */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleMobileMenu}
+              className="h-10 w-10 rounded-xl liquid-glass-button relative transition-all hover:scale-105"
+              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-menu"
             >
-              <div className="container mx-auto p-4 space-y-4">
-                {/* Quick Actions */}
-                <div className="space-y-2">
-                  <h3 className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Quick Actions
-                  </h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        onOpenSearch();
-                        closeMobileMenu();
-                      }}
-                      className="h-auto flex-col gap-2 py-3"
-                    >
-                      <Search className="h-5 w-5" />
-                      <span className="text-sm">Search</span>
-                    </Button>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={isMobileMenuOpen ? "close" : "open"}
+                  initial={{ rotate: -90, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 90, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </motion.div>
+              </AnimatePresence>
+              {mobileMenuUnread > 0 && !isMobileMenuOpen && (
+                <motion.span 
+                  className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                >
+                  {mobileMenuUnread}
+                </motion.span>
+              )}
+            </Button>
 
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        onOpenJoinGoal();
-                        closeMobileMenu();
-                      }}
-                      className="h-auto flex-col gap-2 py-3"
-                    >
-                      <UserPlus className="h-5 w-5" />
-                      <span className="text-sm">Join Goal</span>
-                    </Button>
+            {/* Center: Logo */}
+            <div className="flex items-center gap-2">
+              <LogoAvatar size={32} />
+            </div>
+
+            {/* Right: Add Goal */}
+            <Button
+              onClick={() => {
+                onAddGoal();
+                closeMobileMenu();
+              }}
+              size="icon"
+              className="h-10 w-10 rounded-xl liquid-glass-button transition-all hover:scale-105"
+            >
+              <PlusCircle className="h-5 w-5" />
+              <span className="sr-only">New Goal</span>
+            </Button>
+          </motion.div>
+
+          {/* Mobile Menu */}
+          <AnimatePresence>
+            {isMobileMenuOpen && (
+              <motion.div
+                id="mobile-menu"
+                className="absolute left-4 right-4 top-20 rounded-2xl liquid-glass-modal"
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="p-4 space-y-6">
+                  {/* Quick Actions */}
+                  <div className="space-y-3">
+                    <h3 className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Actions
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          onOpenSearch();
+                          closeMobileMenu();
+                        }}
+                        className="h-20 flex-col gap-2 rounded-xl liquid-glass-button transition-all hover:scale-105"
+                      >
+                        <Search className="h-5 w-5" />
+                        <span className="text-sm font-medium">Search</span>
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          onOpenJoinGoal();
+                          closeMobileMenu();
+                        }}
+                        className="h-20 flex-col gap-2 rounded-xl liquid-glass-button transition-all hover:scale-105"
+                      >
+                        <UserPlus className="h-5 w-5" />
+                        <span className="text-sm font-medium">Join Goal</span>
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Settings */}
+                  <div className="space-y-2">
+                    <h3 className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Settings
+                    </h3>
+                    <div className="space-y-1 rounded-xl liquid-glass-subtle p-1">
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          onOpenApiKeyGuide();
+                          closeMobileMenu();
+                        }}
+                        className="w-full justify-start rounded-lg liquid-glass-button"
+                      >
+                        <Key className="mr-3 h-4 w-4" />
+                        <span className="text-sm">API Configuration</span>
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          onOpenInstallButton();
+                          closeMobileMenu();
+                        }}
+                        className="w-full justify-start rounded-lg liquid-glass-button"
+                      >
+                        <Download className="mr-3 h-4 w-4" />
+                        <span className="text-sm">Install App</span>
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          onOpenNotificationSettings();
+                          closeMobileMenu();
+                        }}
+                        className="w-full justify-start rounded-lg liquid-glass-button"
+                      >
+                        <Bell className="mr-3 h-4 w-4" />
+                        <span className="text-sm">Notifications</span>
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* User Section */}
+                  <div className="flex items-center justify-between rounded-xl liquid-glass-subtle p-3">
+                    <div className="flex items-center gap-3">
+                      <NotificationBell onUnreadChange={(count) => setMobileMenuUnread(count)} />
+                      <span className="text-sm font-medium">Alerts</span>
+                    </div>
+                    <UserMenu />
                   </div>
                 </div>
-
-                {/* Settings */}
-                <div className="space-y-2">
-                  <h3 className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Settings
-                  </h3>
-                  <div className="space-y-1">
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        onOpenApiKeyGuide();
-                        closeMobileMenu();
-                      }}
-                      className="w-full justify-start"
-                    >
-                      <Key className="mr-2 h-4 w-4" />
-                      API Configuration
-                    </Button>
-
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        onOpenInstallButton();
-                        closeMobileMenu();
-                      }}
-                      className="w-full justify-start"
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Install as App
-                    </Button>
-
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        onOpenNotificationSettings();
-                        closeMobileMenu();
-                      }}
-                      className="w-full justify-start"
-                    >
-                      <Bell className="mr-2 h-4 w-4" />
-                      Notifications
-                    </Button>
-                  </div>
-                </div>
-
-                {/* User Section */}
-                <div className="flex items-center justify-between border-t border-border/40 pt-4">
-                  <div className="flex items-center gap-2">
-                    <NotificationBell onUnreadChange={(count) => setMobileMenuUnread(count)} />
-                    <span className="text-sm text-muted-foreground">Notifications</span>
-                  </div>
-                  <UserMenu />
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </header>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </header>
+    </TooltipProvider>
   );
 };
 
