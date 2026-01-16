@@ -59,7 +59,7 @@ export interface Goal {
   memberCounts?: {
     total: number;
   };
-  members: GoalMember[]
+  members?: GoalMember[]
   goal_themes?: {
     card_background_image?: string
     created_at?: string

@@ -174,6 +174,7 @@ export type Database = {
       }
       goals: {
         Row: {
+          ai_prompt: string | null
           created_at: string
           description: string | null
           id: string
@@ -189,6 +190,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_prompt?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -204,6 +206,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_prompt?: string | null
           created_at?: string
           description?: string | null
           id?: string
