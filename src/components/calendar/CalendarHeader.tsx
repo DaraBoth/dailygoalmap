@@ -38,15 +38,13 @@ const CalendarHeader = ({
       <div className="hidden lg:flex items-center justify-between p-3 sm:p-4" >
         {/* Left Section: Month Navigation */}
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={onPreviousMonth}
-            className="h-9 w-9 p-0 hover:bg-white/20 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition-all duration-200 rounded-xl"
+            className="p-2 liquid-glass-button w-9 h-9 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center justify-center"
             aria-label="Previous month"
           >
             <ChevronLeft className="h-4 w-4" />
-          </Button>
+          </button>
 
           <motion.h1
             className="text-xl font-semibold text-gray-800 dark:text-gray-200 min-w-[160px] text-center"
@@ -58,26 +56,22 @@ const CalendarHeader = ({
             {format(currentMonth, "MMMM yyyy")}
           </motion.h1>
 
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={onNextMonth}
-            className="h-9 w-9 p-0 hover:bg-white/20 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition-all duration-200 rounded-xl"
+            className="p-2 liquid-glass-button w-9 h-9 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center justify-center"
             aria-label="Next month"
           >
             <ChevronRight className="h-4 w-4" />
-          </Button>
+          </button>
 
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={onGoToToday}
-            className="h-9 px-3 hover:bg-white/20 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition-all duration-200 rounded-xl text-sm font-medium"
+            className="p-2 liquid-glass-button h-9 px-3 backdrop-blur-sm transition-all duration-200 rounded-xl text-sm font-medium flex items-center"
             aria-label="Go to today"
           >
             <Home className="h-4 w-4 mr-1" />
             Today
-          </Button>
+          </button>
         </div>
 
         {/* Center Section: Progress (if available) */}
@@ -110,14 +104,13 @@ const CalendarHeader = ({
         )}
 
         {/* Right Section: Add Task Button */}
-        <Button
+        <button
           onClick={onOpenAddTaskDialog}
-          variant="outline"
-          className="px-4 py-2 h-auto rounded-xl"
+          className="p-2 liquid-glass-button px-4 py-2 h-auto backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center"
         >
           <CalendarIcon className="w-4 h-4 mr-2" />
           Add Task
-        </Button>
+        </button>
       </div>
 
       {/* Tablet/Mobile Navbar */}
@@ -126,15 +119,13 @@ const CalendarHeader = ({
         <div className="space-y-3 p-3">
           {/* Top Row: Month Navigation */}
           <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={onPreviousMonth}
-              className="h-9 w-9 p-0 hover:bg-white/20 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-xl"
+              className="p-2 liquid-glass-button w-9 h-9 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center justify-center"
               aria-label="Previous month"
             >
               <ChevronLeft className="h-4 w-4" />
-            </Button>
+            </button>
 
             <motion.h1
               className="text-lg font-semibold text-gray-800 dark:text-gray-200 text-center flex-1"
@@ -146,37 +137,33 @@ const CalendarHeader = ({
               {format(currentMonth, isMobile ? "MMM yyyy" : "MMMM yyyy")}
             </motion.h1>
 
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={onNextMonth}
-              className="h-9 w-9 p-0 hover:bg-white/20 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-xl"
+              className="p-2 liquid-glass-button w-9 h-9 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center justify-center"
               aria-label="Next month"
             >
               <ChevronRight className="h-4 w-4" />
-            </Button>
+            </button>
           </div>
 
           {/* Bottom Row: Today Button and Add Task Button */}
           <div className="flex items-center justify-between gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={onGoToToday}
-              className="h-9 px-3 hover:bg-white/20 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition-all duration-200 rounded-xl text-sm font-medium"
+              className="p-2 liquid-glass-button h-9 px-3 backdrop-blur-sm transition-all duration-200 rounded-xl text-sm font-medium flex items-center"
               aria-label="Go to today"
             >
               <Home className="h-4 w-4 mr-1" />
               Today
-            </Button>
+            </button>
 
-            <Button
+            <button
               onClick={onOpenAddTaskDialog}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-0 shadow-lg hover:shadow-xl transition-all duration-300 text-sm px-4 py-2 h-auto rounded-xl flex-1 max-w-[120px]"
+              className="p-2 liquid-glass-button px-4 py-2 h-auto backdrop-blur-sm transition-all duration-200 rounded-xl flex-1 max-w-[120px] flex items-center justify-center"
             >
               <CalendarIcon className="w-4 h-4 mr-2" />
               Add Task
-            </Button>
+            </button>
           </div>
 
           {/* Mobile Progress Section - Always Visible */}

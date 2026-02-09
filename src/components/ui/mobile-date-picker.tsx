@@ -91,17 +91,17 @@ export function MobileDatePicker({
           selected={date}
           fromDate={minDate}
           toDate={maxDate}
-          disabled={[
-            minDate ? { before: minDate } : undefined,
-            maxDate ? { after: maxDate } : undefined,
-          ].filter(Boolean) as any}
+          disabled={(date) => {
+            if (minDate && date < minDate) return true;
+            if (maxDate && date > maxDate) return true;
+            return false;
+          }}
           onSelect={(newDate) => {
-            if (newDate) {
+            if (newDate instanceof Date) {
               setDate(newDate);
               setOpen(false);
             }
           }}
-          initialFocus
         />
       </PopoverContent>
     </Popover>

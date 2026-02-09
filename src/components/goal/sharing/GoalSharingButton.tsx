@@ -85,15 +85,13 @@ export const GoalSharingButton = ({ goalId, goalTitle }: GoalSharingButtonProps)
 
   return (
     <>
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-7 sm:h-8 px-1.5 sm:px-2 gap-1 sm:gap-2"
+      <button
+        className="p-2 liquid-glass-button h-7 sm:h-8 px-1.5 sm:px-2 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center gap-1 sm:gap-2"
         onClick={() => setIsOpen(true)}
       >
         <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         <span className="hidden sm:inline">Share</span>
-      </Button>
+      </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-md">

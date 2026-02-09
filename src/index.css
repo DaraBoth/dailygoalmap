@@ -5,12 +5,12 @@
 @layer base {
   :root {
     /* ---------- Light theme (defaults) ---------- */
-    --background: 0 0% 99%;
-    /* warm near-white background */
+    --background: 220 20% 96%;
+    /* soft gray-blue background, less bright */
     --foreground: 222.2 84% 4.9%;
     /* dark text */
-    --card: 0 0% 100%;
-    /* card bg (white) */
+    --card: 220 15% 98%;
+    /* card bg (soft white) */
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
@@ -49,6 +49,18 @@
     --liquid-glass-hover: rgba(255, 255, 255, 0.30);
     --liquid-glass-contrast: rgba(0, 0, 0, 0.06);
     /* inner subtle shadow for depth */
+
+    /* Neumorphism Design System (Light Mode Only) */
+    --neuro-bg: 220 16% 92%;
+    /* soft muted background for neumorphic elements */
+    --neuro-shadow-dark: rgba(163, 177, 198, 0.5);
+    /* darker shadow for depth */
+    --neuro-shadow-light: rgba(255, 255, 255, 0.7);
+    /* lighter shadow for highlight */
+    --neuro-shadow-distance: 20px;
+    /* shadow distance */
+    --neuro-blur: 40px;
+    /* shadow blur amount */
   }
 
   /* ---------- Dark mode overrides ---------- */
@@ -205,10 +217,10 @@
 
   /* Base Liquid Glass - Primary glass surface */
   .liquid-glass {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: rgba(245, 247, 250, 0.6);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid rgba(220, 225, 232, 0.4);
     box-shadow: 
       inset 0 1px 1px rgba(255, 255, 255, 0.9),
       inset 0 -1px 1px rgba(0, 0, 0, 0.03),
@@ -246,10 +258,10 @@
 
   /* Liquid Glass Card - For content cards */
   .liquid-glass-card {
-    background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: rgba(245, 247, 250, 0.65);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid rgba(220, 225, 232, 0.5);
     border-radius: 1rem;
     box-shadow: 
       inset 0 1px 1px rgba(255, 255, 255, 0.95),
@@ -299,10 +311,10 @@
 
   /* Liquid Glass Container - For panels and sections */
   .liquid-glass-container {
-    background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.45);
+    background: rgba(245, 247, 250, 0.55);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    border: 1px solid rgba(220, 225, 232, 0.45);
     border-radius: 1rem;
     box-shadow: 
       inset 0 1px 1px rgba(255, 255, 255, 0.9),
@@ -325,10 +337,10 @@
 
   /* Liquid Glass Button - For interactive elements */
   .liquid-glass-button {
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: rgba(245, 247, 250, 0.5);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid rgba(220, 225, 232, 0.5);
     border-radius: 0.5rem;
     box-shadow: 
       inset 0 1px 1px rgba(255, 255, 255, 0.9),
@@ -350,11 +362,11 @@
   }
 
   .liquid-glass-button:hover {
-    background: rgba(255, 255, 255, 0.75);
+    background: rgba(245, 247, 250, 0.7);
     box-shadow: 
-      inset 0 1px 1px rgba(255, 255, 255, 0.95),
-      0 3px 8px rgba(0, 0, 0, 0.08),
-      0 6px 16px rgba(0, 0, 0, 0.1);
+      inset 0 1px 1px rgba(255, 255, 255, 0.8),
+      0 3px 8px rgba(0, 0, 0, 0.06),
+      0 6px 16px rgba(0, 0, 0, 0.08);
     transform: translateY(-1px);
   }
 
@@ -372,10 +384,10 @@
 
   /* Liquid Glass Input - For form elements */
   .liquid-glass-input {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: rgba(245, 247, 250, 0.6);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid rgba(220, 225, 232, 0.5);
     border-radius: 0.75rem;
     box-shadow: 
       inset 0 1px 2px rgba(0, 0, 0, 0.05),
@@ -396,7 +408,7 @@
 
   .liquid-glass-input:focus {
     outline: none;
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(245, 247, 250, 0.7);
     border-color: hsl(var(--primary));
     box-shadow: 
       inset 0 1px 2px rgba(0, 0, 0, 0.05),
@@ -484,10 +496,10 @@
 
   /* Modal and Overlay glass */
   .liquid-glass-modal {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(32px) saturate(180%);
-    -webkit-backdrop-filter: blur(32px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    background: rgba(245, 247, 250, 0.75);
+    backdrop-filter: blur(32px) saturate(140%);
+    -webkit-backdrop-filter: blur(32px) saturate(140%);
+    border: 1px solid rgba(220, 225, 232, 0.6);
     box-shadow: 
       inset 0 1px 2px rgba(255, 255, 255, 0.95),
       0 8px 24px rgba(0, 0, 0, 0.12),
@@ -527,6 +539,239 @@
   .liquid-glass-card .text-primary,
   .liquid-glass-container .text-primary {
     color: hsl(var(--primary)) !important;
+  }
+
+  /* ============================================
+     NEUMORPHISM DESIGN SYSTEM - LIGHT MODE ONLY
+     Soft UI with extruded plastic look
+     ============================================ */
+
+  /* Neumorphic Card - Primary card style with soft shadows */
+  .neuro-card {
+    background: hsl(var(--neuro-bg));
+    border-radius: 16px;
+    box-shadow: 
+      var(--neuro-shadow-distance) var(--neuro-shadow-distance) var(--neuro-blur) var(--neuro-shadow-dark),
+      calc(var(--neuro-shadow-distance) * -1) calc(var(--neuro-shadow-distance) * -1) var(--neuro-blur) var(--neuro-shadow-light);
+    border: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: hsl(var(--foreground));
+  }
+
+  /* Dark mode keeps the original liquid glass style */
+  .dark .neuro-card {
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      inset 0 1px 1px rgba(255, 255, 255, 0.12),
+      inset 0 -1px 1px rgba(0, 0, 0, 0.6),
+      0 4px 12px rgba(0, 0, 0, 0.35),
+      0 12px 32px rgba(0, 0, 0, 0.45);
+  }
+
+  .neuro-card:hover {
+    box-shadow: 
+      calc(var(--neuro-shadow-distance) * 1.2) calc(var(--neuro-shadow-distance) * 1.2) calc(var(--neuro-blur) * 1.1) var(--neuro-shadow-dark),
+      calc(var(--neuro-shadow-distance) * -1.2) calc(var(--neuro-shadow-distance) * -1.2) calc(var(--neuro-blur) * 1.1) var(--neuro-shadow-light);
+    transform: translateY(-2px);
+  }
+
+  .dark .neuro-card:hover {
+    box-shadow: 
+      inset 0 1px 1px rgba(255, 255, 255, 0.15),
+      inset 0 -1px 1px rgba(0, 0, 0, 0.6),
+      0 6px 16px rgba(0, 0, 0, 0.4),
+      0 16px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Neumorphic Button - Pressed/embossed effect */
+  .neuro-button {
+    background: hsl(var(--neuro-bg));
+    border-radius: 12px;
+    box-shadow: 
+      15px 15px 30px var(--neuro-shadow-dark),
+      -15px -15px 30px var(--neuro-shadow-light);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: hsl(var(--foreground));
+    font-weight: 500;
+  }
+
+  .dark .neuro-button {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      inset 0 1px 1px rgba(255, 255, 255, 0.15),
+      0 2px 6px rgba(0, 0, 0, 0.3),
+      0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+
+  .neuro-button:hover {
+    box-shadow: 
+      18px 18px 36px var(--neuro-shadow-dark),
+      -18px -18px 36px var(--neuro-shadow-light);
+    transform: translateY(-1px);
+  }
+
+  .dark .neuro-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 
+      inset 0 1px 1px rgba(255, 255, 255, 0.2),
+      0 3px 8px rgba(0, 0, 0, 0.35),
+      0 6px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  .neuro-button:active {
+    box-shadow: 
+      inset 8px 8px 16px var(--neuro-shadow-dark),
+      inset -8px -8px 16px var(--neuro-shadow-light);
+    transform: scale(0.98);
+  }
+
+  .dark .neuro-button:active {
+    box-shadow: 
+      inset 0 2px 4px rgba(0, 0, 0, 0.5),
+      0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Neumorphic Input - Inset effect */
+  .neuro-input {
+    background: hsl(var(--neuro-bg));
+    border-radius: 12px;
+    box-shadow: 
+      inset 6px 6px 12px var(--neuro-shadow-dark),
+      inset -6px -6px 12px var(--neuro-shadow-light);
+    border: none;
+    padding: 0.75rem 1rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: hsl(var(--foreground));
+    font-weight: 500;
+  }
+
+  .dark .neuro-input {
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      inset 0 1px 2px rgba(0, 0, 0, 0.3),
+      0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+
+  .neuro-input:focus {
+    outline: none;
+    box-shadow: 
+      inset 6px 6px 12px var(--neuro-shadow-dark),
+      inset -6px -6px 12px var(--neuro-shadow-light),
+      0 0 0 3px hsla(var(--primary), 0.1);
+  }
+
+  .dark .neuro-input:focus {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: hsl(var(--primary));
+    box-shadow: 
+      inset 0 1px 2px rgba(0, 0, 0, 0.3),
+      0 0 0 3px hsla(var(--primary), 0.2),
+      0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Neumorphic Container - Flat with subtle depth */
+  .neuro-container {
+    background: hsl(var(--neuro-bg));
+    border-radius: 20px;
+    box-shadow: 
+      20px 20px 40px var(--neuro-shadow-dark),
+      -20px -20px 40px var(--neuro-shadow-light);
+    border: none;
+    padding: 1.5rem;
+    color: hsl(var(--foreground));
+  }
+
+  .dark .neuro-container {
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 
+      inset 0 1px 1px rgba(255, 255, 255, 0.1),
+      inset 0 -1px 1px rgba(0, 0, 0, 0.5),
+      0 2px 8px rgba(0, 0, 0, 0.3),
+      0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Neumorphic Badge/Chip - Small elements */
+  .neuro-badge {
+    background: hsl(var(--neuro-bg));
+    border-radius: 20px;
+    box-shadow: 
+      8px 8px 16px var(--neuro-shadow-dark),
+      -8px -8px 16px var(--neuro-shadow-light);
+    border: none;
+    padding: 0.375rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: hsl(var(--foreground));
+  }
+
+  .dark .neuro-badge {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.3),
+      0 4px 8px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Neumorphic Switch/Toggle - Raised effect */
+  .neuro-toggle {
+    background: hsl(var(--neuro-bg));
+    border-radius: 24px;
+    box-shadow: 
+      12px 12px 24px var(--neuro-shadow-dark),
+      -12px -12px 24px var(--neuro-shadow-light);
+    border: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark .neuro-toggle {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.15) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 
+      inset 0 -1px 3px rgba(0, 0, 0, 0.4),
+      0 2px 8px rgba(0, 0, 0, 0.3),
+      0 4px 16px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Neumorphic Modal/Overlay - Elevated */
+  .neuro-modal {
+    background: hsl(var(--neuro-bg));
+    border-radius: 24px;
+    box-shadow: 
+      25px 25px 50px var(--neuro-shadow-dark),
+      -25px -25px 50px var(--neuro-shadow-light),
+      0 8px 32px rgba(0, 0, 0, 0.1);
+    border: none;
+    padding: 2rem;
+    color: hsl(var(--foreground));
+  }
+
+  .dark .neuro-modal {
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(32px) saturate(180%);
+    -webkit-backdrop-filter: blur(32px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 
+      inset 0 1px 2px rgba(255, 255, 255, 0.15),
+      0 8px 24px rgba(0, 0, 0, 0.4),
+      0 24px 64px rgba(0, 0, 0, 0.5);
   }
 
   /* Remove old no-hover styles */

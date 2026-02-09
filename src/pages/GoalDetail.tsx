@@ -5,6 +5,7 @@ import { supabase, supabaseAdmin } from '@/integrations/supabase/client';
 import GoalDetailHeader from '@/components/goal/GoalDetailHeader';
 import Calendar from '@/components/Calendar';
 import GoalAnalytics from '@/components/goal/GoalAnalytics';
+import SmartAnalytics from '@/components/goal/SmartAnalytics';
 import { GoalMember } from '@/types/goal';
 import { enableRealtimeForTable } from '@/components/calendar/taskDatabase';
 import { useToast } from '@/hooks/use-toast';
@@ -325,7 +326,12 @@ const GoalDetail: React.FC = () => {
             {showAnalytics ? (
               <div className="h-full overflow-y-auto">
                 <div className="p-4 max-w-[2000px] mx-auto min-h-full">
-                  <GoalAnalytics tasks={tasks} />
+                  <SmartAnalytics 
+                    tasks={tasks} 
+                    goalTitle={goalTitle}
+                    goalDescription={goalDescription}
+                    targetDate={goalData?.target_date}
+                  />
                 </div>
               </div>
             ) : (
@@ -348,8 +354,8 @@ const GoalDetail: React.FC = () => {
       </div>
 
       {/* Goal Chat Widget */}
-      {/* <GoalChatWidgetN8N goalId={goalId} userInfo={user} /> */}
-      <GoalChatWidget goalId={goalId} userInfo={user} />
+      <GoalChatWidgetN8N goalId={goalId} userInfo={user} />
+      {/* <GoalChatWidget goalId={goalId} userInfo={user} /> */}
     </>
   );
 };

@@ -254,10 +254,10 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-7 sm:h-8 px-1.5 sm:px-2 gap-1 sm:gap-2">
+        <button className="p-2 liquid-glass-button h-7 sm:h-8 px-1.5 sm:px-2 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center gap-1 sm:gap-2">
           <Palette className={`h-3.5 w-3.5 sm:h-4 sm:w-4`} />
-          {!isMobile && "Theme"}
-        </Button>
+          {!isMobile && <span>Theme</span>}
+        </button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[600px] w-full h-[100%] overflow-y-auto rounded-2xl bg-background/60 backdrop-blur-lg p-0">

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useRouterNavigation } from '@/hooks/useRouterNavigation';
-import { ArrowLeft, BarChart3, FileEdit } from 'lucide-react';
+import { ArrowLeft, BarChart3, FileEdit, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user/UserMenu';
 import { GoalMember } from '@/types/goal';
@@ -76,16 +76,14 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
 
             <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
               {hasTemplate && goalId && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 sm:h-8 px-1.5 sm:px-2"
+                <button
+                  className="p-2 liquid-glass-button h-7 sm:h-8 px-1.5 sm:px-2 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center"
                   onClick={() => setShowEditTemplateModal(true)}
                   title="Edit Template Data"
                 >
                   <FileEdit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   {!isMobile && <span className="ml-2">Template</span>}
-                </Button>
+                </button>
               )}
 
               {userId && onThemeChange && (
@@ -101,15 +99,24 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
               )}
 
               {onToggleAnalytics && (
-                <Button
-                  size="sm"
-                  variant={showAnalytics ? "default" : "outline"}
-                  className="h-7 sm:h-8 px-1.5 sm:px-2"
+                <button
+                  className={`p-2 liquid-glass-button h-7 sm:h-8 px-1.5 sm:px-2 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center ${
+                    showAnalytics ? 'bg-primary/10 border-primary/30' : ''
+                  }`}
                   onClick={onToggleAnalytics}
                 >
-                  <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  {!isMobile && <span className="ml-2">Analytics</span>}
-                </Button>
+                  {showAnalytics ? (
+                    <>
+                      <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      {!isMobile && <span className="ml-2">Smart Analytics</span>}
+                    </>
+                  ) : (
+                    <>
+                      <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      {!isMobile && <span className="ml-2">Smart Analytics</span>}
+                    </>
+                  )}
+                </button>
               )}
 
               <UserMenu />
