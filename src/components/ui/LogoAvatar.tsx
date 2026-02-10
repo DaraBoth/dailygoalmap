@@ -7,7 +7,7 @@ const LogoAvatar: React.FC<{ size?: number }> = ({ size = 40 }) => {
       style={{ width: size, height: size }}
     >
       <img
-        src="/icon/maskable_icon_x512.png"
+        src="/logo/logo.png"
         alt="Logo"
         className="w-full h-full object-cover"
       />

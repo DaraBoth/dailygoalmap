@@ -4,11 +4,11 @@ import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, C
 import { DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
-import { Calendar, CheckSquare, Goal } from "lucide-react";
+import { Calendar, CheckSquare, Goal } from "@/components/icons/CustomIcons";
 import { SearchResult } from "@/types/notifications";
 import { debounce } from "lodash";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+
 
 interface SearchCommandPaletteProps {
   open: boolean;
@@ -75,11 +75,11 @@ const SearchCommandPalette: React.FC<SearchCommandPaletteProps> = ({ open, onOpe
       }
 
       const { data: goals, error: goalsError } = await goalQuery.limit(5);
-      
+
       if (goalsError) {
         console.error("Goals search error:", goalsError);
       }
-      
+
       // Get all tasks across user's goals (include both owned and joined goals)
       const { data: ownGoals } = await supabase
         .from('goals')
@@ -100,13 +100,13 @@ const SearchCommandPalette: React.FC<SearchCommandPaletteProps> = ({ open, onOpe
       }
 
       const { data: tasks, error: tasksError } = await taskQuery.limit(5);
-      
+
       if (tasksError) {
         console.error("Tasks search error:", tasksError);
       }
 
       console.log("Raw search data:", { goals, tasks, memberGoalIds });
-      
+
       // Transform and combine results
       const goalResults: SearchResult[] = goals?.map(goal => ({
         type: 'goal' as const,
@@ -115,7 +115,7 @@ const SearchCommandPalette: React.FC<SearchCommandPaletteProps> = ({ open, onOpe
         description: goal.description,
         path: `/goal/${goal.id}`
       })) || [];
-      
+
       const taskResults: SearchResult[] = tasks?.map((task: any) => {
         const dateIso = (task.start_date || task.end_date || task.created_at || new Date().toISOString());
         const dateOnly = new Date(dateIso).toISOString().split('T')[0];
@@ -129,9 +129,9 @@ const SearchCommandPalette: React.FC<SearchCommandPaletteProps> = ({ open, onOpe
           completed: !!task.completed,
         };
       }) || [];
-      
+
       console.log("Search results:", { goalResults, taskResults, totalResults: goalResults.length + taskResults.length });
-      
+
       setResults([...goalResults, ...taskResults]);
     } catch (error) {
       console.error('Search error:', error);
@@ -151,12 +151,12 @@ const SearchCommandPalette: React.FC<SearchCommandPaletteProps> = ({ open, onOpe
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <VisuallyHidden>
+      <span className="sr-only">
         <DialogTitle>Search Goals and Tasks</DialogTitle>
         <DialogDescription>
           Search through your goals and tasks to quickly find what you're looking for.
         </DialogDescription>
-      </VisuallyHidden>
+      </span>
       <CommandInput
         placeholder="Search goals and tasks..."
         value={query}
@@ -169,7 +169,7 @@ const SearchCommandPalette: React.FC<SearchCommandPaletteProps> = ({ open, onOpe
             No results found.
           </CommandEmpty>
         )}
-        
+
         {isLoading && (
           <div className="py-6 text-center text-sm text-muted-foreground">
             <div className="flex items-center justify-center gap-2">
@@ -178,7 +178,7 @@ const SearchCommandPalette: React.FC<SearchCommandPaletteProps> = ({ open, onOpe
             </div>
           </div>
         )}
-        
+
         {results.filter(item => item.type === 'goal').length > 0 && (
           <CommandGroup heading="Goals">
             {results
@@ -204,7 +204,7 @@ const SearchCommandPalette: React.FC<SearchCommandPaletteProps> = ({ open, onOpe
               ))}
           </CommandGroup>
         )}
-        
+
         {results.filter(item => item.type === 'task').length > 0 && (
           <CommandGroup heading="Tasks">
             {results

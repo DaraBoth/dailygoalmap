@@ -2,7 +2,8 @@ import React from "react";
 // ...existing code...
 import { SmartLink } from "@/components/ui/SmartLink";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Heart, Target, Users, Zap } from "lucide-react";
+import { ArrowLeft, Heart } from "@/components/icons/CustomIcons";
+import { PremiumTarget, PremiumUsers, PremiumRocket } from "@/components/icons/PremiumIcons";
 import { motion } from "framer-motion";
 import LogoAvatar from "@/components/ui/LogoAvatar";
 
@@ -64,22 +65,22 @@ const About: React.FC = () => {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Our Story</h2>
               </div>
-              
+
               <div className="prose prose-lg max-w-none text-gray-700 dark:text-gray-300">
                 <p className="mb-6">
-                  Goal Completer was born from a simple belief: <strong>everyone deserves to achieve their dreams</strong>, 
-                  regardless of their background or resources. Too many people give up on their goals because they feel 
+                  Goal Completer was born from a simple belief: <strong>everyone deserves to achieve their dreams</strong>,
+                  regardless of their background or resources. Too many people give up on their goals because they feel
                   overwhelmed by the enormity of their aspirations.
                 </p>
-                
+
                 <p className="mb-6">
-                  That's why we created a platform that uses AI to break down any big goal into small, manageable daily steps. 
+                  That's why we created a platform that uses AI to break down any big goal into small, manageable daily steps.
                   Instead of staring at a mountain, you see a clear path with simple steps you can take today.
                 </p>
-                
+
                 <p className="mb-6">
-                  <strong>Goal Completer is completely free</strong> because we believe that access to tools for personal 
-                  growth shouldn't be limited by financial barriers. This is our contribution to helping people worldwide 
+                  <strong>Goal Completer is completely free</strong> because we believe that access to tools for personal
+                  growth shouldn't be limited by financial barriers. This is our contribution to helping people worldwide
                   achieve their potential.
                 </p>
               </div>
@@ -89,17 +90,17 @@ const About: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
               {[
                 {
-                  icon: Target,
+                  icon: PremiumTarget,
                   title: "Our Mission",
                   description: "To make goal achievement accessible to everyone by breaking down complex dreams into simple, actionable daily steps."
                 },
                 {
-                  icon: Users,
+                  icon: PremiumUsers,
                   title: "Our Values",
                   description: "Free access, simplicity, and empowerment. We believe everyone deserves the tools to succeed."
                 },
                 {
-                  icon: Zap,
+                  icon: PremiumRocket,
                   title: "Our Approach",
                   description: "AI-powered simplification. We use technology to make the complex simple and the overwhelming manageable."
                 }
@@ -111,8 +112,8 @@ const About: React.FC = () => {
                   transition={{ duration: 0.8, delay: 0.4 + index * 0.1 }}
                   className="bg-white/40 dark:bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/30 dark:border-white/20 shadow-xl text-center"
                 >
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <item.icon className="w-6 h-6 text-white" />
+                  <div className="mb-4">
+                    <item.icon size={64} className="mx-auto" />
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{item.title}</h3>
                   <p className="text-gray-600 dark:text-gray-300">{item.description}</p>
@@ -133,7 +134,7 @@ const About: React.FC = () => {
                 <span className="font-semibold text-blue-600 dark:text-blue-400">Vong PichdaraBoth</span>
               </p>
               <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                A passionate developer who believes in the power of technology to help people achieve their dreams. 
+                A passionate developer who believes in the power of technology to help people achieve their dreams.
                 This platform represents a commitment to making personal growth tools accessible to everyone, everywhere.
               </p>
             </motion.div>

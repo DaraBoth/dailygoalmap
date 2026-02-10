@@ -4,11 +4,10 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
-import { Calendar, CheckSquare, Goal, Search, Loader2, Square } from "lucide-react";
+import { Calendar, CheckSquare, Goal, Search, Loader2, Square } from "@/components/icons/CustomIcons";
 import { SearchResult } from "@/types/notifications";
 import { debounce } from "lodash";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import moment from "moment";
@@ -196,12 +195,12 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
         className={`${isMobile ? 'w-[95vw] max-w-md' : 'max-w-2xl'} max-h-[80vh] p-0`}
         onKeyDown={handleKeyDown}
       >
-        <VisuallyHidden>
+        <span className="sr-only">
           <DialogTitle>Search Goals and Tasks</DialogTitle>
           <DialogDescription>
             Search through your goals and tasks to quickly find what you're looking for.
           </DialogDescription>
-        </VisuallyHidden>
+        </span>
 
         {/* Search Header */}
         <div className="flex items-center border-b px-4 py-3">
@@ -313,7 +312,7 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
                           )}
                           <div className="inline-flex items-center gap-1" >
                             {typeof item.completed !== 'undefined' && (
-                              <Badge 
+                              <Badge
                                 variant={item.completed ? "success" : "default"}
                                 className={`${isMobile ? 'text-xs' : 'text-[10px]'}`}>
                                 {item.completed ? 'Completed' : 'Open'}
@@ -321,12 +320,12 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
                             )}
                             <Badge variant="info" className={`relative pr-6 ${isMobile ? 'text-xs' : 'text-[10px]'}`}>
                               {"created by " + (item?.user_profiles?.display_name || "")}  {item?.user_profiles?.avatar_url && (
-                              <Avatar className="w-5 h-5 absolute right-0">
-                                <AvatarImage src={item.user_profiles.avatar_url} />
-                              </Avatar>
-                            )}
+                                <Avatar className="w-5 h-5 absolute right-0">
+                                  <AvatarImage src={item.user_profiles.avatar_url} />
+                                </Avatar>
+                              )}
                             </Badge>
-                           
+
                           </div>
                         </div>
                       </Button>

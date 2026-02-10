@@ -2,7 +2,7 @@ import React from "react";
 import { SmartLink } from "@/components/ui/SmartLink";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles } from "@/components/icons/CustomIcons";
 import LogoAvatar from "@/components/ui/LogoAvatar";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,7 +14,7 @@ const FloatingNavigation: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
 
   return (
-    <motion.header 
+    <motion.header
       style={{ opacity: headerOpacity }}
       className="fixed top-0 left-0 right-0 z-50 p-4 md:p-6"
     >
@@ -25,7 +25,7 @@ const FloatingNavigation: React.FC = () => {
         className="max-w-7xl mx-auto"
       >
         <div className="flex justify-between items-center backdrop-blur-xl bg-white/30 dark:bg-black/20 rounded-3xl px-8 py-4 border border-white/40 dark:border-white/20 shadow-2xl">
-          <motion.div 
+          <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.6 }}
@@ -44,18 +44,18 @@ const FloatingNavigation: React.FC = () => {
               <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Transform Dreams Into Reality</div>
             </div>
           </motion.div>
-          
+
           {/* Navigation Menu */}
           <div className="hidden lg:flex items-center gap-8">
             <nav className="flex items-center gap-6">
-              <motion.a 
+              <motion.a
                 href="#features"
                 whileHover={{ scale: 1.05 }}
                 className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
                 Features
               </motion.a>
-              <motion.a 
+              <motion.a
                 href="#testimonials"
                 whileHover={{ scale: 1.05 }}
                 className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
@@ -71,7 +71,7 @@ const FloatingNavigation: React.FC = () => {
               </motion.a>
             </nav>
           </div>
-          
+
           <div className="flex gap-3 items-center">
             <ThemeToggle />
             {isAuthenticated ? (

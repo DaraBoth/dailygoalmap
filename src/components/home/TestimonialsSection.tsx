@@ -1,5 +1,5 @@
 import React from "react";
-import { Star } from "lucide-react";
+import { PremiumTarget, PremiumClipboard, PremiumChart } from "@/components/icons/PremiumIcons";
 import { motion } from "framer-motion";
 
 const TestimonialsSection: React.FC = () => {
@@ -7,19 +7,19 @@ const TestimonialsSection: React.FC = () => {
     {
       title: "Step-by-Step Breakdown",
       description: "AI divides your big goals into small, manageable daily tasks that guide you to success",
-      icon: "🎯",
+      icon: PremiumTarget,
       highlight: "AI-Powered"
     },
     {
       title: "Daily Task Focus",
       description: "Follow simple daily tasks without feeling overwhelmed by the bigger picture",
-      icon: "📋",
+      icon: PremiumClipboard,
       highlight: "Simple & Clear"
     },
     {
       title: "Progress Tracking",
       description: "Watch your progress grow as you complete each small step towards your achievement",
-      icon: "📈",
+      icon: PremiumChart,
       highlight: "Visual Progress"
     }
   ];
@@ -56,7 +56,9 @@ const TestimonialsSection: React.FC = () => {
               className="bg-white/40 dark:bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/30 dark:border-white/20 shadow-xl group hover:shadow-2xl transition-all duration-300"
             >
               <div className="text-center mb-6">
-                <div className="text-4xl mb-4">{feature.icon}</div>
+                <div className="flex justify-center mb-4">
+                  <feature.icon size={64} />
+                </div>
                 <div className="inline-block px-3 py-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full text-xs font-semibold text-blue-600 dark:text-blue-400 mb-4">
                   {feature.highlight}
                 </div>

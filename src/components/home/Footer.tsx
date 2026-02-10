@@ -1,11 +1,11 @@
 import React from "react";
-import { Shield, Star } from "lucide-react";
+import { Shield } from "@/components/icons/CustomIcons";
 import LogoAvatar from "@/components/ui/LogoAvatar";
 import { motion } from "framer-motion";
 
 const Footer: React.FC = () => {
   return (
-    <motion.footer 
+    <motion.footer
       initial={{ y: 20, opacity: 0 }}
       whileInView={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.8 }}
@@ -29,7 +29,7 @@ const Footer: React.FC = () => {
                 A completely free goal-tracking platform that breaks down your big dreams into manageable daily steps using AI.
               </p>
             </div>
-            
+
             <div>
               <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Product</h4>
               <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
@@ -38,7 +38,7 @@ const Footer: React.FC = () => {
                 <li><a href="/register" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Get Started</a></li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Company</h4>
               <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
@@ -48,7 +48,7 @@ const Footer: React.FC = () => {
               </ul>
             </div>
           </div>
-          
+
           <div className="border-t border-white/20 dark:border-white/10 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex flex-col gap-2 text-sm text-gray-600 dark:text-gray-400">
               <div className="flex items-center gap-6">

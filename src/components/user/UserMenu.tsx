@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouterNavigation } from '@/hooks/useRouterNavigation';
-import { LogOut, Settings, CreditCard, User as UserIcon } from 'lucide-react';
+import { LogOut, Settings, CreditCard, User as UserIcon } from '@/components/icons/CustomIcons';
 import { User } from '@supabase/supabase-js';
 import {
   DropdownMenu,
@@ -42,7 +42,7 @@ export const UserMenu = () => {
     };
   }, []);
 
-  
+
   const [profileData, setProfileData] = useState<{ avatar_url: string | null, display_name: string | null } | null>(null);
 
   useEffect(() => {
@@ -170,7 +170,7 @@ export const UserMenu = () => {
                     <span>Profile</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem className='p-0'>
-                    <ThemeSegmentSwitch/>
+                    <ThemeSegmentSwitch />
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />

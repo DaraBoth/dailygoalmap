@@ -6,7 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { SmartLink } from "@/components/ui/SmartLink";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
-import { ClipboardList, CheckCircle } from "lucide-react";
+import { ClipboardList, CheckCircle } from "@/components/icons/CustomIcons";
+import { PremiumClipboard } from "@/components/icons/PremiumIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { motion, AnimatePresence } from "framer-motion";
@@ -156,7 +157,7 @@ const TodaysTasks: React.FC = () => {
       // Send unified notifications (Toast + Push + Database)
       try {
         const { notifyTaskUpdated } = await import('@/services/notificationService');
-        
+
         // Get goal information
         const { data: goalData } = await supabase
           .from('goals')
@@ -277,7 +278,7 @@ const TodaysTasks: React.FC = () => {
       // Send notifications for each completed task
       try {
         const { notifyTaskUpdated } = await import('@/services/notificationService');
-        
+
         // Group tasks by goal to minimize goal queries
         const tasksByGoal = incompleteTasks.reduce((acc, task) => {
           if (!acc[task.goal_id]) acc[task.goal_id] = [];
@@ -351,7 +352,7 @@ const TodaysTasks: React.FC = () => {
       // Send notifications for undone tasks
       try {
         const { notifyTaskUpdated } = await import('@/services/notificationService');
-        
+
         // Group tasks by goal
         const tasksByGoal = previousTasksState.reduce((acc, task) => {
           if (!acc[task.goal_id]) acc[task.goal_id] = [];
@@ -504,7 +505,8 @@ const TodaysTasks: React.FC = () => {
                         <Skeleton className="h-10 w-full" />
                       </div>
                     ) : tasksForToday.length === 0 ? (
-                      <div className="text-center py-6">
+                      <div className="text-center py-6 flex flex-col items-center">
+                        <PremiumClipboard size={64} className="mb-2" />
                         <p className="text-muted-foreground">No task for today</p>
                       </div>
                     ) : (
@@ -663,7 +665,8 @@ const TodaysTasks: React.FC = () => {
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : tasksForToday.length === 0 ? (
-              <div className="text-center py-8">
+              <div className="text-center py-8 flex flex-col items-center">
+                <PremiumClipboard size={64} className="mb-2" />
                 <p className="text-muted-foreground font-medium">No task for today</p>
               </div>
             ) : (

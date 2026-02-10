@@ -1,7 +1,7 @@
 import React from "react";
 import { SmartLink } from "@/components/ui/SmartLink";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Heart, Target } from "lucide-react";
+import { ArrowRight, Heart, Target } from "@/components/icons/CustomIcons";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 

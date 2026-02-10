@@ -1,7 +1,8 @@
 import React from "react";
 import { SmartLink } from "@/components/ui/SmartLink";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Star, Sparkles, Target, TrendingUp, Award } from "lucide-react";
+import { ArrowRight, Star, Sparkles } from "@/components/icons/CustomIcons";
+import { PremiumChart, PremiumTarget } from "@/components/icons/PremiumIcons";
 import { motion } from "framer-motion";
 
 const HeroSection: React.FC = () => {
@@ -9,7 +10,7 @@ const HeroSection: React.FC = () => {
     <main className="relative z-10 min-h-screen pt-24">
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-full">
         <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[calc(100vh-6rem)]">
-          
+
           {/* Left Side - Content */}
           <motion.div
             initial={{ x: -100, opacity: 0 }}
@@ -48,7 +49,7 @@ const HeroSection: React.FC = () => {
                   Reality
                 </span>
               </h1>
-              
+
               <p className="text-xl lg:text-2xl text-gray-600 dark:text-gray-300 leading-relaxed max-w-2xl">
                 Let AI break down your{" "}
                 <span className="font-semibold text-blue-600 dark:text-blue-400">big goals into small steps</span>.{" "}
@@ -75,7 +76,7 @@ const HeroSection: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </Button>
               </SmartLink>
-              
+
               <SmartLink to="/login">
                 <Button variant="outline" size="lg" className="text-lg px-8 py-6 h-auto group">
                   <span className="mr-2">Already have an account?</span>
@@ -104,7 +105,7 @@ const HeroSection: React.FC = () => {
 
             </motion.div>
           </motion.div>
-          
+
           {/* Right Side - Interactive Dashboard Preview */}
           <motion.div
             initial={{ x: 100, opacity: 0 }}
@@ -135,7 +136,7 @@ const HeroSection: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Dashboard Content */}
                 <div className="p-6 space-y-6">
                   {/* Progress Ring */}
@@ -166,7 +167,7 @@ const HeroSection: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Goal Items */}
                   <div className="space-y-3">
                     {[
@@ -199,7 +200,7 @@ const HeroSection: React.FC = () => {
                   </div>
                 </div>
               </motion.div>
-              
+
               {/* Floating Stats Cards */}
               <motion.div
                 initial={{ y: 20, opacity: 0, scale: 0.8 }}
@@ -208,16 +209,14 @@ const HeroSection: React.FC = () => {
                 className="absolute -top-4 -right-4 bg-white/50 dark:bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/30 dark:border-white/20 shadow-xl"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-white" />
-                  </div>
+                  <PremiumChart size={48} />
                   <div>
                     <div className="text-lg font-bold text-gray-900 dark:text-white">+23%</div>
                     <div className="text-xs text-gray-600 dark:text-gray-400">This Week</div>
                   </div>
                 </div>
               </motion.div>
-              
+
               <motion.div
                 initial={{ y: 20, opacity: 0, scale: 0.8 }}
                 animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -225,8 +224,8 @@ const HeroSection: React.FC = () => {
                 className="absolute -bottom-4 -left-4 bg-white/50 dark:bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/30 dark:border-white/20 shadow-xl"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
-                    <Award className="w-5 h-5 text-white" />
+                  <div className="flex-shrink-0">
+                    <PremiumTarget size={48} />
                   </div>
                   <div>
                     <div className="text-lg font-bold text-gray-900 dark:text-white">12</div>
