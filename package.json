@@ -1,11 +1,11 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "orbit",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && npm run obfuscate",
+    "build": "vite build && pnpm run obfuscate",
     "obfuscate": "javascript-obfuscator ./dist --output ./dist --exclude '*.css'",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",

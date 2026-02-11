@@ -1,6 +1,5 @@
 {
-  "buildCommand": "npm run build && npm run obfuscate",
-  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "pnpm run build && pnpm run obfuscate",
   "outputDirectory": "dist",
   "rewrites": [
     {
