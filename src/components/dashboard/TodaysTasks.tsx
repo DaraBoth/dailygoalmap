@@ -412,7 +412,7 @@ const TodaysTasks: React.FC = React.memo(() => {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed inset-x-0 bottom-0 bg-background/95 backdrop-blur-md border-t shadow-lg rounded-t-2xl max-h-[80vh] overflow-hidden z-50"
+              className="fixed inset-x-0 bottom-0 bg-background/95 backdrop-blur-md border-t shadow-lg rounded-t-2xl max-h-[80vh] overflow-hidden z-[100]"
             >
               <div className="flex items-center justify-between p-4 border-b border-border/40 bg-muted/30 sticky top-0 z-10">
                 <h2 className="text-lg font-semibold">Today's Tasks</h2>
@@ -558,7 +558,7 @@ const TodaysTasks: React.FC = React.memo(() => {
 
       {isMobile && !isTasksVisible && (
         <Button
-          className="fixed inset-x-0 bottom-0 rounded-t-2xl p-2 z-50 border-t border-border/40 bg-background/80 backdrop-blur-md"
+          className="fixed inset-x-0 bottom-0 rounded-t-2xl p-2 z-[100] border-t border-border/40 bg-background/80 backdrop-blur-md"
           onClick={() => setIsTasksVisible(true)}
         >
           View Today's Tasks
