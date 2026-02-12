@@ -246,7 +246,7 @@ const SmartAnalytics: React.FC<SmartAnalyticsProps> = ({
     <div ref={containerRef} className="space-y-4 sm:space-y-6 pb-6 mt-[60px] ">
       {/* Sticky Header Bar matching GoalDetailHeader style */}
       <div className="sticky top-[90px] z-40 -mx-4 mb-4 mt-4">
-        <div className="liquid-glass-container mx-2">
+        <div className="border bg-background/80 backdrop-blur-md shadow-sm rounded-2xl mx-2">
           <div className="px-3 sm:px-4 py-3">
             <div className="flex items-center justify-between gap-2 flex-wrap max-w-[2000px] mx-auto">
               {/* Left section with title and badge */}
@@ -609,9 +609,7 @@ const SmartAnalytics: React.FC<SmartAnalyticsProps> = ({
                   data={radialData}
                 >
                   <RadialBar
-                    minAngle={15}
                     background
-                    clockWise
                     dataKey="value"
                     cornerRadius={10}
                   />

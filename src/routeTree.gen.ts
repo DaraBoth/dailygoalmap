@@ -10,9 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SecurityRouteImport } from './routes/security'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ChatPopupRouteImport } from './routes/chat-popup'
@@ -29,6 +31,11 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -42,6 +49,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -103,9 +115,11 @@ export interface FileRoutesByFullPath {
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/security': typeof SecurityRoute
   '/terms': typeof TermsRoute
   '/goal/$id': typeof GoalIdRoute
   '/goal/create': typeof GoalCreateRoute
@@ -119,9 +133,11 @@ export interface FileRoutesByTo {
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/security': typeof SecurityRoute
   '/terms': typeof TermsRoute
   '/goal/$id': typeof GoalIdRoute
   '/goal/create': typeof GoalCreateRoute
@@ -136,9 +152,11 @@ export interface FileRoutesById {
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/security': typeof SecurityRoute
   '/terms': typeof TermsRoute
   '/goal/$id': typeof GoalIdRoute
   '/goal/create': typeof GoalCreateRoute
@@ -154,9 +172,11 @@ export interface FileRouteTypes {
     | '/chat-popup'
     | '/dashboard'
     | '/login'
+    | '/privacy'
     | '/profile'
     | '/register'
     | '/reset-password'
+    | '/security'
     | '/terms'
     | '/goal/$id'
     | '/goal/create'
@@ -170,9 +190,11 @@ export interface FileRouteTypes {
     | '/chat-popup'
     | '/dashboard'
     | '/login'
+    | '/privacy'
     | '/profile'
     | '/register'
     | '/reset-password'
+    | '/security'
     | '/terms'
     | '/goal/$id'
     | '/goal/create'
@@ -186,9 +208,11 @@ export interface FileRouteTypes {
     | '/chat-popup'
     | '/dashboard'
     | '/login'
+    | '/privacy'
     | '/profile'
     | '/register'
     | '/reset-password'
+    | '/security'
     | '/terms'
     | '/goal/$id'
     | '/goal/create'
@@ -203,9 +227,11 @@ export interface RootRouteChildren {
   ChatPopupRoute: typeof ChatPopupRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SecurityRoute: typeof SecurityRoute
   TermsRoute: typeof TermsRoute
   GoalIdRoute: typeof GoalIdRoute
   GoalCreateRoute: typeof GoalCreateRoute
@@ -220,6 +246,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -241,6 +274,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -323,9 +363,11 @@ const rootRouteChildren: RootRouteChildren = {
   ChatPopupRoute: ChatPopupRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SecurityRoute: SecurityRoute,
   TermsRoute: TermsRoute,
   GoalIdRoute: GoalIdRoute,
   GoalCreateRoute: GoalCreateRoute,

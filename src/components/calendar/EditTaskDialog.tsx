@@ -145,7 +145,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
             <button
               onClick={onClose}
-              className="absolute liquid-glass-button right-4 top-4 p-2 rounded-xl bg-white/80 dark:bg-white/20 backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/30 transition-all duration-200 shadow-lg z-10"
+              className="absolute border bg-background/80 right-4 top-4 p-2 rounded-xl backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/30 transition-all duration-200 shadow-lg z-10"
             >
               <X className="h-5 w-5" />
               <span className="sr-only">Close</span>
@@ -208,43 +208,43 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
+                            <Calendar className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                             Start Date
                           </Label>
-                          <MobileDatePicker date={startDate} minDate={undefined} maxDate={endDate} setDate={(d) => { if (!d) return; const next = d; setStartDate(next); if (next > endDate) setEndDate(next); setSelectedDate(next); }} className="w-full dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-300" />
+                          <MobileDatePicker date={startDate} minDate={undefined} maxDate={endDate} setDate={(d) => { if (!d) return; const next = d; setStartDate(next); if (next > endDate) setEndDate(next); setSelectedDate(next); }} className="w-full" />
                         </div>
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
+                            <Calendar className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                             End Date
                           </Label>
-                          <MobileDatePicker date={endDate} minDate={startDate} maxDate={undefined} setDate={(d) => { if (!d) return; setEndDate(d < startDate ? startDate : d); }} className="w-full dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-300" />
+                          <MobileDatePicker date={endDate} minDate={startDate} maxDate={undefined} setDate={(d) => { if (!d) return; setEndDate(d < startDate ? startDate : d); }} className="w-full" />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
+                            <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                             Daily Start
                           </Label>
                           <MobileTimePicker
                             value={dailyStart}
                             onChange={(value) => setDailyStart(value || taskTime)}
                             onBlur={(e) => !e.currentTarget.value && setDailyStart(taskTime)}
-                            className="dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-300"
+                            className=""
                           />
                         </div>
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
+                            <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                             Daily End
                           </Label>
                           <MobileTimePicker
                             value={dailyEnd}
                             onChange={(value) => setDailyEnd(value || dailyStart)}
                             onBlur={(e) => !e.currentTarget.value && setDailyEnd(dailyStart)}
-                            className="dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-300"
+                            className=""
                           />
                         </div>
                       </div>

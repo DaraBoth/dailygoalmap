@@ -15,7 +15,7 @@ const Index: React.FC = () => {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    "name": "Goal Completer",
+    "name": "Orbit",
     "applicationCategory": "ProductivityApplication",
     "operatingSystem": "Web",
     "offers": {
@@ -25,14 +25,14 @@ const Index: React.FC = () => {
       "@type": "Person",
       "name": "Vong PichdaraBoth"
     },
-    "description": "A completely free goal tracking platform that uses AI to break down your big goals into small, manageable daily steps. Follow the step-by-step plan until you reach your achievement. Created by Vong PichdaraBoth."
+    "description": "Orbit is an autonomous intelligence platform that transforms your complex aspirations into an automated trajectory of success. Break down big goals into manageable daily steps with AI-powered orbital mapping."
   };
 
   return (
     <>
-      <title>Goal Completer | Goal Tracking Platform</title>
-      <meta name="description" content="A completely free goal tracking platform that uses AI to break down your big goals into small, manageable daily steps. Follow the step-by-step plan until you reach your achievement. Created by Vong PichdaraBoth." />
-      <meta name="keywords" content="goal tracking, AI goal breakdown, step by step goals, daily tasks, goal planner, task management, achievement tracker" />
+      <title>Orbit | Autonomous Intelligence & Goal Mapping</title>
+      <meta name="description" content="Orbit is an autonomous intelligence platform that transforms your complex aspirations into an automated trajectory of success. Break down big goals into manageable daily steps with AI-powered orbital mapping." />
+      <meta name="keywords" content="goal tracking, AI goal breakdown, orbital mapping, daily tasks, productivity, autonomous intelligence, achievement tracker" />
       <script type="application/ld+json">
         {JSON.stringify(structuredData)}
       </script>

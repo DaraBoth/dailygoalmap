@@ -13,6 +13,7 @@ import { authService, type AuthState } from "@/services/authService"
 import { supabase } from "@/integrations/supabase/client"
 import React from 'react'
 import { enableRealtimeForTable } from '@/components/calendar/taskDatabase'
+import EnhancedLoading from "@/components/ui/enhanced-loading"
 
 // Create React Query client with optimized settings
 const queryClient = new QueryClient({
@@ -63,8 +64,8 @@ function RootComponent() {
     console.log('🔔 Setting up global notification listener for user:', authState.user.user_metadata?.name);
 
     // Enable realtime for tasks table
-    enableRealtimeForTable('notifications').catch(() => {});
-    
+    enableRealtimeForTable('notifications').catch(() => { });
+
     // Track if we've already shown a toast for this notification ID to prevent duplicates
     const shownNotifications = new Set<string>();
 
@@ -108,7 +109,7 @@ function RootComponent() {
             console.log("true");
             return;
           }
-          
+
           // Prevent duplicate toasts for the same notification
           if (shownNotifications.has(notification.id)) {
             console.log('⏭️ Skipping duplicate notification:', notification.id);
@@ -152,10 +153,10 @@ function RootComponent() {
             toastTitle = '✓ Task Created';
             toastDescription = `${taskTitle} has been added to "${goalTitle}"`;
           } else if (notification.type === 'task_updated') {
-            const actionText = action === 'completed' ? 'completed' : 
-                              action === 'uncompleted' ? 'reopened' : 'updated';
-            toastTitle = action === 'completed' ? '✓ Task Completed' : 
-                        action === 'uncompleted' ? '○ Task Reopened' : '✏ Task Updated';
+            const actionText = action === 'completed' ? 'completed' :
+              action === 'uncompleted' ? 'reopened' : 'updated';
+            toastTitle = action === 'completed' ? '✓ Task Completed' :
+              action === 'uncompleted' ? '○ Task Reopened' : '✏ Task Updated';
             toastDescription = `${taskTitle} has been ${actionText} in "${goalTitle}"`;
           } else if (notification.type === 'task_deleted') {
             toastTitle = '🗑 Task Deleted';
@@ -174,8 +175,8 @@ function RootComponent() {
             description: (
               <div className="flex items-center gap-2">
                 {senderAvatar && (
-                  <img 
-                    src={senderAvatar} 
+                  <img
+                    src={senderAvatar}
                     alt={senderName}
                     className="w-6 h-6 rounded-full ring-2 ring-white/50 dark:ring-gray-700/50 flex-shrink-0"
                   />
@@ -192,9 +193,9 @@ function RootComponent() {
                 const url = new URL(deepLink, window.location.origin);
                 const path = url.pathname;
                 const searchParams = Object.fromEntries(url.searchParams);
-                
+
                 import('@/router').then(({ router }) => {
-                  router.navigate({ 
+                  router.navigate({
                     to: path as any,
                     search: searchParams as any
                   });
@@ -209,7 +210,7 @@ function RootComponent() {
           console.error('🔔 Channel subscription error:', err);
         }
         console.log('🔔 Channel subscription status:', status);
-        
+
         // If channel closes, try to reconnect
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.log('🔄 Attempting to reconnect...');
@@ -251,12 +252,10 @@ function RootComponent() {
   // Show loading screen while initializing auth
   if (authState.isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading application...</p>
-        </div>
-      </div>
+      <EnhancedLoading
+        variant="auth"
+        message="Establishing secure link..."
+      />
     )
   }
 
@@ -265,26 +264,25 @@ function RootComponent() {
       <ThemeProvider defaultTheme="dark" storageKey="theme-preference">
         <link rel="manifest" href="/manifest.json" />
         <QueryClientProvider client={queryClient}>
-            <div className="min-h-screen bg-background">
-              <Outlet />
-            </div>
-            <Toaster 
-              position={isMobile ? "top-center" : "top-right"} 
-              richColors 
-              closeButton 
-              toastOptions={{
-                className: 'liquid-glass-container',
-                style: {
-                  backdropFilter: 'blur(4)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-                },
-              }} 
-            />
-            {updateAvailable && <UpdateNotification onRefresh={handleRefresh} />}
-            <OfflinePopup />
-            {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools />}
-          </QueryClientProvider>
+          <div className="min-h-screen bg-background">
+            <Outlet />
+          </div>
+          <Toaster
+            position={isMobile ? "top-center" : "top-right"}
+            richColors
+            closeButton
+            toastOptions={{
+              className: 'glass-card border-border shadow-lg',
+              style: {
+                backdropFilter: 'blur(8px)',
+                background: 'rgba(var(--background), 0.8)',
+              },
+            }}
+          />
+          {updateAvailable && <UpdateNotification onRefresh={handleRefresh} />}
+          <OfflinePopup />
+          {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools />}
+        </QueryClientProvider>
       </ThemeProvider>
     </UserContext.Provider>
   )

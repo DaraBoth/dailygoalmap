@@ -117,9 +117,9 @@ const TaskSidebar = ({
   // Main render
   return (
     <div className="w-full h-full flex flex-col overflow-hidden rounded-r-3xl">
-      <div className="p-4 border-b border-white/20 liquid-glass">
+      <div className="p-4 border-b border-white/20 bg-muted/30">
         <h2 className="text-lg font-semibold flex items-center text-foreground">
-          <div className="p-2 liquid-glass rounded-xl mr-3">
+          <div className="p-2 bg-primary/10 rounded-xl mr-3">
             <CalendarIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           </div>
           {selectedDate
@@ -130,7 +130,7 @@ const TaskSidebar = ({
 
       {tasksForDate.length > 0 && renderNavButtons()}
 
-      <ScrollArea className="flex-1 z-0 liquid-glass">
+      <ScrollArea className="flex-1 z-0">
         <LayoutGroup>
           <AnimatePresence mode="popLayout">
             {tasksForDate.length > 0 ? (
@@ -144,13 +144,13 @@ const TaskSidebar = ({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.25 }}
-                      className={`p-4 lg:p-5 mx-5 rounded-2xl transition-all cursor-pointer liquid-glass ${selectedTask?.id === task.id
-                          ? "border-2 border-primary"
-                          : task.completed
-                            ? "opacity-70"
-                            : ""
+                      className={`p-4 lg:p-5 mx-5 rounded-2xl transition-all cursor-pointer border bg-card/50 hover:bg-card/70 ${selectedTask?.id === task.id
+                        ? "border-2 border-primary"
+                        : task.completed
+                          ? "opacity-70"
+                          : ""
                         } ${index == 0 ? " mt-5" : ""} `}
-                        style={{ borderBottom: index == (tasksForDate.length-1) ? "7px" : "" }}
+                      style={{ borderBottom: index == (tasksForDate.length - 1) ? "7px" : "" }}
                       onClick={() => onTaskClick && onTaskClick(task)}
                     >
                       <div className="flex items-center gap-3 lg:gap-4">
@@ -158,8 +158,8 @@ const TaskSidebar = ({
                           size="sm"
                           variant="ghost"
                           className={`w-5 h-5 rounded-full ${task.completed
-                              ? "text-green-500 dark:text-green-400"
-                              : "text-gray-400 dark:text-gray-500"
+                            ? "text-green-500 dark:text-green-400"
+                            : "text-gray-400 dark:text-gray-500"
                             } p-0`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -176,8 +176,8 @@ const TaskSidebar = ({
                         <div className="flex-1 min-w-0">
                           <p
                             className={`text-xs lg:text-sm break-words line-clamp-2 text-foreground ${task.completed
-                                ? "line-through opacity-60"
-                                : ""
+                              ? "line-through opacity-60"
+                              : ""
                               }`}
                           >
                             {task.title || task.description}

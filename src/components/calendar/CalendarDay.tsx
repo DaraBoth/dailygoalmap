@@ -64,7 +64,7 @@ const CalendarDay = ({
         relative border-r border-b border-white/10 dark:border-white/5
         ${index % 7 === 0 ? 'border-l' : ''}
         ${Math.floor(index / 7) === 0 ? 'border-t' : ''}
-        ${isCurrentMonth ? 'liquid-glass' : 'liquid-glass opacity-30'}
+        ${isCurrentMonth ? 'bg-background/50 border-border' : 'bg-background/20 opacity-30'}
         ${isSelected ? 'border-2 border-primary' : ''}
         ${isCurrentMonth ? 'cursor-pointer' : 'cursor-default'} overflow-hidden flex flex-col
         ${isCurrentMonth ? '' : ''} transition-all duration-300
@@ -83,7 +83,7 @@ const CalendarDay = ({
           ${isWeekend && isCurrentMonth && date.getDay() === 0 ? ' text-red-700' : ''}
           ${isWeekend && isCurrentMonth && date.getDay() === 6 ? ' text-blue-800' : ''}
           ${isSelected ? isWeekend ? ' bg-primary text-white' : ' bg-primary text-primary-foreground' : ''}
-          ${_isToday && !isSelected ? ' liquid-glass text-success border border-success/30' : ''}
+          ${_isToday && !isSelected ? ' bg-success/20 text-success border border-success/40' : ''}
           ${isCurrentMonth && !isWeekend && !isSelected && !_isToday ? ' text-foreground' : ''}
            transition-all duration-300
         `}>
@@ -134,7 +134,7 @@ const CalendarDay = ({
                       );
                     })}
                     {dayTasks.length > 4 && (
-                      <div className="text-[9px] text-center text-blue-100 dark:text-foreground liquid-glass rounded-full py-0.5 mt-0.5 font-medium" style={{ paddingBottom: "0" }}>
+                      <div className="text-[9px] text-center text-blue-100 dark:text-foreground glass-card rounded-full py-0.5 mt-0.5 font-medium" style={{ paddingBottom: "0" }}>
                         +{dayTasks.length - 4}
                       </div>
                     )}

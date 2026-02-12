@@ -83,7 +83,7 @@ export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userI
   // Save messages with debounce to avoid excessive localStorage writes
   useEffect(() => {
     if (messages.length === 0) return;
-    
+
     const timeoutId = setTimeout(() => {
       const filtered = messages.filter((m) => !m.isStreaming);
       localStorage.setItem(CHAT_KEY, JSON.stringify(filtered));
@@ -100,7 +100,7 @@ export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userI
     const timeoutId = requestAnimationFrame(() => {
       const el = chatContainerRef.current;
       if (!el) return;
-      
+
       const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
       if (atBottom) {
         scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -117,7 +117,7 @@ export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userI
       setTimeout(() => {
         textareaRef.current?.focus();
       }, 100);
-      
+
       // Scroll to bottom immediately
       setTimeout(() => {
         scrollRef.current?.scrollIntoView({ behavior: 'auto' });
@@ -317,7 +317,7 @@ export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userI
       }
 
       const errorMessage = err instanceof Error ? err.message : 'Something went wrong.';
-      
+
       setMessages((prev) => {
         const updated = [...prev];
         updated[updated.length - 1] = {
@@ -362,7 +362,7 @@ export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userI
   return (
     <>
       <motion.button
-        className={`fixed bottom-6 ${isMobile ? 'left-6' : 'right-6'} liquid-glass p-2 rounded-xl z-50`}
+        className={`fixed bottom-6 ${isMobile ? 'left-6' : 'right-6'} border bg-background/80 backdrop-blur-md shadow-lg p-2 rounded-xl z-50`}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(!isOpen)}
@@ -377,7 +377,7 @@ export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userI
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 lg:inset-auto lg:bottom-24 lg:right-6 lg:left-6 lg:top-auto w-full h-dvh lg:w-[calc(100vw-48px)] lg:h-[calc(100vh-120px)] liquid-glass-container z-50 flex flex-col"
+            className="fixed inset-0 lg:inset-auto lg:bottom-24 lg:right-6 lg:left-6 lg:top-auto w-full h-dvh lg:w-[calc(100vw-48px)] lg:h-[calc(100vh-120px)] border bg-background/95 backdrop-blur-lg shadow-2xl z-50 flex flex-col"
           >
             {/* Header */}
             <div className="flex-shrink-0 flex items-center justify-between p-4 border-b">
@@ -429,7 +429,7 @@ export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userI
 
                       {/* User Bubble */}
                       {msg.role === "user" && (
-                        <div className="max-w-[85%] sm:max-w-[80%] liquid-glass p-3 rounded-xl shadow break-words whitespace-pre-wrap overflow-wrap-anywhere overflow-x-auto"
+                        <div className="max-w-[85%] sm:max-w-[80%] border bg-background/50 p-3 rounded-xl shadow break-words whitespace-pre-wrap overflow-wrap-anywhere overflow-x-auto"
                           style={{
                             boxShadow: "rgba(0, 0, 0, 0.16) 0px 1px 4px",
                           }}
@@ -490,7 +490,7 @@ export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userI
 
       {showScrollButton && (
         <motion.button
-          className={`fixed bottom-24 ${isMobile ? 'left-6' : 'right-6'} liquid-glass p-2 rounded-xl z-40`}
+          className={`fixed bottom-24 ${isMobile ? 'left-6' : 'right-6'} border bg-background/80 backdrop-blur-md shadow-lg p-2 rounded-xl z-40`}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={scrollToBottom}

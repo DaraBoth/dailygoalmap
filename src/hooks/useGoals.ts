@@ -18,8 +18,8 @@ export const useGoals = () => {
   const [itemsPerPage] = useState(4);
   const [totalPages, setTotalPages] = useState(1);
 
-  const fetchGoals = async () => {
-    setIsLoading(true);
+  const fetchGoals = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       // Get the current user's ID
       const { data: userData, error: userError } =
@@ -74,9 +74,9 @@ export const useGoals = () => {
           typeof goal.metadata === "string"
             ? JSON.parse(goal.metadata)
             : goal.metadata || {
-                goal_type: "general",
-                start_date: new Date().toISOString().split("T")[0],
-              },
+              goal_type: "general",
+              start_date: new Date().toISOString().split("T")[0],
+            },
         taskCounts: { total: 0, completed: 0, incomplete: 0 }, // Initialize task counts
         memberCounts: { total: 0 }, // Initialize member counts
         members: [],

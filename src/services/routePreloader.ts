@@ -39,7 +39,7 @@ export class RoutePreloader {
    */
   async preloadCriticalRoutes(): Promise<void> {
     const criticalRoutes = ['/dashboard', '/login']
-    
+
     for (const route of criticalRoutes) {
       await this.preloadRoute(route, 'high')
     }
@@ -50,7 +50,7 @@ export class RoutePreloader {
    */
   async preloadPredictiveRoutes(currentPath: string): Promise<void> {
     const predictions = this.getPredictedRoutes(currentPath)
-    
+
     for (const route of predictions) {
       await this.preloadRoute(route, 'normal')
     }
@@ -96,7 +96,7 @@ export class RoutePreloader {
 
     while (this.preloadQueue.length > 0) {
       const path = this.preloadQueue.shift()!
-      
+
       if (this.preloadedRoutes.has(path)) {
         continue
       }
@@ -156,46 +156,46 @@ export function initializeRoutePreloading(): void {
   // Preload critical routes immediately
   routePreloader.preloadCriticalRoutes()
 
-  // Set up intersection observer for link preloading
+  // Set up event delegation for link preloading
+  // This is much more efficient than MutationObserver as it only fires on user interaction
+  const handlePreload = (e: MouseEvent) => {
+    const link = (e.target as HTMLElement).closest('a');
+    if (link) {
+      const href = link.getAttribute('href');
+      if (href && href.startsWith('/')) {
+        routePreloader.preloadRoute(href, 'low');
+      }
+    }
+  };
+
+  document.addEventListener('mouseover', handlePreload, { passive: true });
+
+  // Optional: Also observe links that enter the viewport for predictive loading
+  // but only those currently in the DOM, without constant re-scanning.
   if ('IntersectionObserver' in window) {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            const link = entry.target as HTMLAnchorElement
-            const href = link.getAttribute('href')
+            const link = entry.target as HTMLAnchorElement;
+            const href = link.getAttribute('href');
             if (href && href.startsWith('/')) {
-              routePreloader.preloadRoute(href, 'low')
+              routePreloader.preloadRoute(href, 'low');
+              observer.unobserve(link); // Only need to preload once
             }
           }
-        })
+        });
       },
-      { rootMargin: '100px' }
-    )
+      { rootMargin: '50px' }
+    );
 
-    // Observe all internal links
-    const observeLinks = () => {
+    const observeVisibleLinks = () => {
       document.querySelectorAll('a[href^="/"]').forEach((link) => {
-        observer.observe(link)
-      })
-    }
+        observer.observe(link);
+      });
+    };
 
-    // Initial observation
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', observeLinks)
-    } else {
-      observeLinks()
-    }
-
-    // Re-observe when new links are added
-    const mutationObserver = new MutationObserver(() => {
-      observeLinks()
-    })
-
-    mutationObserver.observe(document.body, {
-      childList: true,
-      subtree: true,
-    })
+    observeVisibleLinks();
   }
 
   // Preload based on current route

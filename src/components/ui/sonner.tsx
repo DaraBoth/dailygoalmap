@@ -14,12 +14,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "liquid-glass-container group toast group-[.toaster]:text-foreground group-[.toaster]:bg-white/70 dark:group-[.toaster]:bg-gray-900/70 group-[.toaster]:border-gray-200/50 dark:group-[.toaster]:border-white/20 group-[.toaster]:shadow-2xl",
-          description: "liquid-glass-text group-[.toast]:text-muted-foreground",
+            "group toast group-[.toaster]:text-foreground group-[.toaster]:bg-background/80 group-[.toaster]:backdrop-blur-md group-[.toaster]:border-border group-[.toaster]:shadow-2xl group-[.toaster]:rounded-2xl",
+          description: "group-[.toast]:text-muted-foreground",
           actionButton:
-            "liquid-glass-button group-[.toast]:bg-blue-600 group-[.toast]:text-white group-[.toast]:hover:bg-blue-700 group-[.toast]:px-3 group-[.toast]:py-1.5 group-[.toast]:rounded-lg group-[.toast]:shadow-md",
+            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground group-[.toast]:hover:bg-primary/90 group-[.toast]:px-3 group-[.toast]:py-1.5 group-[.toast]:rounded-lg group-[.toast]:shadow-md",
           cancelButton:
-            "liquid-glass-button group-[.toast]:bg-gray-200 dark:group-[.toast]:bg-gray-700 group-[.toast]:text-gray-700 dark:group-[.toast]:text-gray-300 group-[.toast]:hover:bg-gray-300 dark:group-[.toast]:hover:bg-gray-600 group-[.toast]:px-3 group-[.toast]:py-1.5 group-[.toast]:rounded-lg",
+            "group-[.toast]:bg-secondary group-[.toast]:text-secondary-foreground group-[.toast]:hover:bg-secondary/80 group-[.toast]:px-3 group-[.toast]:py-1.5 group-[.toast]:rounded-lg",
         },
       }}
       {...props}

@@ -1,6 +1,6 @@
-# Goal Tracker - AI-Powered Goal Management PWA
+# Orbit - Your Daily Revolution
 
-A modern, AI-powered Progressive Web Application for goal setting, task management, and progress tracking. Built with React, TypeScript, Supabase, and designed as a PWA for seamless mobile and desktop experiences.
+**Orbit** is a modern, AI-powered Progressive Web Application for goal setting, task management, and progress tracking. Built with React, TypeScript, Supabase, and designed as a PWA for seamless mobile and desktop experiences.
 
 ## 🌟 Features
 
@@ -42,7 +42,7 @@ A modern, AI-powered Progressive Web Application for goal setting, task manageme
 
 ## 📱 Mobile & PWA Support
 
-DailyGoalMap is a fully-featured Progressive Web App (PWA) that works seamlessly on mobile and desktop without requiring app store downloads.
+Orbit is a fully-featured Progressive Web App (PWA) that works seamlessly on mobile and desktop without requiring app store downloads.
 
 **PWA Features:**
 ```

@@ -4,8 +4,8 @@ import { X, AlertTriangle, Clock, Timer, Focus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Goal } from "@/types/goal";
-import { 
-  calculateGoalDeadlineInfo, 
+import {
+  calculateGoalDeadlineInfo,
   filterGoalsByDeadlineStatus,
   getDeadlineNotificationMessage,
   getDeadlineStatusStyling
@@ -19,7 +19,7 @@ interface DeadlineNotificationsProps {
   onDismiss?: () => void;
 }
 
-export const DeadlineNotifications: React.FC<DeadlineNotificationsProps> = ({
+export const DeadlineNotifications: React.FC<DeadlineNotificationsProps> = React.memo(({
   goals,
   onGoalAction,
   onDismiss
@@ -32,7 +32,7 @@ export const DeadlineNotifications: React.FC<DeadlineNotificationsProps> = ({
   const overdueGoals = filterGoalsByDeadlineStatus(goals, "overdue");
   const dueTodayGoals = filterGoalsByDeadlineStatus(goals, "due_today");
   const approachingGoals = filterGoalsByDeadlineStatus(goals, "approaching_deadline");
-  
+
   const urgentGoals = [...overdueGoals, ...dueTodayGoals, ...approachingGoals];
   const notificationMessage = getDeadlineNotificationMessage(goals);
 
@@ -58,7 +58,7 @@ export const DeadlineNotifications: React.FC<DeadlineNotificationsProps> = ({
 
   const handleGoalAction = (goalId: string, action: string) => {
     onGoalAction?.(goalId, action);
-    
+
     // Show feedback toast
     const actionMessages = {
       "Mark as complete": "Goal marked as complete!",
@@ -67,9 +67,9 @@ export const DeadlineNotifications: React.FC<DeadlineNotificationsProps> = ({
       "Focus mode": "Focus mode activated for this goal",
       "Review progress": "Progress review opened"
     };
-    
+
     const message = actionMessages[action as keyof typeof actionMessages] || `Action "${action}" triggered`;
-    
+
     toast({
       title: "Action Completed",
       description: message,
@@ -92,44 +92,45 @@ export const DeadlineNotifications: React.FC<DeadlineNotificationsProps> = ({
         className="mb-6"
       >
         {/* Summary Banner */}
-        <Card className="p-4 border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50/80 to-red-50/80 dark:from-orange-900/20 dark:to-red-900/20 backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-orange-100 dark:bg-orange-900/40">
+        <Card className="p-4 border border-foreground/5 bg-background/40 backdrop-blur-xl shadow-lg rounded-[2rem] overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-red-500/10 -z-10" />
+          <div className="flex items-center justify-between relative z-10">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-2xl bg-orange-500/10 border border-orange-500/20">
                 {overdueGoals.length > 0 ? (
-                  <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400 animate-pulse" />
                 ) : dueTodayGoals.length > 0 ? (
-                  <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  <Clock className="h-6 w-6 text-orange-600 dark:text-orange-400" />
                 ) : (
-                  <Timer className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  <Timer className="h-6 w-6 text-orange-600 dark:text-orange-400" />
                 )}
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">
-                  Goal Deadline Alert
+                <h3 className="font-black text-foreground tracking-tight">
+                  Trajectory Alerts
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm font-medium text-muted-foreground">
                   {notificationMessage}
                 </p>
               </div>
             </div>
-            
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center gap-3">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowDetails(!showDetails)}
-                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
+                className="rounded-xl border-foreground/10 bg-background/50 hover:bg-accent font-bold"
               >
-                {showDetails ? "Hide Details" : "View Details"}
+                {showDetails ? "Stow Details" : "Scan Orbits"}
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={handleDismiss}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="h-10 w-10 border-foreground/5 rounded-xl text-muted-foreground hover:text-foreground transition-all"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </Button>
             </div>
           </div>
@@ -231,4 +232,5 @@ export const DeadlineNotifications: React.FC<DeadlineNotificationsProps> = ({
       </motion.div>
     </AnimatePresence>
   );
-};
+});
+export default DeadlineNotifications;

@@ -35,7 +35,7 @@ const CalendarContainer = ({
   onOpenTaskDetails
 }: CalendarContainerProps) => {
   const isMobile = useIsMobile();
-  
+
   return (
     <motion.div
       initial={{ y: 20, opacity: 0 }}
@@ -77,14 +77,14 @@ const CalendarContainer = ({
               }
             }}
           />
-          
+
           {/* Floating Action Button for mobile */}
           {isMobile && (
             <Button
               onClick={onOpenAddTaskDialog}
-              variant="floating"
-              size="floating"
-              className="fixed bottom-6 right-6 bg-blue-500 hover:bg-blue-600 text-white shadow-lg z-50 rounded-full"
+              variant="orbit"
+              size="icon"
+              className="fixed bottom-6 right-6 bg-blue-500 hover:bg-blue-600 text-white shadow-lg z-50 rounded-full h-14 w-14"
             >
               <Plus className="h-6 w-6" />
               <span className="sr-only">Add Task</span>
@@ -92,7 +92,7 @@ const CalendarContainer = ({
           )}
         </div>
       )}
-      
+
       {error && (
         <div className="absolute top-16 left-4 right-4 bg-red-50 border border-red-200 rounded-md p-3 text-red-600 text-sm flex items-center shadow-md">
           <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />

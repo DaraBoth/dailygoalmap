@@ -6,9 +6,9 @@ import React from "react";
 import { router } from "@/router";
 
 // Unified notification types
-export type NotificationType = 
-  | 'task_created' 
-  | 'task_updated' 
+export type NotificationType =
+  | 'task_created'
+  | 'task_updated'
   | 'task_deleted'
   | 'invitation'
   | 'member_joined'
@@ -77,8 +77,8 @@ export async function sendUnifiedNotification(options: UnifiedNotificationOption
         description: (
           <div className="flex items-center gap-2">
             {senderAvatar && (
-              <img 
-                src={senderAvatar} 
+              <img
+                src={senderAvatar}
                 alt={senderName}
                 className="w-6 h-6 rounded-full ring-2 ring-white/50 dark:ring-gray-700/50 flex-shrink-0"
               />
@@ -96,9 +96,9 @@ export async function sendUnifiedNotification(options: UnifiedNotificationOption
             const url = new URL(deepLink, window.location.origin);
             const path = url.pathname;
             const searchParams = Object.fromEntries(url.searchParams);
-            
+
             // Use router.navigate for SPA navigation without page reload
-            router.navigate({ 
+            router.navigate({
               to: path as any,
               search: searchParams as any
             });
@@ -160,7 +160,7 @@ export async function notifyTaskCreated(
   taskDate: string
 ) {
   const deepLink = `/goal/${goalId}?date=${encodeURIComponent(taskDate)}&taskId=${encodeURIComponent(taskId)}`;
-  
+
   return sendUnifiedNotification({
     type: 'task_created',
     goalId,
@@ -187,10 +187,10 @@ export async function notifyTaskUpdated(
   taskDate: string,
   action?: 'completed' | 'uncompleted' | 'edited'
 ) {
-  const actionText = action === 'completed' ? 'completed' : 
-                     action === 'uncompleted' ? 'reopened' : 'updated';
+  const actionText = action === 'completed' ? 'completed' :
+    action === 'uncompleted' ? 'reopened' : 'updated';
   const deepLink = `/goal/${goalId}?date=${encodeURIComponent(taskDate)}&taskId=${encodeURIComponent(taskId)}`;
-  
+
   return sendUnifiedNotification({
     type: 'task_updated',
     goalId,
@@ -205,8 +205,8 @@ export async function notifyTaskUpdated(
       task_date: taskDate
     },
     deepLink,
-    toastTitle: action === 'completed' ? '✓ Task Completed' : 
-                action === 'uncompleted' ? '○ Task Reopened' : '✏ Task Updated',
+    toastTitle: action === 'completed' ? '✓ Task Completed' :
+      action === 'uncompleted' ? '○ Task Reopened' : '✏ Task Updated',
   });
 }
 
@@ -219,7 +219,7 @@ export async function notifyTaskDeleted(
   taskDate: string
 ) {
   const deepLink = `/goal/${goalId}?date=${encodeURIComponent(taskDate)}`;
-  
+
   return sendUnifiedNotification({
     type: 'task_deleted',
     goalId,
@@ -244,7 +244,7 @@ export async function notifyGoalInvitation(
   invitedUserId: string
 ) {
   const deepLink = `/goal/${goalId}`;
-  
+
   // For invitations, we send to specific user, not all members
   const { data: senderProfile } = await supabase
     .from('user_profiles')
@@ -287,7 +287,7 @@ export async function notifyMemberJoined(
   goalTitle: string
 ) {
   const deepLink = `/goal/${goalId}`;
-  
+
   return sendUnifiedNotification({
     type: 'member_joined',
     goalId,
@@ -309,7 +309,7 @@ export async function notifyMemberLeft(
   goalTitle: string
 ) {
   const deepLink = `/goal/${goalId}`;
-  
+
   return sendUnifiedNotification({
     type: 'member_left',
     goalId,
@@ -332,7 +332,7 @@ export async function notifyMemberRemoved(
   goalTitle: string
 ) {
   const deepLink = `/goal/${goalId}`;
-  
+
   const { data: removerProfile } = await supabase
     .from('user_profiles')
     .select('display_name')
@@ -369,17 +369,17 @@ export async function notifyMemberRemoved(
 
 // Function to send a push notification to a user using tinynotie-api
 export async function sendNotificationToUser(
-  userId: string, 
-  title: string, 
-  body?: string, 
+  userId: string,
+  title: string,
+  body?: string,
   data?: Record<string, unknown>
 ): Promise<boolean> {
   try {
     // Get user's email from the database
-    const { data:userInfo, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const { data: userInfo, error } = await supabaseAdmin.auth.admin.getUserById(userId);
 
-    if(userInfo){
-       // Send notification using tinynotie-api
+    if (userInfo) {
+      // Send notification using tinynotie-api
       // Compute a clickable URL to include in the push payload.
       // Prefer an explicit url provided in `data.url`. If it's relative, convert to absolute.
       let fullUrl: string | undefined;
@@ -403,9 +403,9 @@ export async function sendNotificationToUser(
           identifier: userInfo.user.email, // Use email as identifier
           payload: {
             // Include sender name in title so user knows who did it from device notification
-            title: data?.userProfile 
-              ? `${data.userProfile['display_name']}: ${title || 'DailyGoalMap Notification'}`
-              : title || 'DailyGoalMap Notification',
+            title: data?.userProfile
+              ? `${data.userProfile['display_name']}: ${title || 'Orbit Notification'}`
+              : title || 'Orbit Notification',
             body: body || 'You have a new update!',
             data: {
               // Provide an absolute, clickable URL when possible. Also include original data for context.
@@ -415,26 +415,26 @@ export async function sendNotificationToUser(
               senderName: data?.userProfile ? (data.userProfile['display_name'] as string || userInfo.user.email || 'Unknown') : 'Unknown',
               ...data,
             },
-            icon : data?.userProfile ? data.userProfile['avatar_url'] : undefined
+            icon: data?.userProfile ? data.userProfile['avatar_url'] : undefined
           },
-          name: data?.userProfile ? data.userProfile['display_name'] : 'DailyGoalMap',
+          name: data?.userProfile ? data.userProfile['display_name'] : 'Orbit',
           appId: 2
         })
       });
-    
+
       if (!response.ok) {
         console.error("Error calling tinynotie-api:", response.statusText);
         return false;
       }
-      
+
       const result = await response.json();
       console.log(`Successfully sent notification to user ${userId}:`, result);
     } else {
-      console.log("user is id", userId , " is ", userInfo);
-      
+      console.log("user is id", userId, " is ", userInfo);
+
       return false
     }
-    
+
     return true;
   } catch (error) {
     console.error("Error sending notification to user:", error);
@@ -444,15 +444,15 @@ export async function sendNotificationToUser(
 
 // Function to send a notification to all members of a goal
 export async function sendNotificationToGoalMembers(
-  goalId: string, 
-  exceptUserId: string, 
-  title: string, 
-  body?: string, 
+  goalId: string,
+  exceptUserId: string,
+  title: string,
+  body?: string,
   data?: Record<string, unknown>
 ): Promise<boolean> {
   try {
     console.log(`Sending notification to goal ${goalId} members (except ${exceptUserId})`);
-    
+
     // Get all members of the goal except the specified user
     const { data: members, error } = await supabase
       .from('goal_members')
@@ -460,7 +460,7 @@ export async function sendNotificationToGoalMembers(
       .eq('goal_id', goalId)
       .neq('user_id', exceptUserId);
 
-    const { data:userProfile } = await supabase.from('user_profiles').select('display_name, avatar_url').eq('id', exceptUserId).single();
+    const { data: userProfile } = await supabase.from('user_profiles').select('display_name, avatar_url').eq('id', exceptUserId).single();
 
     // const { data: members, error } = await supabase
     // .from("goal_members")
@@ -483,35 +483,35 @@ export async function sendNotificationToGoalMembers(
       console.error("Error fetching goal members:", error);
       return false;
     }
-    
+
     console.log(`Found ${members?.length || 0} members to notify:`, members);
-    
+
     if (!members || members.length === 0) {
       console.log("No members to notify");
       return false;
     }
-    
+
     // Send notification to each member
     const results = await Promise.all(
       members.map(member => {
         return sendNotificationToUser(
-          member.user_id, 
-          title, 
-          body, 
+          member.user_id,
+          title,
+          body,
           {
             goalId, // Include the goal ID in the notification data
             senderId: exceptUserId, // Include the sender ID
-            memberInfo:member,
+            memberInfo: member,
             userProfile,
             ...data,
           }
         );
       })
     );
-    
+
     const successCount = results.filter(result => result === true).length;
     console.log(`Successfully sent notifications to ${successCount} out of ${members.length} members`);
-    
+
     // Return true if at least one notification was sent successfully
     return results.some(result => result === true);
   } catch (error) {

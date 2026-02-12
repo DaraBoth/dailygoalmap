@@ -580,7 +580,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   return (
     <>
       <motion.button
-        className={`fixed bottom-6 ${isMobile ? 'left-6' : 'right-6'} liquid-glass p-2 rounded-xl z-50`}
+        className={`fixed bottom-6 ${isMobile ? 'left-6' : 'right-6'} bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 p-2 rounded-xl z-50 transition-all`}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => {
@@ -601,7 +601,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed  inset-0 lg:inset-auto lg:bottom-24 lg:right-6 lg:left-6 lg:top-auto w-full h-dvh lg:w-[calc(100vw-48px)] lg:h-[calc(100vh-120px)] liquid-glass-container z-50 flex flex-col "
+            className="fixed  inset-0 lg:inset-auto lg:bottom-24 lg:right-6 lg:left-6 lg:top-auto w-full h-dvh lg:w-[calc(100vw-48px)] lg:h-[calc(100vh-120px)] bg-background border border-border shadow-2xl rounded-2xl z-50 flex flex-col "
             style={{
               borderRadius: (isPopupMode || isMobile) ? "0px" : ""
             }}
@@ -679,7 +679,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
                       {/* User Bubble */}
                       {msg.role === "user" && (
-                        <div className="max-w-[85%] sm:max-w-[80%] liquid-glass p-3 rounded-xl shadow break-words whitespace-pre-wrap overflow-wrap-anywhere overflow-x-auto"
+                        <div className="max-w-[85%] sm:max-w-[80%] bg-secondary/50 p-3 rounded-xl shadow-sm break-words whitespace-pre-wrap overflow-wrap-anywhere overflow-x-auto"
                           style={{
                             boxShadow: "rgba(0, 0, 0, 0.16) 0px 1px 4px",
                           }}
@@ -757,7 +757,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
                 {showScrollButton && (
                   <button
-                    className="absolute z-90 -top-16 left-1/2 transform translate-x-[-50%] liquid-glass px-2 py-2 hover:animate-none"
+                    className="absolute z-90 -top-16 left-1/2 transform translate-x-[-50%] bg-background border border-border shadow-md rounded-full px-2 py-2 hover:animate-none"
                     style={{ borderRadius: "50%" }}
                     onClick={() => {
                       scrollRef.current?.scrollIntoView({ behavior: 'smooth' });

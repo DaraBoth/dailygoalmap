@@ -1,10 +1,10 @@
 
 import { useState, useEffect } from 'react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
@@ -26,12 +26,12 @@ export const GoalSharingButton = ({ goalId, goalTitle }: GoalSharingButtonProps)
   const [isUserCreator, setIsUserCreator] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const [memberCount, setMemberCount] = useState(0);
-  
-  const { 
-    shareCode, 
-    isLoading, 
+
+  const {
+    shareCode,
+    isLoading,
     isRegenerating,
-    fetchShareCode, 
+    fetchShareCode,
     regenerateShareCode,
     isCurrentUserCreator,
     getMemberCount
@@ -43,10 +43,10 @@ export const GoalSharingButton = ({ goalId, goalTitle }: GoalSharingButtonProps)
       if (!shareCode) {
         fetchShareCode();
       }
-      
+
       // Check if user is creator when opening dialog
       isCurrentUserCreator().then(setIsUserCreator);
-      
+
       // Get member count when dialog is opened
       getMemberCount().then(setMemberCount);
     }
@@ -54,7 +54,7 @@ export const GoalSharingButton = ({ goalId, goalTitle }: GoalSharingButtonProps)
 
   const copyShareCode = () => {
     if (!shareCode) return;
-    
+
     navigator.clipboard.writeText(shareCode)
       .then(() => {
         toast({
@@ -86,7 +86,7 @@ export const GoalSharingButton = ({ goalId, goalTitle }: GoalSharingButtonProps)
   return (
     <>
       <button
-        className="p-2 liquid-glass-button h-7 sm:h-8 px-1.5 sm:px-2 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center gap-1 sm:gap-2"
+        className="p-2 border bg-background/50 hover:bg-accent h-7 sm:h-8 px-1.5 sm:px-2 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center gap-1 sm:gap-2"
         onClick={() => setIsOpen(true)}
       >
         <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -116,10 +116,10 @@ export const GoalSharingButton = ({ goalId, goalTitle }: GoalSharingButtonProps)
                       readOnly
                       className="font-mono"
                     />
-                    <Button 
-                      type="button" 
-                      size="icon" 
-                      variant="outline" 
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
                       disabled={isLoading || !shareCode}
                       onClick={copyShareCode}
                     >
@@ -167,18 +167,18 @@ export const GoalSharingButton = ({ goalId, goalTitle }: GoalSharingButtonProps)
           )}
 
           <DialogFooter className="flex flex-col sm:flex-row sm:justify-between sm:space-x-2">
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={toggleMembersView}
               className="w-full mb-2 sm:mb-0 sm:w-auto"
             >
               <Users className="h-4 w-4 mr-2" />
               {showMembers ? "View Share Code" : "View Members"}
             </Button>
-            <Button 
-              type="button" 
-              variant="default" 
+            <Button
+              type="button"
+              variant="default"
               onClick={() => setIsOpen(false)}
               className="w-full sm:w-auto"
             >

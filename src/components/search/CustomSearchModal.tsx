@@ -296,7 +296,7 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
                       <Button
                         key={`task-${item.id}`}
                         variant="ghost"
-                        className={`w-full flex liquid-glass-button justify-start h-auto p-3 ${selectedIndex === globalIndex ? 'bg-accent' : ''
+                        className={`w-full flex hover:bg-accent justify-start h-auto p-3 ${selectedIndex === globalIndex ? 'bg-accent' : ''
                           }`}
                         onClick={() => handleSelectItem(item.path)}
                       >

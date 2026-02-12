@@ -79,7 +79,7 @@ const TaskDetailsSidebar = ({
         >
           <div className="h-full flex flex-col max-h-screen overflow-hidden">
             {/* Header - goal title, task title and controls */}
-            <div className="flex-shrink-0 liquid-glass border-b border-white/20 p-4">
+            <div className="flex-shrink-0 bg-muted/30 border-b border-border/20 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm text-muted-foreground">{goalTitle}</div>
@@ -103,7 +103,7 @@ const TaskDetailsSidebar = ({
 
                   <button
                     onClick={onClose}
-                    className="p-1.5 rounded-lg liquid-glass text-foreground hover:opacity-80 transition-all duration-200"
+                    className="p-1.5 rounded-lg border bg-background/80 text-foreground hover:bg-accent transition-all duration-200"
                     aria-label="Close"
                   >
                     <X className="h-4 w-4" />
@@ -116,7 +116,7 @@ const TaskDetailsSidebar = ({
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {/* Top row: status */}
                 <div className="flex items-center gap-3">
-                  <div className={`px-3 py-1 rounded-full text-sm font-medium liquid-glass ${selectedTask.completed ? 'text-success' : 'text-primary'
+                  <div className={`px-3 py-1 rounded-full text-sm font-medium border bg-background/50 ${selectedTask.completed ? 'text-success' : 'text-primary'
                     }`}>
                     {selectedTask.completed ? 'Completed' : 'In Progress'}
                   </div>
@@ -124,19 +124,19 @@ const TaskDetailsSidebar = ({
 
                 {/* Date & Time */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="liquid-glass-card p-3">
+                  <div className="border bg-background/50 rounded-xl p-3">
                     <div className="text-xs text-muted-foreground font-medium">Date</div>
                     <div className="text-sm text-foreground">{selectedDate ? format(selectedDate, 'MMMM d, yyyy') : format(new Date(selectedTask.start_date), 'MMMM d, yyyy')}</div>
                   </div>
 
-                  <div className="liquid-glass-card p-3">
+                  <div className="border bg-background/50 rounded-xl p-3">
                     <div className="text-xs text-muted-foreground font-medium">Time</div>
                     <div className="text-sm text-foreground">{selectedTask.daily_start_time ? `${selectedTask.daily_start_time.slice(0, 5)} - ${selectedTask.daily_end_time?.slice(0, 5) ?? ''}` : '—'}</div>
                   </div>
                 </div>
 
                 {/* Description */}
-                <div className="liquid-glass-card p-4">
+                <div className="border bg-background/50 rounded-xl p-4">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
                   <MarkdownRenderer
                     content={normalizeMarkdown(selectedTask.description)}
@@ -147,22 +147,22 @@ const TaskDetailsSidebar = ({
 
                 {/* Progress & Tags */}
                 <div className="grid grid-cols-1 gap-3">
-                  <div className="liquid-glass-card p-4">
+                  <div className="border bg-background/50 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-sm font-medium text-muted-foreground">Progress</h3>
                       <div className="text-sm text-muted-foreground">{selectedTask.completed ? '100%' : '0%'}</div>
                     </div>
-                    <div className="h-2 w-full liquid-glass rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                       <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: selectedTask.completed ? '100%' : '0%' }} />
                     </div>
                   </div>
 
                   {selectedTask.tags && selectedTask.tags.length > 0 && (
-                    <div className="liquid-glass-card p-4">
+                    <div className="border bg-background/50 rounded-xl p-4">
                       <h3 className="text-sm font-medium text-muted-foreground mb-2">Tags</h3>
                       <div className="flex flex-wrap gap-2">
                         {selectedTask.tags.map((tag, idx) => (
-                          <span key={idx} className="px-2 py-1 text-xs rounded-md liquid-glass text-foreground">{tag}</span>
+                          <span key={idx} className="px-2 py-1 text-xs rounded-md border bg-background/80 text-foreground">{tag}</span>
                         ))}
                       </div>
                     </div>
@@ -170,7 +170,7 @@ const TaskDetailsSidebar = ({
                 </div>
 
                 {/* Sticky action footer */}
-                <div className="pt-4 sticky bottom-0 liquid-glass -mx-4 px-4 pb-4">
+                <div className="pt-4 sticky bottom-0 border-t border-border/20 bg-background/80 backdrop-blur-md -mx-4 px-4 pb-4">
                   <div className="space-y-2">
                     <Button variant="outline" className={`w-full flex items-center justify-center gap-2 ${selectedTask.completed && "text-green-600"}`} onClick={() => onToggleTaskCompletion(selectedTask.id)}>
                       {selectedTask.completed ? (

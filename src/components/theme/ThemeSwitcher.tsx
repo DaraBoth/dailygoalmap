@@ -34,7 +34,7 @@ export const ThemeSegmentSwitch = () => {
 
     return (
         <div
-            className="relative flex rounded-lg overflow-hidden mt-1 liquid-glass-button"
+            className="relative flex rounded-lg overflow-hidden mt-1 bg-muted/50 border border-input"
             style={{ width: "100%", height: "35px" }}
         >
 
@@ -43,7 +43,7 @@ export const ThemeSegmentSwitch = () => {
                 layout
                 animate={{ left: leftPosition }}
                 transition={{ type: "spring", stiffness: 100, damping: 10 }}
-                className="absolute top-0 bottom-0 w-1/3 liquid-glass-switch pointer-events-none"
+                className="absolute top-0 bottom-0 w-1/3 bg-primary shadow-sm pointer-events-none"
             />
 
             {/* Buttons */}

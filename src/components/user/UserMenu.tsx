@@ -145,7 +145,7 @@ export const UserMenu = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="relative h-8 w-8 rounded-full transition-all liquid-glass"
+                  className="relative h-8 w-8 rounded-full transition-all bg-muted/50 border border-input hover:ring-2 hover:ring-ring"
                   aria-label="User menu"
                 >
                   <Avatar className="h-8 w-8">
@@ -165,7 +165,7 @@ export const UserMenu = () => {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem className='liquid-glass' onClick={() => goToProfile()}>
+                  <DropdownMenuItem className='cursor-pointer' onClick={() => goToProfile()}>
                     <UserIcon className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
@@ -174,7 +174,7 @@ export const UserMenu = () => {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className='liquid-glass-button'>
+                <DropdownMenuItem onClick={handleLogout} className='cursor-pointer hover:bg-destructive/10'>
                   <LogOut className="text-red-400 mr-2 h-4 w-4" />
                   <span className='text-red-400' >Log out</span>
                 </DropdownMenuItem>

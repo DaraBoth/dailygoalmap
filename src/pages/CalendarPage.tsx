@@ -25,7 +25,7 @@ const getDefaultMonth = (dateParam: string | null): Date => {
 const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; initialDate?: Date }) => {
   const [currentMonth, setCurrentMonth] = useState<Date>(getDefaultMonth(initialDate?.toISOString() || null));
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate);
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
+  const [selectedDateRange, setSelectedDateRange] = useState<any | undefined>({
     from: startOfMonth(currentMonth),
     to: endOfMonth(currentMonth)
   });
@@ -39,13 +39,13 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
       setIsLoading(true);
       try {
         const allGoalTasks: any[] = [];
-        
+
         // Collect tasks from all goals
         for (const goal of goals) {
           // First try to get tasks from localStorage
           const tasksKey = `tasks-${goal.id}`;
           const storedTasks = localStorage.getItem(tasksKey);
-          
+
           if (storedTasks) {
             const parsedTasks = JSON.parse(storedTasks);
             // Add goal reference to each task
@@ -56,11 +56,11 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
             }));
             allGoalTasks.push(...tasksWithGoal);
           }
-          
+
           // If no tasks in localStorage, potentially fetch from API or database
           // This is a placeholder for where you'd add that logic
         }
-        
+
         setAllTasks(allGoalTasks);
       } catch (error) {
         console.error("Error fetching all tasks:", error);
@@ -73,7 +73,7 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
         setIsLoading(false);
       }
     };
-    
+
     fetchAllTasks();
   }, [goals]);
 
@@ -122,7 +122,7 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
         <h1 className="text-2xl font-bold">All Tasks Calendar</h1>
         <ThemeToggle />
       </div>
-      
+
       <Card className="mb-6">
         <CardHeader className="pb-3">
           <div className="flex justify-between items-center">
@@ -150,7 +150,7 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
               </div>
             ))}
           </div>
-          
+
           <div className="grid grid-cols-7 gap-1">
             {days.map((day) => {
               const tasksForDay = getTasksForDay(day);
@@ -188,18 +188,18 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
           </div>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Date Range Selection</CardTitle>
           <CardDescription>Filter tasks by date range</CardDescription>
         </CardHeader>
         <CardContent>
-          <DatePickerWithRange 
+          <DatePickerWithRange
             dateRange={selectedDateRange}
             onRangeChange={setSelectedDateRange}
           />
-          
+
           {selectedDateRange?.from && (
             <div className="mt-4">
               <h3 className="font-medium mb-2">Tasks in selected date range:</h3>
@@ -207,8 +207,8 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
                 {allTasks.filter(task => {
                   const taskDate = new Date(task.date);
                   return (
-                    selectedDateRange.from && 
-                    taskDate >= selectedDateRange.from && 
+                    selectedDateRange.from &&
+                    taskDate >= selectedDateRange.from &&
                     (!selectedDateRange.to || taskDate <= selectedDateRange.to)
                   );
                 }).length > 0 ? (
@@ -217,8 +217,8 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
                       .filter(task => {
                         const taskDate = new Date(task.date);
                         return (
-                          selectedDateRange.from && 
-                          taskDate >= selectedDateRange.from && 
+                          selectedDateRange.from &&
+                          taskDate >= selectedDateRange.from &&
                           (!selectedDateRange.to || taskDate <= selectedDateRange.to)
                         );
                       })

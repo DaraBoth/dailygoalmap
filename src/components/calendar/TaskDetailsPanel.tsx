@@ -74,14 +74,14 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   if (!selectedTask) {
     return (
       <div className="w-full h-full flex flex-col 78 overflow-hidden rounded-l-3xl">
-        <div className="p-4 lg:p-6 border-b border-white/20 liquid-glass">
+        <div className="p-4 lg:p-6 border-b border-border/20 bg-muted/30">
           <h2 className="text-lg font-semibold text-foreground">Task Details</h2>
           <p className="text-sm text-foreground mt-1">Select a task to view details</p>
         </div>
 
-        <div className="flex-1 flex items-center  justify-center p-6 liquid-glass">
+        <div className="flex-1 flex items-center justify-center p-6 bg-background/50 backdrop-blur-sm">
           <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full liquid-glass flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
               <Calendar className="h-8 w-8 text-primary" />
             </div>
             <h3 className="text-lg font-medium text-foreground mb-2">No Task Selected</h3>
@@ -100,7 +100,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   return (
     <div className="w-full h-full flex flex-col overflow-hidden rounded-l-3xl">
       {/* Header */}
-      <div className="p-4 lg:p-6 border-b border-white/20 liquid-glass">
+      <div className="p-4 lg:p-6 border-b border-border/20 bg-muted/30">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-foreground">Task Details</h2>
@@ -111,7 +111,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
           <div className="flex items-center gap-2">
             <Badge
               variant={selectedTask.completed ? "default" : "secondary"}
-              className="liquid-glass"
+              className="rounded-full shadow-sm"
             >
               {selectedTask.completed ? "Completed" : "Pending"}
             </Badge>
@@ -120,7 +120,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6 liquid-glass">
+      <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
         <AnimatePresence mode="wait">
           <motion.div
             key={selectedTask.id}
@@ -137,7 +137,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                   {selectedTask.title || selectedTask.description}
                 </h3>
                 {selectedTask.title && selectedTask.description && selectedTask.title !== selectedTask.description && (
-                  <div className="mt-3 p-4 liquid-glass-card">
+                  <div className="mt-3 p-4 border rounded-xl bg-muted/30">
                     <MarkdownRenderer
                       content={selectedTask.description}
                       isStreaming={false}
@@ -156,8 +156,8 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
 
               <div className="grid grid-cols-1 gap-3">
                 {/* Date Information */}
-                <div className="flex items-center gap-3 p-3 liquid-glass-card">
-                  <div className="p-2 liquid-glass rounded-lg">
+                <div className="flex items-center gap-3 p-3 border rounded-xl bg-muted/20">
+                  <div className="p-2 bg-primary/10 rounded-lg">
                     <Calendar className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1">
@@ -175,8 +175,8 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
 
                 {/* Time Information */}
                 {hasTimeRange && (
-                  <div className="flex items-center gap-3 p-3 liquid-glass-card">
-                    <div className="p-2 liquid-glass rounded-lg">
+                  <div className="flex items-center gap-3 p-3 border rounded-xl bg-muted/20">
+                    <div className="p-2 bg-primary/10 rounded-lg">
                       <Clock className="h-4 w-4 text-primary" />
                     </div>
                     <div className="flex-1">
@@ -191,8 +191,8 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                 )}
 
                 {/* Goal Information */}
-                <div className="flex items-center gap-3 p-3 liquid-glass-card">
-                  <div className="p-2 liquid-glass rounded-lg">
+                <div className="flex items-center gap-3 p-3 border rounded-xl bg-muted/20">
+                  <div className="p-2 bg-success/10 rounded-lg">
                     <Tag className="h-4 w-4 text-success" />
                   </div>
                   <div className="flex-1">
@@ -207,8 +207,8 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
 
                 {/* Created/Updated timestamps (if available) */}
                 {(selectedTask.created_at || selectedTask.updated_at) && (
-                  <div className="flex items-center gap-3 p-3 liquid-glass-card">
-                    <div className="p-2 liquid-glass rounded-lg">
+                  <div className="flex items-center gap-3 p-3 border rounded-xl bg-muted/20">
+                    <div className="p-2 bg-muted rounded-lg">
                       <Clock className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div className="flex-1">
@@ -234,8 +234,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                 {/* Completion Toggle */}
                 <Button
                   onClick={() => onToggleTaskCompletion(selectedTask.id)}
-                  className={`w-full justify-start gap-3 h-12 rounded-xl transition-all duration-200 liquid-glass ${selectedTask.completed ? 'text-success' : 'text-primary'}`}
-                  variant="outline"
+                  className="absolute border bg-background/80 right-4 top-4 p-2 rounded-xl backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/30 transition-all duration-200 shadow-lg z-10"
                 >
                   {selectedTask.completed ? (
                     <>
@@ -255,7 +254,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                   onClick={handleAddToReminders}
                   disabled={isAddingReminder}
                   variant="outline"
-                  className="w-full justify-start gap-3 h-12 rounded-xl liquid-glass transition-all duration-200"
+                  className="w-full justify-start gap-3 h-12 rounded-xl transition-all duration-200 hover:bg-accent"
                 >
                   <Bell className="h-5 w-5" />
                   <span className="font-medium">
@@ -268,7 +267,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                   <Button
                     onClick={() => onEditTask(selectedTask)}
                     variant="outline"
-                    className="w-full justify-start gap-2 h-11 rounded-xl liquid-glass transition-all duration-200"
+                    className="w-full justify-start gap-2 h-11 rounded-xl transition-all duration-200 hover:bg-accent"
                   >
                     <Edit className="h-4 w-4" />
                     <span className="font-medium">Edit</span>
@@ -277,7 +276,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                   <Button
                     onClick={() => onDeleteTask(selectedTask.id)}
                     variant="destructive"
-                    className="w-full justify-start gap-2 h-11 rounded-xl liquid-glass transition-all duration-200"
+                    className="w-full justify-start gap-2 h-11 rounded-xl transition-all duration-200"
                   >
                     <Trash2 className="h-4 w-4" />
                     <span className="font-medium">Delete</span>

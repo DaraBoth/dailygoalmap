@@ -24,15 +24,15 @@ export function UpdateNotification({ onRefresh }: UpdateNotificationProps) {
           animation: slideUpFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
       `}</style>
-      
+
       <div
         className="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[9999] animate-slide-up-fade-in"
       >
-        <div className="liquid-glass-card backdrop-blur-xl px-4 py-3 sm:px-6 sm:py-4 rounded-xl shadow-2xl border border-white/30 dark:border-white/20 w-full sm:max-w-md">
+        <div className="glass-card backdrop-blur-xl px-4 py-3 sm:px-6 sm:py-4 rounded-xl shadow-2xl border border-white/30 dark:border-white/20 w-full sm:max-w-md">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
             {/* Glow effect */}
             <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 blur-xl -z-10" />
-            
+
             {/* Icon and Content Row */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {/* Icon */}
@@ -51,7 +51,7 @@ export function UpdateNotification({ onRefresh }: UpdateNotificationProps) {
                   />
                 </svg>
               </div>
-              
+
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground truncate">
@@ -62,7 +62,7 @@ export function UpdateNotification({ onRefresh }: UpdateNotificationProps) {
                 </p>
               </div>
             </div>
-            
+
             {/* Button */}
             <Button
               onClick={onRefresh}

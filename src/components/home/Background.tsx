@@ -2,22 +2,35 @@ import React from "react";
 
 const Background: React.FC = () => {
   return (
-    <>
-      {/* Simplified Static Background */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-blue-900/20 dark:via-purple-900/20 dark:to-pink-900/20"></div>
-        
-        {/* Static Orbs - No Animation */}
-        <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-blue-400/20 to-cyan-400/20 dark:from-blue-500/10 dark:to-cyan-500/10 rounded-full blur-2xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-r from-purple-400/20 to-pink-400/20 dark:from-purple-500/10 dark:to-pink-500/10 rounded-full blur-2xl" />
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-indigo-400/20 to-violet-400/20 dark:from-indigo-500/10 dark:to-violet-500/10 rounded-full blur-2xl" />
-        </div>
-      </div>
-      
-      {/* Simplified Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/20 to-white/40 dark:from-black/30 dark:via-black/10 dark:to-black/30"></div>
-    </>
+    <div className="fixed inset-0 -z-10 overflow-hidden bg-background">
+      {/* Retro Grid Effect */}
+      <div
+        className="absolute inset-0 z-0 opacity-30 dark:opacity-20"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, currentColor 1px, transparent 1px),
+            linear-gradient(to bottom, currentColor 1px, transparent 1px)
+          `,
+          backgroundSize: '40px 40px',
+          maskImage: 'radial-gradient(ellipse 60% 50% at 50% 0%, #000 70%, transparent 100%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 60% 50% at 50% 0%, #000 70%, transparent 100%)',
+        }}
+      />
+
+      {/* Primary Glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-primary/20 rounded-full blur-[120px] -z-10 opacity-50 dark:opacity-30" />
+
+      {/* Secondary Orbs */}
+      <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-blue-500/10 dark:bg-blue-600/5 rounded-full blur-[100px] -z-10" />
+      <div className="absolute top-[20%] -right-[10%] w-[35%] h-[35%] bg-purple-500/10 dark:bg-purple-600/5 rounded-full blur-[100px] -z-10" />
+
+      {/* Grain Overlay for Texture */}
+      <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none mix-blend-overlay z-10"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+        }}
+      />
+    </div>
   );
 };
 

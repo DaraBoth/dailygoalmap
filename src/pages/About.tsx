@@ -10,10 +10,11 @@ import LogoAvatar from "@/components/ui/LogoAvatar";
 const About: React.FC = () => {
   return (
     <>
-      <title>About Goal Completer | Our Story</title>
-      <meta name="description" content="Learn about Goal Completer, a free goal tracking platform created by Vong PichdaraBoth to help people achieve their dreams through AI-powered step-by-step guidance." />
+      <title>About Orbit | Autonomous Intelligence</title>
+      <meta name="description" content="Learn about Orbit, an autonomous intelligence platform created by Vong PichdaraBoth to help people achieve their dreams through AI-powered orbital mapping." />
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-purple-900/20">
+      <div className="relative min-h-screen text-foreground selection:bg-primary/30">
+        <GlobalBackground />
         {/* Header */}
         <header className="relative z-10 p-4 md:p-6">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -25,8 +26,8 @@ const About: React.FC = () => {
             </SmartLink>
             <div className="flex items-center gap-3">
               <LogoAvatar size={32} />
-              <span className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-                Goal Completer
+              <span className="font-black text-xl tracking-tighter">
+                Orbit
               </span>
             </div>
           </div>
@@ -39,16 +40,13 @@ const About: React.FC = () => {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.8 }}
-              className="text-center mb-16"
+              className="text-center mb-16 space-y-4"
             >
-              <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-                About{" "}
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-                  Goal Completer
-                </span>
+              <h1 className="text-5xl lg:text-7xl font-black tracking-tighter leading-none">
+                About <span className="text-primary italic">Orbit</span>
               </h1>
-              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                A completely free platform designed to turn your biggest dreams into achievable daily steps
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto font-medium">
+                An autonomous intelligence platform engineered to transform your complex aspirations into an automated trajectory of success.
               </p>
             </motion.div>
 
@@ -68,20 +66,18 @@ const About: React.FC = () => {
 
               <div className="prose prose-lg max-w-none text-gray-700 dark:text-gray-300">
                 <p className="mb-6">
-                  Goal Completer was born from a simple belief: <strong>everyone deserves to achieve their dreams</strong>,
-                  regardless of their background or resources. Too many people give up on their goals because they feel
-                  overwhelmed by the enormity of their aspirations.
+                  Orbit was born from a simple belief: <strong>everyone deserves to achieve their absolute potential</strong>.
+                  Too many ambitious missions fail because of the friction between high-level vision and tactical execution.
                 </p>
 
                 <p className="mb-6">
-                  That's why we created a platform that uses AI to break down any big goal into small, manageable daily steps.
-                  Instead of staring at a mountain, you see a clear path with simple steps you can take today.
+                  That's why we engineered an autonomous intelligence platform that decomposes any mission into a sequence of hyper-focused
+                  daily trajectories. Instead of feeling overwhelmed, you follow a clear orbital path to success.
                 </p>
 
                 <p className="mb-6">
-                  <strong>Goal Completer is completely free</strong> because we believe that access to tools for personal
-                  growth shouldn't be limited by financial barriers. This is our contribution to helping people worldwide
-                  achieve their potential.
+                  <strong>Orbit is completely free</strong> because we believe that access to tools for human acceleration
+                  should not be gated. This is our contribution to the next generation of high-performers.
                 </p>
               </div>
             </motion.div>
@@ -126,16 +122,16 @@ const About: React.FC = () => {
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.8 }}
-              className="bg-white/40 dark:bg-white/10 backdrop-blur-xl rounded-3xl p-8 md:p-12 border border-white/30 dark:border-white/20 shadow-xl text-center"
+              className="bg-white/40 dark:bg-white/10 backdrop-blur-xl rounded-[2.5rem] p-8 md:p-12 border border-white/30 dark:border-white/20 shadow-xl text-center"
             >
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Created with ❤️</h2>
-              <p className="text-lg text-gray-600 dark:text-gray-300 mb-4">
-                Goal Completer is created and maintained by{" "}
-                <span className="font-semibold text-blue-600 dark:text-blue-400">Vong PichdaraBoth</span>
+              <h2 className="text-2xl font-black tracking-tight mb-6 uppercase">Forged with Precision</h2>
+              <p className="text-lg text-muted-foreground font-medium mb-4">
+                Orbit is architected and maintained by{" "}
+                <span className="font-black text-foreground underline decoration-primary/30 underline-offset-4">Vong PichdaraBoth</span>
               </p>
-              <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                A passionate developer who believes in the power of technology to help people achieve their dreams.
-                This platform represents a commitment to making personal growth tools accessible to everyone, everywhere.
+              <p className="text-muted-foreground font-medium max-w-2xl mx-auto italic">
+                A dedicated engineer focused on bridging the gap between human ambition and high-velocity execution.
+                This platform is a testament to the power of autonomous intelligence in personal acceleration.
               </p>
             </motion.div>
 
@@ -147,8 +143,8 @@ const About: React.FC = () => {
               className="text-center mt-12"
             >
               <SmartLink to="/register">
-                <Button size="lg" className="text-lg px-8 py-6 h-auto">
-                  Start Your Journey Today
+                <Button size="lg" className="text-lg px-8 py-8 h-auto font-black uppercase tracking-widest bg-primary hover:bg-primary/90 rounded-2xl shadow-xl">
+                  Initialize Your Orbit
                 </Button>
               </SmartLink>
             </motion.div>

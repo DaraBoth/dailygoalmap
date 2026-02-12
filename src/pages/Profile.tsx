@@ -80,8 +80,8 @@ const Profile = () => {
 
   return (
     <>
-      <title>{navItems.find((item)=>(item.id==activeTab)).label || "Profile" } | DailyGoalMap</title>
-      <meta name="description" content={navItems.find((item)=>(item.id==activeTab)).description || "Manage your profile settings, API keys, and notification preferences."} />
+      <title>{navItems.find((item) => (item.id == activeTab)).label || "Profile"} | Orbit</title>
+      <meta name="description" content={navItems.find((item) => (item.id == activeTab)).description || "Manage your profile settings, API keys, and notification preferences."} />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         {/* Header */}
         <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">

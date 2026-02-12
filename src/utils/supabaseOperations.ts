@@ -8,11 +8,11 @@ import { saveTaskForOfflineSync, attemptSyncNow } from '@/pwa/offlineTaskSync';
  */
 
 /**
- * Fetch all goals for the current user
+ * Fetch all goals for the current user with optimized single-query counts
  */
 export const fetchUserGoals = async (sortOption: SortOption): Promise<Goal[]> => {
   try {
-    // Get the current user's ID
+    // Get the current user's ID once
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) {
       throw new Error("Failed to fetch user information");
@@ -20,88 +20,59 @@ export const fetchUserGoals = async (sortOption: SortOption): Promise<Goal[]> =>
 
     const userId = userData.user.id;
 
-    // Fetch goals created by the user
-    const { data: createdGoals, error: createdGoalsError } = await supabase
+    // Fetch goals where user is creator or member, including counts in one go
+    // Note: We use a join with goal_members to find all goals the user belongs to
+    const { data: allGoalsData, error: goalsError } = await supabase
       .from('goals')
       .select(`
         *,
-        goal_themes(*)
+        goal_themes(*),
+        goal_members!inner(user_id),
+        tasks(id, completed),
+        all_members:goal_members(id)
       `)
-      .eq('user_id', userId);
+      .eq('goal_members.user_id', userId);
 
-    if (createdGoalsError) throw createdGoalsError;
+    if (goalsError) throw goalsError;
 
-    // Fetch goals the user has joined
-    const { data: joinedGoals, error: joinedGoalsError } = await supabase
-      .from('goal_members')
-      .select('goal_id, goals(*,goal_themes(*))')
-      .eq('user_id', userId);
+    // Transform data to match Goal type and calculate counts locally
+    const typedGoals: Goal[] = (allGoalsData || []).map(goal => {
+      const taskData = (goal.tasks as any[]) || [];
+      const memberData = (goal.all_members as any[]) || [];
+      const totalTasks = taskData.length;
+      const completedTasks = taskData.filter(t => t.completed).length;
 
-    if (joinedGoalsError) throw joinedGoalsError;
-
-    // Combine created and joined goals, avoiding duplicates
-    const joinedGoalsList = (
-      joinedGoals?.map((member) => member.goals) || []
-    ).filter(Boolean);
-    const createdGoalsList = createdGoals || [];
-
-    // Remove duplicates by filtering out joined goals that are already in created goals
-    const uniqueJoinedGoals = joinedGoalsList.filter(
-      (joinedGoal) =>
-        joinedGoal &&
-        !createdGoalsList.some(
-          (createdGoal) => createdGoal.id === joinedGoal.id
-        )
-    );
-
-    const allGoals = [...createdGoalsList, ...uniqueJoinedGoals];
-
-    // Convert the Supabase data to Goal objects with proper metadata typing
-    const typedGoals: Goal[] = (allGoals || []).map(goal => ({
-      ...goal,
-      metadata: typeof goal.metadata === 'string'
-        ? JSON.parse(goal.metadata)
-        : (goal.metadata || {
+      return {
+        ...goal,
+        metadata: typeof goal.metadata === 'string'
+          ? JSON.parse(goal.metadata)
+          : (goal.metadata || {
             goal_type: 'general',
             start_date: new Date().toISOString().split('T')[0]
           }) as GoalMetadata,
-      taskCounts: { total: 0, completed: 0, incomplete: 0 }, // Initialize task counts
-      memberCounts: { total: 0 }, // Initialize member counts
-      members: []
-    }));
-
-    // Fetch task counts for each goal
-    for (const goal of typedGoals) {
-      const { data: taskData, error: taskError } = await supabase
-        .from('tasks')
-        .select('id, completed')
-        .eq('goal_id', goal.id);
-
-      if (!taskError && taskData) {
-        const totalTasks = taskData.length;
-        const completedTasks = taskData.filter(task => task.completed).length;
-
-        goal.taskCounts = {
+        taskCounts: {
           total: totalTasks,
           completed: completedTasks,
           incomplete: totalTasks - completedTasks
-        };
-      }
-
-      // Fetch member counts
-      const { data: memberData, error: memberError } = await supabase
-        .from('goal_members')
-        .select('id')
-        .eq('goal_id', goal.id);
-
-      if (!memberError && memberData) {
-        goal.memberCounts = {
+        },
+        memberCounts: {
           total: memberData.length
-        };
-      }
-    }
+        },
+        members: [] // Placeholder, populated on detail page if needed
+      };
+    });
 
-    return typedGoals;
+    // Sort locally based on sortOption
+    const sortedGoals = [...typedGoals].sort((a, b) => {
+      const field = sortOption.field as keyof Goal;
+      const direction = sortOption.direction === 'asc' ? 1 : -1;
+
+      if (a[field] < b[field]) return -1 * direction;
+      if (a[field] > b[field]) return 1 * direction;
+      return 0;
+    });
+
+    return sortedGoals;
   } catch (error) {
     console.error("Error fetching goals:", error);
     throw error;
@@ -133,7 +104,7 @@ export const createGoal = async (goalData: Partial<Goal>): Promise<Goal> => {
 
     const { data, error } = await supabase
       .from('goals')
-      .insert(goalToCreate) 
+      .insert(goalToCreate)
       .select()
       .single();
 
@@ -145,10 +116,10 @@ export const createGoal = async (goalData: Partial<Goal>): Promise<Goal> => {
 
     const { error: memberError } = await supabase.rpc(
       'join_goal',
-      { 
-        p_goal_id: data.id, 
-        p_user_id: userData.user.id, 
-        p_role: 'creator' 
+      {
+        p_goal_id: data.id,
+        p_user_id: userData.user.id,
+        p_role: 'creator'
       }
     );
 
@@ -157,12 +128,12 @@ export const createGoal = async (goalData: Partial<Goal>): Promise<Goal> => {
     // Transform the response to match Goal type
     const createdGoal: Goal = {
       ...data,
-      metadata: typeof data.metadata === 'string' 
-        ? JSON.parse(data.metadata) 
+      metadata: typeof data.metadata === 'string'
+        ? JSON.parse(data.metadata)
         : (data.metadata || {
-            goal_type: 'general',
-            start_date: new Date().toISOString().split('T')[0]
-          }) as GoalMetadata
+          goal_type: 'general',
+          start_date: new Date().toISOString().split('T')[0]
+        }) as GoalMetadata
     };
 
     return createdGoal;
@@ -215,9 +186,9 @@ export const updateGoal = async (goalId: string, goalData: Partial<Goal>): Promi
       metadata: typeof data.metadata === 'string'
         ? JSON.parse(data.metadata)
         : (data.metadata || {
-            goal_type: 'general',
-            start_date: new Date().toISOString().split('T')[0]
-          }) as GoalMetadata
+          goal_type: 'general',
+          start_date: new Date().toISOString().split('T')[0]
+        }) as GoalMetadata
     };
 
     return updatedGoal;
@@ -306,9 +277,9 @@ export const joinGoalWithShareCode = async (shareCode: string): Promise<Goal> =>
     // Check if user is already a member
     const { data: isMember } = await supabase.rpc(
       'check_goal_membership',
-      { 
-        p_goal_id: goalData.id, 
-        p_user_id: userData.user.id 
+      {
+        p_goal_id: goalData.id,
+        p_user_id: userData.user.id
       }
     );
 
@@ -317,10 +288,10 @@ export const joinGoalWithShareCode = async (shareCode: string): Promise<Goal> =>
     // Join the goal
     const { error: joinError } = await supabase.rpc(
       'join_goal',
-      { 
-        p_goal_id: goalData.id, 
-        p_user_id: userData.user.id, 
-        p_role: 'member' 
+      {
+        p_goal_id: goalData.id,
+        p_user_id: userData.user.id,
+        p_role: 'member'
       }
     );
 
@@ -329,12 +300,12 @@ export const joinGoalWithShareCode = async (shareCode: string): Promise<Goal> =>
     // Transform the response to match Goal type
     const joinedGoal: Goal = {
       ...goalData,
-      metadata: typeof goalData.metadata === 'string' 
-        ? JSON.parse(goalData.metadata) 
+      metadata: typeof goalData.metadata === 'string'
+        ? JSON.parse(goalData.metadata)
         : (goalData.metadata || {
-            goal_type: 'general',
-            start_date: new Date().toISOString().split('T')[0]
-          }) as GoalMetadata
+          goal_type: 'general',
+          start_date: new Date().toISOString().split('T')[0]
+        }) as GoalMetadata
     };
 
     return joinedGoal;
@@ -396,18 +367,18 @@ export const updateTask = async (taskId: string, updates: any) => {
 
     // Send notifications for task content updates (not just completion)
     try {
-      const hasContentChanges = 
+      const hasContentChanges =
         (updates.title && updates.title !== originalTask.title) ||
         (updates.description && updates.description !== originalTask.description) ||
         (updates.start_date && updates.start_date !== originalTask.start_date) ||
         (updates.end_date && updates.end_date !== originalTask.end_date);
 
-      const hasCompletionChange = 
+      const hasCompletionChange =
         updates.completed !== undefined && updates.completed !== originalTask.completed;
 
       if (hasContentChanges || hasCompletionChange) {
         const { notifyTaskUpdated } = await import('@/services/notificationService');
-        
+
         // Get goal information
         const { data: goalData } = await supabase
           .from('goals')
@@ -416,7 +387,7 @@ export const updateTask = async (taskId: string, updates: any) => {
           .single();
 
         const goalTitle = goalData?.title || 'your goal';
-        
+
         // Determine the action
         let action: 'completed' | 'uncompleted' | 'edited';
         if (hasCompletionChange) {
@@ -424,7 +395,7 @@ export const updateTask = async (taskId: string, updates: any) => {
         } else {
           action = 'edited';
         }
-        
+
         await notifyTaskUpdated(
           originalTask.goal_id,
           user.id,
@@ -471,7 +442,7 @@ export const insertTask = async (taskData: any) => {
       if (user && data && data[0]) {
         const newTask = data[0];
         const { notifyTaskCreated } = await import('@/services/notificationService');
-        
+
         // Get goal information
         const { data: goalData } = await supabase
           .from('goals')
@@ -480,7 +451,7 @@ export const insertTask = async (taskData: any) => {
           .single();
 
         const goalTitle = goalData?.title || 'your goal';
-        
+
         await notifyTaskCreated(
           newTask.goal_id,
           user.id,
@@ -533,7 +504,7 @@ export const deleteTaskFromDatabase = async (taskId: string): Promise<void> => {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const { notifyTaskDeleted } = await import('@/services/notificationService');
-          
+
           const goalTitle = taskData.goals?.title || 'your goal';
 
           await notifyTaskDeleted(

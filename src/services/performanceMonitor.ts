@@ -19,7 +19,7 @@ export class PerformanceMonitor {
    */
   startNavigation(route: string): void {
     this.navigationStart = performance.now()
-    
+
     if (!this.routeMetrics.has(route)) {
       this.routeMetrics.set(route, {
         route,
@@ -40,7 +40,7 @@ export class PerformanceMonitor {
   endNavigation(route: string, fromCache: boolean = false): void {
     const loadTime = performance.now() - this.navigationStart
     const metrics = this.routeMetrics.get(route)
-    
+
     if (!metrics) return
 
     // Update metrics
@@ -48,10 +48,10 @@ export class PerformanceMonitor {
     metrics.lastLoad = loadTime
     metrics.fastestLoad = Math.min(metrics.fastestLoad, loadTime)
     metrics.slowestLoad = Math.max(metrics.slowestLoad, loadTime)
-    
+
     // Update average (running average)
     metrics.averageLoadTime = (
-      (metrics.averageLoadTime * (metrics.totalNavigations - 1) + loadTime) / 
+      (metrics.averageLoadTime * (metrics.totalNavigations - 1) + loadTime) /
       metrics.totalNavigations
     )
 
@@ -87,7 +87,7 @@ export class PerformanceMonitor {
    */
   getPerformanceSummary(): PerformanceSummary {
     const allMetrics = this.getAllMetrics()
-    
+
     if (allMetrics.length === 0) {
       return {
         totalRoutes: 0,
@@ -102,16 +102,16 @@ export class PerformanceMonitor {
     const totalNavigations = allMetrics.reduce((sum, m) => sum + m.totalNavigations, 0)
     const totalCacheHits = allMetrics.reduce((sum, m) => sum + m.cacheHits, 0)
     const totalCacheMisses = allMetrics.reduce((sum, m) => sum + m.cacheMisses, 0)
-    
+
     const overallAverageLoadTime = allMetrics.reduce(
       (sum, m) => sum + (m.averageLoadTime * m.totalNavigations), 0
     ) / totalNavigations
 
-    const slowestRoute = allMetrics.reduce((slowest, current) => 
+    const slowestRoute = allMetrics.reduce((slowest, current) =>
       current.slowestLoad > slowest.slowestLoad ? current : slowest
     )
 
-    const fastestRoute = allMetrics.reduce((fastest, current) => 
+    const fastestRoute = allMetrics.reduce((fastest, current) =>
       current.fastestLoad < fastest.fastestLoad ? current : fastest
     )
 
@@ -153,7 +153,7 @@ export class PerformanceMonitor {
 
     const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
     const paint = performance.getEntriesByType('paint')
-    
+
     if (!navigation) return null
 
     const fcp = paint.find(entry => entry.name === 'first-contentful-paint')
@@ -205,44 +205,34 @@ export const performanceMonitor = PerformanceMonitor.getInstance()
  * Initialize performance monitoring
  */
 export function initializePerformanceMonitoring(): void {
-  // Monitor route changes
-  let currentRoute = window.location.pathname
-  
-  const observer = new MutationObserver(() => {
-    const newRoute = window.location.pathname
-    if (newRoute !== currentRoute) {
-      performanceMonitor.endNavigation(currentRoute)
-      performanceMonitor.startNavigation(newRoute)
-      currentRoute = newRoute
-    }
-  })
+  // Monitor route changes via a simpler mechanism if possible, 
+  // or rely on manual start/end in route loaders (which we already have).
+  // The MutationObserver was scanning the entire DOM on every change, which is too expensive.
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  })
+  // Note: Most route events are already tracked manually in our TanStack loaders
+  // via performanceMonitor.startNavigation/endNavigation calls.
 
-  // Start monitoring current route
-  performanceMonitor.startNavigation(currentRoute)
+  const currentRoute = window.location.pathname;
+  performanceMonitor.startNavigation(currentRoute);
 
   // Log performance summary periodically in development
   if (process.env.NODE_ENV === 'development') {
     setInterval(() => {
-      const summary = performanceMonitor.getPerformanceSummary()
+      const summary = performanceMonitor.getPerformanceSummary();
       if (summary.totalNavigations > 0) {
-        console.group('🚀 Route Performance Summary')
-        console.log(`Total Routes: ${summary.totalRoutes}`)
-        console.log(`Total Navigations: ${summary.totalNavigations}`)
-        console.log(`Average Load Time: ${summary.averageLoadTime.toFixed(2)}ms`)
-        console.log(`Cache Hit Rate: ${(summary.cacheHitRate * 100).toFixed(1)}%`)
+        console.group('🚀 Route Performance Summary');
+        console.log(`Total Routes: ${summary.totalRoutes}`);
+        console.log(`Total Navigations: ${summary.totalNavigations}`);
+        console.log(`Average Load Time: ${summary.averageLoadTime.toFixed(2)}ms`);
+        console.log(`Cache Hit Rate: ${(summary.cacheHitRate * 100).toFixed(1)}%`);
         if (summary.slowestRoute) {
-          console.log(`Slowest Route: ${summary.slowestRoute.route} (${summary.slowestRoute.slowestLoad.toFixed(2)}ms)`)
+          console.log(`Slowest Route: ${summary.slowestRoute.route} (${summary.slowestRoute.slowestLoad.toFixed(2)}ms)`);
         }
         if (summary.fastestRoute) {
-          console.log(`Fastest Route: ${summary.fastestRoute.route} (${summary.fastestRoute.fastestLoad.toFixed(2)}ms)`)
+          console.log(`Fastest Route: ${summary.fastestRoute.route} (${summary.fastestRoute.fastestLoad.toFixed(2)}ms)`);
         }
-        console.groupEnd()
+        console.groupEnd();
       }
-    }, 300000) // Every 5 minutes (reduced CPU usage)
+    }, 300000); // Every 5 minutes
   }
 }

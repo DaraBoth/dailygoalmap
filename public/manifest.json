@@ -1,7 +1,7 @@
 {
-  "name": "DailyGoalMap",
-  "short_name": "GoalMap",
-  "description": "Track and achieve your life goals with AI-powered task management. Created by Vong Pichdaraboth.",
+  "name": "Orbit",
+  "short_name": "Orbit",
+  "description": "Your daily revolution. Track goals, manage tasks, and achieve success with Orbit.",
   "theme_color": "#1C355A",
   "background_color": "#F3F4F6",
   "display": "standalone",

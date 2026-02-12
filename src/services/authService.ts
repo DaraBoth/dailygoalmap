@@ -25,7 +25,7 @@ class AuthService {
   };
   private listeners: Array<(state: AuthState) => void> = [];
   private sessionCheckInterval: NodeJS.Timeout | null = null;
-  private readonly SESSION_STORAGE_KEY = 'dailygoalmap_session';
+  private readonly SESSION_STORAGE_KEY = 'orbit_session';
   private readonly SESSION_VALIDATION_INTERVAL = 5 * 60 * 1000; // 5 minutes
   private readonly SESSION_REFRESH_THRESHOLD = 10 * 60 * 1000; // 10 minutes before expiry
 
@@ -45,41 +45,42 @@ class AuthService {
    */
   private async initializeAuth(): Promise<void> {
     try {
-      // First, try to restore session from storage
+      // First, try to restore session from storage for immediate UI response
       const storedSession = this.getStoredSession();
-      
+
       if (storedSession && this.isSessionValid(storedSession)) {
-        // Validate stored session with Supabase
+        // Optimistically set the auth state from storage
+        this.updateAuthState(storedSession.user, storedSession.session);
+        this.authState.isLoading = false;
+        this.notifyListeners();
+
+        // Validate with Supabase in the background
+        this.validateCurrentSession().catch(err => {
+          console.error('Background session validation failed:', err);
+        });
+      } else {
+        // No valid stored session, check with Supabase (this bit is still blocking but necessary)
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
         if (session && !error) {
           this.updateAuthState(session.user, session);
           this.storeSession(session.user, session);
         } else {
-          // Stored session is invalid, clear it
+          this.updateAuthState(null, null);
           this.clearStoredSession();
         }
-      } else {
-        // No valid stored session, check with Supabase
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (session && !error) {
-          this.updateAuthState(session.user, session);
-          this.storeSession(session.user, session);
-        }
+        this.authState.isLoading = false;
+        this.notifyListeners();
       }
 
       // Set up auth state listener
       supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' && session) {
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
           this.updateAuthState(session.user, session);
           this.storeSession(session.user, session);
         } else if (event === 'SIGNED_OUT') {
           this.updateAuthState(null, null);
           this.clearStoredSession();
-        } else if (event === 'TOKEN_REFRESHED' && session) {
-          this.updateAuthState(session.user, session);
-          this.storeSession(session.user, session);
         }
       });
 
@@ -88,7 +89,6 @@ class AuthService {
 
     } catch (error) {
       console.error('Auth initialization error:', error);
-    } finally {
       this.authState.isLoading = false;
       this.notifyListeners();
     }
@@ -118,7 +118,7 @@ class AuthService {
         expiresAt: session.expires_at ? session.expires_at * 1000 : Date.now() + (24 * 60 * 60 * 1000),
         lastValidated: Date.now(),
       };
-      
+
       localStorage.setItem(this.SESSION_STORAGE_KEY, JSON.stringify(sessionData));
     } catch (error) {
       console.error('Failed to store session:', error);
@@ -132,7 +132,7 @@ class AuthService {
     try {
       const stored = localStorage.getItem(this.SESSION_STORAGE_KEY);
       if (!stored) return null;
-      
+
       return JSON.parse(stored) as SessionData;
     } catch (error) {
       console.error('Failed to parse stored session:', error);
@@ -157,18 +157,18 @@ class AuthService {
    */
   private isSessionValid(sessionData: SessionData): boolean {
     const now = Date.now();
-    
+
     // Check if session has expired
     if (now >= sessionData.expiresAt) {
       return false;
     }
-    
+
     // Check if session needs validation (hasn't been validated recently)
     const timeSinceValidation = now - sessionData.lastValidated;
     if (timeSinceValidation > this.SESSION_VALIDATION_INTERVAL) {
       return false;
     }
-    
+
     return true;
   }
 
@@ -193,7 +193,7 @@ class AuthService {
   private async validateCurrentSession(): Promise<boolean> {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
-      
+
       if (error || !session) {
         // Session is invalid, sign out
         this.updateAuthState(null, null);
@@ -204,11 +204,11 @@ class AuthService {
       // Check if session needs refresh
       const now = Date.now();
       const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
-      
+
       if (expiresAt - now < this.SESSION_REFRESH_THRESHOLD) {
         // Try to refresh the session
         const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
-        
+
         if (refreshedSession && !refreshError) {
           this.updateAuthState(refreshedSession.user, refreshedSession);
           this.storeSession(refreshedSession.user, refreshedSession);
@@ -230,10 +230,10 @@ class AuthService {
    */
   public subscribe(listener: (state: AuthState) => void): () => void {
     this.listeners.push(listener);
-    
+
     // Immediately call listener with current state
     listener(this.authState);
-    
+
     // Return unsubscribe function
     return () => {
       this.listeners = this.listeners.filter(l => l !== listener);
@@ -329,8 +329,8 @@ class AuthService {
    */
   public isPWA(): boolean {
     return window.matchMedia('(display-mode: standalone)').matches ||
-           (window.navigator as any).standalone ||
-           document.referrer.includes('android-app://');
+      (window.navigator as any).standalone ||
+      document.referrer.includes('android-app://');
   }
 
   /**

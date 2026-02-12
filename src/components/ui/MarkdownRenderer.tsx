@@ -24,7 +24,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 }) => {
 
     // === COPY-TO-CLIPBOARD ===
-    const copyMessage = (e: React.MouseEvent<HTMLButtonElement, MouseEvent> ) => {
+    const copyMessage = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         e.preventDefault();
         navigator.clipboard.writeText(content);
         toast({ title: 'Copied!', description: 'Message copied to clipboard.' });
@@ -124,7 +124,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                                     rel="noopener noreferrer"
                                     className="
                                         inline-flex items-center gap-1 px-3 py-1.5 my-1
-                                        liquid-glass-button rounded-md text-sm font-medium
+                                        border bg-background/50 hover:bg-accent rounded-md text-sm font-medium
                                         transition-all shadow-sm hover:shadow-md no-underline
                                     "
                                 >
@@ -160,7 +160,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                         },
 
                         thead({ children }) {
-                            return <thead className="liquid-glass">{children}</thead>;
+                            return <thead className="bg-muted/50">{children}</thead>;
                         },
 
                         tbody({ children }) {
@@ -236,7 +236,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             {/* COPY MESSAGE BUTTON */}
             {!noCopy && !isLoading && !isStreaming && copyMessage && (
                 <button
-                    onClick={(e)=>copyMessage(e)}
+                    onClick={(e) => copyMessage(e)}
                     className="
                         text-xs px-2 py-1 rounded-md
                         bg-gray-300

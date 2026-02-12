@@ -30,7 +30,7 @@ const CalendarHeader = ({
 
   return (
     <nav
-      className="liquid-glass-container relative mt-3 sm:mt-4 mx-2 mb-3 sm:mb-4 rounded-2xl sm:rounded-3xl border border-gray-200/60 dark:border-white/25"
+      className="border bg-background/80 backdrop-blur-md shadow-sm relative mt-3 sm:mt-4 mx-2 mb-3 sm:mb-4 rounded-2xl sm:rounded-3xl border-gray-200/60 dark:border-white/25"
       role="navigation"
       aria-label="Calendar navigation"
     >
@@ -40,7 +40,7 @@ const CalendarHeader = ({
         <div className="flex items-center gap-3">
           <button
             onClick={onPreviousMonth}
-            className="p-2 liquid-glass-button w-9 h-9 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center justify-center"
+            className="p-2 hover:bg-accent w-9 h-9 transition-all duration-200 rounded-xl flex items-center justify-center"
             aria-label="Previous month"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -58,7 +58,7 @@ const CalendarHeader = ({
 
           <button
             onClick={onNextMonth}
-            className="p-2 liquid-glass-button w-9 h-9 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center justify-center"
+            className="p-2 hover:bg-accent w-9 h-9 transition-all duration-200 rounded-xl flex items-center justify-center"
             aria-label="Next month"
           >
             <ChevronRight className="h-4 w-4" />
@@ -66,7 +66,7 @@ const CalendarHeader = ({
 
           <button
             onClick={onGoToToday}
-            className="p-2 liquid-glass-button h-9 px-3 backdrop-blur-sm transition-all duration-200 rounded-xl text-sm font-medium flex items-center"
+            className="p-2 hover:bg-accent h-9 px-3 transition-all duration-200 rounded-xl text-sm font-medium flex items-center"
             aria-label="Go to today"
           >
             <Home className="h-4 w-4 mr-1" />
@@ -106,7 +106,7 @@ const CalendarHeader = ({
         {/* Right Section: Add Task Button */}
         <button
           onClick={onOpenAddTaskDialog}
-          className="p-2 liquid-glass-button px-4 py-2 h-auto backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center"
+          className="p-2 hover:bg-accent px-4 py-2 h-auto transition-all duration-200 rounded-xl flex items-center"
         >
           <CalendarIcon className="w-4 h-4 mr-2" />
           Add Task
@@ -121,7 +121,7 @@ const CalendarHeader = ({
           <div className="flex items-center justify-between">
             <button
               onClick={onPreviousMonth}
-              className="p-2 liquid-glass-button w-9 h-9 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center justify-center"
+              className="p-2 hover:bg-accent w-9 h-9 transition-all duration-200 rounded-xl flex items-center justify-center"
               aria-label="Previous month"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -139,7 +139,7 @@ const CalendarHeader = ({
 
             <button
               onClick={onNextMonth}
-              className="p-2 liquid-glass-button w-9 h-9 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center justify-center"
+              className="p-2 hover:bg-accent w-9 h-9 transition-all duration-200 rounded-xl flex items-center justify-center"
               aria-label="Next month"
             >
               <ChevronRight className="h-4 w-4" />
@@ -150,7 +150,7 @@ const CalendarHeader = ({
           <div className="flex items-center justify-between gap-3">
             <button
               onClick={onGoToToday}
-              className="p-2 liquid-glass-button h-9 px-3 backdrop-blur-sm transition-all duration-200 rounded-xl text-sm font-medium flex items-center"
+              className="p-2 hover:bg-accent h-9 px-3 transition-all duration-200 rounded-xl text-sm font-medium flex items-center"
               aria-label="Go to today"
             >
               <Home className="h-4 w-4 mr-1" />
@@ -159,7 +159,7 @@ const CalendarHeader = ({
 
             <button
               onClick={onOpenAddTaskDialog}
-              className="p-2 liquid-glass-button px-4 py-2 h-auto backdrop-blur-sm transition-all duration-200 rounded-xl flex-1 max-w-[120px] flex items-center justify-center"
+              className="p-2 hover:bg-accent px-4 py-2 h-auto transition-all duration-200 rounded-xl flex-1 max-w-[120px] flex items-center justify-center"
             >
               <CalendarIcon className="w-4 h-4 mr-2" />
               Add Task

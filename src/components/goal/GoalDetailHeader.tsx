@@ -57,12 +57,12 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
 
   return (
     <>
-      <div className="fixed top-2.5 z-50 w-[calc(100vw-16px)] mx-2 liquid-glass-container">
+      <div className="fixed top-2.5 z-50 w-[calc(100vw-16px)] mx-2 border bg-background/80 backdrop-blur-md shadow-sm rounded-2xl">
         <div className="w-full px-2 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between max-w-[2000px] mx-auto gap-2">
             <div className="flex items-center space-x-2 flex-1 min-w-0">
               <button
-                className="p-2 liquid-glass-button w-8 h-8 sm:w-9 sm:h-9 backdrop-blur-sm transition-all duration-200 rounded-xl"
+                className="p-2 hover:bg-accent w-8 h-8 sm:w-9 sm:h-9 transition-all duration-200 rounded-xl"
                 onClick={handleGoBack}
               >
                 <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -77,7 +77,7 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
             <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
               {hasTemplate && goalId && (
                 <button
-                  className="p-2 liquid-glass-button h-7 sm:h-8 px-1.5 sm:px-2 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center"
+                  className="p-2 hover:bg-accent h-7 sm:h-8 px-1.5 sm:px-2 transition-all duration-200 rounded-xl flex items-center"
                   onClick={() => setShowEditTemplateModal(true)}
                   title="Edit Template Data"
                 >
@@ -100,9 +100,8 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
 
               {onToggleAnalytics && (
                 <button
-                  className={`p-2 liquid-glass-button h-7 sm:h-8 px-1.5 sm:px-2 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center ${
-                    showAnalytics ? 'bg-primary/10 border-primary/30' : ''
-                  }`}
+                  className={`p-2 hover:bg-accent h-7 sm:h-8 px-1.5 sm:px-2 transition-all duration-200 rounded-xl flex items-center ${showAnalytics ? 'bg-primary/10 border-primary/30' : ''
+                    }`}
                   onClick={onToggleAnalytics}
                 >
                   {showAnalytics ? (

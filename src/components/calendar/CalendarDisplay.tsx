@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Task } from "./types";
 import CalendarHeader from "./CalendarHeader";
 import CalendarGrid from "./CalendarGrid";
-import LoadingState from "./LoadingState";
+import EnhancedLoading from "@/components/ui/enhanced-loading";
 import { Button } from '@/components/ui/button';
 
 interface CalendarDisplayProps {
@@ -56,7 +56,7 @@ const CalendarDisplay = ({
   return (
     <div className="w-full h-full flex flex-col">
       {isLoading ? (
-        <LoadingState />
+        <EnhancedLoading variant="calendar" message="Synchronizing mission timelines..." fullPage={false} />
       ) : (
         <>
           <CalendarHeader
@@ -72,13 +72,13 @@ const CalendarDisplay = ({
           {/* Fixed height calendar container to prevent size fluctuations */}
           <div className="flex-1 min-h-0 overflow-hidden">
             <div className="h-full min-h-[400px] sm:min-h-[450px] md:min-h-[500px] lg:min-h-[550px]">
-                <CalendarGrid
-                  currentMonth={currentMonth}
-                  selectedDate={selectedDate}
-                  onDateChange={onDateChange}
-                  getTasksForDate={getTasksForDate}
-                  onTaskClick={onTaskClick}
-                />
+              <CalendarGrid
+                currentMonth={currentMonth}
+                selectedDate={selectedDate}
+                onDateChange={onDateChange}
+                getTasksForDate={getTasksForDate}
+                onTaskClick={onTaskClick}
+              />
             </div>
           </div>
         </>

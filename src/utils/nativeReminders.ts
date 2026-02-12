@@ -12,7 +12,7 @@ export const isNativeReminderSupported = (): boolean => {
 export const addTaskToReminders = async (task: Task): Promise<boolean> => {
   try {
     const taskDate = new Date(task.start_date);
-    
+
     // Set time if available
     if (task.daily_start_time) {
       const [hours, minutes] = task.daily_start_time.split(':').map(Number);
@@ -32,7 +32,7 @@ export const addTaskToReminders = async (task: Task): Promise<boolean> => {
     const icsContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//Daily Goal Map//Task Reminder//EN',
+      'PRODID:-//Orbit//Task Reminder//EN',
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
       'BEGIN:VEVENT',
@@ -40,7 +40,7 @@ export const addTaskToReminders = async (task: Task): Promise<boolean> => {
       `DTEND:${endDate}`,
       `SUMMARY:${task.title || 'Task Reminder'}`,
       `DESCRIPTION:${(task.description || '').replace(/\n/g, '\\n')}`,
-      `UID:${task.id}@dailygoalmap.com`,
+      `UID:${task.id}@orbit.system`,
       'STATUS:CONFIRMED',
       'BEGIN:VALARM',
       'TRIGGER:-PT15M', // 15 minutes before

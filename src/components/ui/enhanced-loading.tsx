@@ -1,237 +1,217 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Loader2, Calendar, Target, Sparkles, Clock } from "lucide-react";
+import { Satellite, Rocket, Zap, Radio, Target, Calendar, Sparkles, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import GlobalBackground from "./GlobalBackground";
 
 interface EnhancedLoadingProps {
-  variant?: "default" | "calendar" | "goal" | "dashboard" | "minimal";
+  variant?: "default" | "calendar" | "goal" | "dashboard" | "auth" | "system" | "minimal";
   message?: string;
   className?: string;
-  size?: "sm" | "md" | "lg";
+  fullPage?: boolean;
 }
 
-const EnhancedLoading = ({ 
-  variant = "default", 
-  message, 
+const EnhancedLoading = ({
+  variant = "default",
+  message,
   className,
-  size = "md" 
+  fullPage = true
 }: EnhancedLoadingProps) => {
-  const sizeClasses = {
-    sm: "h-4 w-4",
-    md: "h-8 w-8", 
-    lg: "h-12 w-12"
-  };
-
-  const containerSizes = {
-    sm: "gap-2",
-    md: "gap-4",
-    lg: "gap-6"
-  };
-
-  const textSizes = {
-    sm: "text-sm",
-    md: "text-base",
-    lg: "text-lg"
-  };
 
   const getVariantContent = () => {
     switch (variant) {
       case "calendar":
         return {
           icon: Calendar,
-          message: message || "Loading calendar data...",
-          gradient: "from-blue-500 via-purple-500 to-pink-500",
-          bgGradient: "from-blue-500/10 via-purple-500/10 to-pink-500/10"
+          header: "SYNCHRONIZING SCHEDULE",
+          message: message || "Aligning mission timelines...",
+          color: "text-blue-400",
+          glow: "bg-blue-500/20"
         };
       case "goal":
         return {
           icon: Target,
-          message: message || "Loading goal details...",
-          gradient: "from-green-500 via-emerald-500 to-teal-500",
-          bgGradient: "from-green-500/10 via-emerald-500/10 to-teal-500/10"
+          header: "CALIBRATING TRAJECTORY",
+          message: message || "Calculating achievement vectors...",
+          color: "text-emerald-400",
+          glow: "bg-emerald-500/20"
         };
       case "dashboard":
         return {
-          icon: Sparkles,
-          message: message || "Loading your dashboard...",
-          gradient: "from-orange-500 via-red-500 to-pink-500",
-          bgGradient: "from-orange-500/10 via-red-500/10 to-pink-500/10"
+          icon: Satellite,
+          header: "MISSION CONTROL INITIALIZING",
+          message: message || "Establishing command link...",
+          color: "text-primary",
+          glow: "bg-primary/20"
         };
-      case "minimal":
+      case "auth":
         return {
-          icon: Loader2,
-          message: message || "Loading...",
-          gradient: "from-gray-500 to-gray-600",
-          bgGradient: "from-gray-500/10 to-gray-600/10"
+          icon: Radio,
+          header: "SECURITY VERIFICATION",
+          message: message || "Authenticating credentials...",
+          color: "text-amber-400",
+          glow: "bg-amber-500/20"
+        };
+      case "system":
+        return {
+          icon: Rocket,
+          header: "PROPULSION ACTIVE",
+          message: message || "Preparing orbital insertion...",
+          color: "text-rose-400",
+          glow: "bg-rose-500/20"
         };
       default:
         return {
-          icon: Clock,
-          message: message || "Loading...",
-          gradient: "from-blue-500 via-purple-500 to-indigo-500",
-          bgGradient: "from-blue-500/10 via-purple-500/10 to-indigo-500/10"
+          icon: Zap,
+          header: "SYSTEM INITIALIZING",
+          message: message || "Processing data streams...",
+          color: "text-primary",
+          glow: "bg-primary/20"
         };
     }
   };
 
-  const { icon: Icon, message: loadingMessage, gradient, bgGradient } = getVariantContent();
+  const { icon: Icon, header, message: loadingMessage, color, glow } = getVariantContent();
 
   if (variant === "minimal") {
     return (
-      <div className={cn("flex items-center justify-center", containerSizes[size], className)}>
+      <div className={cn("flex items-center gap-3 p-4 rounded-2xl bg-background/20 backdrop-blur-sm border border-foreground/5", className)}>
         <motion.div
           animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
         >
-          <Icon className={cn(sizeClasses[size], "text-muted-foreground")} />
+          <Loader2 className="h-5 w-5 text-primary" />
         </motion.div>
-        {loadingMessage && (
-          <span className={cn(textSizes[size], "text-muted-foreground font-medium")}>
-            {loadingMessage}
-          </span>
-        )}
+        <span className="text-xs font-bold text-foreground/70 uppercase tracking-widest">{message || "Processing..."}</span>
       </div>
     );
   }
 
   return (
-    <div className={cn("flex flex-col items-center justify-center min-h-[200px] p-8", className)}>
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <motion.div
-          className={cn("absolute inset-0 bg-gradient-to-br opacity-30", bgGradient)}
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-        
-        {/* Floating particles */}
-        {[...Array(6)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-2 h-2 bg-white/20 rounded-full"
-            style={{
-              left: `${20 + i * 15}%`,
-              top: `${30 + (i % 3) * 20}%`,
-            }}
-            animate={{
-              y: [-20, -40, -20],
-              opacity: [0, 1, 0],
-              scale: [0.5, 1, 0.5],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              delay: i * 0.5,
-              ease: "easeInOut",
-            }}
-          />
-        ))}
-      </div>
+    <div className={cn(
+      "relative flex flex-col items-center justify-center p-8 overflow-hidden",
+      fullPage ? "min-h-screen w-screen fixed inset-0 z-[100] bg-background" : "min-h-[400px] w-full bg-background/40 backdrop-blur-2xl rounded-[3.5rem] border border-foreground/5 shadow-2xl",
+      className
+    )}>
+      {fullPage && <GlobalBackground />}
 
-      {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center gap-6">
-        {/* Animated icon container */}
-        <motion.div
-          className="relative"
-          animate={{
-            scale: [1, 1.1, 1],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        >
-          {/* Glowing background */}
+      <div className="relative z-10 flex flex-col items-center max-w-sm w-full">
+        {/* Ultra-Premium Orbital Animation */}
+        <div className="relative w-48 h-48 mb-16 flex items-center justify-center">
+          {/* Main Glow */}
           <motion.div
-            className={cn("absolute inset-0 rounded-full bg-gradient-to-r blur-xl", gradient)}
             animate={{
-              scale: [0.8, 1.2, 0.8],
-              opacity: [0.3, 0.6, 0.3],
+              scale: [1, 1.3, 1],
+              opacity: [0.3, 0.6, 0.3]
             }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className={cn("absolute inset-10 rounded-full blur-[40px]", glow)}
           />
-          
-          {/* Icon container */}
-          <motion.div
-            className={cn(
-              "relative p-6 rounded-full bg-white/10 dark:bg-white/5 backdrop-blur-sm border border-white/20",
-              "shadow-2xl"
-            )}
-            animate={{ rotate: 0 }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-          >
-            <Icon className={cn("h-12 w-12 text-white drop-shadow-lg", `bg-gradient-to-r ${gradient} bg-clip-text text-transparent`)} />
-          </motion.div>
-        </motion.div>
 
-        {/* Loading message */}
-        <motion.div
-          className="text-center space-y-2"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <h3 className="text-lg font-semibold text-foreground">
-            {loadingMessage}
-          </h3>
-          
-          {/* Animated dots */}
-          <div className="flex items-center justify-center gap-1">
-            {[...Array(3)].map((_, i) => (
+          {/* Abstract Orbital Rings */}
+          {[1, 2, 3].map((ring) => (
+            <motion.div
+              key={ring}
+              animate={{ rotate: 360 }}
+              transition={{
+                duration: 10 + ring * 5,
+                repeat: Infinity,
+                ease: "linear"
+              }}
+              className="absolute inset-0 rounded-full border border-foreground/5 pointer-events-none"
+              style={{ scale: 0.6 + ring * 0.15 }}
+            >
               <motion.div
-                key={i}
-                className="w-2 h-2 bg-muted-foreground rounded-full"
                 animate={{
                   scale: [1, 1.5, 1],
-                  opacity: [0.5, 1, 0.5],
+                  opacity: [0.4, 1, 0.4]
                 }}
                 transition={{
-                  duration: 1.5,
+                  duration: 2 + ring,
                   repeat: Infinity,
-                  delay: i * 0.2,
-                  ease: "easeInOut",
+                  ease: "easeInOut"
                 }}
+                className={cn(
+                  "absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full",
+                  ring === 1 ? "bg-primary" : ring === 2 ? "bg-blue-400" : "bg-purple-400"
+                )}
               />
+            </motion.div>
+          ))}
+
+          {/* Central Housing */}
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="relative p-6 rounded-[2rem] bg-background/60 backdrop-blur-xl border border-foreground/10 shadow-2xl flex items-center justify-center"
+          >
+            <Icon className={cn("h-10 w-10", color)} />
+          </motion.div>
+
+          {/* Scanning Line Animation */}
+          <motion.div
+            animate={{ top: ["10%", "90%", "10%"] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent z-20 pointer-events-none"
+          />
+        </div>
+
+        {/* Brand & Loading Info */}
+        <div className="text-center space-y-6 w-full">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="space-y-2"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10 mb-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/80">
+                {header}
+              </span>
+            </div>
+
+            <h1 className="text-4xl font-black tracking-tighter text-foreground leading-none">
+              Orbit <span className="text-primary italic">Syncing</span>
+            </h1>
+
+            <p className="text-sm font-bold text-muted-foreground/60 leading-relaxed px-8">
+              {loadingMessage}
+            </p>
+          </motion.div>
+
+          {/* High-Tech Progress Bar */}
+          <div className="px-12">
+            <div className="h-1 w-full bg-foreground/5 rounded-full overflow-hidden relative">
+              <motion.div
+                animate={{ x: ["-100%", "200%"] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-primary to-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Subsystem Health Checks */}
+          <div className="flex justify-center gap-8 pt-6">
+            {[" Uplink", " Neural", " Core"].map((s, i) => (
+              <motion.div
+                key={s}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0.2, 0.5, 0.2] }}
+                transition={{ delay: 0.5 + i * 0.2, duration: 2, repeat: Infinity }}
+                className="flex items-center gap-2"
+              >
+                <div className="text-[9px] font-black uppercase tracking-widest opacity-40">
+                  {s}
+                </div>
+              </motion.div>
             ))}
           </div>
-        </motion.div>
-
-        {/* Progress bar */}
-        <motion.div
-          className="w-48 h-1 bg-white/10 rounded-full overflow-hidden"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          <motion.div
-            className={cn("h-full bg-gradient-to-r rounded-full", gradient)}
-            animate={{
-              x: ["-100%", "100%"],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-        </motion.div>
+        </div>
       </div>
+
+      {/* Extreme Atmosphere */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1200px] h-[1200px] bg-primary/5 rounded-full blur-[180px] pointer-events-none -z-10" />
     </div>
   );
 };

@@ -115,8 +115,8 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
     await updateTheme(editingTheme.id, { [field]: null });
   };
 
-  // 🌊 Liquid Glass Upload Component
-  const LiquidGlassUpload = ({
+  // 🌊 Orbit Image Upload Component
+  const OrbitImageUpload = ({
     label,
     file,
     existingUrl,
@@ -254,7 +254,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button className="p-2 liquid-glass-button h-7 sm:h-8 px-1.5 sm:px-2 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center gap-1 sm:gap-2">
+        <button className="p-2 border bg-background/50 hover:bg-accent h-7 sm:h-8 px-1.5 sm:px-2 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center gap-1 sm:gap-2">
           <Palette className={`h-3.5 w-3.5 sm:h-4 sm:w-4`} />
           {!isMobile && <span>Theme</span>}
         </button>
@@ -304,21 +304,21 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                   </div>
 
                   <div className="grid grid-cols-3 gap-2">
-                    <LiquidGlassUpload
+                    <OrbitImageUpload
                       label="Profile"
                       file={profileImage}
                       existingUrl={editingTheme?.goal_profile_image}
                       onChange={setProfileImage}
                       onRemove={editingTheme ? () => handleRemoveThemeImage('goal_profile_image') : undefined}
                     />
-                    <LiquidGlassUpload
+                    <OrbitImageUpload
                       label="Card BG"
                       file={cardImage}
                       existingUrl={editingTheme?.card_background_image}
                       onChange={setCardImage}
                       onRemove={editingTheme ? () => handleRemoveThemeImage('card_background_image') : undefined}
                     />
-                    <LiquidGlassUpload
+                    <OrbitImageUpload
                       label="Page BG"
                       file={pageImage}
                       existingUrl={editingTheme?.page_background_image}
@@ -393,8 +393,8 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                         key={theme.id}
                         onClick={() => onThemeSelect(theme.id)}
                         className={`group relative overflow-hidden cursor-pointer rounded-xl border bg-card/60 backdrop-blur-lg shadow-sm transition-all duration-300 hover:shadow-lg hover:scale-[1.02] ${currentThemeId === theme.id
-                            ? "ring-2 ring-primary shadow-primary/20"
-                            : ""
+                          ? "ring-2 ring-primary shadow-primary/20"
+                          : ""
                           }`}
                       >
                         {/* Top bar with name + actions */}

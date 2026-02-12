@@ -70,10 +70,10 @@ export function InstallGuide() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Download className="h-5 w-5" />
-          Install Goal Completer App
+          Install Orbit App
         </CardTitle>
         <CardDescription>
-          Install our app on your device for a better experience. Created by Vong Pichdaraboth.
+          Install our system on your device for a zero-friction experience.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

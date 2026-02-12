@@ -13,7 +13,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast"; // Update toast import
 
-const TodaysTasks: React.FC = () => {
+const TodaysTasks: React.FC = React.memo(() => {
   const [tasksForToday, setTasksForToday] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [availableGoals, setAvailableGoals] = useState<Array<{ id: string; title: string }>>([]);
@@ -403,7 +403,7 @@ const TodaysTasks: React.FC = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative space-y-4 sm:space-y-6">
       {isMobile && (
         <AnimatePresence>
           {isTasksVisible && (
@@ -412,15 +412,15 @@ const TodaysTasks: React.FC = () => {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed inset-x-0 bottom-0 liquid-glass-modal shadow-lg rounded-t-2xl max-h-[80vh] overflow-hidden z-50"
+              className="fixed inset-x-0 bottom-0 bg-background/95 backdrop-blur-md border-t shadow-lg rounded-t-2xl max-h-[80vh] overflow-hidden z-50"
             >
-              <div className="flex items-center justify-between p-4 border-b border-border/40 liquid-glass-subtle sticky top-0 z-10">
+              <div className="flex items-center justify-between p-4 border-b border-border/40 bg-muted/30 sticky top-0 z-10">
                 <h2 className="text-lg font-semibold">Today's Tasks</h2>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setIsTasksVisible(false)}
-                  className="liquid-glass-button"
+                  className="rounded-xl"
                 >
                   Close
                 </Button>
@@ -558,7 +558,7 @@ const TodaysTasks: React.FC = () => {
 
       {isMobile && !isTasksVisible && (
         <Button
-          className="liquid-glass-button fixed inset-x-0 bottom-0 rounded-t-2xl p-2 z-50 border-t border-border/40"
+          className="fixed inset-x-0 bottom-0 rounded-t-2xl p-2 z-50 border-t border-border/40 bg-background/80 backdrop-blur-md"
           onClick={() => setIsTasksVisible(true)}
         >
           View Today's Tasks
@@ -566,26 +566,31 @@ const TodaysTasks: React.FC = () => {
       )}
 
       {!isMobile && (
-        <Card className="border border-border/20 rounded-2xl liquid-glass-card">
-          <CardHeader className="pb-4">
-            <div className="flex items-center space-x-3 mb-3 flex-row">
-              <div className="p-2 liquid-glass-subtle rounded-xl">
-                <ClipboardList className="h-5 w-5 text-primary" />
+        <Card className="border border-foreground/5 rounded-[2.5rem] glass-card bg-background/40 backdrop-blur-xl shadow-2xl overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
+          <CardHeader className="pb-4 pt-8 px-8">
+            <div className="flex items-center space-x-4 mb-4 flex-row">
+              <div className="p-3 bg-primary/10 rounded-2xl ring-1 ring-primary/20 group-hover:scale-110 transition-transform duration-300">
+                <ClipboardList className="h-6 w-6 text-primary" />
               </div>
-              <CardTitle className="text-xl font-bold">
-                Today's Tasks
-              </CardTitle>
+              <div>
+                <CardTitle className="text-2xl font-black tracking-tight">
+                  Mission Logs
+                </CardTitle>
+                <CardDescription className="font-bold text-muted-foreground/60 uppercase text-[10px] tracking-widest">
+                  {format(new Date(), 'EEEE, MMMM d, yyyy')}
+                </CardDescription>
+              </div>
             </div>
 
-            <CardDescription className="font-medium">
-              {format(new Date(), 'EEEE, MMMM d, yyyy')}
-            </CardDescription>
-            <div className="text-sm liquid-glass-subtle rounded-xl px-3 py-1.5 border border-border/20 inline-block mt-2">
-              Total Tasks: <span className="font-semibold">{tasksForToday.length}</span>
+            <div className="flex items-center gap-2">
+              <div className="text-[10px] font-black bg-primary/10 text-primary rounded-full px-3 py-1 border border-primary/20 inline-block uppercase tracking-widest">
+                Active Tasks: {tasksForToday.length}
+              </div>
             </div>
           </CardHeader>
           <CardContent
-            className="liquid-glass-subtle rounded-2xl border border-border/20 flex flex-col pt-6 min-h-[400px] max-h-[600px] overflow-auto"
+            className="rounded-2xl flex flex-col pt-6 min-h-[400px] max-h-[600px] overflow-auto"
           >
             <div className="flex justify-between">
               <div className="flex items-center justify-between mb-6">
@@ -595,7 +600,7 @@ const TodaysTasks: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={handleUndoMarkAllCompleted}
-                    className="liquid-glass-button text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all duration-200 flex items-center gap-2"
+                    className="text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all duration-200 flex items-center gap-2"
                   >
                     Undo
                   </Button> :
@@ -603,7 +608,7 @@ const TodaysTasks: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={handleMarkAllCompleted}
-                    className="liquid-glass-button text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:text-green-700 dark:hover:text-green-300 rounded-xl transition-all duration-200 flex items-center gap-2"
+                    className="text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:text-green-700 dark:hover:text-green-300 rounded-xl transition-all duration-200 flex items-center gap-2"
                   >
                     <CheckCircle className="h-4 w-4" />
                     Mark All Completed
@@ -674,15 +679,15 @@ const TodaysTasks: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
-                className="space-y-2"
+                className="space-y-3"
               >
                 {tasksForToday.map((task) => (
                   <motion.div
                     key={task.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="liquid-glass flex items-start space-x-3 p-4 bg-white/50 dark:bg-white/10 backdrop-blur-sm border border-blue/20 dark:border-white/10 rounded-2xl hover:bg-white/70 dark:hover:bg-white/15 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    className="flex items-start space-x-4 p-4 bg-foreground/[0.02] backdrop-blur-sm border border-foreground/[0.05] rounded-[1.5rem] hover:bg-foreground/[0.05] hover:shadow-lg hover:border-primary/20 transition-all duration-300 cursor-pointer group/item"
                     onClick={() => handleTaskClick(task)}
                   >
                     <Checkbox
@@ -690,29 +695,28 @@ const TodaysTasks: React.FC = () => {
                       checked={task.completed}
                       onCheckedChange={() => handleToggleTaskCompletion(task.id, task.completed)}
                       onClick={e => e.stopPropagation()}
-                      className="mt-0.5"
+                      className="mt-1 h-5 w-5 rounded-lg border-foreground/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                     />
                     <div className="flex-1 min-w-0">
                       <label
                         htmlFor={`task-${task.id}`}
-                        className={`text-sm cursor-pointer font-medium transition-colors ${task.completed ? "line-through text-muted-foreground" : "text-foreground group-hover:text-foreground/90"
+                        className={`text-sm cursor-pointer font-bold transition-colors block leading-snug ${task.completed ? "line-through text-muted-foreground/50" : "text-foreground group-hover/item:text-primary"
                           }`}
                       >
                         {task.title || task.description}
                       </label>
-                      <div className="flex items-center justify-between text-xs mt-2">
+                      <div className="flex items-center justify-between text-[10px] mt-3">
                         {task.daily_start_time && task.daily_end_time && (
-                          <span className="bg-blue-100/60 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg backdrop-blur-sm border border-blue-200/50 dark:border-blue-800/50 font-medium">
+                          <span className="bg-primary/5 text-primary px-2.5 py-1 rounded-lg border border-primary/10 font-black uppercase tracking-tighter">
                             {task.daily_start_time.slice(0, 5)} - {task.daily_end_time.slice(0, 5)}
                           </span>
                         )}
                         {task.goals && (
-                          <SmartLink
-                            to={`/goal/${task.goal_id}`}
-                            className="bg-purple-100/60 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-lg backdrop-blur-sm border border-purple-200/50 dark:border-purple-800/50 font-medium hover:bg-purple-200/60 dark:hover:bg-purple-900/40 transition-colors truncate"
+                          <span
+                            className="text-muted-foreground/60 font-black uppercase tracking-widest truncate max-w-[120px]"
                           >
                             {task.goals.title}
-                          </SmartLink>
+                          </span>
                         )}
                       </div>
                     </div>
@@ -725,6 +729,6 @@ const TodaysTasks: React.FC = () => {
       )}
     </div>
   );
-};
+});
 
 export default TodaysTasks;

@@ -3,6 +3,7 @@ import { Navigate, useParams } from '@tanstack/react-router';
 import { UserContext } from '@/routes/__root';
 import { useToast } from '@/hooks/use-toast';
 import { checkCurrentUserGoalAccess } from '@/utils/goalAccess';
+import EnhancedLoading from '@/components/ui/enhanced-loading';
 
 interface ConditionalProtectedRouteProps {
   children: React.ReactNode;
@@ -22,13 +23,13 @@ interface GoalAccessState {
  * - Requires authentication and membership for private goals
  * - Handles loading and error states
  */
-export const ConditionalProtectedRoute: React.FC<ConditionalProtectedRouteProps> = ({ 
-  children 
+export const ConditionalProtectedRoute: React.FC<ConditionalProtectedRouteProps> = ({
+  children
 }) => {
   const { user } = useContext(UserContext);
   const { id: goalId } = useParams({ from: '/goal/$id' });
   const { toast } = useToast();
-  
+
   const [accessState, setAccessState] = useState<GoalAccessState>({
     loading: true,
     isPublic: null,
@@ -86,14 +87,7 @@ export const ConditionalProtectedRoute: React.FC<ConditionalProtectedRouteProps>
 
   // Show loading state
   if (accessState.loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Checking goal access...</p>
-        </div>
-      </div>
-    );
+    return <EnhancedLoading variant="auth" message="Verifying goal access protocols..." />;
   }
 
   // Handle goal not found

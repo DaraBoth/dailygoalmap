@@ -391,7 +391,7 @@ const Calendar = ({
 
   const renderNavButtons = () => {
     return (
-      <div className="flex items-center justify-center gap-2 pt-3 pb-3 liquid-glass ">
+      <div className="flex items-center justify-center gap-2 pt-3 pb-3 border-t border-border bg-muted/5 ">
         <button
           className="h-8 w-8 p-0 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
           onClick={() => handleNavigateTask('prev')}
@@ -522,7 +522,7 @@ const Calendar = ({
         task={editingTask}
       />
 
-      {isMobile && 
+      {isMobile &&
         <TaskDetailsSidebar
           isOpen={isTaskDetailsOpen}
           onClose={() => setIsTaskDetailsOpen(false)}
