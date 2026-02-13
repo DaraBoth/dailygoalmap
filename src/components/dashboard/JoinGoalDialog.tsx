@@ -99,7 +99,7 @@ export function JoinGoalDialog({ isOpen, onClose, onGoalJoined }: JoinGoalDialog
 
       try {
         const { createMemberJoinedNotifications } = await import("@/services/internalNotifications");
-        
+
         // Send push notification
         const notificationSent = await sendNotificationToGoalMembers(
           goalToJoin.id, // goalId
@@ -107,13 +107,13 @@ export function JoinGoalDialog({ isOpen, onClose, onGoalJoined }: JoinGoalDialog
           "New Member Joined the Goal!", // title
           `${userData.user?.['display_name'] || userData.user.email} has joined your goal: "${goalToJoin.title}".` // body
         );
-        
+
         // Create internal notification
         await createMemberJoinedNotifications(goalToJoin.id, userData.user.id, {
           goal_title: goalToJoin.title,
           message: `${userData.user?.['display_name'] || userData.user.email} has joined the goal`
         });
-        
+
         if (!notificationSent) {
           console.warn("Push notification not sent, but goal joined successfully.");
         }
@@ -176,3 +176,5 @@ export function JoinGoalDialog({ isOpen, onClose, onGoalJoined }: JoinGoalDialog
     </Dialog>
   );
 }
+
+export default JoinGoalDialog;

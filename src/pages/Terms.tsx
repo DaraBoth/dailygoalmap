@@ -6,6 +6,8 @@ import { ArrowLeft, Shield, FileText, Users, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import LogoAvatar from "@/components/ui/LogoAvatar";
 import { Link } from "@tanstack/react-router";
+import GlobalBackground from "@/components/ui/GlobalBackground";
+
 
 const Terms: React.FC = () => {
   return (

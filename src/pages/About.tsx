@@ -6,6 +6,8 @@ import { ArrowLeft, Heart } from "@/components/icons/CustomIcons";
 import { PremiumTarget, PremiumUsers, PremiumRocket } from "@/components/icons/PremiumIcons";
 import { motion } from "framer-motion";
 import LogoAvatar from "@/components/ui/LogoAvatar";
+import GlobalBackground from "@/components/ui/GlobalBackground";
+
 
 const About: React.FC = () => {
   return (
