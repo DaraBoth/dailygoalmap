@@ -31,13 +31,13 @@ const GoalProgress: React.FC<GoalProgressProps> = ({
   return (
     <>
       {/* Mobile: Compact vertical layout */}
-      <div className="sm:hidden bg-white/60 dark:bg-white/10 backdrop-blur-md rounded-2xl p-3 shadow-lg border border-white/20 dark:border-white/10">
+      <div className="sm:hidden bg-card/95 backdrop-blur-md rounded-2xl p-3 shadow-lg border border-border">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-2">
-            <div className="p-1.5 bg-blue-100/60 dark:bg-blue-900/30 backdrop-blur-sm rounded-lg">
-              <Target className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+            <div className="p-1.5 bg-primary/10 backdrop-blur-sm rounded-lg">
+              <Target className="h-3 w-3 text-primary" />
             </div>
-            <span className="text-sm font-semibold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+            <span className="text-sm font-semibold text-foreground">
               Progress
             </span>
           </div>
@@ -56,13 +56,13 @@ const GoalProgress: React.FC<GoalProgressProps> = ({
       </div>
 
       {/* Desktop: Horizontal single-line layout */}
-      <div className="hidden sm:flex items-center justify-between bg-white/60 dark:bg-white/10 backdrop-blur-md rounded-3xl p-4 shadow-lg border border-white/20 dark:border-white/10">
+      <div className="hidden sm:flex items-center justify-between bg-card/95 backdrop-blur-md rounded-3xl p-4 shadow-lg border border-border">
         {/* Left: Icon and Title */}
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-blue-100/60 dark:bg-blue-900/30 backdrop-blur-sm rounded-xl">
-            <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <div className="p-2 bg-primary/10 backdrop-blur-sm rounded-xl">
+            <Target className="h-4 w-4 text-primary" />
           </div>
-          <span className="text-lg font-semibold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+          <span className="text-lg font-semibold text-foreground">
             Progress
           </span>
         </div>

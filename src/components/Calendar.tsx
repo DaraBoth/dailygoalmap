@@ -393,30 +393,30 @@ const Calendar = ({
     return (
       <div className="flex items-center justify-center gap-6 py-4 border-t border-border/20 bg-background/40 backdrop-blur-3xl">
         <button
-          className="group relative h-9 w-9 p-0 rounded-xl border border-white/10 flex items-center justify-center hover:bg-white/5 hover:border-blue-500/30 transition-all duration-300 shadow-2xl"
+          className="group relative h-9 w-9 p-0 rounded-xl border border-border flex items-center justify-center hover:bg-accent hover:border-primary/30 transition-all duration-300 shadow-lg"
           onClick={() => handleNavigateTask('prev')}
         >
-          <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 rounded-xl blur-md transition-opacity"></div>
+          <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 rounded-xl blur-md transition-opacity"></div>
           <span className="sr-only">Previous Task</span>
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-gray-400 group-hover:text-blue-400 group-hover:-translate-x-0.5 transition-all">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary group-hover:-translate-x-0.5 transition-all">
             <path d="M8.84182 3.13514C9.04327 3.32401 9.05348 3.64042 8.86462 3.84188L5.43521 7.49991L8.86462 11.1579C9.05348 11.3594 9.04327 11.6758 8.84182 11.8647C8.64036 12.0535 8.32394 12.0433 8.13508 11.8419L4.38508 7.84188C4.20477 7.64955 4.20477 7.35027 4.38508 7.15794L8.13508 3.15794C8.32394 2.95648 8.64036 2.94628 8.84182 3.13514Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
           </svg>
         </button>
 
         <div className="flex flex-col items-center">
-          <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-0.5 animate-pulse">Stream</span>
-          <span className="text-[11px] font-bold text-gray-400 tracking-tighter">
-            {String(selectedTaskIndex + 1).padStart(2, '0')} <span className="text-gray-700">/</span> {String(getTasksForDateWrapper(selectedDate || new Date()).length).padStart(2, '0')}
+          <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-0.5 animate-pulse">Stream</span>
+          <span className="text-[11px] font-bold text-muted-foreground tracking-tighter">
+            {String(selectedTaskIndex + 1).padStart(2, '0')} <span className="text-muted-foreground/50">/</span> {String(getTasksForDateWrapper(selectedDate || new Date()).length).padStart(2, '0')}
           </span>
         </div>
 
         <button
-          className="group relative h-9 w-9 p-0 rounded-xl border border-white/10 flex items-center justify-center hover:bg-white/5 hover:border-blue-500/30 transition-all duration-300 shadow-2xl"
+          className="group relative h-9 w-9 p-0 rounded-xl border border-border flex items-center justify-center hover:bg-accent hover:border-primary/30 transition-all duration-300 shadow-lg"
           onClick={() => handleNavigateTask('next')}
         >
-          <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 rounded-xl blur-md transition-opacity"></div>
+          <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 rounded-xl blur-md transition-opacity"></div>
           <span className="sr-only">Next Task</span>
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-gray-400 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all">
             <path d="M6.1584 3.13508C6.35985 2.94621 6.67627 2.95642 6.86514 3.15788L10.6151 7.15788C10.7954 7.3502 10.7954 7.64949 10.6151 7.84182L6.86514 11.8418C6.67627 12.0433 6.35985 12.0535 6.1584 11.8646C5.95694 11.6757 5.94673 11.3593 6.1356 11.1579L9.565 7.49985L6.1356 3.84182C5.94673 3.64036 5.95694 3.32394 6.1584 3.13508Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
           </svg>
         </button>

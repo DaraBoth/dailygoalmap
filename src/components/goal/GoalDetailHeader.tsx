@@ -31,7 +31,7 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
   const isMobile = useIsMobile();
 
   return (
-    <div className="sticky top-0 z-40 w-full border-b border-white/5 bg-zinc-950/40 backdrop-blur-xl transition-all duration-300">
+    <div className="sticky top-0 z-40 w-full border-b border-border bg-background/80 backdrop-blur-xl transition-all duration-300">
       <div className="flex h-16 items-center px-4 md:px-8">
         <div className="flex items-center gap-4 flex-1">
           {isMobile && onOpenSidebar && (
@@ -55,20 +55,20 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
           <Breadcrumb className="hidden md:flex">
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink onClick={() => goToDashboard()} className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 cursor-pointer hover:text-blue-400 transition-colors">
+                <BreadcrumbLink onClick={() => goToDashboard()} className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground cursor-pointer hover:text-primary transition-colors">
                   Command
                 </BreadcrumbLink>
               </BreadcrumbItem>
-              <BreadcrumbSeparator className="text-gray-800" />
+              <BreadcrumbSeparator className="text-muted-foreground" />
               <BreadcrumbItem>
-                <BreadcrumbPage className="text-sm font-bold text-gray-200 tracking-tight max-w-[300px] truncate">
+                <BreadcrumbPage className="text-sm font-bold text-foreground tracking-tight max-w-[300px] truncate">
                   {goalTitle || 'MISSION DATA'}
                 </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
 
-          <h1 className="md:hidden text-sm font-semibold truncate max-w-[150px]">
+          <h1 className="md:hidden text-sm font-semibold truncate max-w-[150px] text-foreground">
             {goalTitle || 'Goal Details'}
           </h1>
         </div>

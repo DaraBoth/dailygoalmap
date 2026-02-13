@@ -57,7 +57,7 @@ export const GoalSidebar: React.FC<GoalSidebarProps> = ({
     ];
 
     return (
-        <aside className={cn("w-full lg:w-80 flex flex-col gap-4 h-full overflow-hidden bg-background/40 backdrop-blur-3xl border-r border-border/20", className)}>
+        <aside className={cn("w-full lg:w-80 flex flex-col gap-4 h-full overflow-hidden bg-card/95 backdrop-blur-3xl border-r border-border", className)}>
 
             {/* 1. Header Area */}
             <div className="p-4 pb-2 space-y-4">
@@ -87,8 +87,8 @@ export const GoalSidebar: React.FC<GoalSidebarProps> = ({
                                 "group relative w-full flex items-center h-11 px-4 rounded-xl font-semibold transition-all duration-300",
                                 item.disabled ? "opacity-30 cursor-not-allowed" : "cursor-pointer",
                                 activeTab === item.id
-                                    ? "bg-white/[0.06] text-white shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
-                                    : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.02]"
+                                    ? "bg-primary/10 text-foreground shadow-sm dark:bg-white/[0.06] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
                             )}
                         >
                             {/* Selection Indicator Glow */}
@@ -101,7 +101,7 @@ export const GoalSidebar: React.FC<GoalSidebarProps> = ({
 
                             <item.icon className={cn(
                                 "mr-3.5 h-4.5 w-4.5 transition-colors duration-300",
-                                activeTab === item.id ? "text-blue-400" : "group-hover:text-gray-300"
+                                activeTab === item.id ? "text-primary" : "group-hover:text-foreground"
                             )} />
                             <span className="text-sm tracking-tight">{item.label}</span>
                         </button>

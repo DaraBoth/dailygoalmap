@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Task } from "./types";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -78,17 +78,17 @@ const TaskSidebar = React.memo(({
   if (isLoading) {
     return (
       <div className="w-full h-full flex flex-col bg-background/40 backdrop-blur-md border-r border-border/20 overflow-hidden rounded-r-3xl shadow-lg">
-        <div className="p-4 border-b border-border/20 bg-background/20 backdrop-blur-sm">
-          <Skeleton className="h-6 w-40 mb-2 bg-foreground/10 rounded-xl" />
-          <Skeleton className="h-4 w-28 bg-foreground/5 rounded-lg" />
+        <div className="px-4 py-3 border-b border-border/20 bg-background/20 backdrop-blur-sm">
+          <Skeleton className="h-5 w-40 mb-1.5 bg-foreground/10 rounded-lg" />
+          <Skeleton className="h-3 w-28 bg-foreground/5 rounded" />
         </div>
 
-        <ScrollArea className="flex-1 p-4 lg:p-6">
-          <div className="space-y-4">
-            {[1, 2, 3, 4].map((i) => (
+        <ScrollArea className="flex-1 p-3">
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <Skeleton
                 key={i}
-                className="p-4 h-20 w-full rounded-2xl bg-foreground/10 border border-border/10"
+                className="h-14 w-full rounded-xl bg-foreground/10 border border-border/10"
               />
             ))}
           </div>
@@ -100,15 +100,15 @@ const TaskSidebar = React.memo(({
   // Main render
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">
-      <div className="p-6 border-b border-border/20 bg-background/20">
-        <h2 className="text-sm font-black uppercase tracking-[0.2em] flex items-center text-gray-400">
-          <div className="p-2 bg-blue-500/10 rounded-xl mr-4 border border-blue-500/20">
-            <CalendarIcon className="h-4 w-4 text-blue-400" />
+      <div className="px-4 py-3 border-b border-border/20 bg-background/20">
+        <h2 className="text-xs font-bold uppercase tracking-wider flex items-center text-muted-foreground">
+          <div className="p-1.5 bg-primary/10 rounded-lg mr-3 border border-primary/20">
+            <CalendarIcon className="h-3.5 w-3.5 text-primary" />
           </div>
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-gray-100 to-gray-400">
+          <span className="text-foreground font-semibold">
             {selectedDate
               ? format(selectedDate, "MMMM d")
-              : "Active Nodes"}
+              : "Active Tasks"}
           </span>
         </h2>
       </div>
@@ -116,7 +116,7 @@ const TaskSidebar = React.memo(({
       {tasksForDate.length > 0 && renderNavButtons()}
 
       <ScrollArea className="flex-1 z-0">
-        <div className="space-y-3 px-2">
+        <div className="space-y-1.5 p-3">
           {tasksForDate.length > 0 ? (
             tasksForDate.map((task, index) => {
               return (
@@ -134,25 +134,22 @@ const TaskSidebar = React.memo(({
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center p-8 text-center group/dormant relative overflow-hidden"
+              className="flex flex-col items-center justify-center py-12 px-6 text-center"
             >
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.02),transparent_70%)] opacity-0 group-hover/dormant:opacity-100 transition-opacity duration-1000"></div>
-
-              <div className="relative mb-8">
-                <div className="absolute inset-0 bg-blue-500/10 blur-2xl rounded-full scale-125 animate-pulse"></div>
-                <div className="relative h-16 w-16 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center shadow-xl group-hover/dormant:border-blue-500/20 transition-all duration-500">
-                  <CalendarIcon className="h-7 w-7 text-gray-600 group-hover/dormant:text-blue-400 group-hover/dormant:rotate-6 transition-all duration-500" />
+              <div className="relative mb-4">
+                <div className="h-12 w-12 rounded-xl bg-muted/50 border border-border/50 flex items-center justify-center">
+                  <CalendarIcon className="h-5 w-5 text-muted-foreground/50" />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">Orbital Dormancy</h3>
-                <p className="text-[10px] text-gray-500/60 font-medium leading-relaxed uppercase tracking-widest max-w-[180px]">
-                  No active mission streams detected for this temporal coordinate.
+              <div className="space-y-1">
+                <h3 className="text-xs font-semibold text-muted-foreground">No tasks scheduled</h3>
+                <p className="text-xs text-muted-foreground/60 max-w-[200px]">
+                  Tasks for this date will appear here
                 </p>
               </div>
             </motion.div>
-          )
+          )}
         </div>
       </ScrollArea>
     </div>

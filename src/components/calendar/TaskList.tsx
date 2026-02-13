@@ -25,7 +25,7 @@ const TaskList = ({
 }: TaskListProps) => {
   if (!selectedDate || tasks.length === 0) {
     return (
-      <div className="p-4 text-center text-gray-500">
+      <div className="p-4 text-center text-muted-foreground">
         {!selectedDate ? "Select a date to view tasks" : "No tasks for this day"}
       </div>
     );
@@ -33,7 +33,7 @@ const TaskList = ({
 
   return (
     <div className="space-y-2 p-4">
-      <h3 className="text-sm font-medium text-gray-800 dark:text-gray-400 mb-2">
+      <h3 className="text-sm font-medium text-foreground mb-2">
         Tasks for {format(selectedDate, "MMMM d, yyyy")}
       </h3>
       <div className="space-y-3 pb-24">

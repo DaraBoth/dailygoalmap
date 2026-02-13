@@ -183,7 +183,7 @@ const GoalDetail: React.FC = () => {
       <div className="flex h-screen overflow-hidden bg-background" style={backgroundStyle}>
 
         {/* Desktop Sidebar */}
-        <div className="hidden lg:block w-80 border-r border-border/20 bg-background/40 backdrop-blur-2xl h-full shadow-2xl">
+        <div className="hidden lg:block w-80 border-r border-border bg-card/95 backdrop-blur-2xl h-full shadow-lg">
           <GoalSidebar
             goalId={goalId}
             goalTitle={goalTitle}
@@ -226,7 +226,7 @@ const GoalDetail: React.FC = () => {
 
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col min-w-0 bg-background/10 backdrop-blur-3xl overflow-hidden relative">
+        <div className="flex-1 flex flex-col min-w-0 bg-background/95 backdrop-blur-3xl overflow-hidden relative">
           <GoalDetailHeader
             goalTitle={goalTitle}
             onOpenSidebar={() => setIsSidebarOpen(true)}
