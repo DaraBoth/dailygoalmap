@@ -362,12 +362,13 @@ export const GoalChatWidgetN8N: React.FC<GoalChatWidgetProps> = ({ goalId, userI
   return (
     <>
       <motion.button
-        className={`fixed bottom-6 ${isMobile ? 'left-6' : 'right-6'} border bg-background/80 backdrop-blur-md shadow-lg p-2 rounded-xl z-50`}
+        className={`fixed ${isMobile ? 'bottom-6 left-6' : 'bottom-24 right-6'} h-14 w-14 rounded-full bg-zinc-950/80 backdrop-blur-xl border border-white/10 text-white shadow-2xl z-50 hover:scale-110 transition-all duration-300 flex items-center justify-center p-0 overflow-hidden group`}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(!isOpen)}
       >
-        {!isOpen ? <img className='h-8 w-8' src={chatAIGif} alt="Chat AI Image" /> : <X />}
+        <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        {!isOpen ? <img className='h-8 w-8 object-contain relative z-10' src={chatAIGif} alt="Chat AI Image" /> : <X className="relative z-10" />}
       </motion.button>
 
       <AnimatePresence>

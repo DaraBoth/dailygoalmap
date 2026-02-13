@@ -1,6 +1,6 @@
 import { Task } from "./types";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CalendarIcon, CheckCircle2, Circle, Edit2, Trash2, Clock, AlertCircle, Tag } from "lucide-react";
+import { X, CalendarIcon, CheckCircle2, Circle, Edit2, Trash2, Clock, AlertCircle, Tag, Loader2, Sparkles, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { TaskTags } from "./TaskTags";
@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { openCalendarOptionsDialog } from "@/utils/calendarIntegration";
 import { MarkdownRenderer } from "../ui/MarkdownRenderer";
+import { cn } from "@/lib/utils";
 
 interface TaskDetailsSidebarProps {
   isOpen: boolean;
@@ -75,154 +76,191 @@ const TaskDetailsSidebar = ({
           animate={{ x: 0 }}
           exit={{ x: "100%" }}
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="fixed right-0 top-0 h-full w-full sm:w-[420px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-50 shadow-xl border-l border-gray-200/60 dark:border-white/10"
+          className="fixed right-0 top-0 h-full w-full sm:w-[420px] bg-zinc-950/90 dark:bg-zinc-950/90 backdrop-blur-2xl z-50 shadow-2xl border-l border-white/10"
         >
           <div className="h-full flex flex-col max-h-screen overflow-hidden">
             {/* Header - goal title, task title and controls */}
-            <div className="flex-shrink-0 bg-muted/30 border-b border-border/20 p-4">
-              <div className="flex items-start justify-between gap-3">
+            <div className="flex-shrink-0 p-6 pb-4">
+              <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-muted-foreground">{goalTitle}</div>
-                  <h2 className="text-lg font-semibold text-foreground truncate mt-1">{selectedTask?.title || 'Task Details'}</h2>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+                      {goalTitle}
+                    </span>
+                    {selectedTask && (
+                      <div className={cn(
+                        "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border",
+                        selectedTask.completed
+                          ? "bg-green-500/10 border-green-500/20 text-green-400"
+                          : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                      )}>
+                        {selectedTask.completed ? (
+                          <><CheckCircle2 className="h-3 w-3" /> Done</>
+                        ) : (
+                          <><Circle className="h-3 w-3" /> Active</>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <h2 className="text-2xl font-black text-white leading-tight tracking-tight break-words">
+                    {selectedTask?.title || 'Task Details'}
+                  </h2>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {/* Settings / Edit button */}
-                  {onEditTask && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="inline-flex items-center gap-2"
-                      onClick={() => selectedTask && onEditTask(selectedTask)}
-                      aria-label="Edit task"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                      <span className="sr-only">Edit</span>
-                    </Button>
-                  )}
-
-                  <button
-                    onClick={onClose}
-                    className="p-1.5 rounded-lg border bg-background/80 text-foreground hover:bg-accent transition-all duration-200"
-                    aria-label="Close"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
+                <button
+                  onClick={onClose}
+                  className="mt-1 p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-200"
+                  aria-label="Close"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
             </div>
 
             {selectedTask ? (
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {/* Top row: status */}
-                <div className="flex items-center gap-3">
-                  <div className={`px-3 py-1 rounded-full text-sm font-medium border bg-background/50 ${selectedTask.completed ? 'text-success' : 'text-primary'
-                    }`}>
-                    {selectedTask.completed ? 'Completed' : 'In Progress'}
-                  </div>
-                </div>
-
-                {/* Date & Time */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="border bg-background/50 rounded-xl p-3">
-                    <div className="text-xs text-muted-foreground font-medium">Date</div>
-                    <div className="text-sm text-foreground">{selectedDate ? format(selectedDate, 'MMMM d, yyyy') : format(new Date(selectedTask.start_date), 'MMMM d, yyyy')}</div>
-                  </div>
-
-                  <div className="border bg-background/50 rounded-xl p-3">
-                    <div className="text-xs text-muted-foreground font-medium">Time</div>
-                    <div className="text-sm text-foreground">{selectedTask.daily_start_time ? `${selectedTask.daily_start_time.slice(0, 5)} - ${selectedTask.daily_end_time?.slice(0, 5) ?? ''}` : '—'}</div>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div className="border bg-background/50 rounded-xl p-4">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
-                  <MarkdownRenderer
-                    content={normalizeMarkdown(selectedTask.description)}
-                    isStreaming={false}
-                    isLoading={false}
-                  />
-                </div>
-
-                {/* Progress & Tags */}
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="border bg-background/50 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Progress</h3>
-                      <div className="text-sm text-muted-foreground">{selectedTask.completed ? '100%' : '0%'}</div>
-                    </div>
-                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: selectedTask.completed ? '100%' : '0%' }} />
-                    </div>
-                  </div>
-
-                  {selectedTask.tags && selectedTask.tags.length > 0 && (
-                    <div className="border bg-background/50 rounded-xl p-4">
-                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Tags</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedTask.tags.map((tag, idx) => (
-                          <span key={idx} className="px-2 py-1 text-xs rounded-md border bg-background/80 text-foreground">{tag}</span>
-                        ))}
+              <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6">
+                {/* Info Grid - Date & Time in a unified elegant panel */}
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-1 overflow-hidden">
+                  <div className="grid grid-cols-2">
+                    <div className="p-4 border-r border-white/10">
+                      <div className="flex items-center gap-2 text-gray-400 mb-1.5">
+                        <CalendarIcon className="h-3.5 w-3.5" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Scheduled</span>
+                      </div>
+                      <div className="text-sm font-bold text-white">
+                        {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : format(new Date(selectedTask.start_date), 'MMMM d, yyyy')}
                       </div>
                     </div>
-                  )}
+
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 text-gray-400 mb-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Duration</span>
+                      </div>
+                      <div className="text-sm font-bold text-white">
+                        {selectedTask.daily_start_time ? (
+                          <span className="flex items-center gap-1">
+                            {selectedTask.daily_start_time.slice(0, 5)}
+                            <span className="opacity-30">→</span>
+                            {selectedTask.daily_end_time?.slice(0, 5) ?? '...'}
+                          </span>
+                        ) : 'All Day'}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Sticky action footer */}
-                <div className="pt-4 sticky bottom-0 border-t border-border/20 bg-background/80 backdrop-blur-md -mx-4 px-4 pb-4">
-                  <div className="space-y-2">
-                    <Button variant="outline" className={`w-full flex items-center justify-center gap-2 ${selectedTask.completed && "text-green-600"}`} onClick={() => onToggleTaskCompletion(selectedTask.id)}>
-                      {selectedTask.completed ? (
-                        <>
-                          <CheckCircle2 className="h-4 w-4" />
-                          Mark as Incomplete
-                        </>
-                      ) : (
-                        <>
-                          <Circle className="h-4 w-4" />
-                          Mark as Complete
-                        </>
-                      )}
-                    </Button>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      {onEditTask && (
-                        <Button variant="outline" className="w-full flex items-center justify-center gap-2" onClick={() => onEditTask(selectedTask)}>
-                          <Edit2 className="h-4 w-4" />
-                          Edit
-                        </Button>
-                      )}
-
-                      <Button variant="outline" className="w-full flex items-center justify-center gap-2" onClick={handleAddToReminders} disabled={isAddingReminder}>
-                        <AlertCircle className="h-4 w-4" />
-                        Remind
-                      </Button>
+                {/* Automation - Sync to Local Reminders */}
+                <Button
+                  variant="outline"
+                  onClick={handleAddToReminders}
+                  disabled={isAddingReminder}
+                  className="w-full h-12 rounded-2xl bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:text-white transition-all duration-300 font-bold group"
+                >
+                  <div className="flex items-center justify-center w-full relative">
+                    {isAddingReminder ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 mr-2 text-blue-400 group-hover:scale-125 transition-transform" />
+                    )}
+                    <span>{isAddingReminder ? "Syncing..." : "Sync to Local Reminders"}</span>
+                    <div className="absolute right-0 opacity-20 group-hover:opacity-100 transition-opacity">
+                      <ExternalLink className="h-3 w-3" />
                     </div>
+                  </div>
+                </Button>
 
+                {/* Description - Prominent and clean */}
+                <div className="relative group">
+                  <div className="flex items-center justify-between mb-3 px-1">
+                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                      <div className="h-1 w-4 bg-blue-500/50 rounded-full" />
+                      Detailed Overview
+                    </h3>
+                  </div>
+
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-sm text-gray-200 leading-relaxed shadow-inner">
+                    <MarkdownRenderer
+                      content={normalizeMarkdown(selectedTask.description)}
+                      isStreaming={false}
+                      isLoading={false}
+                    />
+                  </div>
+                </div>
+
+                {/* Tags Section */}
+                {selectedTask.tags && selectedTask.tags.length > 0 && (
+                  <div className="space-y-3 px-1">
+                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                      <Tag className="h-3 w-3" />
+                      Classification
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTask.tags.map((tag, idx) => (
+                        <span key={idx} className="px-3 py-1 text-[11px] font-bold rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Audit Info */}
+                <div className="pt-6 border-t border-white/5 flex items-center gap-3 text-[10px] text-gray-500 font-bold uppercase tracking-widest px-1">
+                  <span className="opacity-50">Entry Created</span>
+                  <div className="h-1 w-1 bg-white/20 rounded-full" />
+                  <span className="text-gray-400">{format(new Date(selectedTask.created_at), "MMM d, yyyy h:mm a")}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full p-4 text-center text-gray-500">
+                <AlertCircle className="h-12 w-12 mb-4 opacity-20" />
+                <p className="text-sm font-medium">Select a task to view full technical specifications</p>
+              </div>
+            )}
+
+            {/* Premium Action Footer */}
+            {selectedTask && (
+              <div className="p-6 pt-2 bg-gradient-to-t from-zinc-950 via-zinc-950/90 to-transparent">
+                <div className="space-y-4">
+                  <Button
+                    className={cn(
+                      "w-full h-14 text-sm font-black uppercase tracking-widest transition-all duration-300 rounded-2xl border",
+                      selectedTask.completed
+                        ? "bg-zinc-800 hover:bg-zinc-700 text-white/70 border-white/10"
+                        : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-[0_10px_20px_-10px_rgba(37,99,235,0.5)] border-white/20"
+                    )}
+                    onClick={() => onToggleTaskCompletion(selectedTask.id)}
+                  >
+                    {selectedTask.completed ? "Reactivate Task" : "Confirm Completion"}
+                  </Button>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {onEditTask && (
+                      <Button
+                        variant="outline"
+                        className="h-12 rounded-2xl bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:text-white transition-all duration-200 font-bold"
+                        onClick={() => onEditTask(selectedTask)}
+                      >
+                        <Edit2 className="h-4 w-4 mr-2 opacity-60" />
+                        Modify
+                      </Button>
+                    )}
                     {onDeleteTask && (
-                      <Button className="w-full flex items-center justify-center gap-2 " onClick={() => onDeleteTask(selectedTask.id)}>
-                        <Trash2 className="h-4 w-4" />
-                        Delete Task
+                      <Button
+                        variant="outline"
+                        className="h-12 rounded-2xl bg-transparent border-red-500/20 text-red-400/80 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 font-bold"
+                        onClick={() => onDeleteTask(selectedTask.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2 opacity-60" />
+                        Purge
                       </Button>
                     )}
                   </div>
                 </div>
-
-                {/* Footer: meta info */}
-                <div className="text-xs text-muted-foreground pt-2 border-t border-white/20">
-                  <div>Created: {format(new Date(selectedTask.created_at), "MMM d, yyyy 'at' h:mm a")}</div>
-                  {selectedTask.updated_at && selectedTask.updated_at !== selectedTask.created_at && (
-                    <div>Updated: {format(new Date(selectedTask.updated_at), "MMM d, yyyy 'at' h:mm a")}</div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full p-4 text-center text-muted-foreground">
-                <AlertCircle className="h-8 w-8 mb-2" />
-                <p>No task selected</p>
               </div>
             )}
+
           </div>
         </motion.div>
       )}

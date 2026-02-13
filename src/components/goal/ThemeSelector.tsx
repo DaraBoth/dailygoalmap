@@ -260,7 +260,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
         </button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[600px] w-full h-[100%] overflow-y-auto rounded-2xl bg-background/60 backdrop-blur-lg p-0">
+      <DialogContent className="sm:max-w-[700px] w-full max-h-[90vh] overflow-hidden rounded-3xl bg-background/95 backdrop-blur-2xl border-border/20 p-0">
         <DialogHeader className="px-6 pt-6 pb-0 flex-shrink-0">
           <DialogTitle className="flex items-center justify-between">
             <span>{editingTheme ? 'Edit Theme' : 'Goal Themes'}</span>
@@ -377,8 +377,8 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                 )}
               </div>
 
-              <ScrollArea className="h-[60vh] md:h-[65vh] rounded-md border bg-background/40 backdrop-blur-sm">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 p-3 pr-5">
+              <ScrollArea className="max-h-[50vh] rounded-lg border border-border/20 bg-foreground/[0.02] backdrop-blur-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
                   {loading ? (
                     <p className="text-sm text-muted-foreground col-span-full text-center py-10">
                       Loading themes...
@@ -392,28 +392,28 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                       <Card
                         key={theme.id}
                         onClick={() => onThemeSelect(theme.id)}
-                        className={`group relative overflow-hidden cursor-pointer rounded-xl border bg-card/60 backdrop-blur-lg shadow-sm transition-all duration-300 hover:shadow-lg hover:scale-[1.02] ${currentThemeId === theme.id
-                          ? "ring-2 ring-primary shadow-primary/20"
-                          : ""
+                        className={`group relative overflow-hidden cursor-pointer rounded-2xl border transition-all duration-300 hover:shadow-xl hover:scale-[1.02] bg-card/80 backdrop-blur-sm ${currentThemeId === theme.id
+                            ? "ring-2 ring-primary/50 shadow-lg shadow-primary/10"
+                            : "hover:border-primary/30"
                           }`}
                       >
-                        {/* Top bar with name + actions */}
-                        <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10">
-                          <div className="flex items-center gap-1.5 bg-background/70 backdrop-blur-sm px-2 py-0.5 rounded-md text-xs font-medium text-foreground">
+                        {/* Top bar with name + visibility + active badge */}
+                        <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
+                          <div className="flex items-center gap-2 bg-background/90 backdrop-blur-md px-3 py-1.5 rounded-lg text-sm font-semibold text-foreground shadow-md">
                             {theme.name}
                             {theme.is_public && (
-                              <Globe className="h-3.5 w-3.5 text-blue-500" />
+                              <Globe className="h-4 w-4 text-blue-500" />
                             )}
                           </div>
                           {currentThemeId === theme.id && (
-                            <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                            <span className="text-xs font-bold text-primary bg-primary/20 px-2 py-1 rounded-md shadow-sm">
                               Active
                             </span>
                           )}
                         </div>
 
-                        {/* Image grid preview */}
-                        <div className={`grid grid-cols-3 gap-1.5 p-3 mt-6 `}>
+                        {/* Image grid preview - larger and more prominent */}
+                        <div className="grid grid-cols-3 gap-2 p-4 mt-12">
                           {[
                             { key: "goal_profile_image", label: "Profile" },
                             { key: "card_background_image", label: "Card" },
@@ -421,13 +421,13 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                           ].map(({ key, label }) => (
                             <div
                               key={key}
-                              className="aspect-square overflow-hidden rounded-md border bg-muted relative"
+                              className="aspect-square overflow-hidden rounded-lg border border-border/20 bg-muted/50 relative group-hover:border-primary/20 transition-colors"
                             >
                               {theme[key as keyof typeof theme] ? (
                                 <img
                                   src={theme[key as keyof typeof theme] as string}
                                   alt={label}
-                                  className="w-full h-full object-fit transition-transform duration-300 group-hover:scale-105"
+                                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">

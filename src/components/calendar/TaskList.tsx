@@ -4,12 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CheckCircle2, Circle } from "lucide-react";
 import { motion } from "framer-motion";
+import { ModernTaskItem } from "./ModernTaskItem";
 
 interface TaskListProps {
   selectedDate: Date | undefined;
   tasks: Task[];
   onTaskClick: (task: Task) => void;
   onToggleTaskCompletion: (taskId: string) => void;
+  onEdit?: (task: Task) => void;
+  onDelete?: (taskId: string) => void;
 }
 
 const TaskList = ({
@@ -17,6 +20,8 @@ const TaskList = ({
   tasks,
   onTaskClick,
   onToggleTaskCompletion,
+  onEdit,
+  onDelete
 }: TaskListProps) => {
   if (!selectedDate || tasks.length === 0) {
     return (
@@ -31,49 +36,18 @@ const TaskList = ({
       <h3 className="text-sm font-medium text-gray-800 dark:text-gray-400 mb-2">
         Tasks for {format(selectedDate, "MMMM d, yyyy")}
       </h3>
-      {tasks.map((task, index) => (
-        <motion.div
-          key={task.id}
-          initial={{ y: 6, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.04 * index, duration: 0.18 }}
-          className="rounded-md"
-        >
-          <Card
-            className="p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
-            onClick={() => onTaskClick(task)}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                  {task.description.length==0 ? task.title:task.description}
-                </p>
-                {task.daily_start_time && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {task.daily_start_time.slice(0, 5)}
-                    {task.daily_end_time && ` - ${task.daily_end_time.slice(0, 5)}`}
-                  </p>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleTaskCompletion(task.id);
-                }}
-              >
-                {task.completed ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                ) : (
-                  <Circle className="h-4 w-4 text-gray-400" />
-                )}
-              </Button>
-            </div>
-          </Card>
-        </motion.div>
-      ))}
+      <div className="space-y-3 pb-24">
+        {tasks.map((task, index) => (
+          <ModernTaskItem
+            key={task.id}
+            task={task}
+            onToggleCompletion={onToggleTaskCompletion}
+            onClick={onTaskClick}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        ))}
+      </div>
     </div>
   );
 };

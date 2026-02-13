@@ -391,27 +391,32 @@ const Calendar = ({
 
   const renderNavButtons = () => {
     return (
-      <div className="flex items-center justify-center gap-2 pt-3 pb-3 border-t border-border bg-muted/5 ">
+      <div className="flex items-center justify-center gap-6 py-4 border-t border-border/20 bg-background/40 backdrop-blur-3xl">
         <button
-          className="h-8 w-8 p-0 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+          className="group relative h-9 w-9 p-0 rounded-xl border border-white/10 flex items-center justify-center hover:bg-white/5 hover:border-blue-500/30 transition-all duration-300 shadow-2xl"
           onClick={() => handleNavigateTask('prev')}
         >
+          <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 rounded-xl blur-md transition-opacity"></div>
           <span className="sr-only">Previous Task</span>
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-gray-400 group-hover:text-blue-400 group-hover:-translate-x-0.5 transition-all">
             <path d="M8.84182 3.13514C9.04327 3.32401 9.05348 3.64042 8.86462 3.84188L5.43521 7.49991L8.86462 11.1579C9.05348 11.3594 9.04327 11.6758 8.84182 11.8647C8.64036 12.0535 8.32394 12.0433 8.13508 11.8419L4.38508 7.84188C4.20477 7.64955 4.20477 7.35027 4.38508 7.15794L8.13508 3.15794C8.32394 2.95648 8.64036 2.94628 8.84182 3.13514Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
           </svg>
         </button>
 
-        <span className="text-xs text-muted-foreground">
-          {selectedTaskIndex + 1} of {getTasksForDateWrapper(selectedDate || new Date()).length}
-        </span>
+        <div className="flex flex-col items-center">
+          <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-0.5 animate-pulse">Stream</span>
+          <span className="text-[11px] font-bold text-gray-400 tracking-tighter">
+            {String(selectedTaskIndex + 1).padStart(2, '0')} <span className="text-gray-700">/</span> {String(getTasksForDateWrapper(selectedDate || new Date()).length).padStart(2, '0')}
+          </span>
+        </div>
 
         <button
-          className="h-8 w-8 p-0 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+          className="group relative h-9 w-9 p-0 rounded-xl border border-white/10 flex items-center justify-center hover:bg-white/5 hover:border-blue-500/30 transition-all duration-300 shadow-2xl"
           onClick={() => handleNavigateTask('next')}
         >
+          <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 rounded-xl blur-md transition-opacity"></div>
           <span className="sr-only">Next Task</span>
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-gray-400 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all">
             <path d="M6.1584 3.13508C6.35985 2.94621 6.67627 2.95642 6.86514 3.15788L10.6151 7.15788C10.7954 7.3502 10.7954 7.64949 10.6151 7.84182L6.86514 11.8418C6.67627 12.0433 6.35985 12.0535 6.1584 11.8646C5.95694 11.6757 5.94673 11.3593 6.1356 11.1579L9.565 7.49985L6.1356 3.84182C5.94673 3.64036 5.95694 3.32394 6.1584 3.13508Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
           </svg>
         </button>
@@ -429,8 +434,8 @@ const Calendar = ({
       ref={calendarRef}
     >
       {isMobile ? (
-        <div className="h-full overflow-y-auto pb-28 pt-[80px] pb-safe-or-6 no-scrollbar">
-          <div className="min-h-[500px]">
+        <div className="h-full overflow-y-auto pb-28 pt-4 pb-safe-or-6 no-scrollbar">
+          <div className="">
             <CalendarContainer
               selectedDate={selectedDate}
               onDateChange={handleInternalDateChange}
@@ -452,12 +457,14 @@ const Calendar = ({
               tasks={selectedDate ? getTasksForDateWrapper(selectedDate) : []}
               onTaskClick={handleOpenTaskDetails}
               onToggleTaskCompletion={handleToggleTaskCompletion}
+              onEdit={handleEditTask}
+              onDelete={handleDeleteTask}
             />
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-[280px,1fr] lg:grid-cols-[300px,1fr,320px] xl:grid-cols-[320px,1fr,360px] h-full pt-[90px] ">
-          <div className="h-full overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-[clamp(260px,20vw,300px),1fr] lg:grid-cols-[clamp(260px,20vw,300px),1fr,clamp(300px,25vw,360px)] transition-all duration-700 ease-in-out h-full bg-background/5">
+          <div className="h-full overflow-hidden border-r border-border/20 bg-background/20 backdrop-blur-2xl">
             <TaskSidebar
               tasks={tasks}
               selectedDate={selectedDate}
@@ -480,21 +487,23 @@ const Calendar = ({
             />
           </div>
 
-          <CalendarContainer
-            selectedDate={selectedDate}
-            onDateChange={handleInternalDateChange}
-            tasks={tasks}
-            getTasksForDate={getTasksForDateWrapper}
-            financialData={financialData}
-            dailySpendingLimit={dailySpendingLimit}
-            isLoading={isLoading || isLoadingAllTasks}
-            error={error}
-            onAddTask={handleAddTask}
-            onOpenAddTaskDialog={() => setIsAddTaskDialogOpen(true)}
-            onOpenTaskDetails={handleOpenTaskDetails}
-          />
+          <div className="h-full overflow-hidden border-r border-border/20 bg-foreground/[0.02]">
+            <CalendarContainer
+              selectedDate={selectedDate}
+              onDateChange={handleInternalDateChange}
+              tasks={tasks}
+              getTasksForDate={getTasksForDateWrapper}
+              financialData={financialData}
+              dailySpendingLimit={dailySpendingLimit}
+              isLoading={isLoading || isLoadingAllTasks}
+              error={error}
+              onAddTask={handleAddTask}
+              onOpenAddTaskDialog={() => setIsAddTaskDialogOpen(true)}
+              onOpenTaskDetails={handleOpenTaskDetails}
+            />
+          </div>
 
-          <div className="h-full overflow-hidden hidden lg:block">
+          <div className="h-full overflow-hidden hidden lg:block bg-background/20 backdrop-blur-2xl">
             <TaskDetailsPanel
               selectedTask={selectedTask}
               selectedDate={selectedDate}

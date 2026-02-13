@@ -102,7 +102,7 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         <Card className="transition-all duration-200">
           <CardHeader className="pb-2">
             <Skeleton className="h-6 w-3/4 mb-2" />
@@ -177,7 +177,7 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         <AnimatePresence mode="popLayout">
           {goals.map((goal, index) => {
             const deadlineInfo = calculateGoalDeadlineInfo(goal);

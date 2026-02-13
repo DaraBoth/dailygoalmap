@@ -34,7 +34,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = React.memo(({
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="max-w-7xl mx-auto flex items-center justify-between gap-6 pointer-events-auto"
+          className="max-w-7xl mx-auto flex items-center justify-between gap-2 md:gap-6 pointer-events-auto"
         >
           {/* Logo & Brand */}
           <div className="flex items-center gap-4 bg-background/60 backdrop-blur-2xl border border-foreground/5 p-2 px-4 rounded-2xl shadow-sm">
@@ -59,10 +59,10 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = React.memo(({
           )}
 
           {/* Actions Rig */}
-          <div className="flex items-center gap-3 bg-background/60 backdrop-blur-2xl border border-foreground/5 p-2 rounded-2xl shadow-sm">
+          <div className="flex items-center gap-1 md:gap-3 bg-background/60 backdrop-blur-2xl border border-foreground/5 p-1 md:p-2 rounded-2xl shadow-sm">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={onOpenJoinGoal} className="h-10 w-10 rounded-xl hover:bg-accent font-black">
+                <Button variant="ghost" size="icon" onClick={onOpenJoinGoal} className="hidden md:flex h-10 w-10 rounded-xl hover:bg-accent font-black">
                   <UserPlus className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
@@ -71,7 +71,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = React.memo(({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={onAddGoal} size="icon" className="h-10 w-10 rounded-xl bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition-all font-black">
+                <Button onClick={onAddGoal} size="icon" className="h-8 w-8 md:h-10 md:w-10 rounded-xl bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition-all font-black">
                   <PlusCircle className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
@@ -84,11 +84,14 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = React.memo(({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-accent">
+                <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10 rounded-xl hover:bg-accent">
                   <Settings className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64 rounded-2xl p-2 border-foreground/5 bg-background/80 backdrop-blur-2xl">
+                <DropdownMenuItem onClick={onOpenJoinGoal} className="md:hidden rounded-xl h-11 px-4 cursor-pointer font-bold">
+                  <UserPlus className="mr-3 h-4 w-4" /> Join Shared Orbit
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={onOpenApiKeyGuide} className="rounded-xl h-11 px-4 cursor-pointer font-bold">
                   <Key className="mr-3 h-4 w-4" /> System Config
                 </DropdownMenuItem>

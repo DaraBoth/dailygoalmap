@@ -50,7 +50,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onUnreadChan
 
     return (
       <>
-        <Button variant="ghost" size="icon" className="relative hover:bg-accent" aria-label="Notifications" onClick={() => setOpen(true)}>
+        <Button variant="ghost" size="icon" className="relative hover:bg-accent h-8 w-8 md:h-10 md:w-10" aria-label="Notifications" onClick={() => setOpen(true)}>
           <Bell className="h-5 w-5" />
           {unread > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-4 min-w-4 px-1 flex items-center justify-center shadow-lg">
@@ -77,7 +77,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onUnreadChan
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative hover:bg-accent" aria-label="Notifications">
+        <Button variant="ghost" size="icon" className="relative hover:bg-accent h-8 w-8 md:h-10 md:w-10" aria-label="Notifications">
           <Bell className="h-5 w-5" />
           {unread > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-4 min-w-4 px-1 flex items-center justify-center shadow-lg">

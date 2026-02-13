@@ -3,6 +3,7 @@ import { Task } from "./types";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import CalendarDay from "./CalendarDay";
+import { cn } from "@/lib/utils";
 
 
 interface CalendarGridProps {
@@ -21,19 +22,19 @@ const CalendarGrid = ({
   onTaskClick
 }: CalendarGridProps) => {
   const isMobile = useIsMobile();
-  
+
   return (
-    <div className="flex flex-col h-full w-full p-1 sm:p-2">
-      <div className="rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-200/60 dark:border-white/25 h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-md">
+    <div className={cn("flex flex-col w-full p-1 sm:p-2", isMobile ? "h-auto" : "h-full")}>
+      <div className={cn(
+        "rounded-3xl overflow-hidden border border-white/5 flex flex-col bg-zinc-950/40 backdrop-blur-2xl shadow-2xl",
+        isMobile ? "h-auto" : "h-full"
+      )}>
         {/* Compact header for day names */}
-        <div className="grid grid-cols-7 text-center bg-gradient-to-r from-blue-100/80 to-teal-100/80 dark:from-blue-900/40 dark:to-teal-900/40 backdrop-blur-sm">
+        <div className="grid grid-cols-7 text-center border-b border-white/5 bg-white/[0.02]">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => (
             <div key={day} className={`
-              py-1.5 sm:py-2 md:py-3 font-semibold text-xs sm:text-sm transition-colors duration-200
-              border-r border-white/20 dark:border-white/10 last:border-r-0
-              ${index === 0 ? 'text-red-600 dark:text-red-400' :
-                index === 6 ? 'text-blue-600 dark:text-blue-400' :
-                'text-gray-700 dark:text-gray-300'}
+              py-3 md:py-4 font-black text-[10px] uppercase tracking-[0.2em]
+              ${index === 0 || index === 6 ? 'text-gray-600' : 'text-gray-400'}
             `}>
               {isMobile ? day.charAt(0) : day}
             </div>
@@ -41,8 +42,8 @@ const CalendarGrid = ({
         </div>
 
         {/* Full-width calendar grid with no gaps */}
-        <div className="flex-1 min-h-0">
-          <div className="grid grid-cols-7 h-full bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm" style={{
+        <div className={cn("flex-1", isMobile ? "min-h-0" : "min-h-0")}>
+          <div className={cn("grid grid-cols-7", isMobile ? "auto-rows-fr" : "h-full")} style={isMobile ? {} : {
             gridTemplateRows: `repeat(${getOptimalRowCount(currentMonth)}, minmax(0, 1fr))`
           }}>
             {getDaysInMonth(currentMonth).map((date, index) => (
@@ -74,7 +75,7 @@ function getOptimalRowCount(currentMonth: Date): number {
   const startingDayOfWeek = firstDay.getDay();
   const totalCellsNeeded = daysInMonth + startingDayOfWeek;
   const resultRow = totalCellsNeeded <= 28 ? 4 : totalCellsNeeded >= 36 ? 6 : 5;
-  
+
   return resultRow;
 }
 

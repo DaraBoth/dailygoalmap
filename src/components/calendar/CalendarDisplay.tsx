@@ -69,9 +69,9 @@ const CalendarDisplay = ({
             onOpenAddTaskDialog={onOpenAddTaskDialog}
           />
 
-          {/* Fixed height calendar container to prevent size fluctuations */}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <div className="h-full min-h-[400px] sm:min-h-[450px] md:min-h-[500px] lg:min-h-[550px]">
+          {/* Calendar Grid Container */}
+          <div className="flex-1 min-h-0">
+            <div className="w-full">
               <CalendarGrid
                 currentMonth={currentMonth}
                 selectedDate={selectedDate}

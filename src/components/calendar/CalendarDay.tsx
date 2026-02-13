@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useSystemTheme from "@/hooks/use-system-theme";
 import { useTheme } from "@/hooks/use-theme";
+import { cn } from "@/lib/utils";
 
 interface CalendarDayProps {
   date: Date;
@@ -60,136 +61,68 @@ const CalendarDay = ({
 
   return (
     <motion.div
-      className={`
-        relative border-r border-b border-white/10 dark:border-white/5
-        ${index % 7 === 0 ? 'border-l' : ''}
-        ${Math.floor(index / 7) === 0 ? 'border-t' : ''}
-        ${isCurrentMonth ? 'bg-background/50 border-border' : 'bg-background/20 opacity-30'}
-        ${isSelected ? 'border-2 border-primary' : ''}
-        ${isCurrentMonth ? 'cursor-pointer' : 'cursor-default'} overflow-hidden flex flex-col
-        ${isCurrentMonth ? '' : ''} transition-all duration-300
-        h-full p-1 sm:p-2
-        min-h-[80px] sm:min-h-[90px] md:min-h-[100px] lg:min-h-[110px]
-        max-h-[80px] sm:max-h-[90px] md:max-h-[100px] lg:max-h-[110px]
-      `}
+      className={cn(
+        "relative border-r border-b border-white/5 transition-all duration-300 flex flex-col p-1.5 gap-1 min-h-[80px] sm:min-h-[100px]",
+        index % 7 === 0 && "border-l",
+        Math.floor(index / 7) === 0 && "border-t",
+        !isCurrentMonth && "bg-white/[0.01] opacity-20 cursor-default",
+        isCurrentMonth && "hover:bg-white/[0.04] cursor-pointer bg-transparent",
+        isSelected && "bg-blue-600/5 shadow-[inset_0_0_20px_rgba(59,130,246,0.05)] border-blue-500/20"
+      )}
       onClick={() => isCurrentMonth && onDateChange(date)}
-      transition={{ duration: 0.2 }}
     >
-      {/* Compact date display */}
-      <div className="flex justify-center mb-0.5 ">
-        <span className={`
-          w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 flex items-center justify-center rounded-lg text-xs sm:text-sm font-semibold 
-          ${!isCurrentMonth ? ' opacity-50' : ''}
-          ${isWeekend && isCurrentMonth && date.getDay() === 0 ? ' text-red-700' : ''}
-          ${isWeekend && isCurrentMonth && date.getDay() === 6 ? ' text-blue-800' : ''}
-          ${isSelected ? isWeekend ? ' bg-primary text-white' : ' bg-primary text-primary-foreground' : ''}
-          ${_isToday && !isSelected ? ' bg-success/20 text-success border border-success/40' : ''}
-          ${isCurrentMonth && !isWeekend && !isSelected && !_isToday ? ' text-foreground' : ''}
-           transition-all duration-300
-        `}>
+      <div className="flex justify-center mb-1">
+        <span className={cn(
+          "h-7 w-7 flex items-center justify-center rounded-lg text-[11px] font-black transition-all",
+          _isToday && !isSelected && "bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]",
+          isSelected && "bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] scale-110",
+          !_isToday && !isSelected && "text-gray-500 group-hover:text-gray-300"
+        )}>
           {date.getDate()}
         </span>
       </div>
 
+      {/* Task Indicators */}
       {isCurrentMonth && (
-        <>
-          {/* Desktop view with fixed height */}
-          <div className="flex-1 min-h-0 hidden sm:block">
-            <ScrollArea className="h-full max-h-[50px] sm:max-h-[55px] md:max-h-[65px] lg:max-h-[75px] no-scrollbar" style={{ paddingBottom: "0" }}>
-              <div className="space-y-0.5 pr-1 min-h-[50px] sm:min-h-[55px] md:min-h-[30px] lg:min-h-[30px] no-scrollbar" style={{ paddingBottom: "0" }}>
-                {dayTasks.length > 0 ? (
-                  <>
-                    {dayTasks.slice(0, 4).map((task, taskIndex) => {
-                      const isRange = task.start_date && task.end_date && new Date(task.start_date).toDateString() !== new Date(task.end_date).toDateString();
-                      const isFirstDay = isRange && isSameDay(new Date(task.start_date!), date);
-                      const isLastDay = isRange && isSameDay(new Date(task.end_date!), date);
-                      const rounded = isRange
-                        ? (isFirstDay && isLastDay ? 'rounded-md' :
-                          isFirstDay ? 'rounded-l-md rounded-r-none' :
-                            isLastDay ? 'rounded-r-md rounded-l-none' : 'rounded-none')
-                        : 'rounded-md';
-                      return (
-                        <motion.div
-                          key={task.id}
-                          className={`
-                            text-xs py-0.5 px-1.5 leading-tight ${rounded}
-                            ${getTaskColor(date)} truncate shadow-sm text-blue-100 dark:text-foreground
-                            ${task.completed ? 'opacity-70' : ''}
-                            hover:shadow-md hover:scale-105 p-0 transition-all duration-200 cursor-pointer
-                          `}
-                          style={{ paddingBottom: "0", color: themeMode == "light" ? "white" : "black" }}
-                          title={task.title || task.description}
-                          initial={{ x: -5, opacity: 0 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          transition={{ delay: 0.05 * taskIndex }}
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent date selection
-                            if (onTaskClick) {
-                              onTaskClick(task);
-                            }
-                          }}
-                        >
-                          {formatTimeDisplay(task)}
-                        </motion.div>
-                      );
-                    })}
-                    {dayTasks.length > 4 && (
-                      <div className="text-[9px] text-center text-blue-100 dark:text-foreground glass-card rounded-full py-0.5 mt-0.5 font-medium" style={{ paddingBottom: "0" }}>
-                        +{dayTasks.length - 4}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  // Empty state to maintain consistent height
-                  <div className="h-full"></div>
-                )}
-              </div>
-            </ScrollArea>
+        <div className="flex-1 flex flex-col justify-end gap-1">
+          {/* Mobile Dot Indicators */}
+          <div className="sm:hidden flex justify-center gap-0.5 h-1.5 flex-wrap px-1">
+            {dayTasks.slice(0, 4).map((task, i) => (
+              <div key={i} className={cn(
+                "h-1 w-1 rounded-full",
+                task.completed ? "bg-muted-foreground/40" : "bg-primary"
+              )} />
+            ))}
+            {dayTasks.length > 4 && <div className="h-1 w-1 rounded-full bg-muted-foreground" />}
           </div>
 
-          {/* Mobile indicator for tasks with fixed height */}
-          <div className="sm:hidden flex justify-center mt-1 h-4 items-center">
-            {dayTasks.length > 0 ? (
-              <div className="flex gap-0.5 cursor-pointer" onClick={(e) => {
-                e.stopPropagation();
-                if (onTaskClick && dayTasks.length > 0) {
-                  onTaskClick(dayTasks[0]); // Click first task on mobile
-                }
-              }}>
-                {dayTasks.length <= 3 ? (
-                  dayTasks.map((task, idx) => (
-                    <div
-                      key={idx}
-                      className={`h-1.5 w-1.5 rounded-full transition-transform hover:scale-125 ${task.completed ? 'bg-green-500 dark:bg-green-400' : 'bg-blue-500 dark:bg-blue-400'}`}
-                      title={task.title || task.description}
-                    ></div>
-                  ))
-                ) : (
-                  <>
-                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500 dark:bg-blue-400 transition-transform hover:scale-125"></div>
-                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500 dark:bg-blue-400 transition-transform hover:scale-125"></div>
-                    <div className="text-[8px] text-blue-500 dark:text-blue-400 font-medium">+{dayTasks.length - 2}</div>
-                  </>
+          {/* Desktop Task Bars */}
+          <div className="hidden sm:flex flex-col gap-0.5 overflow-hidden">
+            {dayTasks.slice(0, 3).map((task) => (
+              <div key={task.id}
+                className={cn(
+                  "text-[9px] font-bold truncate px-2 py-1 rounded-md mx-0.5 cursor-pointer transition-all border",
+                  task.completed
+                    ? "bg-zinc-900/40 text-gray-600 border-transparent line-through opacity-60"
+                    : "bg-blue-600/10 text-blue-400 border-blue-500/10 hover:bg-blue-600/20 hover:border-blue-500/30",
+                  isSelected && !task.completed && "bg-blue-600/20 border-blue-500/40 text-blue-300"
                 )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTaskClick?.(task);
+                }}
+                title={task.title || task.description}
+              >
+                {task.title || task.description}
               </div>
-            ) : (
-              // Empty state for mobile to maintain height
-              <div className="h-1.5"></div>
+            ))}
+            {dayTasks.length > 3 && (
+              <div className="text-[9px] text-muted-foreground text-center font-medium">
+                +{dayTasks.length - 3} more
+              </div>
             )}
           </div>
-        </>
-      )}
-
-      {/* Empty state for non-current month days */}
-      {!isCurrentMonth && (
-        <>
-          <div className="flex-1 min-h-0 hidden sm:block">
-            <div className="min-h-[50px] sm:min-h-[55px] md:min-h-[65px] lg:min-h-[75px]"></div>
-          </div>
-          <div className="sm:hidden flex justify-center mt-1 h-4 items-center">
-            <div className="h-1.5"></div>
-          </div>
-        </>
+        </div>
       )}
     </motion.div>
   );

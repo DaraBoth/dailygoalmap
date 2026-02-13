@@ -15,13 +15,14 @@ const FloatingChatButton: React.FC<FloatingChatButtonProps> = ({ onGoalDataGener
   return (
     <>
       <motion.button
-        className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full p-4 shadow-lg z-50 hover:shadow-xl transition-all duration-300"
+        className="fixed bottom-24 right-6 h-14 w-14 rounded-full bg-zinc-950/80 backdrop-blur-xl border border-white/10 text-white shadow-2xl z-50 hover:scale-110 transition-all duration-300 flex items-center justify-center group overflow-hidden"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(true)}
         aria-label="Create goal with AI"
       >
-        <MessageCircle className="h-6 w-6" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <MessageCircle className="h-6 w-6 text-white/90 group-hover:text-white transition-colors" />
       </motion.button>
 
       <GoalAIChat

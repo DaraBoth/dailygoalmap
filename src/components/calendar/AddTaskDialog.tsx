@@ -160,196 +160,186 @@ const AddTaskDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[80vh] max-w-[380px] sm:max-w-[380px] md:max-w-[500px] lg:max-w-2xl p-0 overflow-hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/60 dark:border-white/25 text-gray-900 dark:text-white rounded-xl sm:rounded-2xl md:rounded-3xl shadow-2xl flex flex-col">
+      <DialogContent className="max-h-[80vh] max-w-[380px] sm:max-w-[380px] md:max-w-[500px] lg:max-w-2xl p-0 overflow-hidden bg-zinc-950/85 dark:bg-zinc-950/85 backdrop-blur-xl border border-white/10 text-white rounded-2xl shadow-2xl flex flex-col">
         <div className="flex flex-col h-full max-h-[80vh]">
           {/* Fixed header */}
-          <div className="flex-shrink-0 z-20 bg-inherit">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
-            <button
-              onClick={onClose}
-              className="absolute right-4 top-4 p-2 rounded-xl bg-white/80 dark:bg-white/20 backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/30 transition-all duration-200 shadow-lg z-10"
-            >
-              <X className="h-5 w-5" />
-              <span className="sr-only">Close</span>
-            </button>
-            <DialogHeader className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-gray-200/60 dark:border-white/25">
-              <DialogTitle className="flex items-center gap-3 sm:gap-4 text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
-                <div className="p-1.5 sm:p-2 bg-blue-100/80 dark:bg-blue-900/50 backdrop-blur-sm rounded-lg sm:rounded-xl">
-                  <CalendarClock className="h-5 w-5 sm:h-6 sm:w-6 text-blue-700 dark:text-blue-300" />
+          <div className="flex-shrink-0 z-20 bg-white/5 border-b border-white/10">
+            <div className="flex items-center justify-between p-4 sm:p-5">
+              <DialogTitle className="flex items-center gap-3 text-lg sm:text-xl font-semibold text-white">
+                <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                  <CalendarClock className="h-5 w-5 text-blue-400" />
                 </div>
                 Add New Task
               </DialogTitle>
-            </DialogHeader>
+              <button
+                onClick={onClose}
+                className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="h-5 w-5" />
+                <span className="sr-only">Close</span>
+              </button>
+            </div>
           </div>
 
-          {/* Scrollable content area with enhanced UX */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto no-scrollbar">
             <div
               ref={scrollAreaRef}
-              className="px-4"
-              style={{ minHeight: "calc(100% + 8rem)", paddingBottom: "min(0.1rem, max(20vh, 6rem))" }}
+              className="px-5 py-6"
             >
-              <div ref={contentRef} className="py-4 space-y-4">
-                <form id="add-task-form" onSubmit={handleSubmit} className="space-y-2.5 sm:space-y-4 md:space-y-6">
-                  <div className="space-y-3 sm:space-y-5">
-                    {/* Title */}
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="task-title" className="text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-1.5 sm:gap-2">
-                        Title
-                        <div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" />
-                      </Label>
-                      <Input
-                        id="task-title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder="Short title (e.g., Meeting, Read Book)"
-                        autoFocus
-                        className="dark:bg-slate-800/50 border-slate-700 dark:text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20 transition-all h-8 sm:h-10 text-sm"
+              <div ref={contentRef} className="space-y-6">
+                <form id="add-task-form" onSubmit={handleSubmit} className="space-y-6">
+                  {/* Title */}
+                  <div className="space-y-2">
+                    <Label htmlFor="task-title" className="text-sm font-medium text-gray-300">
+                      Title
+                    </Label>
+                    <Input
+                      id="task-title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="What needs to be done?"
+                      autoFocus
+                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-blue-500/50 focus:ring-blue-500/20 h-11"
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <div className="space-y-2">
+                    <Label htmlFor="task-description" className="text-sm font-medium text-gray-300">
+                      Description
+                    </Label>
+                    <AutoResizingDescription
+                      id="task-description"
+                      value={taskDescription}
+                      onChange={(v) => setTaskDescription(v)}
+                      placeholder="Add details..."
+                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-blue-500/50 focus:ring-blue-500/20 min-h-[100px]"
+                    />
+                  </div>
+
+                  {/* Date and Time Pickers */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-300">Start Date</Label>
+                      <MobileDatePicker
+                        date={startDate}
+                        minDate={undefined}
+                        maxDate={endDate}
+                        setDate={(d) => {
+                          if (!d) return;
+                          const next = d;
+                          setStartDate(next);
+                          if (moment(next).isAfter(endDate)) setEndDate(next);
+                          setSelectedDate(next);
+                        }}
+                        className="w-full bg-white/5 border-white/10 text-white"
                       />
                     </div>
 
-                    {/* Description */}
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="task-description" className="text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-1.5 sm:gap-2">
-                        Task Description
-                        <div className="h-px flex-1 bg-gradient-to-r from-gray-700 to-transparent" />
-                      </Label>
-                      <AutoResizingDescription
-                        id="task-description"
-                        value={taskDescription}
-                        onChange={(v) => setTaskDescription(v)}
-                        placeholder="What needs to be done?"
-                        className="dark:bg-slate-800/50 border-slate-700 dark:text-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20 transition-all"
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-300">End Date</Label>
+                      <MobileDatePicker
+                        date={endDate}
+                        minDate={startDate}
+                        maxDate={undefined}
+                        setDate={(d) => {
+                          if (!d) return;
+                          setEndDate(moment(d).isBefore(startDate) ? startDate : d);
+                        }}
+                        className="w-full bg-white/5 border-white/10 text-white"
                       />
-                    </div>
-
-                    {/* Date and Time Pickers */}
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
-                            Start Date
-                          </Label>
-                          <MobileDatePicker
-                            date={startDate}
-                            minDate={undefined}
-                            maxDate={endDate}
-                            setDate={(d) => {
-                              if (!d) return;
-                              const next = d;
-                              setStartDate(next);
-                              if (moment(next).isAfter(endDate)) setEndDate(next);
-                              setSelectedDate(next);
-                            }}
-                            className="w-full dark:bg-slate-800/50 border-slate-700 dark:text-white"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
-                            End Date
-                          </Label>
-                          <MobileDatePicker
-                            date={endDate}
-                            minDate={startDate}
-                            maxDate={undefined}
-                            setDate={(d) => {
-                              if (!d) return;
-                              setEndDate(moment(d).isBefore(startDate) ? startDate : d);
-                            }}
-                            className="w-full dark:bg-slate-800/50 border-slate-700 dark:text-white"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
-                            Daily Start
-                          </Label>
-                          <MobileTimePicker
-                            value={dailyStart}
-                            onChange={(value) => {
-                              const newStart = value || dailyStart;
-                              // If start > end, set end = start (enforce rule)
-                              if (moment(newStart, "HH:mm").isAfter(moment(dailyEnd, "HH:mm"))) {
-                                setDailyStart(moment(newStart, "HH:mm").format("HH:mm"));
-                                setDailyEnd(moment(newStart, "HH:mm").format("HH:mm"));
-                              } else {
-                                setDailyStart(moment(newStart, "HH:mm").format("HH:mm"));
-                              }
-                            }}
-                            onBlur={(e) => {
-                              if (!e.currentTarget.value) {
-                                setDailyStart(defaultDailyStart);
-                              }
-                            }}
-                            className="dark:bg-slate-800/50 border-slate-700 dark:text-white"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-800 dark:text-gray-300 flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" /> 
-                            Daily End
-                          </Label>
-                          <MobileTimePicker
-                            value={dailyEnd}
-                            onChange={(value) => {
-                              const newEnd = value || dailyEnd;
-                              // If end < start, set start = end (enforce rule)
-                              if (moment(newEnd, "HH:mm").isBefore(moment(dailyStart, "HH:mm"))) {
-                                setDailyStart(moment(newEnd, "HH:mm").format("HH:mm"));
-                                setDailyEnd(moment(newEnd, "HH:mm").format("HH:mm"));
-                              } else {
-                                setDailyEnd(moment(newEnd, "HH:mm").format("HH:mm"));
-                              }
-                            }}
-                            onBlur={(e) => {
-                              if (!e.currentTarget.value) setDailyEnd(dailyStart);
-                            }}
-                            className="dark:bg-slate-800/50 border-slate-700 dark:text-white"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-gray-800 dark:text-gray-400">
-                        {/* Keep day-span info the same */}
-                        {moment(startDate).isSame(endDate, "day")
-                          ? "Single day task"
-                          : `Spans ${moment(endDate).diff(moment(startDate), "days") + 1} days`}
-                      </div>
                     </div>
                   </div>
 
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="flex flex-row items-center justify-between gap-2 flex-wrap py-1 sm:py-2 w-full">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <button type="button" onClick={() => setIsPriority(!isPriority)} className={cn("p-1.5 sm:p-2 rounded-md sm:rounded-lg border transition-all", isPriority ? "bg-red-500/20 border-red-500/50 text-red-400" : "dark:bg-slate-800/50 border-slate-700 text-gray-800 dark:text-gray-400 hover:border-blue-500/50") }>
-                        <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </button>
-                      <span className="text-xs sm:text-sm text-gray-800 dark:text-gray-400">{isPriority ? "Priority Task" : "Mark as Priority"}</span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-300">Start Time</Label>
+                      <MobileTimePicker
+                        value={dailyStart}
+                        onChange={(value) => {
+                          const newStart = value || dailyStart;
+                          if (moment(newStart, "HH:mm").isAfter(moment(dailyEnd, "HH:mm"))) {
+                            setDailyStart(moment(newStart, "HH:mm").format("HH:mm"));
+                            setDailyEnd(moment(newStart, "HH:mm").format("HH:mm"));
+                          } else {
+                            setDailyStart(moment(newStart, "HH:mm").format("HH:mm"));
+                          }
+                        }}
+                        onBlur={(e) => !e.currentTarget.value && setDailyStart(defaultDailyStart)}
+                        className="bg-white/5 border-white/10 text-white"
+                      />
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <Label className="text-xs sm:text-sm text-gray-800 dark:text-gray-300">Completed</Label>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-300">End Time</Label>
+                      <MobileTimePicker
+                        value={dailyEnd}
+                        onChange={(value) => {
+                          const newEnd = value || dailyEnd;
+                          if (moment(newEnd, "HH:mm").isBefore(moment(dailyStart, "HH:mm"))) {
+                            setDailyStart(moment(newEnd, "HH:mm").format("HH:mm"));
+                            setDailyEnd(moment(newEnd, "HH:mm").format("HH:mm"));
+                          } else {
+                            setDailyEnd(moment(newEnd, "HH:mm").format("HH:mm"));
+                          }
+                        }}
+                        onBlur={(e) => !e.currentTarget.value && setDailyEnd(dailyStart)}
+                        className="bg-white/5 border-white/10 text-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Priority & Completed */}
+                  <div className="flex items-center justify-between pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsPriority(!isPriority)}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-sm",
+                        isPriority
+                          ? "bg-red-500/10 border-red-500/20 text-red-400"
+                          : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white"
+                      )}
+                    >
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{isPriority ? "High Priority" : "Normal Priority"}</span>
+                    </button>
+
+                    <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-2 rounded-lg">
+                      <Label className="text-sm font-medium text-gray-300">Completed</Label>
                       <Switch checked={completed} onCheckedChange={setCompleted} />
                     </div>
-                  </motion.div>
+                  </div>
                 </form>
               </div>
             </div>
           </div>
 
-          {/* Fixed button area at bottom */}
-          <div className="flex-shrink-0 sticky bottom-0 z-20 p-4 border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <Button type="submit" form="add-task-form" disabled={!title.trim() || isSubmitting} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 h-9 sm:h-10 md:h-11 text-sm">
-                {isSubmitting ? (<><Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin mr-1.5 sm:mr-2" />Adding Task...</>) : (<><Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />Add Task</>)}
+          {/* Fixed button area */}
+          <div className="flex-shrink-0 z-20 p-5 bg-zinc-950/50 backdrop-blur-md border-t border-white/10 mt-auto">
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { resetForm(); onClose(); }}
+                className="flex-1 bg-transparent border-white/10 text-gray-300 hover:bg-white/5 hover:text-white h-11"
+              >
+                Cancel
               </Button>
-              <Button type="button" variant="outline" onClick={() => { resetForm(); onClose(); }} className="w-full transition-all duration-200 h-9 sm:h-10 md:h-11 text-sm">Cancel</Button>
-            </motion.div>
+              <Button
+                type="submit"
+                form="add-task-form"
+                disabled={!title.trim() || isSubmitting}
+                className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white h-11 shadow-lg shadow-blue-900/20 border border-blue-500/50"
+              >
+                {isSubmitting ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" />Adding...</>
+                ) : (
+                  <><Check className="h-4 w-4 mr-2" />Create Task</>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

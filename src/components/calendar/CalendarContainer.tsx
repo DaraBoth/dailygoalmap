@@ -41,7 +41,7 @@ const CalendarContainer = ({
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 0.2, duration: 0.5 }}
-      className="h-full relative flex-1 min-h-[500px]"
+      className="h-full relative flex-1 flex flex-col"
     >
       {isLoading ? (
         <div className="grid grid-cols-1 gap-4 p-4">
@@ -84,7 +84,7 @@ const CalendarContainer = ({
               onClick={onOpenAddTaskDialog}
               variant="orbit"
               size="icon"
-              className="fixed bottom-6 right-6 bg-blue-500 hover:bg-blue-600 text-white shadow-lg z-50 rounded-full h-14 w-14"
+              className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] z-50 hover:scale-110 hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] transition-all duration-300 border border-white/10"
             >
               <Plus className="h-6 w-6" />
               <span className="sr-only">Add Task</span>

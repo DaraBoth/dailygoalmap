@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { put } from "@vercel/blob";
 import { ImageCropDialog } from "./ImageCropDialog";
+import { cn } from "@/lib/utils";
+
 
 interface Profile {
   id: string;
@@ -40,17 +42,17 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
     const fetchProfile = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
+
         if (!session) return;
-        
+
         const { data, error } = await supabase
           .from('user_profiles')
           .select('*')
           .eq('id', session.user.id)
           .maybeSingle();
-        
+
         if (error) throw error;
-        
+
         if (data) {
           setProfile(data);
           setDisplayName(data.display_name || "");
@@ -63,17 +65,17 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
               id: session.user.id,
               display_name: session.user.user_metadata.name || "",
             });
-          
+
           if (insertError) throw insertError;
-          
+
           const { data: newProfile, error: refetchError } = await supabase
             .from('user_profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
-          
+
           if (refetchError) throw refetchError;
-          
+
           setProfile(newProfile);
           setDisplayName(newProfile.display_name || "");
           setBio(newProfile.bio || "");
@@ -90,7 +92,7 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
         setIsLoading(false);
       }
     };
-    
+
     fetchProfile();
   }, [toast]);
 
@@ -100,18 +102,18 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
       setHasChanges(false);
       return;
     }
-    
+
     const nameChanged = displayName !== (profile.display_name || "");
     const bioChanged = bio !== (profile.bio || "");
     const avatarChanged = avatarUrl !== profile.avatar_url;
-    
+
     setHasChanges(nameChanged || bioChanged || avatarChanged);
   }, [displayName, bio, avatarUrl, profile]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     // Create a URL for the selected image
     const reader = new FileReader();
     reader.onload = () => {
@@ -119,26 +121,26 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
       setCropDialogOpen(true);
     };
     reader.readAsDataURL(file);
-    
+
     // Reset the input so the same file can be selected again
     e.target.value = '';
   };
 
   const handleCropComplete = async (croppedImage: Blob) => {
     if (!profile) return;
-    
+
     setIsUploading(true);
     setCropDialogOpen(false);
-    
+
     try {
       const filename = `goalmap/${Date.now()}-profile.jpg`;
       const { url } = await put(filename, croppedImage, {
         access: 'public',
         token: import.meta.env.VITE_VERCEL_BLOB,
       });
-      
+
       setAvatarUrl(url);
-      
+
       toast({
         title: "Image uploaded",
         description: "Your profile image was uploaded successfully"
@@ -162,15 +164,15 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!profile) return;
-    
+
     setIsSaving(true);
-    
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("No active session");
-      
+
       // Update profile in database
       const { error } = await supabase
         .from('user_profiles')
@@ -181,19 +183,19 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
           updated_at: new Date().toISOString()
         })
         .eq('id', profile.id);
-      
+
       if (error) throw error;
-      
+
       // Update user metadata in auth
       const { error: updateUserError } = await supabase.auth.updateUser({
-        data: { 
+        data: {
           avatar_url: avatarUrl,
           name: displayName
         }
       });
-      
+
       if (updateUserError) throw updateUserError;
-      
+
       // Update local state to match saved values
       setProfile({
         ...profile,
@@ -201,12 +203,12 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
         bio: bio,
         avatar_url: avatarUrl
       });
-      
+
       toast({
         title: "Profile updated",
         description: "Your profile has been successfully updated."
       });
-      
+
       // Call the onSave callback if provided
       if (onSave) {
         onSave();
@@ -232,35 +234,51 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col items-center mb-4 sm:mb-6">
-        <div 
+    <form onSubmit={handleSubmit} className="space-y-6 lg:space-y-10">
+      {/* Avatar Management Section */}
+      <div className="flex flex-col items-center">
+        <div
           className="relative cursor-pointer group"
           onClick={handleAvatarClick}
         >
-          <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-3 sm:border-4 border-purple-200 shadow-lg transition-all duration-300 hover:border-purple-400">
-            {avatarUrl ? (
-              <AvatarImage src={avatarUrl} alt={displayName || "Profile"} />
-            ) : (
-              <AvatarFallback className="bg-gradient-to-br from-blue-100 to-purple-100">
-                <UserCircle className="h-12 w-12 sm:h-16 sm:w-16 text-purple-400" />
-              </AvatarFallback>
-            )}
-          </Avatar>
-          
-          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300">
-            <Camera className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
-          </div>
-          
-          {isUploading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 rounded-full">
-              <Loader2 className="h-10 w-10 animate-spin text-white" />
+          {/* Animated rings around avatar */}
+          <div className="absolute -inset-4 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+
+          <div className="relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur opacity-20 group-hover:opacity-60 transition-opacity duration-500"></div>
+            <Avatar className="h-32 w-32 border-2 border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-105 bg-zinc-900 group-hover:border-blue-500/30 overflow-hidden">
+              {avatarUrl ? (
+                <AvatarImage src={avatarUrl} alt={displayName || "Profile"} className="object-cover" />
+              ) : (
+                <AvatarFallback className="bg-gradient-to-br from-zinc-900 to-zinc-950 text-white/10">
+                  <div className="relative">
+                    <UserCircle className="h-16 w-16 opacity-20" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="h-2 w-2 rounded-full bg-blue-500/40 animate-pulse"></div>
+                    </div>
+                  </div>
+                </AvatarFallback>
+              )}
+            </Avatar>
+
+            {/* Overlay for interaction */}
+            <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/60 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm">
+              <Camera className="h-8 w-8 text-white translate-y-2 group-hover:translate-y-0 transition-transform duration-300" />
             </div>
-          )}
+
+            {isUploading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/80 rounded-full backdrop-blur-md">
+                <Loader2 className="h-10 w-10 animate-spin text-blue-400" />
+              </div>
+            )}
+          </div>
         </div>
-        
-        <p className="text-sm text-purple-500 mt-3 font-medium animate-pulse">Click to upload profile image</p>
-        
+
+        <div className="mt-4 text-center">
+          <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Visual Identifier</p>
+          <p className="text-xs text-gray-500 font-medium">Click image to update avatar</p>
+        </div>
+
         <input
           type="file"
           ref={fileInputRef}
@@ -269,7 +287,7 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
           onChange={handleFileChange}
         />
       </div>
-      
+
       {imageToCrop && (
         <ImageCropDialog
           open={cropDialogOpen}
@@ -281,52 +299,82 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
           }}
         />
       )}
-      
-      <div className="space-y-2">
-        <Label htmlFor="displayName" className="text-purple-700 font-medium">Display Name</Label>
-        <Input
-          id="displayName"
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          placeholder="Enter your display name"
-          className="border-purple-200 focus:border-purple-400 transition-all duration-300"
-        />
+
+      {/* Form Fields */}
+      <div className="grid gap-6 lg:gap-10">
+        <div className="group/field space-y-3 lg:space-y-4">
+          <div className="flex items-center gap-3 px-1">
+            <div className="relative">
+              <div className="h-1.5 w-1.5 rounded-full bg-blue-400 group-focus-within/field:animate-ping opacity-70"></div>
+              <div className="absolute inset-0 h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
+            </div>
+            <Label htmlFor="displayName" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 group-focus-within/field:text-blue-400 transition-colors">
+              Identity Descriptor
+            </Label>
+          </div>
+          <Input
+            id="displayName"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="Enter public identity"
+            className="h-12 lg:h-14 bg-white/[0.02] border-white/5 focus:border-blue-500/40 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-white font-bold placeholder:text-gray-800 transition-all text-sm lg:text-base shadow-inner group-hover/field:border-white/10"
+          />
+        </div>
+
+        <div className="group/field space-y-3 lg:space-y-4">
+          <div className="flex items-center gap-3 px-1">
+            <div className="relative">
+              <div className="h-1.5 w-1.5 rounded-full bg-blue-400 group-focus-within/field:animate-ping opacity-70"></div>
+              <div className="absolute inset-0 h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
+            </div>
+            <Label htmlFor="bio" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 group-focus-within/field:text-blue-400 transition-colors">
+              System Narrative
+            </Label>
+          </div>
+          <Textarea
+            id="bio"
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            placeholder="Professional brief / Core objective"
+            rows={4}
+            className="bg-white/[0.02] border-white/5 focus:border-blue-500/40 focus:ring-4 focus:ring-blue-500/10 rounded-[1.5rem] text-white font-bold placeholder:text-gray-800 transition-all text-sm lg:text-base resize-none py-4 px-5 lg:py-5 lg:px-6 shadow-inner group-hover/field:border-white/10"
+          />
+        </div>
       </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="bio" className="text-purple-700 font-medium">Bio</Label>
-        <Textarea
-          id="bio"
-          value={bio}
-          onChange={(e) => setBio(e.target.value)}
-          placeholder="Tell us a bit about yourself"
-          rows={4}
-          className="border-purple-200 focus:border-purple-400 transition-all duration-300"
-        />
-      </div>
-      
-      <div className="flex justify-end gap-4">
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={onCancel} 
-          className="w-1/3"
+
+      {/* Action Buttons */}
+      <div className="flex items-center gap-3 lg:gap-5 pt-6 lg:pt-10 border-t border-white/5">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onCancel}
+          className="h-12 lg:h-14 flex-1 rounded-2xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] text-gray-500 hover:text-gray-300 font-black uppercase tracking-widest text-[9px] lg:text-[10px] transition-all"
         >
-          Cancel
+          Discard
         </Button>
-        <Button 
-          type="submit" 
-          className="w-2/3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-md"
+        <Button
+          type="submit"
+          className={cn(
+            "h-12 lg:h-14 flex-[2] rounded-2xl font-black uppercase tracking-widest text-[9px] lg:text-[10px] transition-all relative overflow-hidden group shadow-2xl",
+            hasChanges && !isSaving
+              ? "bg-blue-600 text-white shadow-blue-500/20 hover:shadow-blue-500/40"
+              : "bg-white/5 text-gray-600 cursor-not-allowed border border-white/5"
+          )}
           disabled={isSaving || !hasChanges}
         >
-          {isSaving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save Changes"
-          )}
+          {/* Refraction Shine Effect */}
+          <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-[35deg] translate-x-[-150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out pointer-events-none"></div>
+
+          <div className="relative z-10 flex items-center justify-center gap-2">
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-blue-200" />
+                <span>Syncing...</span>
+              </>
+            ) : (
+              <span>Archive System Changes</span>
+            )}
+          </div>
         </Button>
       </div>
     </form>

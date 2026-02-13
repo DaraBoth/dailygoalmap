@@ -42,14 +42,14 @@ if ('serviceWorker' in navigator) {
     try {
       await registerServiceWorker();
       console.log('Service Worker registered successfully');
-      
+
       // Initialize client API for offline support
       initializeClientApi();
-      
+
       // Force reload favicon
       const favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
       if (favicon) {
-        favicon.href = `/icon/maskable_icon_x96.png?${new Date().getTime()}`;
+        favicon.href = `/logo/newlogo.png?${new Date().getTime()}`;
       }
 
       // Check if app can be installed

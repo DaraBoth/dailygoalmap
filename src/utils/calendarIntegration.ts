@@ -41,7 +41,7 @@ export const createCalendarEvent = (task: Task) => {
 // Function to directly add to default system calendar using .ics file
 export const addToSystemCalendar = async (task: Task): Promise<boolean> => {
   const event = createCalendarEvent(task);
-  
+
   try {
     // Create a hidden link element
     const link = document.createElement('a');
@@ -49,10 +49,10 @@ export const addToSystemCalendar = async (task: Task): Promise<boolean> => {
     link.download = `${task.title || 'Task'}_reminder.ics`;
     link.style.display = 'none';
     document.body.appendChild(link);
-    
+
     // Click the link to trigger the download
     link.click();
-    
+
     // Clean up
     document.body.removeChild(link);
     return true;
@@ -65,62 +65,107 @@ export const addToSystemCalendar = async (task: Task): Promise<boolean> => {
 // Function to open calendar options dialog
 export const openCalendarOptionsDialog = (task: Task) => {
   const links = createCalendarEvent(task);
-  
+
   // Create and show the dialog
   const dialog = document.createElement('dialog');
-  dialog.className = 'fixed inset-0 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md mx-auto mt-20';
-  
+  dialog.className = 'fixed inset-0 z-[100] bg-transparent backdrop:bg-black/40 backdrop:backdrop-blur-sm p-0 flex items-center justify-center border-none overflow-visible';
+
   dialog.innerHTML = `
-    <div class="space-y-4">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Add to Calendar</h3>
-      <p class="text-sm text-gray-600 dark:text-gray-400">
-        Select your preferred calendar app below. You'll be taken to your calendar to confirm and save the event.
-      </p>
-      <div class="grid gap-3">
-        <a href="${links.google}" target="_blank" rel="noopener noreferrer" 
-           class="flex items-center justify-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-           onclick="window.toast?.({ title: 'Opening Google Calendar', description: 'Please complete adding the event in your calendar.' })">
-          Add to Google Calendar
-        </a>
-        <a href="${links.outlook}" target="_blank" rel="noopener noreferrer"
-           class="flex items-center justify-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-           onclick="window.toast?.({ title: 'Opening Outlook', description: 'Please complete adding the event in your calendar.' })">
-          Add to Outlook
-        </a>
-        <a href="${links.office365}" target="_blank" rel="noopener noreferrer"
-           class="flex items-center justify-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-           onclick="window.toast?.({ title: 'Opening Office 365', description: 'Please complete adding the event in your calendar.' })">
-          Add to Office 365
-        </a>
-        <a href="${links.yahoo}" target="_blank" rel="noopener noreferrer"
-           class="flex items-center justify-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-           onclick="window.toast?.({ title: 'Opening Yahoo Calendar', description: 'Please complete adding the event in your calendar.' })">
-          Add to Yahoo Calendar
-        </a>
-        <button id="downloadIcs" 
-                class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
-          Download .ics File (Windows/Mac Calendar)
+    <div class="relative w-full max-w-sm mx-4 bg-zinc-950/90 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-2xl overflow-hidden p-8 animate-in fade-in zoom-in duration-300">
+      <div class="absolute -top-24 -right-24 h-48 w-48 bg-blue-500/10 rounded-full blur-[80px]"></div>
+      <div class="absolute -bottom-24 -left-24 h-48 w-48 bg-purple-500/10 rounded-full blur-[80px]"></div>
+
+      <div class="relative z-10 space-y-6">
+        <div class="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            </div>
+            <div>
+              <h3 class="text-xl font-black text-white leading-tight">Calendar</h3>
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest opacity-70">Integration Hub</p>
+            </div>
+          </div>
+          <button id="closeDialogX" class="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div class="grid gap-3">
+          <a href="${links.google}" target="_blank" rel="noopener noreferrer" 
+             class="flex items-center gap-4 px-5 py-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 hover:border-white/20 transition-all duration-300 group">
+            <div class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span class="text-lg font-bold text-white">G</span>
+            </div>
+            <div class="flex-1">
+              <span class="block text-sm font-bold text-white mb-0.5">Google Calendar</span>
+              <span class="block text-[10px] text-gray-500 font-medium tracking-wide">Cloud-based sync</span>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-600 group-hover:text-blue-400 transition-colors"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+
+          <a href="${links.outlook}" target="_blank" rel="noopener noreferrer"
+             class="flex items-center gap-4 px-5 py-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 hover:border-white/20 transition-all duration-300 group">
+            <div class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span class="text-lg font-bold text-white text-blue-400">O</span>
+            </div>
+            <div class="flex-1">
+              <span class="block text-sm font-bold text-white mb-0.5">Outlook Desktop</span>
+              <span class="block text-[10px] text-gray-500 font-medium tracking-wide">Native experience</span>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-600 group-hover:text-blue-400 transition-colors"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+
+          <a href="${links.office365}" target="_blank" rel="noopener noreferrer"
+             class="flex items-center gap-4 px-5 py-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 hover:border-white/20 transition-all duration-300 group">
+            <div class="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span class="text-lg font-bold text-orange-400">365</span>
+            </div>
+            <div class="flex-1">
+              <span class="block text-sm font-bold text-white mb-0.5">Office 365</span>
+              <span class="block text-[10px] text-gray-500 font-medium tracking-wide">Enterprise workflows</span>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-600 group-hover:text-blue-400 transition-colors"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+
+          <button id="downloadIcs" 
+                  class="flex items-center gap-4 px-5 py-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 hover:border-white/20 transition-all duration-300 group text-left w-full">
+            <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-purple-400"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            </div>
+            <div class="flex-1">
+              <span class="block text-sm font-bold text-white mb-0.5">Offline Download</span>
+              <span class="block text-[10px] text-gray-500 font-medium tracking-wide">Universal .ICS format</span>
+            </div>
+          </button>
+        </div>
+
+        <button id="closeDialog"
+                class="w-full h-14 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all duration-300">
+          Dismiss Options
         </button>
       </div>
-      <button id="closeDialog"
-              class="mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors w-full">
-        Close
-      </button>
     </div>
   `;
 
   // Add event listeners
-  dialog.querySelector('#closeDialog')?.addEventListener('click', () => {
+  const closeBtn = dialog.querySelector('#closeDialog');
+  const closeX = dialog.querySelector('#closeDialogX');
+
+  const closeAction = () => {
     dialog.close();
     document.body.removeChild(dialog);
-  });
+  };
+
+  closeBtn?.addEventListener('click', closeAction);
+  closeX?.addEventListener('click', closeAction);
 
   dialog.querySelector('#downloadIcs')?.addEventListener('click', async () => {
     const success = await addToSystemCalendar(task);
     if (success) {
       toast({
-        title: "Calendar File Downloaded",
-        description: "Open the downloaded file to add it to your calendar.",
+        title: "Calendar File Ready",
+        description: "Open the downloaded .ics to sync your device.",
       });
     }
   });
@@ -132,8 +177,7 @@ export const openCalendarOptionsDialog = (task: Task) => {
   // Add backdrop click handler
   dialog.addEventListener('click', (e) => {
     if (e.target === dialog) {
-      dialog.close();
-      document.body.removeChild(dialog);
+      closeAction();
     }
   });
 };

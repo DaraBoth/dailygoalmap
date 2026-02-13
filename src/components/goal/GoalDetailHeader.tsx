@@ -1,139 +1,85 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouterNavigation } from '@/hooks/useRouterNavigation';
-import { ArrowLeft, BarChart3, FileEdit, Sparkles } from 'lucide-react';
+import { ArrowLeft, BarChart3, Menu, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user/UserMenu';
-import { GoalMember } from '@/types/goal';
-import { GoalSharingButton } from './sharing/GoalSharingButton';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ThemeSelector } from './ThemeSelector';
-import { EditTemplateDataModal } from './EditTemplateDataModal';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 
 interface GoalDetailHeaderProps {
-  goalId?: string;
-  members: GoalMember[];
   goalTitle: string;
-  goalDescription: string;
-  totalTasks?: number;
-  completedTasks?: number;
-  targetDate?: string;
-  status?: string;
   showAnalytics?: boolean;
   onToggleAnalytics?: () => void;
-  userId?: string;
-  currentThemeId?: string;
-  onThemeChange?: (themeId: string, isRemove?: boolean) => void;
-  goalData?: any;
-  onGoalUpdate?: () => void;
+  onOpenSidebar?: () => void;
 }
 
 const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
-  goalId,
-  members,
   goalTitle,
-  goalDescription,
-  totalTasks = 0,
-  completedTasks = 0,
-  targetDate = '',
-  status = 'active',
   showAnalytics = false,
   onToggleAnalytics,
-  userId,
-  currentThemeId,
-  onThemeChange,
-  goalData,
-  onGoalUpdate
+  onOpenSidebar
 }) => {
   const { goToDashboard } = useRouterNavigation();
   const isMobile = useIsMobile();
-  const [showEditTemplateModal, setShowEditTemplateModal] = useState(false);
-
-  const handleGoBack = () => {
-    goToDashboard();
-  };
-
-  const hasTemplate = goalData?.metadata?.template_id;
 
   return (
-    <>
-      <div className="fixed top-2.5 z-50 w-[calc(100vw-16px)] mx-2 border bg-background/80 backdrop-blur-md shadow-sm rounded-2xl">
-        <div className="w-full px-2 sm:px-4 py-3 sm:py-4">
-          <div className="flex items-center justify-between max-w-[2000px] mx-auto gap-2">
-            <div className="flex items-center space-x-2 flex-1 min-w-0">
-              <button
-                className="p-2 hover:bg-accent w-8 h-8 sm:w-9 sm:h-9 transition-all duration-200 rounded-xl"
-                onClick={handleGoBack}
-              >
-                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-              </button>
-              <div className="min-w-0 flex-1 overflow-hidden">
-                <h1 className="text-base sm:text-xl md:text-2xl font-bold truncate bg-clip-text text-transparent">
-                  {goalTitle || 'Loading...'}
-                </h1>
-              </div>
-            </div>
+    <div className="sticky top-0 z-40 w-full border-b border-white/5 bg-zinc-950/40 backdrop-blur-xl transition-all duration-300">
+      <div className="flex h-16 items-center px-4 md:px-8">
+        <div className="flex items-center gap-4 flex-1">
+          {isMobile && onOpenSidebar && (
+            <Button variant="ghost" size="icon" className="-ml-2 mr-1" onClick={onOpenSidebar}>
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
 
-            <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
-              {hasTemplate && goalId && (
-                <button
-                  className="p-2 hover:bg-accent h-7 sm:h-8 px-1.5 sm:px-2 transition-all duration-200 rounded-xl flex items-center"
-                  onClick={() => setShowEditTemplateModal(true)}
-                  title="Edit Template Data"
-                >
-                  <FileEdit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  {!isMobile && <span className="ml-2">Template</span>}
-                </button>
-              )}
+          {!isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 -ml-2 text-muted-foreground hover:text-foreground"
+              onClick={() => goToDashboard()}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="sr-only">Back</span>
+            </Button>
+          )}
 
-              {userId && onThemeChange && (
-                <ThemeSelector
-                  userId={userId}
-                  currentThemeId={currentThemeId}
-                  onThemeSelect={onThemeChange}
-                />
-              )}
+          <Breadcrumb className="hidden md:flex">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink onClick={() => goToDashboard()} className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 cursor-pointer hover:text-blue-400 transition-colors">
+                  Command
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="text-gray-800" />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="text-sm font-bold text-gray-200 tracking-tight max-w-[300px] truncate">
+                  {goalTitle || 'MISSION DATA'}
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
 
-              {goalId && goalTitle && (
-                <GoalSharingButton goalId={goalId} goalTitle={goalTitle} />
-              )}
+          <h1 className="md:hidden text-sm font-semibold truncate max-w-[150px]">
+            {goalTitle || 'Goal Details'}
+          </h1>
+        </div>
 
-              {onToggleAnalytics && (
-                <button
-                  className={`p-2 hover:bg-accent h-7 sm:h-8 px-1.5 sm:px-2 transition-all duration-200 rounded-xl flex items-center ${showAnalytics ? 'bg-primary/10 border-primary/30' : ''
-                    }`}
-                  onClick={onToggleAnalytics}
-                >
-                  {showAnalytics ? (
-                    <>
-                      <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      {!isMobile && <span className="ml-2">Smart Analytics</span>}
-                    </>
-                  ) : (
-                    <>
-                      <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      {!isMobile && <span className="ml-2">Smart Analytics</span>}
-                    </>
-                  )}
-                </button>
-              )}
+        <div className="flex items-center gap-2">
+          {/* Analytics toggle removed - moved to sidebar */}
 
-              <UserMenu />
-            </div>
-          </div>
+          <UserMenu />
         </div>
       </div>
-
-      {hasTemplate && goalId && goalData && (
-        <EditTemplateDataModal
-          isOpen={showEditTemplateModal}
-          onClose={() => setShowEditTemplateModal(false)}
-          goalId={goalId}
-          goalData={goalData}
-          onSuccess={onGoalUpdate}
-        />
-      )}
-    </>
+    </div>
   );
 };
 

@@ -30,174 +30,64 @@ const CalendarHeader = ({
 
   return (
     <nav
-      className="border bg-background/80 backdrop-blur-md shadow-sm relative mt-3 sm:mt-4 mx-2 mb-3 sm:mb-4 rounded-2xl sm:rounded-3xl border-gray-200/60 dark:border-white/25"
+      className="flex flex-col gap-4"
       role="navigation"
       aria-label="Calendar navigation"
     >
-      {/* Desktop Navbar */}
-      <div className="hidden lg:flex items-center justify-between p-3 sm:p-4" >
-        {/* Left Section: Month Navigation */}
+      <div className="flex items-center justify-between gap-3 p-1">
+        {/* Left: Date Navigation */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={onPreviousMonth}
-            className="p-2 hover:bg-accent w-9 h-9 transition-all duration-200 rounded-xl flex items-center justify-center"
-            aria-label="Previous month"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-
-          <motion.h1
-            className="text-xl font-semibold text-gray-800 dark:text-gray-200 min-w-[160px] text-center"
-            key={currentMonth.toISOString()}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {format(currentMonth, "MMMM yyyy")}
-          </motion.h1>
-
-          <button
-            onClick={onNextMonth}
-            className="p-2 hover:bg-accent w-9 h-9 transition-all duration-200 rounded-xl flex items-center justify-center"
-            aria-label="Next month"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-
-          <button
-            onClick={onGoToToday}
-            className="p-2 hover:bg-accent h-9 px-3 transition-all duration-200 rounded-xl text-sm font-medium flex items-center"
-            aria-label="Go to today"
-          >
-            <Home className="h-4 w-4 mr-1" />
-            Today
-          </button>
-        </div>
-
-        {/* Center Section: Progress (if available) */}
-        {dailySpendingLimit && (
-          <motion.div
-            className="flex items-center gap-4 bg-white/40 dark:bg-white/5 rounded-xl px-4 py-2 border border-white/30 dark:border-white/10"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-gradient-to-r from-emerald-400 to-blue-500 rounded-lg">
-                <Sparkles className="w-3 h-3 text-white" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Daily Budget</p>
-                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                  {formatCurrency(dailySpendingLimit, currency)}
-                </p>
-              </div>
-            </div>
-
-            <div className="text-right">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Remaining</p>
-              <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                {formatCurrency(dailySpendingLimit * 0.75, currency)}
-              </p>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Right Section: Add Task Button */}
-        <button
-          onClick={onOpenAddTaskDialog}
-          className="p-2 hover:bg-accent px-4 py-2 h-auto transition-all duration-200 rounded-xl flex items-center"
-        >
-          <CalendarIcon className="w-4 h-4 mr-2" />
-          Add Task
-        </button>
-      </div>
-
-      {/* Tablet/Mobile Navbar */}
-      <div className="lg:hidden">
-        {/* Mobile Header - Always Visible Controls */}
-        <div className="space-y-3 p-3">
-          {/* Top Row: Month Navigation */}
-          <div className="flex items-center justify-between">
-            <button
-              onClick={onPreviousMonth}
-              className="p-2 hover:bg-accent w-9 h-9 transition-all duration-200 rounded-xl flex items-center justify-center"
-              aria-label="Previous month"
-            >
+          <div className="flex items-center bg-zinc-900/40 rounded-xl p-1 border border-white/5 shadow-2xl backdrop-blur-xl">
+            <Button variant="ghost" size="icon" onClick={onPreviousMonth} className="h-8 w-8 hover:bg-white/5 text-gray-400 hover:text-blue-400 transition-colors">
               <ChevronLeft className="h-4 w-4" />
-            </button>
-
-            <motion.h1
-              className="text-lg font-semibold text-gray-800 dark:text-gray-200 text-center flex-1"
-              key={currentMonth.toISOString()}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              {format(currentMonth, isMobile ? "MMM yyyy" : "MMMM yyyy")}
-            </motion.h1>
-
-            <button
-              onClick={onNextMonth}
-              className="p-2 hover:bg-accent w-9 h-9 transition-all duration-200 rounded-xl flex items-center justify-center"
-              aria-label="Next month"
-            >
+            </Button>
+            <div className="w-px h-4 bg-white/5 mx-1" />
+            <Button variant="ghost" size="icon" onClick={onNextMonth} className="h-8 w-8 hover:bg-white/5 text-gray-400 hover:text-blue-400 transition-colors">
               <ChevronRight className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
 
-          {/* Bottom Row: Today Button and Add Task Button */}
-          <div className="flex items-center justify-between gap-3">
-            <button
-              onClick={onGoToToday}
-              className="p-2 hover:bg-accent h-9 px-3 transition-all duration-200 rounded-xl text-sm font-medium flex items-center"
-              aria-label="Go to today"
-            >
-              <Home className="h-4 w-4 mr-1" />
-              Today
-            </button>
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight min-w-[140px] text-white uppercase tracking-[0.1em]">
+            {format(currentMonth, "MMMM yyyy")}
+          </h2>
+        </div>
 
-            <button
-              onClick={onOpenAddTaskDialog}
-              className="p-2 hover:bg-accent px-4 py-2 h-auto transition-all duration-200 rounded-xl flex-1 max-w-[120px] flex items-center justify-center"
-            >
-              <CalendarIcon className="w-4 h-4 mr-2" />
-              Add Task
-            </button>
-          </div>
-
-          {/* Mobile Progress Section - Always Visible */}
-          {dailySpendingLimit && (
-            <motion.div
-              className="bg-white/40 dark:bg-white/5 rounded-xl p-3 border border-white/30 dark:border-white/10"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-gradient-to-r from-emerald-400 to-blue-500 rounded-lg">
-                    <Sparkles className="w-3 h-3 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Daily Budget</p>
-                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                      {formatCurrency(dailySpendingLimit, currency)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Remaining</p>
-                  <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                    {formatCurrency(dailySpendingLimit * 0.75, currency)}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          )}
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onGoToToday} className="hidden sm:flex h-9 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all font-bold uppercase tracking-widest text-[10px]">
+            <Home className="h-3.5 w-3.5 mr-2 text-blue-400" />
+            Today
+          </Button>
+          <Button onClick={onOpenAddTaskDialog} size="sm" className="h-9 rounded-xl bg-blue-600 hover:bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)] hover:shadow-[0_0_25px_rgba(59,130,246,0.4)] transition-all font-bold uppercase tracking-widest text-[10px] px-5">
+            <CalendarIcon className="h-3.5 w-3.5 mr-2" />
+            {isMobile ? "Add" : "Add Task"}
+          </Button>
         </div>
       </div>
+
+      {/* Optional: Spending Limit / Progress (Glassmorphic Card) */}
+      {dailySpendingLimit && (
+        <motion.div
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-background/80 to-muted/30 border border-border/40 rounded-xl backdrop-blur-sm shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-full">
+              <Sparkles className="w-4 h-4 text-primary" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Daily Budget</span>
+              <span className="text-sm font-bold">{formatCurrency(dailySpendingLimit, currency)}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-end">
+            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Remaining</span>
+            <span className="text-sm font-bold text-emerald-500">{formatCurrency(dailySpendingLimit * 0.75, currency)}</span>
+          </div>
+        </motion.div>
+      )}
     </nav>
   );
 };

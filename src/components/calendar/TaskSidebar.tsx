@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Task } from "./types";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ModernTaskItem } from "./ModernTaskItem";
 
 interface TaskSidebarProps {
   tasks: Task[];
@@ -28,7 +29,7 @@ interface TaskSidebarProps {
   goalId: string;
 }
 
-const TaskSidebar = ({
+const TaskSidebar = React.memo(({
   tasks,
   selectedDate,
   onToggleTaskCompletion,
@@ -41,39 +42,22 @@ const TaskSidebar = ({
   onTaskClick,
   goalId,
 }: TaskSidebarProps) => {
-  const [tasksForDate, setTasksForDate] = useState<Task[]>([]);
+  const tasksForDate = useMemo(() => {
+    const target = selectedDate
+      ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate())
+      : new Date();
 
-  // Filter by date
-  const filterTasksForDate = useCallback(
-    (date: Date | undefined, allTasks: Task[]) => {
-      const target = date
-        ? new Date(date.getFullYear(), date.getMonth(), date.getDate())
-        : new Date();
+    const filteredTasks = tasks.filter((task) => {
+      if (!task.start_date || !task.end_date) return false;
+      const start = new Date(task.start_date);
+      const end = new Date(task.end_date);
+      const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+      return startDay <= target && target <= endDay;
+    });
 
-      return allTasks.filter((task) => {
-        if (!task.start_date || !task.end_date) return false;
-        const start = new Date(task.start_date);
-        const end = new Date(task.end_date);
-        const startDay = new Date(
-          start.getFullYear(),
-          start.getMonth(),
-          start.getDate()
-        );
-        const endDay = new Date(
-          end.getFullYear(),
-          end.getMonth(),
-          end.getDate()
-        );
-        return startDay <= target && target <= endDay;
-      });
-    },
-    []
-  );
-
-  useEffect(() => {
-    const filteredTasks = filterTasksForDate(selectedDate, tasks);
     // Sort: incomplete first, completed last
-    const sortedTasks = filteredTasks.sort((a, b) => {
+    return filteredTasks.sort((a, b) => {
       if (a.completed === b.completed) {
         if (a.daily_start_time && b.daily_start_time)
           return a.daily_start_time.localeCompare(b.daily_start_time);
@@ -81,8 +65,7 @@ const TaskSidebar = ({
       }
       return a.completed ? 1 : -1;
     });
-    setTasksForDate(sortedTasks);
-  }, [selectedDate, tasks, filterTasksForDate]);
+  }, [selectedDate, tasks]);
 
   const formatTaskTime = (task: Task) => {
     if (task.daily_start_time && task.daily_end_time) {
@@ -94,10 +77,10 @@ const TaskSidebar = ({
   // Loading state
   if (isLoading) {
     return (
-      <div className="w-full h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border-r border-white/20 dark:border-white/10 overflow-hidden rounded-r-3xl shadow-lg">
-        <div className="p-4 border-b border-white/20 dark:border-white/10 bg-white/40 dark:bg-white/10 backdrop-blur-sm">
-          <Skeleton className="h-6 w-40 mb-2 bg-white/40 dark:bg-white/10 rounded-xl" />
-          <Skeleton className="h-4 w-28 bg-white/30 dark:bg-white/5 rounded-lg" />
+      <div className="w-full h-full flex flex-col bg-background/40 backdrop-blur-md border-r border-border/20 overflow-hidden rounded-r-3xl shadow-lg">
+        <div className="p-4 border-b border-border/20 bg-background/20 backdrop-blur-sm">
+          <Skeleton className="h-6 w-40 mb-2 bg-foreground/10 rounded-xl" />
+          <Skeleton className="h-4 w-28 bg-foreground/5 rounded-lg" />
         </div>
 
         <ScrollArea className="flex-1 p-4 lg:p-6">
@@ -105,7 +88,7 @@ const TaskSidebar = ({
             {[1, 2, 3, 4].map((i) => (
               <Skeleton
                 key={i}
-                className="p-4 h-20 w-full rounded-2xl bg-white/40 dark:bg-white/10 border border-white/20 dark:border-white/10"
+                className="p-4 h-20 w-full rounded-2xl bg-foreground/10 border border-border/10"
               />
             ))}
           </div>
@@ -116,142 +99,66 @@ const TaskSidebar = ({
 
   // Main render
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden rounded-r-3xl">
-      <div className="p-4 border-b border-white/20 bg-muted/30">
-        <h2 className="text-lg font-semibold flex items-center text-foreground">
-          <div className="p-2 bg-primary/10 rounded-xl mr-3">
-            <CalendarIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+    <div className="w-full h-full flex flex-col overflow-hidden">
+      <div className="p-6 border-b border-border/20 bg-background/20">
+        <h2 className="text-sm font-black uppercase tracking-[0.2em] flex items-center text-gray-400">
+          <div className="p-2 bg-blue-500/10 rounded-xl mr-4 border border-blue-500/20">
+            <CalendarIcon className="h-4 w-4 text-blue-400" />
           </div>
-          {selectedDate
-            ? format(selectedDate, "MMMM d, yyyy")
-            : "Today's Tasks"}
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-gray-100 to-gray-400">
+            {selectedDate
+              ? format(selectedDate, "MMMM d")
+              : "Active Nodes"}
+          </span>
         </h2>
       </div>
 
       {tasksForDate.length > 0 && renderNavButtons()}
 
       <ScrollArea className="flex-1 z-0">
-        <LayoutGroup>
-          <AnimatePresence mode="popLayout">
-            {tasksForDate.length > 0 ? (
-              <div className="space-y-4">
-                {tasksForDate.map((task, index) => {
-                  return (
-                    <motion.div
-                      key={task.id}
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.25 }}
-                      className={`p-4 lg:p-5 mx-5 rounded-2xl transition-all cursor-pointer border bg-card/50 hover:bg-card/70 ${selectedTask?.id === task.id
-                        ? "border-2 border-primary"
-                        : task.completed
-                          ? "opacity-70"
-                          : ""
-                        } ${index == 0 ? " mt-5" : ""} `}
-                      style={{ borderBottom: index == (tasksForDate.length - 1) ? "7px" : "" }}
-                      onClick={() => onTaskClick && onTaskClick(task)}
-                    >
-                      <div className="flex items-center gap-3 lg:gap-4">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className={`w-5 h-5 rounded-full ${task.completed
-                            ? "text-green-500 dark:text-green-400"
-                            : "text-gray-400 dark:text-gray-500"
-                            } p-0`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleTaskCompletion(task.id);
-                          }}
-                        >
-                          {task.completed ? (
-                            <CheckCircle2 className="h-5 w-5" />
-                          ) : (
-                            <div className="relative" ><div className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 " /></div>
-                          )}
-                        </Button>
+        <div className="space-y-3 px-2">
+          {tasksForDate.length > 0 ? (
+            tasksForDate.map((task, index) => {
+              return (
+                <ModernTaskItem
+                  key={task.id}
+                  task={task}
+                  onToggleCompletion={onToggleTaskCompletion}
+                  onClick={(t) => onTaskClick && onTaskClick(t)}
+                  onEdit={onEditTask}
+                  onDelete={onDeleteTask}
+                />
+              )
+            })
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center p-8 text-center group/dormant relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.02),transparent_70%)] opacity-0 group-hover/dormant:opacity-100 transition-opacity duration-1000"></div>
 
-                        <div className="flex-1 min-w-0">
-                          <p
-                            className={`text-xs lg:text-sm break-words line-clamp-2 text-foreground ${task.completed
-                              ? "line-through opacity-60"
-                              : ""
-                              }`}
-                          >
-                            {task.title || task.description}
-                          </p>
-                          <div className="flex items-center mt-1 text-[10px] lg:text-xs text-muted-foreground">
-                            <Clock className="w-3 h-3 mr-0.5" />
-                            {formatTaskTime(task)}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-0.5">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="w-6 h-6 p-0 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEditTask(task);
-                            }}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="w-6 h-6 p-0 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteTask(task.id);
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                          {task.completed && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="w-6 h-6 p-0 text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleTaskCompletion(task.id);
-                              }}
-                            >
-                              <XCircle className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )
-                })}
-              </div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center h-60 text-center p-4"
-              >
-                <div className="w-16 h-16 mb-4 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-                  <CalendarIcon className="h-8 w-8 text-blue-500 dark:text-blue-400" />
+              <div className="relative mb-8">
+                <div className="absolute inset-0 bg-blue-500/10 blur-2xl rounded-full scale-125 animate-pulse"></div>
+                <div className="relative h-16 w-16 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center shadow-xl group-hover/dormant:border-blue-500/20 transition-all duration-500">
+                  <CalendarIcon className="h-7 w-7 text-gray-600 group-hover/dormant:text-blue-400 group-hover/dormant:rotate-6 transition-all duration-500" />
                 </div>
-                <h3 className="text-lg font-medium text-accent-foreground">
-                  No tasks for this day
-                </h3>
-                <p className="text-sm text-secondary-foreground mt-2">
-                  Select another date or generate new tasks
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">Orbital Dormancy</h3>
+                <p className="text-[10px] text-gray-500/60 font-medium leading-relaxed uppercase tracking-widest max-w-[180px]">
+                  No active mission streams detected for this temporal coordinate.
                 </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </LayoutGroup>
+              </div>
+            </motion.div>
+          )
+        </div>
       </ScrollArea>
     </div>
   );
-};
+});
+
+TaskSidebar.displayName = 'TaskSidebar';
 
 export default TaskSidebar;

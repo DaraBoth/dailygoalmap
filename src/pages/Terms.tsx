@@ -106,8 +106,8 @@ const Terms: React.FC = () => {
 
                 <h3 className="text-lg font-black text-foreground uppercase tracking-widest text-xs mb-4">1. Acceptance of Protocols</h3>
                 <p className="mb-6">
-                  By using Goal Completer, you agree to these terms. If you don't agree with any part of these terms,
-                  please don't use our service.
+                  By using Orbit, you agree to these protocols. If you don't agree with this mission framework,
+                  please discontinue use of our system.
                 </p>
 
                 <h3 className="text-lg font-black text-foreground uppercase tracking-widest text-xs mb-4">2. Permanent Autonomy</h3>
@@ -134,13 +134,13 @@ const Terms: React.FC = () => {
 
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">5. Service Availability</h3>
                 <p className="mb-6">
-                  While we strive to keep Goal Completer available 24/7, we cannot guarantee 100% uptime.
+                  While we strive to keep Orbit operational 24/7, we cannot guarantee 100% uptime.
                   We may need to perform maintenance or updates that temporarily affect service availability.
                 </p>
 
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">6. Limitation of Liability</h3>
                 <p className="mb-6">
-                  Goal Completer is provided "as is" without warranties. We are not liable for any damages
+                  Orbit is provided "as is" without warranties. We are not liable for any damages
                   arising from your use of the service.
                 </p>
 

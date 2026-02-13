@@ -16,7 +16,7 @@ export function TemplateFormPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { createGoal, isLoading: isCreating } = useCreateGoal();
-  
+
   const template = getTemplateById(templateId);
   const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -46,12 +46,12 @@ export function TemplateFormPage() {
       if (value === undefined || value === null || value === '') {
         return field.label + ' is required';
       }
-      
+
       // Check for empty string with whitespace for text fields
       if (typeof value === 'string' && value.trim() === '') {
         return field.label + ' is required';
       }
-      
+
       // Check for empty arrays
       if (Array.isArray(value) && value.length === 0) {
         return field.label + ' is required';
@@ -103,7 +103,7 @@ export function TemplateFormPage() {
     section.fields.forEach(field => {
       const value = formData[field.id];
       const error = validateField(field, value);
-      
+
       // Debug log to see what's failing
       if (error) {
         console.log(`Validation error for field "${field.id}":`, {
@@ -113,7 +113,7 @@ export function TemplateFormPage() {
           error
         });
       }
-      
+
       if (error) {
         sectionErrors[field.id] = error;
         hasError = true;
@@ -195,7 +195,7 @@ export function TemplateFormPage() {
       if (result.success) {
         toast({
           title: skipTemplateData ? 'Goal Created!' : 'Goal Created! 🎉',
-          description: skipTemplateData 
+          description: skipTemplateData
             ? 'You can fill in the template details later from the goal page.'
             : 'AI is now generating your daily action plan...',
         });
@@ -218,7 +218,7 @@ export function TemplateFormPage() {
 
   const updateFormData = (fieldId: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [fieldId]: value }));
-    
+
     // Clear error for this field when user starts typing
     if (errors[fieldId]) {
       setErrors(prev => {
@@ -227,7 +227,7 @@ export function TemplateFormPage() {
         return newErrors;
       });
     }
-    
+
     // For text fields, also validate in real-time if there's content
     if (typeof value === 'string' && value.trim() !== '') {
       setErrors(prev => {
@@ -519,13 +519,13 @@ export function TemplateFormPage() {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Templates
             </Button>
-            
+
             <div className="flex items-center gap-3">
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 Step {currentSection + 1} of {template.sections.length}
               </div>
               <div className="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 />
@@ -542,7 +542,7 @@ export function TemplateFormPage() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl py-8 sm:py-12">
         {/* Template Header */}
         <div className="text-center mb-12">
-          <div 
+          <div
             className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl mx-auto mb-6 flex items-center justify-center text-6xl sm:text-7xl shadow-2xl transform hover:scale-105 transition-transform"
             style={{ background: template.color }}
           >
@@ -564,13 +564,12 @@ export function TemplateFormPage() {
                 key={sec.id}
                 onClick={() => setCurrentSection(idx)}
                 disabled={idx > currentSection}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all transform hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed ${
-                  idx === currentSection
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all transform hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed ${idx === currentSection
                     ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
                     : idx < currentSection
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40'
-                    : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
-                }`}
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40'
+                      : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
+                  }`}
               >
                 {idx < currentSection && <Check className="w-4 h-4 inline mr-1" />}
                 {sec.icon && <span className="mr-2">{sec.icon}</span>}
@@ -608,53 +607,53 @@ export function TemplateFormPage() {
         </div>
 
         {/* Navigation Buttons */}
-        <div className="flex justify-between items-center gap-4">
+        <div className="flex justify-between items-center gap-2 sm:gap-4 w-full">
           <Button
             variant="outline"
             onClick={handlePrevious}
             disabled={currentSection === 0}
             size="lg"
-            className="min-w-[120px] border-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+            className="flex-1 sm:min-w-[120px] sm:flex-none border-2 hover:bg-gray-50 dark:hover:bg-gray-800"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             Previous
           </Button>
 
           {currentSection === template.sections.length - 1 ? (
-          <div className="flex gap-2">
-            <Button
-              onClick={handleSkipAndCreate}
-              disabled={isCreating}
-              size="lg"
-              variant="outline"
-              className="min-w-[140px] border-2"
-            >
-              Skip & Create
-            </Button>
-            <Button
-              onClick={() => handleSubmit(false)}
-              disabled={isCreating}
-              size="lg"
-              className="min-w-[160px] bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg"
-            >
-              {isCreating ? (
-                <>
-                  <span className="animate-spin mr-2">⏳</span>
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Check className="w-5 h-5 mr-2" />
-                  Create Goal
-                </>
-              )}
-            </Button>
-          </div>
+            <div className="flex gap-2 flex-1 sm:flex-none">
+              <Button
+                onClick={handleSkipAndCreate}
+                disabled={isCreating}
+                size="lg"
+                variant="outline"
+                className="flex-1 sm:min-w-[140px] sm:flex-none border-2"
+              >
+                Skip & Create
+              </Button>
+              <Button
+                onClick={() => handleSubmit(false)}
+                disabled={isCreating}
+                size="lg"
+                className="flex-1 sm:min-w-[160px] sm:flex-none bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg"
+              >
+                {isCreating ? (
+                  <>
+                    <span className="animate-spin mr-2">⏳</span>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-5 h-5 mr-2" />
+                    Create Goal
+                  </>
+                )}
+              </Button>
+            </div>
           ) : (
             <Button
               onClick={handleNext}
               size="lg"
-              className="min-w-[120px] bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg"
+              className="flex-1 sm:min-w-[120px] sm:flex-none bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg"
             >
               Next
               <ArrowLeft className="w-5 h-5 ml-2 rotate-180" />

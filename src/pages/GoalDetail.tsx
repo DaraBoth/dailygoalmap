@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import moment from 'moment';
 import { useLoaderData, useSearch, useParams } from '@tanstack/react-router';
 import { supabase, supabaseAdmin } from '@/integrations/supabase/client';
 import GoalDetailHeader from '@/components/goal/GoalDetailHeader';
 import Calendar from '@/components/Calendar';
-import GoalAnalytics from '@/components/goal/GoalAnalytics';
 import SmartAnalytics from '@/components/goal/SmartAnalytics';
 import { GoalMember } from '@/types/goal';
 import { enableRealtimeForTable } from '@/components/calendar/taskDatabase';
@@ -12,34 +10,46 @@ import { useToast } from '@/hooks/use-toast';
 import { Task } from '@/components/calendar/types';
 import { GoalTheme } from '@/types/theme';
 import { useAuth } from '@/hooks/useAuth';
-import { GoalChatWidget } from '@/components/goal/GoalChatWidget';
-import GoalChatWidgetN8N from '@/components/goal/GoalChatWidgetN8N';
-// import GoalChatWidgetN8N from '@/components/goal/GoalChatWidgetN8N';
+import { GoalChatWidgetN8N } from '@/components/goal/GoalChatWidgetN8N';
+import { GoalSidebar } from '@/components/goal/GoalSidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { AnimatePresence, motion } from "framer-motion";
+import { useQuery } from '@tanstack/react-query';
+
 
 const GoalDetail: React.FC = () => {
   const { id: goalId } = useParams({ from: '/goal/$id' });
   const loaderData = useLoaderData({ from: '/goal/$id' }) as any;
   const search = useSearch({ strict: false }) as any;
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const goalData = loaderData?.goal || null;
-  const goalTitle = goalData?.title || '';
-  const goalDescription = goalData?.description || '';
-  const goalTheme = goalData?.goal_themes || null
+  const goalTheme = goalData?.goal_themes || null;
+
+  const [currentGoalData, setCurrentGoalData] = useState(goalData);
+  const [currentTheme, setCurrentTheme] = useState<GoalTheme | null>(goalTheme);
+
+  const goalTitle = currentGoalData?.title || '';
+  const goalDescription = currentGoalData?.description || '';
 
   const [members, setMembers] = useState<GoalMember[]>(loaderData?.members || []);
   const [tasks, setTasks] = useState<Task[]>(loaderData?.tasks || []);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [showAnalytics, setShowAnalytics] = useState<boolean>(false);
+
+  // Navigation State
+  const [activeTab, setActiveTab] = useState("overview");
   const [autoOpenTaskId, setAutoOpenTaskId] = useState<string | null>(null);
-  const [currentTheme, setCurrentTheme] = useState<GoalTheme | null>(goalTheme);
-  const [currentGoalData, setCurrentGoalData] = useState(goalData);
+
   const { user } = useAuth();
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Update last seen when user views this goal
   useEffect(() => {
     if (!goalId || !user?.id) return;
-    
+
     const updateLastSeen = async () => {
       try {
         await supabase.rpc('update_member_last_seen', { p_goal_id: goalId });
@@ -47,14 +57,35 @@ const GoalDetail: React.FC = () => {
         console.error('Failed to update last seen:', error);
       }
     };
-    
+
     updateLastSeen();
   }, [goalId, user?.id]);
 
   useEffect(() => {
     const taskParam = search?.task || search?.taskId;
-    if (taskParam) setAutoOpenTaskId(taskParam);
+    if (taskParam) {
+      setAutoOpenTaskId(taskParam);
+      // If coming from a notification/link to a task, switch to tasks view
+      setActiveTab("tasks");
+    }
   }, [search]);
+
+  // Sync state with loaderData when navigating between goals
+  useEffect(() => {
+    if (loaderData) {
+      if (loaderData.goal) {
+        setCurrentGoalData(loaderData.goal);
+        // Update theme from loader data
+        if (loaderData.goal.goal_themes) {
+          setCurrentTheme(loaderData.goal.goal_themes);
+        } else {
+          setCurrentTheme(null);
+        }
+      }
+      if (loaderData.members) setMembers(loaderData.members);
+      if (loaderData.tasks) setTasks(loaderData.tasks);
+    }
+  }, [loaderData]);
 
   // Function to refresh goal data
   const refreshGoalData = async () => {
@@ -66,10 +97,6 @@ const GoalDetail: React.FC = () => {
       .single();
     if (!error && data) {
       setCurrentGoalData(data);
-      toast({
-        title: 'Goal updated',
-        description: 'Your goal information has been refreshed',
-      });
     }
   };
 
@@ -107,184 +134,34 @@ const GoalDetail: React.FC = () => {
 
     if (updatedGoal) {
       if (!isRemove) {
-        const { data } = await supabase
-          .from('goal_themes')
-          .select('*')
-          .eq('id', themeId)
-          .single();
-
-        if (data) {
-          setCurrentTheme(data as GoalTheme);
-          toast({
-            title: 'Success',
-            description: 'Theme updated successfully',
-          });
-        }
+        const { data } = await supabase.from('goal_themes').select('*').eq('id', themeId).single();
+        if (data) setCurrentTheme(data as GoalTheme);
       } else {
         setCurrentTheme(null);
-        toast({
-          title: 'Success',
-          description: 'Theme remove successfully',
-        });
       }
-
-    } else {
-      toast({
-        title: 'Error',
-        description: 'Failed to update theme',
-        variant: 'destructive',
-      });
+      toast({ title: 'Success', description: 'Theme updated successfully' });
     }
   };
 
-  // Set up realtime subscription
+  // Set up realtime subscription (Simplified)
   useEffect(() => {
     if (!goalId) return;
-
-    // Enable realtime for tasks table
     enableRealtimeForTable('tasks').catch(() => { });
 
     const channel = supabase
       .channel(`task-changes-${goalId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to all events
-          schema: 'public',
-          table: 'tasks',
-          filter: `goal_id=eq.${goalId}`
-        },
-        async (payload) => {
-          // Refresh the entire task list to ensure consistency
-          if (!goalId) return;
-          const { data, error } = await supabase
-            .from('tasks')
-            .select('*')
-            .eq('goal_id', goalId);
-          if (!error && data) {
-            setTasks(data as Task[]);
-          }
-
-          // Show toast notification for task changes (styled like root page)
-          const { eventType, new: newTaskRaw, old: oldTask } = payload;
-          const newTask = newTaskRaw as Task;
-          let toastTitle = '';
-          let toastDescription = '';
-          let senderName = '';
-          let senderAvatar = '';
-          // Try to get sender info (if available)
-          const newUpdatedBy = newTask && typeof newTask === 'object' && 'updated_by' in newTask ? newTask['updated_by'] : undefined;
-          const oldUpdatedBy = oldTask && typeof oldTask === 'object' && 'updated_by' in oldTask ? oldTask['updated_by'] : undefined;
-
-          if (newUpdatedBy) {
-            const { data: senderProfile } = await supabaseAdmin
-              .from('user_profiles')
-              .select('display_name, avatar_url')
-              .eq('id', newUpdatedBy as string)
-              .single();
-            senderName = senderProfile?.display_name || 'Someone';
-            senderAvatar = senderProfile?.avatar_url;
-          } else if (oldUpdatedBy) {
-            const { data: senderProfile } = await supabaseAdmin
-              .from('user_profiles')
-              .select('display_name, avatar_url')
-              .eq('id', oldUpdatedBy)
-              .single();
-            senderName = senderProfile?.display_name || 'Someone';
-            senderAvatar = senderProfile?.avatar_url;
-          } else {
-            senderName = 'Someone';
-            senderAvatar = '';
-          }
-
-          if (eventType === 'INSERT') {
-            toastTitle = '✓ Task Created';
-            toastDescription = `${newTask?.title || 'A task'} has been added to this goal.`;
-          } else if (eventType === 'UPDATE') {
-            const actionText = newTask?.completed && !oldTask?.completed ? 'completed' :
-              !newTask?.completed && oldTask?.completed ? 'reopened' : 'updated';
-            toastTitle = newTask?.completed && !oldTask?.completed ? '✓ Task Completed' :
-              !newTask?.completed && oldTask?.completed ? '○ Task Reopened' : '✏ Task Updated';
-            toastDescription = `${newTask?.title || 'A task'} has been ${actionText}.`;
-          } else if (eventType === 'DELETE') {
-            toastTitle = '🗑 Task Deleted';
-            toastDescription = `${oldTask?.title || 'A task'} has been deleted from this goal.`;
-          }
-          
-          // Build deepLink: /goal/{goalId}?date={created_at}&task={task_id}
-          let deepLink = "";
-          if (newTask?.id && newTask?.created_at) {
-            const url = new URL(window.location.origin + `/goal/${goalId}`);
-            const formattedDate = moment(newTask.created_at).format('YYYY-MM-DD');
-            url.searchParams.set('date', formattedDate);
-            url.searchParams.set('task', newTask.id);
-            deepLink = url.pathname + url.search;
-          }
-
-          if (toastTitle && toastDescription) {
-            toast({
-              title: toastTitle,
-              description: (
-                <div className="flex items-center gap-2">
-                  {senderAvatar && (
-                    <img
-                      src={senderAvatar}
-                      alt={senderName}
-                      className="w-6 h-6 rounded-full ring-2 ring-white/50 dark:ring-gray-700/50 flex-shrink-0"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm">{toastDescription}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">by {senderName}</div>
-                  </div>
-                </div>
-              ),
-              action: deepLink ? {
-                label: "View",
-                onClick: () => {
-                  const url = new URL(deepLink, window.location.origin);
-                  const path = url.pathname;
-                  const searchParams = Object.fromEntries(url.searchParams);
-
-                  import('@/router').then(({ router }) => {
-                    router.navigate({
-                      to: path as any,
-                      search: searchParams as any
-                    });
-                  });
-                }
-              } : undefined,
-            });
-          }
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `goal_id=eq.${goalId}` }, async (payload) => {
+        const { data, error } = await supabase.from('tasks').select('*').eq('goal_id', goalId);
+        if (!error && data) setTasks(data as Task[]);
+      })
       .subscribe();
 
-    // Initial fetch
-    const fetchInitialTasks = async () => {
-      if (!goalId) return;
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('goal_id', goalId);
-      if (!error && data) {
-        setTasks(data as Task[]);
-      }
-    };
-    fetchInitialTasks();
+    return () => { supabase.removeChannel(channel); };
+  }, [goalId]);
 
-    return () => {
-      try {
-        supabase.removeChannel(channel);
-      } catch (e) {
-        /* ignore errors during cleanup */
-      }
-    };
-  }, [goalId, toast]);
 
-  const completedTasks = tasks.filter(t => t.completed).length;
-
-  // Background style with theme or default gradient
+  const completedTasksCount = tasks.filter(t => t.completed).length;
+  // Background style
   const backgroundStyle = currentTheme?.page_background_image
     ? {
       backgroundImage: `url(${currentTheme.page_background_image})`,
@@ -294,68 +171,157 @@ const GoalDetail: React.FC = () => {
     }
     : {};
 
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (isMobile) {
+      setIsSidebarOpen(false); // Close sidebar on mobile selection
+    }
+  };
+
   return (
     <>
-      <title>{goalTitle || 'Goal Detail'}</title>
-      <meta name={goalTitle} content={goalDescription} />
-      <link rel="manifest" href="/manifest.json" />
-      <div
-        className="min-h-screen bg-gradient-to-br from-blue-400/50 via-gray-500 to-purple-500/50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/20"
-        style={backgroundStyle}
-      >
-        <div className="grid grid-rows-[auto,1fr] h-screen overflow-hidden ">
-          <GoalDetailHeader
+      <div className="flex h-screen overflow-hidden bg-background" style={backgroundStyle}>
+
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block w-80 border-r border-border/20 bg-background/40 backdrop-blur-2xl h-full shadow-2xl">
+          <GoalSidebar
             goalId={goalId}
-            members={members}
             goalTitle={goalTitle}
             goalDescription={goalDescription}
+            members={members}
+            progress={tasks.length > 0 ? (completedTasksCount / tasks.length) * 100 : 0}
             totalTasks={tasks.length}
-            completedTasks={completedTasks}
-            targetDate={goalData?.target_date}
-            status={goalData?.status}
-            showAnalytics={showAnalytics}
-            onToggleAnalytics={() => setShowAnalytics(!showAnalytics)}
+            completedTasks={completedTasksCount}
+            targetDate={currentGoalData?.target_date}
             userId={user?.id}
             currentThemeId={currentTheme?.id}
             onThemeChange={handleThemeChange}
-            goalData={currentGoalData}
-            onGoalUpdate={refreshGoalData}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            className="h-full pt-4"
+          />
+        </div>
+
+        {/* Mobile Sidebar (Sheet) */}
+        <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+          <SheetContent side="left" className="p-0 w-80 pt-10">
+            <GoalSidebar
+              goalId={goalId}
+              goalTitle={goalTitle}
+              goalDescription={goalDescription}
+              members={members}
+              progress={tasks.length > 0 ? (completedTasksCount / tasks.length) * 100 : 0}
+              totalTasks={tasks.length}
+              completedTasks={completedTasksCount}
+              targetDate={currentGoalData?.target_date}
+              userId={user?.id}
+              currentThemeId={currentTheme?.id}
+              onThemeChange={handleThemeChange}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              isMobile={true}
+            />
+          </SheetContent>
+        </Sheet>
+
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col min-w-0 bg-background/10 backdrop-blur-3xl overflow-hidden relative">
+          <GoalDetailHeader
+            goalTitle={goalTitle}
+            onOpenSidebar={() => setIsSidebarOpen(true)}
           />
 
-          <div className="w-full max-w-screen overflow-hidden">
-            {showAnalytics ? (
-              <div className="h-full overflow-y-auto">
-                <div className="p-4 max-w-[2000px] mx-auto min-h-full">
-                  <SmartAnalytics 
-                    tasks={tasks} 
+          <main className="flex-1 overflow-hidden relative flex flex-col gap-6">
+            <AnimatePresence mode="wait">
+              {/* OVERVIEW VIEW - Reuse Calendar but could be a dashboard summary later */}
+              {activeTab === 'overview' && (
+                <motion.div
+                  key="overview"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.2 }}
+                  className="h-full"
+                >
+                  {/* For now, Overview maps to Calendar/Tasks since it's the main view */}
+                  <Calendar
+                    goalId={goalId}
                     goalTitle={goalTitle}
                     goalDescription={goalDescription}
-                    targetDate={goalData?.target_date}
+                    selectedDate={selectedDate}
+                    onDateChange={setSelectedDate}
+                    allTasks={tasks}
+                    autoOpenTaskId={autoOpenTaskId}
+                    onAutoOpenTaskHandled={() => setAutoOpenTaskId(null)}
                   />
-                </div>
-              </div>
-            ) : (
-              <div className="h-full">
-                <Calendar
-                  goalId={goalId}
-                  goalTitle={goalTitle}
-                  goalDescription={goalDescription}
-                  selectedDate={selectedDate}
-                  onDateChange={setSelectedDate}
-                  allTasks={tasks}
-                  autoOpenTaskId={autoOpenTaskId}
-                  onAutoOpenTaskHandled={() => setAutoOpenTaskId(null)}
-                />
-              </div>
-            )}
+                </motion.div>
+              )}
 
-          </div>
+              {/* TASKS VIEW - Same as Overview for now, but explicitly tasks */}
+              {activeTab === 'tasks' && (
+                <motion.div
+                  key="tasks"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="h-full"
+                >
+                  <Calendar
+                    goalId={goalId}
+                    goalTitle={goalTitle}
+                    goalDescription={goalDescription}
+                    selectedDate={selectedDate}
+                    onDateChange={setSelectedDate}
+                    allTasks={tasks}
+                    autoOpenTaskId={autoOpenTaskId}
+                    onAutoOpenTaskHandled={() => setAutoOpenTaskId(null)}
+                  />
+                </motion.div>
+              )}
+
+              {/* ANALYTICS VIEW */}
+              {activeTab === 'analytics' && (
+                <motion.div
+                  key="analytics"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                  className="h-full overflow-y-auto p-4 md:p-6"
+                >
+                  <div className="max-w-7xl mx-auto pb-20">
+                    <SmartAnalytics
+                      tasks={tasks}
+                      goalTitle={goalTitle}
+                      goalDescription={goalDescription}
+                      targetDate={currentGoalData?.target_date}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
+              {/* TEAM VIEW placeholder */}
+              {activeTab === 'team' && (
+                <motion.div
+                  key="team"
+                  className="h-full flex items-center justify-center text-muted-foreground"
+                >
+                  <div className="text-center">
+                    <div className="text-4xl mb-2">👥</div>
+                    <h3 className="text-xl font-semibold mb-2">Team Management</h3>
+                    <p>Coming soon...</p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </main>
         </div>
+
       </div>
 
-      {/* Goal Chat Widget */}
       <GoalChatWidgetN8N goalId={goalId} userInfo={user} />
-      {/* <GoalChatWidget goalId={goalId} userInfo={user} /> */}
     </>
   );
 };
