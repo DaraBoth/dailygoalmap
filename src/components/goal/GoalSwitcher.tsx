@@ -63,7 +63,7 @@ export function GoalSwitcher({ className }: { className?: string }) {
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className={cn("w-full justify-between h-12 bg-accent/50 border-border hover:bg-accent text-left font-normal backdrop-blur-md", className)}
+                    className={cn("w-full justify-between h-12 bg-accent/50 border-border hover:bg-accent text-left font-normal backdrop-blur-md pr-8", className)}
                 >
                     <div className="flex items-center gap-2 truncate">
                         <div className="flex items-center justify-center w-6 h-6 rounded-md bg-indigo-500/20 text-indigo-400">

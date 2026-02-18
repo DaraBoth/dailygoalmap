@@ -13,7 +13,8 @@ import {
   MapPin,
   User,
   Tag,
-  Bell
+  Bell,
+  X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -30,6 +31,8 @@ interface TaskDetailsPanelProps {
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
   goalTitle: string;
+  isImmersive?: boolean;
+  onClose?: () => void;
 }
 
 const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
@@ -38,7 +41,9 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   onToggleTaskCompletion,
   onEditTask,
   onDeleteTask,
-  goalTitle
+  goalTitle,
+  isImmersive,
+  onClose
 }) => {
   const { toast } = useToast();
   const [isAddingReminder, setIsAddingReminder] = useState(false);
@@ -113,158 +118,192 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   const hasTimeRange = selectedTask.daily_start_time && selectedTask.daily_end_time;
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden">
-      {/* Minimalist Header */}
-      <div className="p-6 border-b border-white/5 bg-zinc-950/20">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-black uppercase tracking-[0.3em] text-gray-500">Node Insight</h2>
-            <p className="text-[11px] font-bold text-blue-400 mt-1 uppercase tracking-widest leading-none">
-              {selectedDate ? format(selectedDate, "MMM d, yyyy") : ""}
-            </p>
-          </div>
-          <Badge
-            variant={selectedTask.completed ? "default" : "secondary"}
-            className={cn(
-              "rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest",
-              selectedTask.completed ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-            )}
-          >
-            {selectedTask.completed ? "Resolved" : "Active"}
-          </Badge>
-        </div>
-      </div>
+    <div className={cn(
+      "w-full h-full flex flex-col overflow-hidden relative",
+      isImmersive ? "items-center justify-center p-6 lg:p-12" : ""
+    )}>
+      {/* Immersive Background Elements */}
+      {isImmersive && (
+        <>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/2 blur-[120px] rounded-full pointer-events-none" />
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
+          {/* Top Navigation Bar (Compact) */}
+          <div className="absolute top-0 left-0 right-0 p-8 flex items-center justify-between z-50">
+            <div className="flex items-center gap-6">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-12 w-12 rounded-2xl bg-background/20 backdrop-blur-md border border-border/10 hover:bg-background/40 transition-all group"
+              >
+                <X className="h-6 w-6 text-foreground/60 group-hover:text-foreground group-hover:rotate-90 transition-all duration-300" />
+              </Button>
+
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <div className="h-1 w-1 rounded-full bg-primary/60" />
+                  <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">Mission Node</h2>
+                </div>
+                <h3 className="text-sm font-bold text-foreground/80 tracking-tight">
+                  {selectedTask.title || "Untitled Mission"}
+                </h3>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Badge
+                variant={selectedTask.completed ? "default" : "secondary"}
+                className={cn(
+                  "rounded-full px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] border-none",
+                  selectedTask.completed
+                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    : "bg-primary/10 text-primary border border-primary/20"
+                )}
+              >
+                {selectedTask.completed ? "Resolved" : "Active"}
+              </Badge>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Minimalist Header (Non-Immersive) */}
+      {!isImmersive && (
+        <div className="p-6 border-b border-white/5 bg-zinc-950/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-black uppercase tracking-[0.3em] text-gray-500">Node Insight</h2>
+              <p className="text-[11px] font-bold text-blue-400 mt-1 uppercase tracking-widest leading-none">
+                {selectedDate ? format(selectedDate, "MMM d, yyyy") : ""}
+              </p>
+            </div>
+            <Badge
+              variant={selectedCompleted ? "default" : "secondary"}
+              className={cn(
+                "rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest",
+                selectedTask.completed ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+              )}
+            >
+              {selectedTask.completed ? "Resolved" : "Active"}
+            </Badge>
+          </div>
+        </div>
+      )}
+
+      {/* Content Area (Centered Hero) */}
+      <div className={cn(
+        "flex-1 overflow-y-auto custom-scrollbar scroll-smooth flex flex-col items-center",
+        isImmersive ? "pt-32 pb-12 px-6 lg:px-12" : "p-4 lg:p-6"
+      )}>
         <AnimatePresence mode="wait">
           <motion.div
             key={selectedTask.id}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.4, ease: "circOut" }}
-            className="space-y-8"
+            initial={{ opacity: 0, y: 40, filter: "blur(20px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -40, filter: "blur(20px)" }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className={cn(
+              "w-full flex flex-col gap-16",
+              isImmersive ? "max-w-4xl" : ""
+            )}
           >
-            {/* Mission Critical Content */}
-            <div className="space-y-4">
-              <h3 className="text-2xl font-black text-white tracking-tight leading-[1.1]">
-                {selectedTask.title || selectedTask.description}
-              </h3>
-              {selectedTask.title && selectedTask.description && selectedTask.title !== selectedTask.description && (
-                <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5">
+            {/* Primary Content Hero */}
+            <div className="flex flex-col items-center text-center space-y-12">
+              <div className="space-y-8 max-w-3xl">
+                <div className={cn(
+                  "relative prose prose-invert prose-lg max-w-none transition-all duration-700",
+                  isImmersive ? "text-2xl lg:text-3xl font-medium text-foreground/90 leading-relaxed" : ""
+                )}>
+                  {/* Decorative faint quotes or marks could go here */}
                   <MarkdownRenderer
-                    content={selectedTask.description}
+                    content={selectedTask.description || selectedTask.title}
                     isStreaming={false}
                     isLoading={false}
                   />
                 </div>
-              )}
-            </div>
 
-            {/* Temporal & Contextual Data */}
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 gap-2.5">
-                {/* Date & Time Streamlined */}
-                <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.01] border border-white/5 hover:bg-white/[0.03] transition-colors group/item">
-                  <div className="h-10 w-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 group-hover/item:border-blue-500/40 transition-colors">
-                    <Calendar className="h-4 w-4 text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Temporal Access</p>
-                    <p className="text-xs font-bold text-gray-200">
-                      {isMultiDay
-                        ? `${format(new Date(selectedTask.start_date), "MMM d")} — ${format(new Date(selectedTask.end_date), "MMM d, y")}`
-                        : format(new Date(selectedTask.start_date), "MMMM d, yyyy")
-                      }
-                      {hasTimeRange && (
-                        <span className="text-blue-400 ml-2 opacity-60">
-                          {selectedTask.daily_start_time?.slice(0, 5)} - {selectedTask.daily_end_time?.slice(0, 5)}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Goal Context Streamlined */}
-                <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.01] border border-white/5 hover:bg-white/[0.03] transition-colors group/item">
-                  <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 group-hover/item:border-emerald-500/40 transition-colors">
-                    <Tag className="h-4 w-4 text-emerald-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Orbital Context</p>
-                    <p className="text-xs font-bold text-gray-200">{goalTitle}</p>
-                  </div>
+                {/* Secondary technical divider */}
+                <div className="flex items-center justify-center gap-4 py-4">
+                  <div className="h-px w-12 bg-gradient-to-r from-transparent to-border/30" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-border/40" />
+                  <div className="h-px w-12 bg-gradient-to-l from-transparent to-border/30" />
                 </div>
               </div>
-            </div>
 
-            {/* Actions */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                Actions
-              </h4>
-
-              <div className="space-y-3">
-                {/* Completion Toggle */}
-                <Button
-                  onClick={() => onToggleTaskCompletion(selectedTask.id)}
-                  className={cn(
-                    "group relative w-full h-14 rounded-2xl overflow-hidden transition-all duration-500 border border-white/5",
-                    selectedTask.completed
-                      ? "bg-zinc-900 text-emerald-400 hover:bg-zinc-800"
-                      : "bg-blue-600 text-white hover:bg-blue-500 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]"
-                  )}
-                >
-                  <div className="relative z-10 flex items-center justify-center gap-3">
-                    {selectedTask.completed ? (
-                      <>
-                        <CheckCircle2 className="h-5 w-5" />
-                        <span className="font-bold uppercase tracking-widest text-[11px]">Mark Incomplete</span>
-                      </>
-                    ) : (
-                      <>
-                        <Circle className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                        <span className="font-bold uppercase tracking-widest text-[11px]">Complete Mission</span>
-                      </>
+              {/* Refined Action Control (Boutique Style) */}
+              <div className="flex flex-col items-center gap-8">
+                <div className="flex items-center gap-3 p-1.5 rounded-2xl bg-foreground/[0.03] border border-border/10">
+                  <Button
+                    onClick={() => onToggleTaskCompletion(selectedTask.id)}
+                    className={cn(
+                      "h-12 px-6 rounded-xl transition-all duration-500 font-bold uppercase tracking-widest text-[10px]",
+                      selectedTask.completed
+                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
+                        : "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20"
                     )}
-                  </div>
-                  {/* Subtle shine effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shine" />
-                </Button>
+                  >
+                    {selectedTask.completed ? (
+                      <span className="flex items-center gap-2 italic">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Resolved
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Circle className="h-3.5 w-3.5" />
+                        Resolve Mission
+                      </span>
+                    )}
+                  </Button>
 
-                {/* Download Reminder */}
-                <Button
-                  onClick={handleAddToReminders}
-                  disabled={isAddingReminder}
-                  variant="outline"
-                  className="w-full justify-start gap-3 h-12 rounded-xl transition-all duration-200 hover:bg-accent"
-                >
-                  <Bell className="h-5 w-5" />
-                  <span className="font-medium">
-                    {isAddingReminder ? 'Adding...' : 'Add Reminder'}
-                  </span>
-                </Button>
-
-                {/* Edit and Delete Grid */}
-                <div className="grid grid-cols-2 gap-4 pt-2">
                   <Button
                     onClick={() => onEditTask(selectedTask)}
-                    variant="outline"
-                    className="h-11 rounded-xl bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-white/20 transition-all duration-300"
+                    variant="ghost"
+                    className="h-12 px-5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05] font-bold uppercase tracking-widest text-[9px]"
                   >
-                    <Edit className="h-4 w-4 mr-2 text-gray-400" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Edit</span>
+                    <Edit className="h-3.5 w-3.5 mr-2" />
+                    Adjust
                   </Button>
+
+                  <div className="w-px h-6 bg-border/20 mx-1" />
 
                   <Button
                     onClick={() => onDeleteTask(selectedTask.id)}
                     variant="ghost"
-                    className="h-11 rounded-xl text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-all duration-300"
+                    className="h-12 px-5 rounded-xl text-destructive/40 hover:text-destructive hover:bg-destructive/10 font-bold uppercase tracking-widest text-[9px]"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Delete</span>
+                    <Trash2 className="h-3.5 w-3.5 mr-2" />
+                    Terminate
                   </Button>
+                </div>
+
+                {/* Distributed Metadata Footer */}
+                <div className="flex items-center gap-10 text-muted-foreground/40 font-bold uppercase tracking-[0.3em] text-[9px]">
+                  <div className="flex items-center gap-3 group/meta hover:text-foreground/40 transition-colors">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>
+                      {isMultiDay
+                        ? `${format(new Date(selectedTask.start_date), "MMM d")} — ${format(new Date(selectedTask.end_date), "MMM d")}`
+                        : format(new Date(selectedTask.start_date), "MMM d, yyyy")
+                      }
+                    </span>
+                  </div>
+
+                  <div className="h-1 w-1 rounded-full bg-border/40" />
+
+                  <div className="flex items-center gap-3 group/meta hover:text-foreground/40 transition-colors">
+                    <Tag className="h-3.5 w-3.5" />
+                    <span>{goalTitle}</span>
+                  </div>
+
+                  {hasTimeRange && (
+                    <>
+                      <div className="h-1 w-1 rounded-full bg-border/40" />
+                      <div className="flex items-center gap-3 group/meta hover:text-foreground/40 transition-colors">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>{selectedTask.daily_start_time?.slice(0, 5)} - {selectedTask.daily_end_time?.slice(0, 5)}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

@@ -26,15 +26,15 @@ const CalendarGrid = ({
   return (
     <div className={cn("flex flex-col w-full p-1 sm:p-2", isMobile ? "h-auto" : "h-full")}>
       <div className={cn(
-        "rounded-3xl overflow-hidden border border-white/5 flex flex-col bg-zinc-950/40 backdrop-blur-2xl shadow-2xl",
+        "rounded-3xl overflow-hidden border border-border/50 flex flex-col bg-card/40 backdrop-blur-2xl shadow-2xl",
         isMobile ? "h-auto" : "h-full"
       )}>
         {/* Compact header for day names */}
-        <div className="grid grid-cols-7 text-center border-b border-white/5 bg-white/[0.02]">
+        <div className="grid grid-cols-7 text-center border-b border-border/50 bg-muted/30">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => (
             <div key={day} className={`
               py-3 md:py-4 font-black text-[10px] uppercase tracking-[0.2em]
-              ${index === 0 || index === 6 ? 'text-gray-600' : 'text-gray-400'}
+              ${index === 0 || index === 6 ? 'text-muted-foreground/60' : 'text-muted-foreground'}
             `}>
               {isMobile ? day.charAt(0) : day}
             </div>

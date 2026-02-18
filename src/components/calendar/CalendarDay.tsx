@@ -62,21 +62,21 @@ const CalendarDay = ({
   return (
     <motion.div
       className={cn(
-        "relative border-r border-b border-white/5 transition-all duration-300 flex flex-col p-1.5 gap-1 min-h-[80px] sm:min-h-[100px]",
+        "relative border-r border-b border-border/50 transition-all duration-300 flex flex-col p-1.5 gap-1 min-h-[80px] sm:min-h-[100px]",
         index % 7 === 0 && "border-l",
         Math.floor(index / 7) === 0 && "border-t",
-        !isCurrentMonth && "bg-white/[0.01] opacity-20 cursor-default",
-        isCurrentMonth && "hover:bg-white/[0.04] cursor-pointer bg-transparent",
-        isSelected && "bg-blue-600/5 shadow-[inset_0_0_20px_rgba(59,130,246,0.05)] border-blue-500/20"
+        !isCurrentMonth && "bg-muted/10 opacity-20 cursor-default",
+        isCurrentMonth && "hover:bg-muted/20 cursor-pointer bg-transparent",
+        isSelected && "bg-primary/5 shadow-[inset_0_0_20px_rgba(var(--primary-rgb),0.05)] border-primary/20"
       )}
       onClick={() => isCurrentMonth && onDateChange(date)}
     >
       <div className="flex justify-center mb-1">
         <span className={cn(
           "h-7 w-7 flex items-center justify-center rounded-lg text-[11px] font-black transition-all",
-          _isToday && !isSelected && "bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]",
-          isSelected && "bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] scale-110",
-          !_isToday && !isSelected && "text-gray-500 group-hover:text-gray-300"
+          _isToday && !isSelected && "bg-primary text-primary-foreground shadow-lg",
+          isSelected && "bg-primary/90 text-primary-foreground shadow-lg scale-110",
+          !_isToday && !isSelected && "text-muted-foreground hover:text-foreground"
         )}>
           {date.getDate()}
         </span>
@@ -103,9 +103,9 @@ const CalendarDay = ({
                 className={cn(
                   "text-[9px] font-bold truncate px-2 py-1 rounded-md mx-0.5 cursor-pointer transition-all border",
                   task.completed
-                    ? "bg-zinc-900/40 text-gray-600 border-transparent line-through opacity-60"
-                    : "bg-blue-600/10 text-blue-400 border-blue-500/10 hover:bg-blue-600/20 hover:border-blue-500/30",
-                  isSelected && !task.completed && "bg-blue-600/20 border-blue-500/40 text-blue-300"
+                    ? "bg-muted/40 text-muted-foreground border-transparent line-through opacity-60"
+                    : "bg-primary/10 text-primary border-primary/10 hover:bg-primary/20 hover:border-primary/30",
+                  isSelected && !task.completed && "bg-primary/20 border-primary/40 text-primary"
                 )}
                 onClick={(e) => {
                   e.stopPropagation();

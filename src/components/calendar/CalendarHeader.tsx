@@ -37,28 +37,28 @@ const CalendarHeader = ({
       <div className="flex items-center justify-between gap-3 p-1">
         {/* Left: Date Navigation */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center bg-zinc-900/40 rounded-xl p-1 border border-white/5 shadow-2xl backdrop-blur-xl">
-            <Button variant="ghost" size="icon" onClick={onPreviousMonth} className="h-8 w-8 hover:bg-white/5 text-gray-400 hover:text-blue-400 transition-colors">
+          <div className="flex items-center bg-card/40 rounded-xl p-1 border border-border/50 shadow-2xl backdrop-blur-xl">
+            <Button variant="ghost" size="icon" onClick={onPreviousMonth} className="h-8 w-8 hover:bg-muted/50 text-muted-foreground hover:text-primary transition-colors">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="w-px h-4 bg-white/5 mx-1" />
-            <Button variant="ghost" size="icon" onClick={onNextMonth} className="h-8 w-8 hover:bg-white/5 text-gray-400 hover:text-blue-400 transition-colors">
+            <div className="w-px h-4 bg-border/50 mx-1" />
+            <Button variant="ghost" size="icon" onClick={onNextMonth} className="h-8 w-8 hover:bg-muted/50 text-muted-foreground hover:text-primary transition-colors">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
-          <h2 className="text-xl sm:text-2xl font-black tracking-tight min-w-[140px] text-white uppercase tracking-[0.1em]">
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight min-w-[140px] text-foreground uppercase tracking-[0.1em]">
             {format(currentMonth, "MMMM yyyy")}
           </h2>
         </div>
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onGoToToday} className="hidden sm:flex h-9 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all font-bold uppercase tracking-widest text-[10px]">
-            <Home className="h-3.5 w-3.5 mr-2 text-blue-400" />
+          <Button variant="outline" size="sm" onClick={onGoToToday} className="hidden sm:flex h-9 rounded-xl border-border/50 bg-muted/20 hover:bg-muted/40 hover:border-border transition-all font-bold uppercase tracking-widest text-[10px]">
+            <Home className="h-3.5 w-3.5 mr-2 text-primary" />
             Today
           </Button>
-          <Button onClick={onOpenAddTaskDialog} size="sm" className="h-9 rounded-xl bg-blue-600 hover:bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)] hover:shadow-[0_0_25px_rgba(59,130,246,0.4)] transition-all font-bold uppercase tracking-widest text-[10px] px-5">
+          <Button onClick={onOpenAddTaskDialog} size="sm" className="h-9 rounded-xl bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all font-bold uppercase tracking-widest text-[10px] px-5 text-primary-foreground">
             <CalendarIcon className="h-3.5 w-3.5 mr-2" />
             {isMobile ? "Add" : "Add Task"}
           </Button>

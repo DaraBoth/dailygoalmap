@@ -16,6 +16,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQuery } from '@tanstack/react-query';
+import { cn } from '@/lib/utils';
 
 
 const GoalDetail: React.FC = () => {
@@ -45,6 +46,7 @@ const GoalDetail: React.FC = () => {
   const { user } = useAuth();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Update last seen when user views this goal
   useEffect(() => {
@@ -183,7 +185,10 @@ const GoalDetail: React.FC = () => {
       <div className="flex h-screen overflow-hidden bg-background" style={backgroundStyle}>
 
         {/* Desktop Sidebar */}
-        <div className="hidden lg:block w-80 border-r border-border bg-card/95 backdrop-blur-2xl h-full shadow-lg">
+        <div className={cn(
+          "hidden lg:block border-r border-border bg-card/95 backdrop-blur-2xl h-full shadow-lg transition-all duration-300",
+          isSidebarCollapsed ? "w-20" : "w-80"
+        )}>
           <GoalSidebar
             goalId={goalId}
             goalTitle={goalTitle}
@@ -199,6 +204,8 @@ const GoalDetail: React.FC = () => {
             activeTab={activeTab}
             onTabChange={handleTabChange}
             className="h-full pt-4"
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           />
         </div>
 

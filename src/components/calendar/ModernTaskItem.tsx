@@ -64,7 +64,7 @@ export const ModernTaskItem = memo(({
             onClick={() => onClick?.(task)}
         >
             {/* Animated Background Gradient on Hover */}
-            <motion.div 
+            <motion.div
                 className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/5 via-primary/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                 initial={false}
                 animate={{ x: isHovered ? [0, 100] : 0 }}
@@ -98,11 +98,11 @@ export const ModernTaskItem = memo(({
 
             {/* Content Area */}
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                     <span className={cn(
                         "font-medium leading-tight transition-all duration-200",
-                        task.completed 
-                            ? "text-sm text-muted-foreground line-through" 
+                        task.completed
+                            ? "text-sm text-muted-foreground line-through"
                             : "text-sm text-foreground truncate"
                     )}>
                         {task.title || task.description}
@@ -112,8 +112,8 @@ export const ModernTaskItem = memo(({
                 {/* Time Badge */}
                 {timeDisplay && !task.completed && (
                     <div className="flex items-center gap-1.5">
-                        <Badge 
-                            variant="outline" 
+                        <Badge
+                            variant="outline"
                             className="h-5 px-1.5 text-[10px] font-medium border-primary/20 text-primary bg-primary/5"
                         >
                             <Clock className="w-2.5 h-2.5 mr-1" />
@@ -179,7 +179,7 @@ export const ModernTaskItem = memo(({
             {/* Status Indicator Bar */}
             <div className={cn(
                 "absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-r-full transition-all duration-300",
-                task.completed 
+                task.completed
                     ? "h-0 bg-primary/30"
                     : "h-8 bg-gradient-to-b from-primary/60 via-primary/40 to-primary/20 group-hover:h-10 group-hover:from-primary group-hover:via-primary/60 group-hover:to-primary/30"
             )} />

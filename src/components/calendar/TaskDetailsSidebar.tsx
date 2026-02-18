@@ -75,111 +75,149 @@ const TaskDetailsSidebar = ({
           initial={{ x: "100%" }}
           animate={{ x: 0 }}
           exit={{ x: "100%" }}
-          transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="fixed right-0 top-0 h-full w-full sm:w-[420px] bg-background/95 backdrop-blur-2xl z-50 shadow-2xl border-l border-border"
+          transition={{ type: "spring", damping: 30, stiffness: 300 }}
+          className="fixed right-0 top-0 h-full w-full sm:w-[480px] bg-background z-50 shadow-2xl border-l border-border"
         >
-          <div className="h-full flex flex-col max-h-screen overflow-hidden">
-            {/* Header - goal title, task title and controls */}
-            <div className="flex-shrink-0 p-6 pb-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400 uppercase tracking-widest">
-                      {goalTitle}
-                    </span>
-                    {selectedTask && (
+          {selectedTask ? (
+            <div className="h-full flex flex-col">
+              {/* Notion-style Minimal Header */}
+              <div className="flex items-center justify-between px-6 py-3 border-b border-border/50">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={onClose}
+                    className="h-7 w-7 rounded-md hover:bg-muted transition-colors flex items-center justify-center"
+                  >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                  <span className="text-xs text-muted-foreground font-medium">{goalTitle}</span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {onEditTask && (
+                    <button
+                      onClick={() => onEditTask(selectedTask)}
+                      className="h-7 px-3 rounded-md hover:bg-muted transition-colors text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-1.5"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                      Edit
+                    </button>
+                  )}
+                  {onDeleteTask && (
+                    <button
+                      onClick={() => onDeleteTask(selectedTask.id)}
+                      className="h-7 px-3 rounded-md hover:bg-destructive/10 transition-colors text-xs font-medium text-muted-foreground hover:text-destructive flex items-center gap-1.5"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Notion-style Page Content */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="max-w-3xl mx-auto px-12 py-8">
+                  {/* Icon + Title (Notion style) */}
+                  <div className="mb-6">
+                    <div className="flex items-start gap-2 mb-2">
                       <div className={cn(
-                        "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border",
-                        selectedTask.completed
-                          ? "bg-green-500/10 border-green-500/20 text-green-400"
-                          : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                        "h-6 w-6 rounded-md flex items-center justify-center shrink-0 mt-1.5",
+                        selectedTask.completed 
+                          ? "bg-green-500/10 text-green-600 dark:text-green-500" 
+                          : "bg-amber-500/10 text-amber-600 dark:text-amber-500"
                       )}>
                         {selectedTask.completed ? (
-                          <><CheckCircle2 className="h-3 w-3" /> Done</>
+                          <CheckCircle2 className="h-3.5 w-3.5" />
                         ) : (
-                          <><Circle className="h-3 w-3" /> Active</>
+                          <Circle className="h-3.5 w-3.5" />
                         )}
                       </div>
+                      <h1 className="text-3xl font-bold text-foreground leading-tight flex-1 break-words">
+                        {selectedTask.title}
+                      </h1>
+                    </div>
+                  </div>
+
+                  {/* Properties (Notion style) */}
+                  <div className="space-y-1 mb-8 pb-8 border-b border-border/50">
+                    {/* Status Property */}
+                    <div className="group flex items-center hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-md transition-colors">
+                      <div className="w-32 shrink-0">
+                        <span className="text-xs font-medium text-muted-foreground">Status</span>
+                      </div>
+                      <button
+                        onClick={() => onToggleTaskCompletion(selectedTask.id)}
+                        className={cn(
+                          "flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                          selectedTask.completed
+                            ? "bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-500/20"
+                            : "bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
+                        )}
+                      >
+                        {selectedTask.completed ? (
+                          <><CheckCircle2 className="h-3 w-3" /> Completed</>
+                        ) : (
+                          <><Circle className="h-3 w-3" /> In Progress</>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Date Property */}
+                    <div className="group flex items-center hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-md transition-colors">
+                      <div className="w-32 shrink-0">
+                        <span className="text-xs font-medium text-muted-foreground">Date</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-foreground">
+                        <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                        {selectedDate ? format(selectedDate, 'MMM d, yyyy') : format(new Date(selectedTask.start_date), 'MMM d, yyyy')}
+                      </div>
+                    </div>
+
+                    {/* Time Property */}
+                    {selectedTask.daily_start_time && (
+                      <div className="group flex items-center hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-md transition-colors">
+                        <div className="w-32 shrink-0">
+                          <span className="text-xs font-medium text-muted-foreground">Time</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-foreground">
+                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                          {selectedTask.daily_start_time.slice(0, 5)} - {selectedTask.daily_end_time?.slice(0, 5) ?? '...'}
+                        </div>
+                      </div>
                     )}
-                  </div>
-                  <h2 className="text-2xl font-black text-foreground leading-tight tracking-tight break-words">
-                    {selectedTask?.title || 'Task Details'}
-                  </h2>
-                </div>
 
-                <button
-                  onClick={onClose}
-                  className="mt-1 p-2 rounded-xl bg-accent border border-border text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-all duration-200"
-                  aria-label="Close"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            {selectedTask ? (
-              <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6">
-                {/* Info Grid - Date & Time in a unified elegant panel */}
-                <div className="bg-muted/40 border border-border rounded-2xl p-1 overflow-hidden">
-                  <div className="grid grid-cols-2">
-                    <div className="p-4 border-r border-border">
-                      <div className="flex items-center gap-2 text-muted-foreground mb-1.5">
-                        <CalendarIcon className="h-3.5 w-3.5" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Scheduled</span>
+                    {/* Tags Property */}
+                    {selectedTask.tags && selectedTask.tags.length > 0 && (
+                      <div className="group flex items-start hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-md transition-colors">
+                        <div className="w-32 shrink-0 pt-0.5">
+                          <span className="text-xs font-medium text-muted-foreground">Tags</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedTask.tags.map((tag, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-0.5 text-xs font-medium rounded bg-primary/10 text-primary"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      <div className="text-sm font-bold text-foreground">
-                        {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : format(new Date(selectedTask.start_date), 'MMMM d, yyyy')}
-                      </div>
-                    </div>
-
-                    <div className="p-4">
-                      <div className="flex items-center gap-2 text-muted-foreground mb-1.5">
-                        <Clock className="h-3.5 w-3.5" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Duration</span>
-                      </div>
-                      <div className="text-sm font-bold text-foreground">
-                        {selectedTask.daily_start_time ? (
-                          <span className="flex items-center gap-1">
-                            {selectedTask.daily_start_time.slice(0, 5)}
-                            <span className="opacity-30">→</span>
-                            {selectedTask.daily_end_time?.slice(0, 5) ?? '...'}
-                          </span>
-                        ) : 'All Day'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Automation - Sync to Local Reminders */}
-                <Button
-                  variant="outline"
-                  onClick={handleAddToReminders}
-                  disabled={isAddingReminder}
-                  className="w-full h-12 rounded-2xl bg-accent border-border text-foreground hover:bg-accent/80 transition-all duration-300 font-bold group"
-                >
-                  <div className="flex items-center justify-center w-full relative">
-                    {isAddingReminder ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Sparkles className="h-4 w-4 mr-2 text-blue-400 group-hover:scale-125 transition-transform" />
                     )}
-                    <span>{isAddingReminder ? "Syncing..." : "Sync to Local Reminders"}</span>
-                    <div className="absolute right-0 opacity-20 group-hover:opacity-100 transition-opacity">
-                      <ExternalLink className="h-3 w-3" />
+
+                    {/* Created Property */}
+                    <div className="group flex items-center hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-md transition-colors">
+                      <div className="w-32 shrink-0">
+                        <span className="text-xs font-medium text-muted-foreground">Created</span>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {format(new Date(selectedTask.created_at), "MMM d, yyyy 'at' h:mm a")}
+                      </span>
                     </div>
                   </div>
-                </Button>
 
-                {/* Description - Prominent and clean */}
-                <div className="relative group">
-                  <div className="flex items-center justify-between mb-3 px-1">
-                    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                      <div className="h-1 w-4 bg-primary/50 rounded-full" />
-                      Detailed Overview
-                    </h3>
-                  </div>
-
-                  <div className="bg-muted/40 border border-border rounded-2xl p-6 text-sm text-foreground leading-relaxed shadow-inner">
+                  {/* Description (Notion-style content block) */}
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
                     <MarkdownRenderer
                       content={normalizeMarkdown(selectedTask.description)}
                       isStreaming={false}
@@ -187,81 +225,35 @@ const TaskDetailsSidebar = ({
                     />
                   </div>
                 </div>
-
-                {/* Tags Section */}
-                {selectedTask.tags && selectedTask.tags.length > 0 && (
-                  <div className="space-y-3 px-1">
-                    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                      <Tag className="h-3 w-3" />
-                      Classification
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTask.tags.map((tag, idx) => (
-                        <span key={idx} className="px-3 py-1 text-[11px] font-bold rounded-lg bg-primary/10 border border-primary/20 text-primary">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Audit Info */}
-                <div className="pt-6 border-t border-white/5 flex items-center gap-3 text-[10px] text-gray-500 font-bold uppercase tracking-widest px-1">
-                  <span className="opacity-50">Entry Created</span>
-                  <div className="h-1 w-1 bg-white/20 rounded-full" />
-                  <span className="text-gray-400">{format(new Date(selectedTask.created_at), "MMM d, yyyy h:mm a")}</span>
-                </div>
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full p-4 text-center text-gray-500">
-                <AlertCircle className="h-12 w-12 mb-4 opacity-20" />
-                <p className="text-sm font-medium">Select a task to view full technical specifications</p>
+
+              {/* Notion-style Bottom Actions */}
+              <div className="border-t border-border/50 px-6 py-3 flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAddToReminders}
+                  disabled={isAddingReminder}
+                  className="h-8 text-xs"
+                >
+                  {isAddingReminder ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5 mr-2" />
+                  )}
+                  {isAddingReminder ? "Adding..." : "Add to Calendar"}
+                </Button>
               </div>
-            )}
-
-            {/* Premium Action Footer */}
-            {selectedTask && (
-              <div className="p-6 pt-2 bg-gradient-to-t from-zinc-950 via-zinc-950/90 to-transparent">
-                <div className="space-y-4">
-                  <Button
-                    className={cn(
-                      "w-full h-14 text-sm font-black uppercase tracking-widest transition-all duration-300 rounded-2xl border",
-                      selectedTask.completed
-                        ? "bg-zinc-800 hover:bg-zinc-700 text-white/70 border-white/10"
-                        : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-[0_10px_20px_-10px_rgba(37,99,235,0.5)] border-white/20"
-                    )}
-                    onClick={() => onToggleTaskCompletion(selectedTask.id)}
-                  >
-                    {selectedTask.completed ? "Reactivate Task" : "Confirm Completion"}
-                  </Button>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    {onEditTask && (
-                      <Button
-                        variant="outline"
-                        className="h-12 rounded-2xl bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:text-white transition-all duration-200 font-bold"
-                        onClick={() => onEditTask(selectedTask)}
-                      >
-                        <Edit2 className="h-4 w-4 mr-2 opacity-60" />
-                        Modify
-                      </Button>
-                    )}
-                    {onDeleteTask && (
-                      <Button
-                        variant="outline"
-                        className="h-12 rounded-2xl bg-transparent border-red-500/20 text-red-400/80 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 font-bold"
-                        onClick={() => onDeleteTask(selectedTask.id)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2 opacity-60" />
-                        Purge
-                      </Button>
-                    )}
-                  </div>
-                </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center h-full p-12 text-center">
+              <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center mb-4">
+                <AlertCircle className="h-6 w-6 text-muted-foreground/40" />
               </div>
-            )}
-
-          </div>
+              <h3 className="text-base font-semibold text-foreground mb-1">No task selected</h3>
+              <p className="text-sm text-muted-foreground">Select a task to view its details</p>
+            </div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>

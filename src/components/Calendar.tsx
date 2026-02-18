@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { parseYMD, formatYMD } from '@/utils/parseYMD';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSearch } from "@tanstack/react-router";
@@ -15,6 +15,7 @@ import { updateTask, deleteTaskFromDatabase, insertTask } from "@/utils/supabase
 import { Task } from "./calendar/types";
 import { useToast } from "@/hooks/use-toast";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
+import { cn } from "@/lib/utils";
 
 
 interface CalendarProps {
@@ -463,8 +464,11 @@ const Calendar = ({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-[clamp(260px,20vw,300px),1fr] lg:grid-cols-[clamp(260px,20vw,300px),1fr,clamp(300px,25vw,360px)] transition-all duration-700 ease-in-out h-full bg-background/5">
-          <div className="h-full overflow-hidden border-r border-border/20 bg-background/20 backdrop-blur-2xl">
+        <div className={cn(
+          "grid transition-[grid-template-columns] duration-700 ease-in-out h-full bg-background/5",
+          "grid-cols-1 md:grid-cols-[clamp(260px,20vw,300px),1fr]"
+        )}>
+          <div className="h-full overflow-hidden border-r border-border/20 bg-background/20 backdrop-blur-2xl z-10 relative">
             <TaskSidebar
               tasks={tasks}
               selectedDate={selectedDate}
@@ -487,32 +491,55 @@ const Calendar = ({
             />
           </div>
 
-          <div className="h-full overflow-hidden border-r border-border/20 bg-foreground/[0.02]">
-            <CalendarContainer
-              selectedDate={selectedDate}
-              onDateChange={handleInternalDateChange}
-              tasks={tasks}
-              getTasksForDate={getTasksForDateWrapper}
-              financialData={financialData}
-              dailySpendingLimit={dailySpendingLimit}
-              isLoading={isLoading || isLoadingAllTasks}
-              error={error}
-              onAddTask={handleAddTask}
-              onOpenAddTaskDialog={() => setIsAddTaskDialogOpen(true)}
-              onOpenTaskDetails={handleOpenTaskDetails}
-            />
+          <div className="h-full overflow-hidden border-r border-border/20 bg-foreground/[0.02] relative">
+            <AnimatePresence mode="wait">
+              {!selectedTask ? (
+                <motion.div
+                  key="calendar"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="h-full"
+                >
+                  <CalendarContainer
+                    selectedDate={selectedDate}
+                    onDateChange={handleInternalDateChange}
+                    tasks={tasks}
+                    getTasksForDate={getTasksForDateWrapper}
+                    financialData={financialData}
+                    dailySpendingLimit={dailySpendingLimit}
+                    isLoading={isLoading || isLoadingAllTasks}
+                    error={error}
+                    onAddTask={handleAddTask}
+                    onOpenAddTaskDialog={() => setIsAddTaskDialogOpen(true)}
+                    onOpenTaskDetails={handleOpenTaskDetails}
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="details"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="h-full"
+                >
+                  <TaskDetailsPanel
+                    selectedTask={selectedTask}
+                    selectedDate={selectedDate}
+                    onToggleTaskCompletion={handleToggleTaskCompletion}
+                    onEditTask={handleEditTask}
+                    onDeleteTask={handleDeleteTask}
+                    goalTitle={allTasks ? "All Goals" : goalTitle}
+                    isImmersive={true}
+                    onClose={handleCloseTaskDetails}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          <div className="h-full overflow-hidden hidden lg:block bg-background/20 backdrop-blur-2xl">
-            <TaskDetailsPanel
-              selectedTask={selectedTask}
-              selectedDate={selectedDate}
-              onToggleTaskCompletion={handleToggleTaskCompletion}
-              onEditTask={handleEditTask}
-              onDeleteTask={handleDeleteTask}
-              goalTitle={allTasks ? "All Goals" : goalTitle}
-            />
-          </div>
         </div>
       )}
 
