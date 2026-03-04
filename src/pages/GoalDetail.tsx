@@ -165,15 +165,15 @@ const GoalDetail: React.FC = () => {
     <>
       <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-background" style={backgroundStyle}>
 
-        {/* Sidebar - Desktop */}
-        <aside className="hidden lg:flex flex-col w-72 border-r border-border/40 bg-card/95 backdrop-blur-xl">
+        {/* Sidebar - Desktop Only */}
+        <aside className="hidden lg:flex flex-col w-64 xl:w-72 border-r border-border/40 bg-card/95 backdrop-blur-xl">
           {/* Sidebar Header */}
-          <div className="p-4 border-b border-border/40">
+          <div className="p-3 xl:p-4 border-b border-border/40">
             <GoalSwitcher />
           </div>
 
           {/* Progress Section */}
-          <div className="p-4 space-y-3">
+          <div className="p-3 xl:p-4 space-y-3">
             <div className="flex justify-between text-xs font-semibold text-muted-foreground">
               <span>Progress</span>
               <span className="text-primary">{Math.round(progress)}%</span>
@@ -182,7 +182,7 @@ const GoalDetail: React.FC = () => {
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>{completedTasksCount} of {tasks.length} tasks</span>
               {currentGoalData?.target_date && (
-                <span>{new Date(currentGoalData.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                <span className="truncate">{new Date(currentGoalData.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
               )}
             </div>
           </div>
@@ -190,22 +190,20 @@ const GoalDetail: React.FC = () => {
           <Separator className="bg-border/40" />
 
           {/* Navigation */}
-          <nav className="flex-1 p-3 space-y-1">
+          <nav className="flex-1 p-2 xl:p-3 space-y-1">
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                }}
+                onClick={() => setActiveTab(item.id)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  "w-full flex items-center gap-2 xl:gap-3 px-2.5 xl:px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                   activeTab === item.id
                     ? "bg-secondary text-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                 )}
               >
-                <item.icon className="h-4 w-4" />
-                <span>{item.label}</span>
+                <item.icon className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">{item.label}</span>
               </button>
             ))}
           </nav>
@@ -214,7 +212,7 @@ const GoalDetail: React.FC = () => {
           {members.length > 0 && (
             <>
               <Separator className="bg-border/40" />
-              <div className="p-4 space-y-3">
+              <div className="p-3 xl:p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Team
@@ -223,13 +221,13 @@ const GoalDetail: React.FC = () => {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {members.slice(0, 8).map(m => (
-                    <Avatar key={m.user_id} className="h-8 w-8">
+                    <Avatar key={m.user_id} className="h-7 w-7 xl:h-8 xl:w-8">
                       <AvatarImage src={m.user_profiles?.avatar_url || undefined} />
-                      <AvatarFallback className="text-xs">{m.user_profiles?.display_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                      <AvatarFallback className="text-[10px] xl:text-xs">{m.user_profiles?.display_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
                   ))}
                   {members.length > 8 && (
-                    <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold">
+                    <div className="h-7 w-7 xl:h-8 xl:w-8 rounded-full bg-secondary flex items-center justify-center text-[10px] xl:text-xs font-semibold">
                       +{members.length - 8}
                     </div>
                   )}
@@ -242,7 +240,7 @@ const GoalDetail: React.FC = () => {
           {user?.id && (
             <>
               <Separator className="bg-border/40" />
-              <div className="p-4">
+              <div className="p-3 xl:p-4">
                 <ThemeSelector
                   userId={user.id}
                   currentThemeId={currentTheme?.id}
@@ -256,86 +254,88 @@ const GoalDetail: React.FC = () => {
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-w-0 bg-background/95 backdrop-blur-xl overflow-hidden">
           {/* Header */}
-          <header className="sticky top-0 z-40 border-b border-border/40 bg-background/80 backdrop-blur-xl">
-            <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
-              {/* Mobile Menu Button */}
-              {isMobile && (
-                <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="lg:hidden">
-                      <Menu className="h-5 w-5" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="left" className="p-0 w-72">
-                    {/* Mobile Sidebar Content */}
-                    <div className="flex flex-col h-full">
-                      <div className="p-4 border-b border-border/40">
-                        <GoalSwitcher />
-                      </div>
-
-                      <div className="p-4 space-y-3">
-                        <div className="flex justify-between text-xs font-semibold text-muted-foreground">
-                          <span>Progress</span>
-                          <span className="text-primary">{Math.round(progress)}%</span>
-                        </div>
-                        <Progress value={progress} className="h-2" />
-                        <div className="text-xs text-muted-foreground">
-                          {completedTasksCount} of {tasks.length} tasks
-                        </div>
-                      </div>
-
-                      <Separator className="bg-border/40" />
-
-                      <nav className="flex-1 p-3 space-y-1">
-                        {navItems.map((item) => (
-                          <button
-                            key={item.id}
-                            onClick={() => {
-                              setActiveTab(item.id);
-                              setIsSidebarOpen(false);
-                            }}
-                            className={cn(
-                              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                              activeTab === item.id
-                                ? "bg-secondary text-foreground"
-                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                            )}
-                          >
-                            <item.icon className="h-4 w-4" />
-                            <span>{item.label}</span>
-                          </button>
-                        ))}
-                      </nav>
-
-                      {user?.id && (
-                        <>
-                          <Separator className="bg-border/40" />
-                          <div className="p-4">
-                            <ThemeSelector
-                              userId={user.id}
-                              currentThemeId={currentTheme?.id}
-                              onThemeSelect={handleThemeChange}
-                            />
+          <header className="sticky top-0 z-40 border-b border-border/40 bg-background/95 backdrop-blur-xl">
+            <div className="w-full">
+              <div className="flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-4 lg:px-6">
+                {/* Mobile Menu Button & Back Button */}
+                <div className="flex items-center gap-2">
+                  {isMobile && (
+                    <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+                      <SheetTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-9 w-9">
+                          <Menu className="h-4 w-4" />
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="left" className="p-0 w-[85vw] max-w-sm">
+                        {/* Mobile Sidebar Content */}
+                        <div className="flex flex-col h-full">
+                          <div className="p-4 border-b border-border/40">
+                            <GoalSwitcher />
                           </div>
-                        </>
-                      )}
-                    </div>
-                  </SheetContent>
-                </Sheet>
-              )}
 
-              {/* Goal Title */}
-              <h1 className="flex-1 text-base sm:text-lg font-semibold truncate">{goalTitle}</h1>
+                          <div className="p-4 space-y-3">
+                            <div className="flex justify-between text-xs font-semibold text-muted-foreground">
+                              <span>Progress</span>
+                              <span className="text-primary">{Math.round(progress)}%</span>
+                            </div>
+                            <Progress value={progress} className="h-2" />
+                            <div className="text-xs text-muted-foreground">
+                              {completedTasksCount} of {tasks.length} tasks
+                            </div>
+                          </div>
 
-              {/* Desktop Navigation Tabs */}
-              {!isMobile && (
-                <nav className="flex items-center gap-1">
+                          <Separator className="bg-border/40" />
+
+                          <nav className="flex-1 p-3 space-y-1">
+                            {navItems.map((item) => (
+                              <button
+                                key={item.id}
+                                onClick={() => {
+                                  setActiveTab(item.id);
+                                  setIsSidebarOpen(false);
+                                }}
+                                className={cn(
+                                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                                  activeTab === item.id
+                                    ? "bg-secondary text-foreground"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                                )}
+                              >
+                                <item.icon className="h-4 w-4" />
+                                <span>{item.label}</span>
+                              </button>
+                            ))}
+                          </nav>
+
+                          {user?.id && (
+                            <>
+                              <Separator className="bg-border/40" />
+                              <div className="p-4">
+                                <ThemeSelector
+                                  userId={user.id}
+                                  currentThemeId={currentTheme?.id}
+                                  onThemeSelect={handleThemeChange}
+                                />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </SheetContent>
+                    </Sheet>
+                  )}
+                </div>
+
+                {/* Goal Title */}
+                <h1 className="flex-1 text-sm sm:text-base lg:text-lg font-semibold truncate">{goalTitle}</h1>
+
+                {/* Desktop Navigation Tabs */}
+                <nav className="hidden lg:flex items-center gap-1">
                   {navItems.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => setActiveTab(item.id)}
                       className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
+                        "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap",
                         activeTab === item.id
                           ? "bg-secondary text-foreground"
                           : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -346,7 +346,14 @@ const GoalDetail: React.FC = () => {
                     </button>
                   ))}
                 </nav>
-              )}
+
+                {/* Mobile Tab Indicator */}
+                {isMobile && (
+                  <div className="text-xs font-medium text-muted-foreground capitalize px-2 py-1 bg-secondary/50 rounded-md">
+                    {activeTab}
+                  </div>
+                )}
+              </div>
             </div>
           </header>
 

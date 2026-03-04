@@ -25,6 +25,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -209,73 +210,68 @@ const Dashboard = () => {
         <GlobalBackground />
 
         <div className="relative z-10">
-          {/* Modern Header - Vercel/GitHub Style */}
-          <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
-            <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex h-16 items-center justify-between gap-4">
+          {/* Modern Header - Responsive */}
+          <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-xl">
+            <div className="w-full px-3 sm:px-4 lg:px-6">
+              <div className="flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-4 max-w-[1600px] mx-auto">
                 {/* Logo */}
-                <div className="flex items-center gap-3">
-                  <LogoAvatar size={32} />
-                  <span className="hidden sm:block font-bold text-xl">Orbit</span>
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <LogoAvatar size={isMobile ? 28 : 32} />
+                  <span className="font-bold text-base sm:text-xl truncate">Orbit</span>
                 </div>
 
-                {/* Search Bar - Desktop */}
-                {!isMobile && (
-                  <div className="flex-1 max-w-md">
-                    <button
-                      onClick={() => setShowSearch(true)}
-                      className="w-full flex items-center gap-3 h-9 px-3 bg-secondary/50 hover:bg-secondary border border-border/40 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-all"
-                    >
-                      <Search className="h-4 w-4" />
-                      <span className="flex-1 text-left">Search goals...</span>
-                      <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border/40 bg-background px-1.5 font-mono text-[10px] font-medium opacity-50">
-                        <span className="text-xs">⌘</span>K
-                      </kbd>
-                    </button>
-                  </div>
-                )}
+                {/* Search Bar - Tablet & Desktop */}
+                <div className="hidden md:flex flex-1 max-w-lg">
+                  <button
+                    onClick={() => setShowSearch(true)}
+                    className="w-full flex items-center gap-2 sm:gap-3 h-9 px-3 bg-secondary/50 hover:bg-secondary border border-border/40 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-all"
+                  >
+                    <Search className="h-4 w-4 flex-shrink-0" />
+                    <span className="flex-1 text-left truncate">Search goals...</span>
+                    <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-border/40 bg-background px-1.5 font-mono text-[10px] font-medium opacity-50 flex-shrink-0">
+                      <span className="text-xs">⌘</span>K
+                    </kbd>
+                  </button>
+                </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                   {/* Mobile Search */}
-                  {isMobile && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowSearch(true)}
-                      className="h-9 w-9"
-                    >
-                      <Search className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowSearch(true)}
+                    className="h-9 w-9 md:hidden"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
 
                   {/* Join Goal - Desktop Only */}
-                  {!isMobile && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setShowJoinGoalDialog(true)}
-                            className="h-9 w-9"
-                          >
-                            <UserPlus className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Join Goal</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShowJoinGoalDialog(true)}
+                          className="hidden lg:flex h-9 w-9"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Join Goal</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
 
                   {/* Create Goal */}
                   <Button
                     onClick={handleToggleForm}
-                    size={isMobile ? "sm" : "default"}
-                    className="gap-2 rounded-lg"
+                    size="sm"
+                    className="gap-1.5 sm:gap-2 rounded-lg h-9 text-xs sm:text-sm px-2.5 sm:px-4"
                   >
-                    <PlusCircle className="h-4 w-4" />
-                    {!isMobile && <span>New Goal</span>}
+                    <PlusCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">New Goal</span>
+                    <span className="sm:hidden">New</span>
                   </Button>
 
                   {/* Notification Bell */}
@@ -288,15 +284,11 @@ const Dashboard = () => {
                         <Bell className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      {isMobile && (
-                        <>
-                          <DropdownMenuItem onClick={() => setShowJoinGoalDialog(true)}>
-                            <UserPlus className="mr-2 h-4 w-4" /> Join Goal
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                        </>
-                      )}
+                    <DropdownMenuContent align="end" className="w-52 sm:w-56">
+                      <DropdownMenuItem onClick={() => setShowJoinGoalDialog(true)} className="lg:hidden">
+                        <UserPlus className="mr-2 h-4 w-4" /> Join Goal
+                      </DropdownMenuItem>
+                      {isMobile && <DropdownMenuSeparator />}
                       <DropdownMenuItem onClick={() => setShowApiKeyGuide(true)}>
                         <Key className="mr-2 h-4 w-4" /> API Keys
                       </DropdownMenuItem>
@@ -316,29 +308,32 @@ const Dashboard = () => {
             </div>
           </header>
 
-          {/* Main Content - GitHub/Vercel Style */}
-          <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+          {/* Main Content */}
+          <main className="w-full">
             
             {/* Deadline Notifications */}
-            <DeadlineNotifications
-              goals={goals}
-              onGoalAction={handleGoalAction}
-            />
+            <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+              <DeadlineNotifications
+                goals={goals}
+                onGoalAction={handleGoalAction}
+              />
+            </div>
 
             {/* Two Column Layout - Responsive */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-              
-              {/* Main Content - Goals */}
-              <div className="lg:col-span-8 space-y-6">
-                {/* Section Header */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Your Goals</h1>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {goals.length === 0 ? 'No goals yet' : `${goals.length} active ${goals.length === 1 ? 'goal' : 'goals'}`}
-                    </p>
+            <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8 lg:pb-12">
+              <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
+                
+                {/* Main Content - Goals */}
+                <div className="lg:col-span-2 xl:col-span-3 space-y-4 sm:space-y-6">
+                  {/* Section Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight">Your Goals</h1>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">
+                        {goals.length === 0 ? 'No goals yet' : `${goals.length} active ${goals.length === 1 ? 'goal' : 'goals'}`}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
                 {/* Goals Grid */}
                 <GoalList
@@ -350,65 +345,79 @@ const Dashboard = () => {
                   sortOption={sortOption}
                 />
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex justify-center pt-8">
-                    <Pagination>
-                      <PaginationContent>
-                        <PaginationItem>
-                          <PaginationPrevious
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              if (currentPage > 1) setCurrentPage(currentPage - 1);
-                            }}
-                            className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-                          />
-                        </PaginationItem>
-
-                        {Array.from({ length: totalPages }, (_, i) => i + 1)
-                          .filter(page => Math.abs(page - currentPage) <= 1 || page === 1 || page === totalPages)
-                          .map((page, i, arr) => (
-                            <React.Fragment key={page}>
-                              {i > 0 && arr[i - 1] !== page - 1 && (
-                                <PaginationItem>
-                                  <PaginationEllipsis />
-                                </PaginationItem>
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex justify-center pt-6 sm:pt-8">
+                      <Pagination>
+                        <PaginationContent className="gap-1 sm:gap-2">
+                          <PaginationItem>
+                            <PaginationPrevious
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (currentPage > 1) setCurrentPage(currentPage - 1);
+                              }}
+                              className={cn(
+                                "h-8 sm:h-9 px-2 sm:px-3",
+                                currentPage <= 1 ? "pointer-events-none opacity-50" : ""
                               )}
-                              <PaginationItem>
-                                <PaginationLink
-                                  href="#"
-                                  onClick={(e) => { e.preventDefault(); setCurrentPage(page); }}
-                                  isActive={currentPage === page}
-                                >
-                                  {page}
-                                </PaginationLink>
-                              </PaginationItem>
-                            </React.Fragment>
-                          ))}
+                            />
+                          </PaginationItem>
 
-                        <PaginationItem>
-                          <PaginationNext
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                            }}
-                            className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
-                          />
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
-                  </div>
-                )}
-              </div>
+                          {Array.from({ length: totalPages }, (_, i) => i + 1)
+                            .filter(page => {
+                              // On mobile, show less pages
+                              if (isMobile) {
+                                return page === currentPage || page === 1 || page === totalPages;
+                              }
+                              return Math.abs(page - currentPage) <= 1 || page === 1 || page === totalPages;
+                            })
+                            .map((page, i, arr) => (
+                              <React.Fragment key={page}>
+                                {i > 0 && arr[i - 1] !== page - 1 && (
+                                  <PaginationItem>
+                                    <PaginationEllipsis className="h-8 sm:h-9 w-8 sm:w-9" />
+                                  </PaginationItem>
+                                )}
+                                <PaginationItem>
+                                  <PaginationLink
+                                    href="#"
+                                    onClick={(e) => { e.preventDefault(); setCurrentPage(page); }}
+                                    isActive={currentPage === page}
+                                    className="h-8 sm:h-9 w-8 sm:w-9 text-xs sm:text-sm"
+                                  >
+                                    {page}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              </React.Fragment>
+                            ))}
 
-              {/* Sidebar - Today's Tasks */}
-              <aside className="lg:col-span-4">
-                <div className="lg:sticky lg:top-24 space-y-6">
-                  <TodaysTasks />
+                          <PaginationItem>
+                            <PaginationNext
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                              }}
+                              className={cn(
+                                "h-8 sm:h-9 px-2 sm:px-3",
+                                currentPage >= totalPages ? "pointer-events-none opacity-50" : ""
+                              )}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
                 </div>
-              </aside>
+
+                {/* Sidebar - Today's Tasks */}
+                <aside className="lg:col-span-1 xl:col-span-1">
+                  <div className="lg:sticky lg:top-20 space-y-6">
+                    <TodaysTasks />
+                  </div>
+                </aside>
+              </div>
             </div>
           </main>
         </div>

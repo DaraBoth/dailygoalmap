@@ -25,6 +25,8 @@ import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import { createMemberLeftNotifications } from "@/services/internalNotifications";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 export interface GoalListProps {
   goals: Goal[];
@@ -48,6 +50,7 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
   const [leavingGoalId, setLeavingGoalId] = useState<string | null>(null);
   const { toast } = useToast();
   const { goToGoal } = useRouterNavigation();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const getCurrentUser = async () => {
@@ -177,7 +180,7 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
         <AnimatePresence mode="popLayout">
           {goals.map((goal, index) => {
             const deadlineInfo = calculateGoalDeadlineInfo(goal);
@@ -204,7 +207,7 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
                 transition={{ duration: 0.4, delay: index * 0.05 }}
               >
                 <Card
-                  className={`relative cursor-pointer group hover:shadow-[0_0_30px_-5px_rgba(139,92,246,0.3)] transition-all duration-500 overflow-hidden glass-card border-foreground/5 bg-background/40 backdrop-blur-xl ${deadlineStyling.borderColor}`}
+                  className={`relative cursor-pointer group hover:shadow-lg transition-all duration-300 overflow-hidden border bg-card ${deadlineStyling.borderColor}`}
                   onClick={(e) => {
                     const target = e.target as HTMLElement | null;
                     if (target) {
@@ -219,8 +222,8 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
                     goToGoal(goal.id);
                   }}
                 >
-                  {/* Internal Glow Effect */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  {/* Hover Glow Effect */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                   {/* Background Image Container */}
                   {backgroundStyle.backgroundImage && (
@@ -232,29 +235,29 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
                     </div>
                   )}
 
-                  <div className="relative z-10 p-6">
-                    <CardHeader className="p-0 mb-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-4 flex-1 min-w-0">
+                  <div className="relative z-10 p-4 sm:p-5 lg:p-6">
+                    <CardHeader className="p-0 mb-3 sm:mb-4">
+                      <div className="flex items-start justify-between gap-3 sm:gap-4">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
                           {goal?.goal_themes && goal?.goal_themes?.goal_profile_image != null ? (
-                            <div className="relative h-14 w-14 flex-shrink-0">
+                            <div className="relative h-12 w-12 sm:h-14 sm:w-14 flex-shrink-0">
                               <img
                                 src={goal?.goal_themes?.goal_profile_image}
                                 alt="Goal avatar"
-                                className="object-cover h-full w-full rounded-2xl ring-2 ring-primary/20 group-hover:ring-primary/40 transition-all"
+                                className="object-cover h-full w-full rounded-xl sm:rounded-2xl ring-2 ring-primary/20 group-hover:ring-primary/40 transition-all"
                               />
                             </div>
                           ) : (
-                            <div className="h-14 w-14 rounded-2xl flex items-center justify-center bg-primary/10 text-primary font-black text-xl flex-shrink-0 group-hover:scale-110 transition-transform">
+                            <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl flex items-center justify-center bg-primary/10 text-primary font-black text-lg sm:text-xl flex-shrink-0 group-hover:scale-110 transition-transform">
                               {goal.title ? goal.title.charAt(0).toUpperCase() : 'G'}
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <CardTitle className="text-lg font-bold text-foreground leading-tight tracking-tight group-hover:text-primary transition-colors">
+                            <CardTitle className="text-base sm:text-lg font-bold text-foreground leading-tight tracking-tight group-hover:text-primary transition-colors line-clamp-2">
                               {goal.title}
                             </CardTitle>
-                            <div className="flex items-center gap-2 mt-2 flex-wrap">
-                              <Badge variant="secondary" className="px-2 py-0 text-[10px] font-bold uppercase tracking-widest bg-primary/5 border-primary/10">
+                            <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 flex-wrap">
+                              <Badge variant="secondary" className="px-1.5 sm:px-2 py-0 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider bg-primary/5 border-primary/10">
                                 {goal.metadata?.goal_type || 'General'}
                               </Badge>
                               <DeadlineStatusBadge deadlineInfo={deadlineInfo} size="sm" />
@@ -270,14 +273,14 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
                                   variant="ghost"
                                   size="icon"
                                   onClick={(e) => { e.stopPropagation(); setLeavingGoalId(goal.id); }}
-                                  className="h-10 w-10 rounded-xl hover:bg-destructive/10 hover:text-destructive transition-all"
+                                  className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl hover:bg-destructive/10 hover:text-destructive transition-all"
                                   data-ignore-navigation="true"
                                 >
-                                  <ArrowRight className="h-5 w-5" />
+                                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Leave trajectory</p>
+                                <p>Leave goal</p>
                               </TooltipContent>
                             </Tooltip>
                           ) : (
@@ -288,26 +291,26 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all"
-                                      aria-label="Orbit controls"
+                                      className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl hover:bg-primary/10 hover:text-primary transition-all"
+                                      aria-label="Goal actions"
                                       data-ignore-navigation="true"
                                     >
-                                      <MoreHorizontal className="h-5 w-5" />
+                                      <MoreHorizontal className="h-4 w-4 sm:h-5 sm:w-5" />
                                     </Button>
                                   </DropdownMenuTrigger>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Orbit controls</p>
+                                  <p>Goal actions</p>
                                 </TooltipContent>
                               </Tooltip>
-                              <DropdownMenuContent align="end" className="w-48 bg-background/95 backdrop-blur-xl border-foreground/5 rounded-2xl shadow-2xl" data-ignore-navigation="true">
+                              <DropdownMenuContent align="end" className="w-44 sm:w-48 bg-background/95 backdrop-blur-xl border-border/40 rounded-xl sm:rounded-2xl shadow-xl" data-ignore-navigation="true">
                                 {onEditGoal && (
-                                  <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onEditGoal(goal, e as unknown as React.MouseEvent); }} className="p-3 focus:bg-primary/10 rounded-xl mb-1 cursor-pointer font-medium transition-colors">
-                                    <Edit className="h-4 w-4 mr-3 text-primary" /> Adjust Trajectory
+                                  <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onEditGoal(goal, e as unknown as React.MouseEvent); }} className="p-2.5 sm:p-3 focus:bg-primary/10 rounded-lg sm:rounded-xl mb-1 cursor-pointer font-medium transition-colors text-sm">
+                                    <Edit className="h-4 w-4 mr-2 sm:mr-3 text-primary" /> Edit Goal
                                   </DropdownMenuItem>
                                 )}
-                                <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onDeleteGoal(goal, e as unknown as React.MouseEvent); }} className="p-3 focus:bg-destructive/10 text-destructive rounded-xl cursor-pointer font-medium transition-colors">
-                                  <Trash2 className="h-4 w-4 mr-3" /> Terminate Orbit
+                                <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onDeleteGoal(goal, e as unknown as React.MouseEvent); }} className="p-2.5 sm:p-3 focus:bg-destructive/10 text-destructive rounded-lg sm:rounded-xl cursor-pointer font-medium transition-colors text-sm">
+                                  <Trash2 className="h-4 w-4 mr-2 sm:mr-3" /> Delete Goal
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -317,71 +320,74 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
                     </CardHeader>
 
                     <CardContent className="p-0">
-                      <p className="text-sm text-muted-foreground/80 line-clamp-2 mb-6 font-medium leading-relaxed">
-                        {goal.description || 'System standby. No secondary objectives defined.'}
+                      <p className="text-xs sm:text-sm text-muted-foreground/80 line-clamp-2 mb-4 sm:mb-6 font-medium leading-relaxed">
+                        {goal.description || 'No description'}
                       </p>
 
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-tighter text-muted-foreground/60">
-                          <span>Progress Pulse</span>
+                      <div className="space-y-2.5 sm:space-y-3">
+                        <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold uppercase tracking-tight text-muted-foreground/60">
+                          <span>Progress</span>
                           <span className="text-primary">{progress}%</span>
                         </div>
-                        <div className="relative h-2.5 w-full bg-foreground/5 rounded-full overflow-hidden border border-foreground/[0.03]">
+                        <div className="relative h-2 sm:h-2.5 w-full bg-foreground/5 rounded-full overflow-hidden border border-foreground/[0.03]">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${progress}%` }}
-                            transition={{ duration: 1, ease: "easeOut", delay: 0.5 + index * 0.1 }}
-                            className={`h-full transition-all duration-500 relative ${deadlineStyling.progressColor}`}
+                            transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 + index * 0.05 }}
+                            className={`h-full transition-all duration-300 relative ${deadlineStyling.progressColor}`}
                           >
                             <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                            {/* Orbital Marker */}
-                            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-full w-4 bg-gradient-to-r from-transparent to-white/40 blur-[2px]" />
                           </motion.div>
                         </div>
 
-                        <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground pt-1">
-                          <div className="flex items-center gap-1.5">
-                            <ClipboardList className="h-3.5 w-3.5 text-primary/60" />
-                            <span>{goal.taskCounts ? `${goal.taskCounts.completed}/${goal.taskCounts.total} Tasks` : '0 Tasks'}</span>
+                        <div className="flex items-center justify-between text-[11px] sm:text-xs font-semibold text-muted-foreground pt-0.5 sm:pt-1">
+                          <div className="flex items-center gap-1 sm:gap-1.5">
+                            <ClipboardList className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary/60 flex-shrink-0" />
+                            <span className="truncate">{goal.taskCounts ? `${goal.taskCounts.completed}/${goal.taskCounts.total} Tasks` : '0 Tasks'}</span>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <CalendarDays className="h-3.5 w-3.5 text-primary/60" />
-                            <span>Due {format(new Date(goal.target_date), 'MMM d, yyyy')}</span>
+                          <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+                            <CalendarDays className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary/60" />
+                            <span className="truncate">{format(new Date(goal.target_date), isMobile ? 'MMM d' : 'MMM d, yyyy')}</span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between mt-8 pt-4 border-t border-foreground/[0.05]">
+                      <div className="flex items-center justify-between mt-5 sm:mt-6 lg:mt-8 pt-3 sm:pt-4 border-t border-foreground/[0.05]">
                         {goal.members && goal.members.length > 0 ? (
-                          <div className="flex -space-x-3 overflow-hidden p-1">
-                            {goal.members.slice(0, 4).map((mem, idx) => {
+                          <div className="flex -space-x-2 sm:-space-x-3 overflow-hidden p-0.5 sm:p-1">
+                            {goal.members.slice(0, isMobile ? 3 : 4).map((mem, idx) => {
                               const displayName = mem.user_profiles?.display_name || "User";
                               return (
                                 <Tooltip key={idx}>
                                   <TooltipTrigger asChild>
-                                    <Avatar className="h-8 w-8 ring-2 ring-background border-2 border-transparent hover:ring-primary/40 hover:z-10 transition-all cursor-pointer">
+                                    <Avatar className="h-7 w-7 sm:h-8 sm:w-8 ring-2 ring-background border border-transparent hover:ring-primary/40 hover:z-10 transition-all cursor-pointer">
                                       <AvatarImage src={mem.user_profiles?.avatar_url} />
-                                      <AvatarFallback className="bg-primary/5 text-primary text-[10px] font-black">{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
+                                      <AvatarFallback className="bg-primary/5 text-primary text-[10px] font-bold">{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
                                     </Avatar>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p className="text-xs font-bold">{displayName}</p>
+                                    <p className="text-xs font-semibold">{displayName}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               );
                             })}
-                            {goal.members.length > 4 && (
-                              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-black ring-2 ring-background border-2 border-transparent">
-                                +{goal.members.length - 4}
+                            {goal.members.length > (isMobile ? 3 : 4) && (
+                              <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-muted flex items-center justify-center text-[9px] sm:text-[10px] font-black ring-2 ring-background border border-transparent">
+                                +{goal.members.length - (isMobile ? 3 : 4)}
                               </div>
                             )}
                           </div>
                         ) : (
-                          <div className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest">Solo Mission</div>
+                          <div className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground/40 tracking-wider">Solo</div>
                         )}
                         <Badge
                           variant={goal.status === 'completed' ? 'default' : 'secondary'}
-                          className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full ${goal.status === 'completed' ? 'bg-green-500 text-white border-none shadow-[0_0_15px_-3px_rgba(34,197,94,0.4)]' : 'bg-foreground/5 border-foreground/10'}`}
+                          className={cn(
+                            "text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full",
+                            goal.status === 'completed' 
+                              ? 'bg-green-500 text-white border-none shadow-sm' 
+                              : 'bg-foreground/5 border-border/40'
+                          )}
                         >
                           {goal.status}
                         </Badge>

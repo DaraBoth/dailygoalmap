@@ -413,21 +413,21 @@ const TodaysTasks: React.FC = React.memo(() => {
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed inset-x-0 bottom-0 bg-background/95 backdrop-blur-md border-t shadow-lg rounded-t-2xl max-h-[80vh] overflow-hidden z-[100]"
+                className="fixed inset-x-0 bottom-0 bg-background/95 backdrop-blur-md border-t shadow-lg rounded-t-2xl max-h-[85vh] overflow-hidden z-[100]"
               >
-                <div className="flex items-center justify-between p-4 border-b border-border/40 bg-muted/30 sticky top-0 z-10">
-                  <h2 className="text-lg font-semibold">Today's Tasks</h2>
+                <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border/40 bg-muted/30 sticky top-0 z-10">
+                  <h2 className="text-base sm:text-lg font-semibold">Today's Tasks</h2>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setIsTasksVisible(false)}
-                    className="rounded-xl"
+                    className="rounded-xl h-9"
                   >
                     Close
                   </Button>
                 </div>
-                <div className="p-4">
-                  <div className="flex justify-between">
+                <div className="p-4 sm:p-5">
+                  <div className="flex flex-col gap-3 mb-4">
                     <div className="flex space-x-2">
 
                       {previousTasksState.length > 0 ?
@@ -435,7 +435,7 @@ const TodaysTasks: React.FC = React.memo(() => {
                           variant="outline"
                           size="sm"
                           onClick={handleUndoMarkAllCompleted}
-                          className="mb-4 flex items-center gap-2 text-red-500"
+                          className="flex-1 h-10 flex items-center justify-center gap-2 text-red-500 rounded-xl"
                         >
                           Undo
                         </Button>
@@ -443,47 +443,47 @@ const TodaysTasks: React.FC = React.memo(() => {
                           variant="outline"
                           size="sm"
                           onClick={handleMarkAllCompleted}
-                          className="mb-4 flex items-center gap-2"
+                          className="flex-1 h-10 flex items-center justify-center gap-2 rounded-xl"
                         >
                           <CheckCircle className="h-4 w-4" />
-                          Mark All Completed
+                          Mark All
                         </Button>}
                     </div>
-                    {/* The ml-auto utility pushes this div to the end */}
-                    <div className="relative inline-block ml-auto" ref={filterRef}>
+                    {/* Filter button below action buttons on mobile */}
+                    <div className="relative" ref={filterRef}>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setIsFilterOpen(s => !s)}
-                        className="ml-2"
+                        className="w-full h-10 rounded-xl"
                       >
                         Filter Goals
                       </Button>
                       {isFilterOpen && (
-                        <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 p-3">
-                          <div className="flex items-center">
+                        <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 p-4">
+                          <div className="flex items-center py-2">
                             <input
                               id="filter-all"
                               type="checkbox"
                               checked={availableGoals.length > 0 && selectedGoalIds.length === availableGoals.length}
                               onChange={() => toggleAll()}
-                              className="mr-2"
+                              className="mr-3 h-4 w-4"
                             />
-                            <label htmlFor="filter-all" className="font-medium">
+                            <label htmlFor="filter-all" className="font-medium text-base">
                               All
                             </label>
                           </div>
-                          <div className="max-h-48 overflow-y-auto mt-2 space-y-2">
+                          <div className="max-h-56 overflow-y-auto mt-2 space-y-2.5">
                             {availableGoals.map(g => (
-                              <div key={g.id} className="flex items-center">
+                              <div key={g.id} className="flex items-center py-2">
                                 <input
                                   id={`goal-${g.id}`}
                                   type="checkbox"
                                   checked={selectedGoalIds.includes(g.id)}
                                   onChange={() => toggleGoal(g.id)}
-                                  className="mr-2"
+                                  className="mr-3 h-4 w-4"
                                 />
-                                <label htmlFor={`goal-${g.id}`} className="truncate">
+                                <label htmlFor={`goal-${g.id}`} className="truncate text-base">
                                   {g.title || 'Untitled'}
                                 </label>
                               </div>
@@ -497,21 +497,21 @@ const TodaysTasks: React.FC = React.memo(() => {
                     </div>
                   </div>
 
-                  <Card>
-                    <CardContent className="max-h-[400px] overflow-y-auto">
+                  <Card className="rounded-xl">
+                    <CardContent className="max-h-[50vh] overflow-y-auto p-0">
                       {loading ? (
-                        <div className="space-y-4">
-                          <Skeleton className="h-10 w-full" />
-                          <Skeleton className="h-10 w-full" />
-                          <Skeleton className="h-10 w-full" />
+                        <div className="space-y-3 p-4">
+                          <Skeleton className="h-16 w-full rounded-xl" />
+                          <Skeleton className="h-16 w-full rounded-xl" />
+                          <Skeleton className="h-16 w-full rounded-xl" />
                         </div>
                       ) : tasksForToday.length === 0 ? (
-                        <div className="text-center py-6 flex flex-col items-center">
-                          <PremiumClipboard size={64} className="mb-2" />
-                          <p className="text-muted-foreground">No task for today</p>
+                        <div className="text-center py-10 flex flex-col items-center px-4">
+                          <PremiumClipboard size={56} className="mb-3" />
+                          <p className="text-base text-muted-foreground font-medium">No task for today</p>
                         </div>
                       ) : (
-                        <div className="pt-8">
+                        <div className="p-4 space-y-3">
                           {tasksForToday.map((task) => (
                             <motion.div
                               key={task.id}
@@ -558,7 +558,7 @@ const TodaysTasks: React.FC = React.memo(() => {
 
           {!isTasksVisible && (
             <Button
-              className="fixed inset-x-0 bottom-0 rounded-t-2xl p-2 z-[100] border-t border-border/40 bg-background/80 backdrop-blur-md"
+              className="fixed inset-x-0 bottom-0 rounded-t-2xl h-12 z-[100] border-t border-border/40 bg-background/80 backdrop-blur-md text-base font-medium"
               onClick={() => setIsTasksVisible(true)}
             >
               View Today's Tasks
@@ -571,41 +571,40 @@ const TodaysTasks: React.FC = React.memo(() => {
 
       {
         !isMobile && (
-          <Card className="border border-foreground/5 rounded-[2.5rem] glass-card bg-background/40 backdrop-blur-xl shadow-2xl overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
-            <CardHeader className="pb-4 pt-8 px-8">
-              <div className="flex items-center space-x-4 mb-4 flex-row">
-                <div className="p-3 bg-primary/10 rounded-2xl ring-1 ring-primary/20 group-hover:scale-110 transition-transform duration-300">
-                  <ClipboardList className="h-6 w-6 text-primary" />
+          <Card className="border border-foreground/5 rounded-2xl xl:rounded-[2.5rem] bg-background/40 backdrop-blur-xl shadow-xl overflow-hidden">
+            <CardHeader className="pb-3 sm:pb-4 pt-5 sm:pt-6 xl:pt-8 px-4 sm:px-6 xl:px-8">
+              <div className="flex items-center space-x-3 sm:space-x-4 mb-3 sm:mb-4 flex-row">
+                <div className="p-2 sm:p-2.5 xl:p-3 bg-primary/10 rounded-xl xl:rounded-2xl ring-1 ring-primary/20">
+                  <ClipboardList className="h-5 w-5 sm:h-5 sm:w-5 xl:h-6 xl:w-6 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-2xl font-black tracking-tight">
+                  <CardTitle className="text-lg sm:text-xl xl:text-2xl font-bold xl:font-black tracking-tight">
                     Mission Logs
                   </CardTitle>
-                  <CardDescription className="font-bold text-muted-foreground/60 uppercase text-[10px] tracking-widest">
+                  <CardDescription className="font-semibold xl:font-bold text-muted-foreground/60 uppercase text-[9px] sm:text-[10px] tracking-wider xl:tracking-widest">
                     {format(new Date(), 'EEEE, MMMM d, yyyy')}
                   </CardDescription>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="text-[10px] font-black bg-primary/10 text-primary rounded-full px-3 py-1 border border-primary/20 inline-block uppercase tracking-widest">
+                <div className="text-[9px] sm:text-[10px] font-bold xl:font-black bg-primary/10 text-primary rounded-full px-2.5 sm:px-3 py-1 border border-primary/20 inline-block uppercase tracking-wide xl:tracking-widest">
                   Active Tasks: {tasksForToday.length}
                 </div>
               </div>
             </CardHeader>
             <CardContent
-              className="rounded-2xl flex flex-col pt-6 min-h-[400px] max-h-[600px] overflow-auto"
+              className="rounded-xl xl:rounded-2xl flex flex-col pt-4 sm:pt-5 xl:pt-6 min-h-[350px] sm:min-h-[400px] max-h-[500px] sm:max-h-[600px] overflow-auto px-4 sm:px-6 xl:px-8"
             >
-              <div className="flex justify-between">
-                <div className="flex items-center justify-between mb-6">
+              <div className="flex justify-between items-start mb-4 sm:mb-5 xl:mb-6">
+                <div className="flex items-center">
 
                   {previousTasksState.length > 0 ?
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleUndoMarkAllCompleted}
-                      className="text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all duration-200 flex items-center gap-2"
+                      className="h-8 sm:h-8 text-sm text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all duration-200 flex items-center gap-2"
                     >
                       Undo
                     </Button> :
@@ -613,10 +612,11 @@ const TodaysTasks: React.FC = React.memo(() => {
                       variant="outline"
                       size="sm"
                       onClick={handleMarkAllCompleted}
-                      className="text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:text-green-700 dark:hover:text-green-300 rounded-xl transition-all duration-200 flex items-center gap-2"
+                      className="h-8 sm:h-8 text-xs sm:text-sm text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:text-green-700 dark:hover:text-green-300 rounded-xl transition-all duration-200 flex items-center gap-1.5 sm:gap-2"
                     >
-                      <CheckCircle className="h-4 w-4" />
-                      Mark All Completed
+                      <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">Mark All Completed</span>
+                      <span className="sm:hidden">Complete All</span>
                     </Button>}
                 </div>
                 {/* The ml-auto utility pushes this div to the end */}
@@ -625,41 +625,41 @@ const TodaysTasks: React.FC = React.memo(() => {
                     variant="outline"
                     size="sm"
                     onClick={() => setIsFilterOpen(s => !s)}
-                    className="ml-2"
+                    className="h-8 text-xs sm:text-sm rounded-xl"
                   >
                     Filter Goals
                   </Button>
                   {isFilterOpen && (
-                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 p-3">
-                      <div className="flex items-center">
+                    <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 p-3 sm:p-4">
+                      <div className="flex items-center py-1.5">
                         <input
                           id="filter-all"
                           type="checkbox"
                           checked={availableGoals.length > 0 && selectedGoalIds.length === availableGoals.length}
                           onChange={() => toggleAll()}
-                          className="mr-2"
+                          className="mr-3 h-4 w-4"
                         />
-                        <label htmlFor="filter-all" className="font-medium">
+                        <label htmlFor="filter-all" className="font-medium text-sm">
                           All
                         </label>
                       </div>
-                      <div className="max-h-48 overflow-y-auto mt-2 space-y-2">
+                      <div className="max-h-44 sm:max-h-48 overflow-y-auto mt-2 space-y-1.5 sm:space-y-2">
                         {availableGoals.map(g => (
-                          <div key={g.id} className="flex items-center">
+                          <div key={g.id} className="flex items-center py-1.5">
                             <input
                               id={`goal-${g.id}`}
                               type="checkbox"
                               checked={selectedGoalIds.includes(g.id)}
                               onChange={() => toggleGoal(g.id)}
-                              className="mr-2"
+                              className="mr-3 h-4 w-4"
                             />
-                            <label htmlFor={`goal-${g.id}`} className="truncate">
+                            <label htmlFor={`goal-${g.id}`} className="truncate text-sm">
                               {g.title || 'Untitled'}
                             </label>
                           </div>
                         ))}
                         {availableGoals.length === 0 && (
-                          <div className="text-sm text-muted-foreground">No goals</div>
+                          <div className="text-xs sm:text-sm text-muted-foreground py-1.5">No goals</div>
                         )}
                       </div>
                     </div>
@@ -669,15 +669,15 @@ const TodaysTasks: React.FC = React.memo(() => {
 
               {/* Add margin above the first task */}
               {loading ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
+                <div className="space-y-3 sm:space-y-4">
+                  <Skeleton className="h-12 sm:h-10 w-full rounded-xl" />
+                  <Skeleton className="h-12 sm:h-10 w-full rounded-xl" />
+                  <Skeleton className="h-12 sm:h-10 w-full rounded-xl" />
                 </div>
               ) : tasksForToday.length === 0 ? (
-                <div className="text-center py-8 flex flex-col items-center">
-                  <PremiumClipboard size={64} className="mb-2" />
-                  <p className="text-muted-foreground font-medium">No task for today</p>
+                <div className="text-center py-8 sm:py-10 flex flex-col items-center">
+                  <PremiumClipboard size={56} className="mb-3" />
+                  <p className="text-sm sm:text-base text-muted-foreground font-medium">No task for today</p>
                 </div>
               ) : (
                 <motion.div
