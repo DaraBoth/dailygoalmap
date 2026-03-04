@@ -151,7 +151,7 @@ function Calendar({
   };
 
   return (
-    <div className={cn("p-3 rounded-md border bg-background", className)}>
+    <div className={cn("p-4 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-white/30 dark:border-white/20 shadow-xl min-w-[320px]", className)}>
       <div className="flex justify-between items-center mb-4 px-2">
         <Button
           variant="outline"

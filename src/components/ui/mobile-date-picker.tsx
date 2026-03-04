@@ -85,7 +85,7 @@ export function MobileDatePicker({
           {date ? format(date, "yyyy-MM-dd") : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0 z-[150]" align="start" sideOffset={8}>
         <Calendar
           mode="single"
           selected={date}
