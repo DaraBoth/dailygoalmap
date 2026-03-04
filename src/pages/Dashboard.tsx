@@ -77,7 +77,6 @@ const Dashboard = () => {
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [offline, setOffline] = useState(!navigator.onLine);
   const [offlineGoals, setOfflineGoals] = useState<Goal[]>([]);
-
   const isMobile = useIsMobile();
   const { goToGoal } = useRouterNavigation();
   const { markGoalAsComplete, archiveGoal } = useGoalStatus();
