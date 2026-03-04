@@ -1,14 +1,16 @@
 import { Task } from "./types";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { X, CalendarIcon, CheckCircle2, Circle, Edit2, Trash2, Clock, AlertCircle, Tag, Loader2, Sparkles, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { TaskTags } from "./TaskTags";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { openCalendarOptionsDialog } from "@/utils/calendarIntegration";
 import { MarkdownRenderer } from "../ui/MarkdownRenderer";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TaskDetailsSidebarProps {
   isOpen: boolean;
@@ -33,6 +35,7 @@ const TaskDetailsSidebar = ({
 }: TaskDetailsSidebarProps) => {
 
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [isAddingReminder, setIsAddingReminder] = useState(false);
 
   const handleAddToReminders = async () => {
@@ -69,80 +72,77 @@ const TaskDetailsSidebar = ({
 
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ x: "100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "100%" }}
-          transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          className="fixed right-0 top-0 h-full w-full sm:w-[480px] bg-background z-50 shadow-2xl border-l border-border"
-        >
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent 
+        side={isMobile ? "bottom" : "right"}
+        className={cn(
+          "p-0 overflow-hidden",
+          isMobile ? "h-[90vh] rounded-t-3xl" : "w-full sm:w-[480px] lg:w-[540px]"
+        )}
+      >
           {selectedTask ? (
             <div className="h-full flex flex-col">
-              {/* Notion-style Minimal Header */}
-              <div className="flex items-center justify-between px-6 py-3 border-b border-border/50">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={onClose}
-                    className="h-7 w-7 rounded-md hover:bg-muted transition-colors flex items-center justify-center"
-                  >
-                    <X className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                  <span className="text-xs text-muted-foreground font-medium">{goalTitle}</span>
+              {/* Header */}
+              <SheetHeader className="flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-b border-border/50">
+                <div className="flex items-center justify-between gap-3">
+                  <SheetTitle className="text-xs sm:text-sm text-muted-foreground font-medium truncate">{goalTitle}</SheetTitle>
+                  
+                  <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                    {onEditTask && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEditTask(selectedTask)}
+                        className="h-8 sm:h-9 px-2 sm:px-3 rounded-xl text-xs sm:text-sm"
+                      >
+                        <Edit2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1.5" />
+                        <span className="hidden sm:inline">Edit</span>
+                      </Button>
+                    )}
+                    {onDeleteTask && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDeleteTask(selectedTask.id)}
+                        className="h-8 sm:h-9 px-2 sm:px-3 rounded-xl text-xs sm:text-sm text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1.5" />
+                        <span className="hidden sm:inline">Delete</span>
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                
-                <div className="flex items-center gap-2">
-                  {onEditTask && (
-                    <button
-                      onClick={() => onEditTask(selectedTask)}
-                      className="h-7 px-3 rounded-md hover:bg-muted transition-colors text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-1.5"
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                      Edit
-                    </button>
-                  )}
-                  {onDeleteTask && (
-                    <button
-                      onClick={() => onDeleteTask(selectedTask.id)}
-                      className="h-7 px-3 rounded-md hover:bg-destructive/10 transition-colors text-xs font-medium text-muted-foreground hover:text-destructive flex items-center gap-1.5"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Delete
-                    </button>
-                  )}
-                </div>
-              </div>
+              </SheetHeader>
 
-              {/* Notion-style Page Content */}
+              {/* Content */}
               <div className="flex-1 overflow-y-auto">
-                <div className="max-w-3xl mx-auto px-12 py-8">
+                <div className="max-w-3xl mx-auto px-4 sm:px-8 lg:px-12 py-4 sm:py-6 lg:py-8">
                   {/* Icon + Title (Notion style) */}
-                  <div className="mb-6">
+                  <div className="mb-4 sm:mb-6">
                     <div className="flex items-start gap-2 mb-2">
                       <div className={cn(
-                        "h-6 w-6 rounded-md flex items-center justify-center shrink-0 mt-1.5",
+                        "h-5 w-5 sm:h-6 sm:w-6 rounded-md flex items-center justify-center shrink-0 mt-1 sm:mt-1.5",
                         selectedTask.completed 
                           ? "bg-green-500/10 text-green-600 dark:text-green-500" 
                           : "bg-amber-500/10 text-amber-600 dark:text-amber-500"
                       )}>
                         {selectedTask.completed ? (
-                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <CheckCircle2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         ) : (
-                          <Circle className="h-3.5 w-3.5" />
+                          <Circle className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         )}
                       </div>
-                      <h1 className="text-3xl font-bold text-foreground leading-tight flex-1 break-words">
+                      <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground leading-tight flex-1 break-words">
                         {selectedTask.title}
                       </h1>
                     </div>
                   </div>
 
                   {/* Properties (Notion style) */}
-                  <div className="space-y-1 mb-8 pb-8 border-b border-border/50">
+                  <div className="space-y-1 mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-border/50">
                     {/* Status Property */}
                     <div className="group flex items-center hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-md transition-colors">
-                      <div className="w-32 shrink-0">
+                      <div className="w-20 sm:w-24 lg:w-32 shrink-0">
                         <span className="text-xs font-medium text-muted-foreground">Status</span>
                       </div>
                       <button
@@ -164,10 +164,10 @@ const TaskDetailsSidebar = ({
 
                     {/* Date Property */}
                     <div className="group flex items-center hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-md transition-colors">
-                      <div className="w-32 shrink-0">
+                      <div className="w-20 sm:w-24 lg:w-32 shrink-0">
                         <span className="text-xs font-medium text-muted-foreground">Date</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-foreground">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-foreground">
                         <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
                         {selectedDate ? format(selectedDate, 'MMM d, yyyy') : format(new Date(selectedTask.start_date), 'MMM d, yyyy')}
                       </div>
@@ -176,10 +176,10 @@ const TaskDetailsSidebar = ({
                     {/* Time Property */}
                     {selectedTask.daily_start_time && (
                       <div className="group flex items-center hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-md transition-colors">
-                        <div className="w-32 shrink-0">
+                        <div className="w-20 sm:w-24 lg:w-32 shrink-0">
                           <span className="text-xs font-medium text-muted-foreground">Time</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-foreground">
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-foreground">
                           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                           {selectedTask.daily_start_time.slice(0, 5)} - {selectedTask.daily_end_time?.slice(0, 5) ?? '...'}
                         </div>
@@ -189,7 +189,7 @@ const TaskDetailsSidebar = ({
                     {/* Tags Property */}
                     {selectedTask.tags && selectedTask.tags.length > 0 && (
                       <div className="group flex items-start hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-md transition-colors">
-                        <div className="w-32 shrink-0 pt-0.5">
+                        <div className="w-20 sm:w-24 lg:w-32 shrink-0 pt-0.5">
                           <span className="text-xs font-medium text-muted-foreground">Tags</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
@@ -207,10 +207,10 @@ const TaskDetailsSidebar = ({
 
                     {/* Created Property */}
                     <div className="group flex items-center hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-md transition-colors">
-                      <div className="w-32 shrink-0">
+                      <div className="w-20 sm:w-24 lg:w-32 shrink-0">
                         <span className="text-xs font-medium text-muted-foreground">Created</span>
                       </div>
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
                         {format(new Date(selectedTask.created_at), "MMM d, yyyy 'at' h:mm a")}
                       </span>
                     </div>
@@ -227,36 +227,35 @@ const TaskDetailsSidebar = ({
                 </div>
               </div>
 
-              {/* Notion-style Bottom Actions */}
-              <div className="border-t border-border/50 px-6 py-3 flex items-center gap-2">
+              {/* Bottom Actions */}
+              <div className="border-t border-border/50 px-4 sm:px-6 py-2.5 sm:py-3 flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleAddToReminders}
                   disabled={isAddingReminder}
-                  className="h-8 text-xs"
+                  className="h-8 sm:h-9 text-xs sm:text-sm px-3 sm:px-4"
                 >
                   {isAddingReminder ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5 sm:mr-2" />
                   ) : (
-                    <Sparkles className="h-3.5 w-3.5 mr-2" />
+                    <Sparkles className="h-3.5 w-3.5 mr-1.5 sm:mr-2" />
                   )}
                   {isAddingReminder ? "Adding..." : "Add to Calendar"}
                 </Button>
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center h-full p-12 text-center">
-              <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center mb-4">
-                <AlertCircle className="h-6 w-6 text-muted-foreground/40" />
+            <div className="flex-1 flex flex-col items-center justify-center h-full p-6 sm:p-8 lg:p-12 text-center">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-muted/50 flex items-center justify-center mb-3 sm:mb-4">
+                <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground/40" />
               </div>
-              <h3 className="text-base font-semibold text-foreground mb-1">No task selected</h3>
-              <p className="text-sm text-muted-foreground">Select a task to view its details</p>
+              <h3 className="text-sm sm:text-base font-semibold text-foreground mb-1">No task selected</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground">Select a task to view its details</p>
             </div>
           )}
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </SheetContent>
+      </Sheet>
   );
 };
 

@@ -1,6 +1,6 @@
 
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Task } from "./types";
 import { AnimatePresence, motion } from "framer-motion";
@@ -15,6 +15,7 @@ import remarkGfm from "remark-gfm";
 import { openCalendarOptionsDialog } from "@/utils/calendarIntegration";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TaskDetailsDialogProps {
   isOpen: boolean;

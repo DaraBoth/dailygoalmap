@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import UserContextStep from "../goal-form/UserContextStep";
 import { GoalFormValues } from "../goal-form/types";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface EditGoalInfoModalProps {
   open: boolean;
@@ -68,18 +70,26 @@ const EditGoalInfoModal = ({ open, onOpenChange, goal, onSuccess }: EditGoalInfo
     }
   };
 
+  const isMobile = useIsMobile();
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Info className="w-5 h-5" />
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent 
+        side={isMobile ? "bottom" : "right"}
+        className={cn(
+          "overflow-hidden flex flex-col",
+          isMobile ? "h-[90vh] rounded-t-3xl" : "w-full sm:w-[600px] lg:w-[800px] xl:w-[900px]"
+        )}
+      >
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Info className="w-4 h-4 sm:w-5 sm:h-5" />
             Edit Goal Information
-          </DialogTitle>
-          <DialogDescription>
+          </SheetTitle>
+          <SheetDescription className="text-xs sm:text-sm">
             Update your personal information to help AI generate better, more personalized tasks
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
           <TabsList className="grid w-full grid-cols-3">
@@ -219,16 +229,25 @@ const EditGoalInfoModal = ({ open, onOpenChange, goal, onSuccess }: EditGoalInfo
           </div>
         </Tabs>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+        <div className="flex justify-end gap-2 pt-3 sm:pt-4 border-t px-4 sm:px-6 pb-4 sm:pb-6">
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)} 
+            disabled={isSubmitting}
+            className="h-9 sm:h-10 text-xs sm:text-sm"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isSubmitting}>
+          <Button 
+            onClick={handleSave} 
+            disabled={isSubmitting}
+            className="h-9 sm:h-10 text-xs sm:text-sm"
+          >
             {isSubmitting ? "Saving..." : "Save Changes"}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };
 

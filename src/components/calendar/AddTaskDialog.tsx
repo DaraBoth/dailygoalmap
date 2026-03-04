@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import moment from "moment";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { MobileDatePicker } from "@/components/ui/mobile-date-picker";
 import { MobileTimePicker } from "@/components/ui/mobile-time-picker";
@@ -24,6 +24,7 @@ import { motion } from "framer-motion";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { AutoResizingDescription } from "./AutoResizingDescription";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AddTaskDialogProps {
   isOpen: boolean;
@@ -158,28 +159,27 @@ const AddTaskDialog = ({
     setDailyEnd(nowReset.add(1, "hour").format("HH:mm"));
   };
 
+  const isMobile = useIsMobile();
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[80vh] max-w-[380px] sm:max-w-[380px] md:max-w-[500px] lg:max-w-2xl p-0 overflow-hidden bg-zinc-950/85 dark:bg-zinc-950/85 backdrop-blur-xl border border-white/10 text-white rounded-2xl shadow-2xl flex flex-col">
-        <div className="flex flex-col h-full max-h-[80vh]">
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent 
+        side={isMobile ? "bottom" : "right"}
+        className={cn(
+          "p-0 overflow-hidden bg-zinc-950/85 dark:bg-zinc-950/85 backdrop-blur-xl border border-white/10 text-white shadow-2xl flex flex-col",
+          isMobile ? "h-[90vh] rounded-t-3xl" : "w-full sm:w-[480px] lg:w-[600px]"
+        )}
+      >
+        <div className="flex flex-col h-full">
           {/* Fixed header */}
-          <div className="flex-shrink-0 z-20 bg-white/5 border-b border-white/10">
-            <div className="flex items-center justify-between p-4 sm:p-5">
-              <DialogTitle className="flex items-center gap-3 text-lg sm:text-xl font-semibold text-white">
-                <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                  <CalendarClock className="h-5 w-5 text-blue-400" />
-                </div>
-                Add New Task
-              </DialogTitle>
-              <button
-                onClick={onClose}
-                className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                <X className="h-5 w-5" />
-                <span className="sr-only">Close</span>
-              </button>
-            </div>
-          </div>
+          <SheetHeader className="flex-shrink-0 z-20 bg-white/5 border-b border-white/10 px-4 sm:px-5 py-4 sm:py-5">
+            <SheetTitle className="flex items-center gap-3 text-base sm:text-lg lg:text-xl font-semibold text-white">
+              <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                <CalendarClock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
+              </div>
+              Add New Task
+            </SheetTitle>
+          </SheetHeader>
 
           {/* Scrollable content area */}
           <div className="flex-1 overflow-y-auto no-scrollbar">
@@ -342,8 +342,8 @@ const AddTaskDialog = ({
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };
 

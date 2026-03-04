@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useMemo } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface FinancialData {
   currency: string;
@@ -110,21 +111,28 @@ const TaskDetails = ({
   ];
 
   const activeTask = tasksForSelectedDate.length > 0 ? tasksForSelectedDate[activeTaskIndex] : null;
+  const isMobile = useIsMobile();
   
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-[480px] sm:max-w-[520px] md:max-w-[600px] lg:max-w-[700px] xl:max-w-[800px] p-0 rounded-2xl sm:rounded-3xl overflow-hidden bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl">
-        <DialogHeader className="p-4 sm:p-6 lg:p-8 border-b border-white/20 dark:border-white/10 bg-gradient-to-r from-teal-500/80 to-blue-500/80 dark:from-teal-600/80 dark:to-blue-600/80 backdrop-blur-md text-white rounded-t-2xl sm:rounded-t-3xl">
-          <DialogTitle className="text-xl font-bold flex items-center gap-3">
+    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+      <SheetContent 
+        side={isMobile ? "bottom" : "right"}
+        className={cn(
+          "p-0 overflow-hidden bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl",
+          isMobile ? "h-[90vh] rounded-t-3xl" : "w-full sm:w-[520px] lg:w-[700px] xl:w-[800px]"
+        )}
+      >
+        <SheetHeader className="p-4 sm:p-6 lg:p-8 border-b border-white/20 dark:border-white/10 bg-gradient-to-r from-teal-500/80 to-blue-500/80 dark:from-teal-600/80 dark:to-blue-600/80 backdrop-blur-md text-white">
+          <SheetTitle className="text-lg sm:text-xl font-bold flex items-center gap-3">
             <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
-              <Calendar className="w-5 h-5" />
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             Task Details
-          </DialogTitle>
-          <DialogDescription className="text-white/90 font-medium">
+          </SheetTitle>
+          <SheetDescription className="text-white/90 font-medium text-xs sm:text-sm">
             {selectedDate && format(selectedDate, "MMMM d, yyyy")}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         
         <div className="p-4 sm:p-6 lg:p-8 space-y-4 lg:space-y-6">
           <AnimatePresence>
@@ -276,8 +284,8 @@ const TaskDetails = ({
             </motion.div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };
 

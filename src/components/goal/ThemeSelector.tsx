@@ -1,13 +1,6 @@
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Palette, Upload, Trash2, X, Edit2, Check, Globe } from "lucide-react";
@@ -252,32 +245,38 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
         <button className="p-2 border bg-background/50 hover:bg-accent h-7 sm:h-8 px-1.5 sm:px-2 backdrop-blur-sm transition-all duration-200 rounded-xl flex items-center gap-1 sm:gap-2">
           <Palette className={`h-3.5 w-3.5 sm:h-4 sm:w-4`} />
-          {!isMobile && <span>Theme</span>}
+          {!isMobile && <span className="text-xs sm:text-sm">Theme</span>}
         </button>
-      </DialogTrigger>
+      </SheetTrigger>
 
-      <DialogContent className="sm:max-w-[700px] w-full max-h-[90vh] overflow-hidden rounded-3xl bg-background/95 backdrop-blur-2xl border-border/20 p-0">
-        <DialogHeader className="px-6 pt-6 pb-0 flex-shrink-0">
-          <DialogTitle className="flex items-center justify-between">
+      <SheetContent 
+        side={isMobile ? "bottom" : "right"} 
+        className={cn(
+          "overflow-hidden p-0",
+          isMobile ? "h-[85vh] rounded-t-3xl" : "w-full sm:max-w-[600px] lg:max-w-[700px]"
+        )}
+      >
+        <SheetHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 flex-shrink-0 border-b border-border/40">
+          <SheetTitle className="flex items-center justify-between text-base sm:text-lg">
             <span>{editingTheme ? 'Edit Theme' : 'Goal Themes'}</span>
-            <DialogClose asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+            <SheetClose asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl">
                 <X className="h-4 w-4" />
               </Button>
-            </DialogClose>
-          </DialogTitle>
-        </DialogHeader>
+            </SheetClose>
+          </SheetTitle>
+        </SheetHeader>
 
-        <ScrollArea className="flex-1 px-6 pb-6">
-          <div className="space-y-6 pt-4 ">
+        <ScrollArea className="flex-1 px-4 sm:px-6 pb-4 sm:pb-6 h-[calc(85vh-4rem)]">
+          <div className="space-y-4 sm:space-y-6 pt-4">
             {/* 🌈 Create/Edit Theme */}
-            <div className="space-y-4 p-4 md:p-6 border rounded-lg bg-card">
+            <div className="space-y-3 sm:space-y-4 p-3 sm:p-4 lg:p-6 border rounded-xl sm:rounded-2xl bg-card">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg">
+                <h3 className="font-semibold text-sm sm:text-base lg:text-lg">
                   {editingTheme ? 'Edit Theme' : 'Create New Theme'}
                 </h3>
                 {editingTheme && (
@@ -285,21 +284,23 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={handleCancelEdit}
+                    className="h-8 text-xs sm:text-sm"
                   >
                     Cancel
                   </Button>
                 )}
               </div>
 
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
                 {/* Left: Form */}
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   <div>
-                    <Label>Theme Name</Label>
+                    <Label className="text-xs sm:text-sm">Theme Name</Label>
                     <Input
                       value={newThemeName}
                       onChange={(e) => setNewThemeName(e.target.value)}
                       placeholder="e.g., Ocean Blue"
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
 
@@ -328,8 +329,8 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                   </div>
 
                   {/* ⚡ Add this inside the form section */}
-                  <div className="grid grid-cols-3 gap-2">
-                    <Label className="text-sm font-medium">Make Public</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs sm:text-sm">Make Public</Label>
                     <Switch
                       checked={isPublic}
                       onCheckedChange={setIsPublic}
@@ -339,7 +340,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                   <Button
                     onClick={handleSaveTheme}
                     disabled={!newThemeName.trim() || creating}
-                    className="w-full"
+                    className="w-full h-9 sm:h-10 text-sm"
                   >
                     {editingTheme ? (
                       <>
@@ -356,7 +357,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                 </div>
 
                 {/* Right: Preview */}
-                <div className="order-first md:order-last">
+                <div className="order-first lg:order-last">
                   <ThemePreview />
                 </div>
               </div>
@@ -365,26 +366,26 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
             {/* 🎨 Existing Themes */}
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <h3 className="font-semibold">Your Themes</h3>
+                <h3 className="font-semibold text-sm sm:text-base">Your Themes</h3>
                 {currentThemeId && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => onThemeSelect(null, true)}
+                    className="h-8 text-xs sm:text-sm"
                   >
                     Remove Theme
                   </Button>
                 )}
               </div>
 
-              <ScrollArea className="max-h-[50vh] rounded-lg border border-border/20 bg-foreground/[0.02] backdrop-blur-sm">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
-                  {loading ? (
-                    <p className="text-sm text-muted-foreground col-span-full text-center py-10">
+              <ScrollArea className="max-h-[40vh] sm:max-h-[50vh] rounded-xl border border-border/20 bg-foreground/[0.02] backdrop-blur-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 p-3 sm:p-4">{loading ? (
+                    <p className="text-xs sm:text-sm text-muted-foreground col-span-full text-center py-8 sm:py-10">
                       Loading themes...
                     </p>
                   ) : themes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground col-span-full text-center py-10">
+                    <p className="text-xs sm:text-sm text-muted-foreground col-span-full text-center py-8 sm:py-10">
                       No themes yet. Create your first one!
                     </p>
                   ) : (
@@ -392,28 +393,28 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                       <Card
                         key={theme.id}
                         onClick={() => onThemeSelect(theme.id)}
-                        className={`group relative overflow-hidden cursor-pointer rounded-2xl border transition-all duration-300 hover:shadow-xl hover:scale-[1.02] bg-card/80 backdrop-blur-sm ${currentThemeId === theme.id
+                        className={`group relative overflow-hidden cursor-pointer rounded-xl sm:rounded-2xl border transition-all duration-300 hover:shadow-lg hover:scale-[1.02] bg-card/80 backdrop-blur-sm ${currentThemeId === theme.id
                             ? "ring-2 ring-primary/50 shadow-lg shadow-primary/10"
                             : "hover:border-primary/30"
                           }`}
                       >
                         {/* Top bar with name + visibility + active badge */}
-                        <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
-                          <div className="flex items-center gap-2 bg-background/90 backdrop-blur-md px-3 py-1.5 rounded-lg text-sm font-semibold text-foreground shadow-md">
+                        <div className="absolute top-2 sm:top-3 left-2 sm:left-3 right-2 sm:right-3 flex items-center justify-between z-10">
+                          <div className="flex items-center gap-1.5 sm:gap-2 bg-background/90 backdrop-blur-md px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-foreground shadow-md">
                             {theme.name}
                             {theme.is_public && (
-                              <Globe className="h-4 w-4 text-blue-500" />
+                              <Globe className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
                             )}
                           </div>
                           {currentThemeId === theme.id && (
-                            <span className="text-xs font-bold text-primary bg-primary/20 px-2 py-1 rounded-md shadow-sm">
+                            <span className="text-[10px] sm:text-xs font-bold text-primary bg-primary/20 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md shadow-sm">
                               Active
                             </span>
                           )}
                         </div>
 
                         {/* Image grid preview - larger and more prominent */}
-                        <div className="grid grid-cols-3 gap-2 p-4 mt-12">
+                        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 p-3 sm:p-4 mt-8 sm:mt-12">
                           {[
                             { key: "goal_profile_image", label: "Profile" },
                             { key: "card_background_image", label: "Card" },
@@ -430,7 +431,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                 />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">
+                                <div className="w-full h-full flex items-center justify-center text-[9px] sm:text-[10px] text-muted-foreground">
                                   {label}
                                 </div>
                               )}
@@ -440,7 +441,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
 
                         {/* Edit/Delete buttons */}
                         {userId == theme.user_id && (
-                          <div className="absolute bottom-2 right-2 flex gap-1">
+                          <div className="absolute bottom-1.5 sm:bottom-2 right-1.5 sm:right-2 flex gap-1">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -448,9 +449,9 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                                 e.stopPropagation();
                                 handleEditTheme(theme);
                               }}
-                              className="h-7 w-7 p-0"
+                              className="h-6 w-6 sm:h-7 sm:w-7 p-0"
                             >
-                              <Edit2 className="h-3.5 w-3.5" />
+                              <Edit2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                             </Button>
                             {currentThemeId !== theme.id && (
                               <Button
@@ -460,9 +461,9 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                                   e.stopPropagation();
                                   deleteTheme(theme.id);
                                 }}
-                                className="h-7 w-7 p-0 text-destructive"
+                                className="h-6 w-6 sm:h-7 sm:w-7 p-0 text-destructive"
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
+                                <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                               </Button>
                             )}
                           </div>
@@ -476,7 +477,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
             </div>
           </div>
         </ScrollArea>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { MobileDatePicker } from "@/components/ui/mobile-date-picker";
 import { MobileTimePicker } from "@/components/ui/mobile-time-picker";
@@ -137,27 +137,26 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
   if (!task) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={popUpSize() + " p-0 overflow-hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/60 dark:border-white/25 text-gray-900 dark:text-white rounded-xl sm:rounded-2xl md:rounded-3xl shadow-2xl flex flex-col"}>
-        <div className="flex flex-col h-full max-h-[80vh]">
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent 
+        side={isMobile ? "bottom" : "right"}
+        className={cn(
+          "p-0 overflow-hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/60 dark:border-white/25 text-gray-900 dark:text-white shadow-2xl flex flex-col",
+          isMobile ? "h-[90vh] rounded-t-3xl" : "w-full sm:w-[480px] lg:w-[600px]"
+        )}
+      >
+        <div className="flex flex-col h-full">
           {/* Fixed header */}
           <div className="flex-shrink-0 z-20 bg-inherit">
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
-            <button
-              onClick={onClose}
-              className="absolute border bg-background/80 right-4 top-4 p-2 rounded-xl backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/30 transition-all duration-200 shadow-lg z-10"
-            >
-              <X className="h-5 w-5" />
-              <span className="sr-only">Close</span>
-            </button>
-            <DialogHeader className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-gray-200/60 dark:border-white/25">
-              <DialogTitle className="flex items-center gap-3 sm:gap-4 text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
+            <SheetHeader className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-gray-200/60 dark:border-white/25">
+              <SheetTitle className="flex items-center gap-3 sm:gap-4 text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">
                 <div className="p-1.5 sm:p-2 bg-blue-100/80 dark:bg-blue-900/50 backdrop-blur-sm rounded-lg sm:rounded-xl">
-                  <CalendarClock className="h-5 w-5 sm:h-6 sm:w-6 text-blue-700 dark:text-blue-300" />
+                  <CalendarClock className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-blue-700 dark:text-blue-300" />
                 </div>
                 Edit Tasks
-              </DialogTitle>
-            </DialogHeader>
+              </SheetTitle>
+            </SheetHeader>
           </div>
 
           {/* Scrollable content area with enhanced UX */}
@@ -334,8 +333,8 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
             </div>
           </motion.div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };
 
