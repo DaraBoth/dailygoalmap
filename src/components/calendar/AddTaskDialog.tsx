@@ -162,7 +162,7 @@ const AddTaskDialog = ({
   const isMobile = useIsMobile();
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
         side={isMobile ? "bottom" : "right"}
         className={cn(

@@ -137,7 +137,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
   if (!task) return null;
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
         side={isMobile ? "bottom" : "right"}
         className={cn(
