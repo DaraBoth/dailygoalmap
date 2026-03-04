@@ -25,18 +25,18 @@ const TaskList = ({
 }: TaskListProps) => {
   if (!selectedDate || tasks.length === 0) {
     return (
-      <div className="p-4 text-center text-muted-foreground">
+      <div className="p-3 sm:p-4 text-center text-xs sm:text-sm text-muted-foreground">
         {!selectedDate ? "Select a date to view tasks" : "No tasks for this day"}
       </div>
     );
   }
 
   return (
-    <div className="space-y-2 p-4">
-      <h3 className="text-sm font-medium text-foreground mb-2">
+    <div className="space-y-2 p-3 sm:p-4">
+      <h3 className="text-xs sm:text-sm font-medium text-foreground mb-2">
         Tasks for {format(selectedDate, "MMMM d, yyyy")}
       </h3>
-      <div className="space-y-3 pb-24">
+      <div className="space-y-2 sm:space-y-3 pb-20 sm:pb-24">
         {tasks.map((task, index) => (
           <ModernTaskItem
             key={task.id}

@@ -435,8 +435,8 @@ const Calendar = ({
       ref={calendarRef}
     >
       {isMobile ? (
-        <div className="h-full overflow-y-auto pb-28 pt-4 pb-safe-or-6 no-scrollbar">
-          <div className="">
+        <div className="h-full overflow-y-auto pb-24 sm:pb-28 pt-3 sm:pt-4 pb-safe-or-6 no-scrollbar">
+          <div className="px-2 sm:px-0">
             <CalendarContainer
               selectedDate={selectedDate}
               onDateChange={handleInternalDateChange}
@@ -452,7 +452,7 @@ const Calendar = ({
             />
           </div>
 
-          <div className="pb-safe-or-6">
+          <div className="pb-safe-or-6 mt-2 sm:mt-3">
             <TaskList
               selectedDate={selectedDate}
               tasks={selectedDate ? getTasksForDateWrapper(selectedDate) : []}
