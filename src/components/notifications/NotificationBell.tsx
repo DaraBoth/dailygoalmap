@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { NotificationList } from "./NotificationList";
 import { getUnreadCount } from "@/services/internalNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface NotificationBellProps {
   onUnreadChange?: (count: number, open?: boolean) => void;
@@ -45,51 +45,56 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onUnreadChan
     onUnreadChange?.(unread, open);
   }, [open, unread, onUnreadChange]);
 
-  // On mobile we use a Drawer/Sheet for better UX, on desktop a Popover
-  if (isMobile) {
-
-    return (
-      <>
-        <Button variant="ghost" size="icon" className="relative hover:bg-accent h-8 w-8 md:h-10 md:w-10" aria-label="Notifications" onClick={() => setOpen(true)}>
-          <Bell className="h-5 w-5" />
-          {unread > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-4 min-w-4 px-1 flex items-center justify-center shadow-lg">
-              {unread}
-            </span>
-          )}
-        </Button>
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent side="right" className="w-full sm:max-w-md p-0 bg-background/95 backdrop-blur-2xl border-l border-border">
-            <SheetHeader className="p-4 pb-2 border-b border-white/20 dark:border-white/10">
-              <SheetTitle className="text-lg font-semibold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                Notifications
-              </SheetTitle>
-            </SheetHeader>
-            <div className={isMobile ? "p-0" : "p-1"}>
-              <NotificationList onAnyAction={refreshUnread} onUnreadChanged={onUnreadChange} isOpen={open} isMobile />
-            </div>
-          </SheetContent>
-        </Sheet>
-      </>
-    );
-  }
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative hover:bg-accent h-8 w-8 md:h-10 md:w-10" aria-label="Notifications">
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="relative hover:bg-accent h-8 w-8 md:h-10 md:w-10" 
+          aria-label="Notifications"
+        >
           <Bell className="h-5 w-5" />
           {unread > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-4 min-w-4 px-1 flex items-center justify-center shadow-lg">
-              {unread}
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center shadow-lg animate-in zoom-in-50">
+              {unread > 99 ? '99+' : unread}
             </span>
           )}
         </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="p-0 w-80 sm:w-80 md:w-96 bg-popover/95 backdrop-blur-2xl border border-border rounded-xl shadow-2xl">
-        <NotificationList onAnyAction={refreshUnread} onUnreadChanged={onUnreadChange} isOpen={open} />
-      </PopoverContent>
-    </Popover>
+      </SheetTrigger>
+      <SheetContent 
+        side="right"
+        className={cn(
+          "p-0 overflow-hidden border-l shadow-2xl",
+          isMobile 
+            ? "w-full bg-background/98 backdrop-blur-3xl" 
+            : "w-full sm:w-[420px] lg:w-[460px] bg-background/95 backdrop-blur-2xl"
+        )}
+      >
+        <SheetHeader className="px-4 sm:px-5 py-4 border-b border-border/40 bg-gradient-to-r from-background via-primary/5 to-background">
+          <div className="flex items-center justify-between">
+            <SheetTitle className="text-base sm:text-lg font-bold tracking-tight">
+              <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Notifications
+              </span>
+            </SheetTitle>
+            {unread > 0 && (
+              <span className="px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-bold border border-red-500/20">
+                {unread} new
+              </span>
+            )}
+          </div>
+        </SheetHeader>
+        <div className="h-[calc(100vh-80px)] overflow-hidden">
+          <NotificationList 
+            onAnyAction={refreshUnread} 
+            onUnreadChanged={onUnreadChange} 
+            isOpen={open} 
+            isMobile={isMobile}
+          />
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 
