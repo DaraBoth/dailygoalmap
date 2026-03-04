@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { X, PlusCircle, Search, UserPlus, Key, Download, Bell } from "lucide-react";
 import { Goal } from "@/types/goal";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import { useGoalStatus } from "@/hooks/useGoalStatus";
@@ -8,11 +8,9 @@ import { useGoals } from "@/hooks/useGoals";
 import { useToast } from "@/hooks/use-toast";
 import { getDashboardGoals, saveDashboardGoals } from "@/pwa/offlineDashboardCache";
 import GlobalBackground from "@/components/ui/GlobalBackground";
-import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import GoalList from "@/components/dashboard/GoalList";
 import TodaysTasks from "@/components/dashboard/TodaysTasks";
 import { DeadlineNotifications } from "@/components/dashboard/DeadlineNotifications";
-import GoalForm from "@/components/GoalForm";
 import EditGoalSlidePanel from "@/components/dashboard/EditGoalSlidePanel";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 import ApiKeyGuide from "@/components/dashboard/ApiKeyGuide";
@@ -20,6 +18,20 @@ import InstallButton from "@/components/pwa/InstallButton";
 import NotificationSettings from "@/components/pwa/NotificationSettings";
 import CustomSearchModal from "@/components/search/CustomSearchModal";
 import { JoinGoalDialog } from "@/components/dashboard/JoinGoalDialog";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { UserMenu } from "@/components/user/UserMenu";
+import LogoAvatar from "@/components/ui/LogoAvatar";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import {
   Pagination,
   PaginationContent,
@@ -29,18 +41,6 @@ import {
   PaginationNext,
   PaginationPrevious
 } from "@/components/ui/pagination";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 // Modal Helper Components
 const ModalContent = ({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) => (
@@ -67,7 +67,6 @@ const ModalBody = ({ children }: { children: React.ReactNode }) => (
 );
 
 const Dashboard = () => {
-  const [showForm, setShowForm] = useState(false);
   const [showEditSlidePanel, setShowEditSlidePanel] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [showSearch, setShowSearch] = useState(false);
@@ -75,11 +74,11 @@ const Dashboard = () => {
   const [showApiKeyGuide, setShowApiKeyGuide] = useState(false);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [offline, setOffline] = useState(!navigator.onLine);
   const [offlineGoals, setOfflineGoals] = useState<Goal[]>([]);
 
-  const { goToGoal, router } = useRouterNavigation();
+  const isMobile = useIsMobile();
+  const { goToGoal } = useRouterNavigation();
   const { markGoalAsComplete, archiveGoal } = useGoalStatus();
   const {
     goals,
@@ -100,6 +99,7 @@ const Dashboard = () => {
   } = useGoals();
   const { toast } = useToast();
 
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === "k") {
@@ -114,6 +114,7 @@ const Dashboard = () => {
     };
   }, []);
 
+  // Offline support
   useEffect(() => {
     function handleOnlineStatus() {
       setOffline(!navigator.onLine);
@@ -146,54 +147,6 @@ const Dashboard = () => {
     }
   }, [goalToDelete, deleteGoal]);
 
-  const handleOpenJoinGoal = useCallback(() => {
-    setShowJoinGoalDialog(true);
-  }, []);
-
-  const handleJoinGoalClose = useCallback(() => {
-    setShowJoinGoalDialog(false);
-    fetchGoals(true); // Silent refresh
-  }, [fetchGoals]);
-
-  const handleOpenApiKeyGuide = useCallback(() => {
-    setShowApiKeyGuide(true);
-  }, []);
-
-  const handleCloseApiKeyGuide = useCallback(() => {
-    setShowApiKeyGuide(false);
-  }, []);
-
-  const handleOpenInstallButton = useCallback(() => {
-    setShowInstallButton(true);
-  }, []);
-
-  const handleCloseInstallButton = useCallback(() => {
-    setShowInstallButton(false);
-  }, []);
-
-  const handleOpenNotificationSettings = useCallback(() => {
-    setShowNotificationSettings(true);
-  }, []);
-
-  const handleCloseNotificationSettings = useCallback(() => {
-    setShowNotificationSettings(false);
-  }, []);
-
-  const handleGoalJoined = useCallback(() => {
-    fetchGoals(true); // Silent refresh
-    toast({
-      title: "Goal Joined",
-      description: "You have successfully joined the goal.",
-    });
-  }, [fetchGoals, toast]);
-
-  const handleKeyAdded = useCallback(() => {
-    toast({
-      title: "API Key Added",
-      description: "Your API key has been successfully added.",
-    });
-  }, [toast]);
-
   const handleEditGoal = useCallback((goal: Goal, event: React.MouseEvent) => {
     event.stopPropagation();
     setEditingGoal(goal);
@@ -201,7 +154,7 @@ const Dashboard = () => {
   }, []);
 
   const handleGoalUpdated = useCallback((updatedGoal: Goal) => {
-    fetchGoals(true); // Silent refresh
+    fetchGoals(true);
     setShowEditSlidePanel(false);
     setEditingGoal(null);
     toast({
@@ -209,11 +162,6 @@ const Dashboard = () => {
       description: "Your goal has been successfully updated.",
     });
   }, [fetchGoals, toast]);
-
-  const handleCloseEditSlidePanel = useCallback(() => {
-    setShowEditSlidePanel(false);
-    setEditingGoal(null);
-  }, []);
 
   const handleGoalAction = useCallback(async (goalId: string, action: string) => {
     const goal = goals.find(g => g.id === goalId);
@@ -223,7 +171,7 @@ const Dashboard = () => {
       case "Mark as complete":
         await markGoalAsComplete(goalId).then((res) => {
           if (res.success) {
-            fetchGoals(true); // Silent refresh
+            fetchGoals(true);
           }
           return res;
         });
@@ -235,7 +183,7 @@ const Dashboard = () => {
       case "Archive goal":
         await archiveGoal(goalId).then((res) => {
           if (res.success) {
-            fetchGoals(true); // Silent refresh
+            fetchGoals(true);
           }
           return res;
         })
@@ -253,137 +201,226 @@ const Dashboard = () => {
 
   return (
     <>
-      <title>Command Center | Orbit</title>
-      <meta name="description" content="Manage your personal and professional orbit with advanced AI-powered goal tracking." />
+      <title>Dashboard | Orbit</title>
+      <meta name="description" content="Manage your personal and professional goals with advanced AI-powered tracking." />
       <link rel="manifest" href="/manifest.json" />
 
       <div className="relative min-h-screen text-foreground selection:bg-primary/30">
         <GlobalBackground />
 
         <div className="relative z-10">
-          <DashboardHeader
-            onOpenSearch={() => setShowSearch(true)}
-            onOpenJoinGoal={handleOpenJoinGoal}
-            onOpenApiKeyGuide={handleOpenApiKeyGuide}
-            onOpenInstallButton={handleOpenInstallButton}
-            onOpenNotificationSettings={handleOpenNotificationSettings}
-            onAddGoal={handleToggleForm}
-          />
+          {/* Modern Header - Vercel/GitHub Style */}
+          <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
+            <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex h-16 items-center justify-between gap-4">
+                {/* Logo */}
+                <div className="flex items-center gap-3">
+                  <LogoAvatar size={32} />
+                  <span className="hidden sm:block font-bold text-xl">Orbit</span>
+                </div>
 
-          <main className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-12">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+                {/* Search Bar - Desktop */}
+                {!isMobile && (
+                  <div className="flex-1 max-w-md">
+                    <button
+                      onClick={() => setShowSearch(true)}
+                      className="w-full flex items-center gap-3 h-9 px-3 bg-secondary/50 hover:bg-secondary border border-border/40 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-all"
+                    >
+                      <Search className="h-4 w-4" />
+                      <span className="flex-1 text-left">Search goals...</span>
+                      <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border/40 bg-background px-1.5 font-mono text-[10px] font-medium opacity-50">
+                        <span className="text-xs">⌘</span>K
+                      </kbd>
+                    </button>
+                  </div>
+                )}
 
-              {/* Mission Control Sidebar (Today's Tasks) */}
-              <aside className="lg:col-span-4 order-2 lg:order-1">
-                <div className="sticky top-28 space-y-8">
-                  <motion.div
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ duration: 0.5 }}
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                  {/* Mobile Search */}
+                  {isMobile && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowSearch(true)}
+                      className="h-9 w-9"
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  )}
+
+                  {/* Join Goal - Desktop Only */}
+                  {!isMobile && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowJoinGoalDialog(true)}
+                            className="h-9 w-9"
+                          >
+                            <UserPlus className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Join Goal</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+
+                  {/* Create Goal */}
+                  <Button
+                    onClick={handleToggleForm}
+                    size={isMobile ? "sm" : "default"}
+                    className="gap-2 rounded-lg"
                   >
-                    <TodaysTasks />
-                  </motion.div>
+                    <PlusCircle className="h-4 w-4" />
+                    {!isMobile && <span>New Goal</span>}
+                  </Button>
+
+                  {/* Notification Bell */}
+                  <NotificationBell onUnreadChange={() => {}} />
+
+                  {/* Settings Menu */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-9 w-9">
+                        <Bell className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      {isMobile && (
+                        <>
+                          <DropdownMenuItem onClick={() => setShowJoinGoalDialog(true)}>
+                            <UserPlus className="mr-2 h-4 w-4" /> Join Goal
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
+                      <DropdownMenuItem onClick={() => setShowApiKeyGuide(true)}>
+                        <Key className="mr-2 h-4 w-4" /> API Keys
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowInstallButton(true)}>
+                        <Download className="mr-2 h-4 w-4" /> Install App
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowNotificationSettings(true)}>
+                        <Bell className="mr-2 h-4 w-4" /> Notifications
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* User Menu */}
+                  <UserMenu />
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content - GitHub/Vercel Style */}
+          <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+            
+            {/* Deadline Notifications */}
+            <DeadlineNotifications
+              goals={goals}
+              onGoalAction={handleGoalAction}
+            />
+
+            {/* Two Column Layout - Responsive */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+              
+              {/* Main Content - Goals */}
+              <div className="lg:col-span-8 space-y-6">
+                {/* Section Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Your Goals</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {goals.length === 0 ? 'No goals yet' : `${goals.length} active ${goals.length === 1 ? 'goal' : 'goals'}`}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Goals Grid */}
+                <GoalList
+                  goals={offline ? offlineGoals : goals}
+                  isLoading={offline ? false : isLoading}
+                  onDeleteGoal={confirmDelete}
+                  onEditGoal={handleEditGoal}
+                  isDeleting={isDeleting}
+                  sortOption={sortOption}
+                />
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center pt-8">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (currentPage > 1) setCurrentPage(currentPage - 1);
+                            }}
+                            className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                          />
+                        </PaginationItem>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter(page => Math.abs(page - currentPage) <= 1 || page === 1 || page === totalPages)
+                          .map((page, i, arr) => (
+                            <React.Fragment key={page}>
+                              {i > 0 && arr[i - 1] !== page - 1 && (
+                                <PaginationItem>
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              )}
+                              <PaginationItem>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => { e.preventDefault(); setCurrentPage(page); }}
+                                  isActive={currentPage === page}
+                                >
+                                  {page}
+                                </PaginationLink>
+                              </PaginationItem>
+                            </React.Fragment>
+                          ))}
+
+                        <PaginationItem>
+                          <PaginationNext
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                            }}
+                            className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
+              </div>
+
+              {/* Sidebar - Today's Tasks */}
+              <aside className="lg:col-span-4">
+                <div className="lg:sticky lg:top-24 space-y-6">
+                  <TodaysTasks />
                 </div>
               </aside>
-
-              {/* Primary Trajectory (Goal List) */}
-              <div className="lg:col-span-8 order-1 lg:order-2 space-y-12">
-                <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                >
-                  <DeadlineNotifications
-                    goals={goals}
-                    onGoalAction={handleGoalAction}
-                  />
-
-                  <div className="flex items-center justify-between mb-8">
-                    <div>
-                      <h1 className="text-3xl font-black tracking-tight text-foreground">My Orbits</h1>
-                      <p className="text-muted-foreground font-medium">Active trajectories in your ecosystem.</p>
-                    </div>
-                  </div>
-
-                  <GoalList
-                    goals={offline ? offlineGoals : goals}
-                    isLoading={offline ? false : isLoading}
-                    onDeleteGoal={confirmDelete}
-                    onEditGoal={handleEditGoal}
-                    isDeleting={isDeleting}
-                    sortOption={sortOption}
-                  />
-
-                  {/* Enhanced Pagination */}
-                  {totalPages > 1 && (
-                    <div className="mt-16 flex justify-center">
-                      <Pagination className="bg-background/40 backdrop-blur-2xl rounded-[2rem] border border-foreground/5 p-2 px-6 shadow-2xl">
-                        <PaginationContent className="gap-2">
-                          <PaginationItem>
-                            <PaginationPrevious
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                if (currentPage > 1) setCurrentPage(currentPage - 1);
-                              }}
-                              className={currentPage <= 1 ? "pointer-events-none opacity-20" : "hover:bg-primary/10 hover:text-primary rounded-xl transition-all font-bold"}
-                            />
-                          </PaginationItem>
-
-                          <div className="flex items-center gap-1 mx-2">
-                            {Array.from({ length: totalPages }, (_, i) => i + 1)
-                              .filter(page => Math.abs(page - currentPage) <= 1 || page === 1 || page === totalPages)
-                              .map((page, i, arr) => (
-                                <React.Fragment key={page}>
-                                  {i > 0 && arr[i - 1] !== page - 1 && <PaginationItem><PaginationEllipsis className="text-muted-foreground/40" /></PaginationItem>}
-                                  <PaginationItem>
-                                    <PaginationLink
-                                      href="#"
-                                      onClick={(e) => { e.preventDefault(); setCurrentPage(page); }}
-                                      isActive={currentPage === page}
-                                      className={`rounded-xl h-10 w-10 font-bold transition-all ${currentPage === page ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25' : 'hover:bg-primary/10 hover:text-primary text-muted-foreground'}`}
-                                    >
-                                      {page}
-                                    </PaginationLink>
-                                  </PaginationItem>
-                                </React.Fragment>
-                              ))}
-                          </div>
-
-                          <PaginationItem>
-                            <PaginationNext
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                              }}
-                              className={currentPage >= totalPages ? "pointer-events-none opacity-20" : "hover:bg-primary/10 hover:text-primary rounded-xl transition-all font-bold"}
-                            />
-                          </PaginationItem>
-                        </PaginationContent>
-                      </Pagination>
-                    </div>
-                  )}
-                </motion.div>
-              </div>
             </div>
           </main>
         </div>
 
-        {/* Overlays & Modals */}
-        <AnimatePresence>
-          {showForm && (
-            <GoalForm
-              onSuccess={baseHandleGoalCreated}
-              onClose={() => setShowForm(false)}
-            />
-          )}
-        </AnimatePresence>
-
+        {/* Modals & Dialogs */}
         <EditGoalSlidePanel
           isOpen={showEditSlidePanel}
           goal={editingGoal}
-          onClose={handleCloseEditSlidePanel}
+          onClose={() => {
+            setShowEditSlidePanel(false);
+            setEditingGoal(null);
+          }}
           onSuccess={handleGoalUpdated}
         />
 
@@ -395,44 +432,38 @@ const Dashboard = () => {
           goalTitle={goalToDelete?.title || ""}
         />
 
-        <ModalContent isOpen={showApiKeyGuide} onClose={handleCloseApiKeyGuide}>
-          <ModalHeader onClose={handleCloseApiKeyGuide}>System Configuration</ModalHeader>
-          <ModalBody><ApiKeyGuide onKeyAdded={handleKeyAdded} /></ModalBody>
+        <ModalContent isOpen={showApiKeyGuide} onClose={() => setShowApiKeyGuide(false)}>
+          <ModalHeader onClose={() => setShowApiKeyGuide(false)}>API Configuration</ModalHeader>
+          <ModalBody>
+            <ApiKeyGuide onKeyAdded={() => {
+              toast({ title: "API Key Added", description: "Your API key has been successfully added." });
+            }} />
+          </ModalBody>
         </ModalContent>
 
-        <ModalContent isOpen={showInstallButton} onClose={handleCloseInstallButton}>
-          <ModalHeader onClose={handleCloseInstallButton}>Deploy locally</ModalHeader>
+        <ModalContent isOpen={showInstallButton} onClose={() => setShowInstallButton(false)}>
+          <ModalHeader onClose={() => setShowInstallButton(false)}>Install App</ModalHeader>
           <ModalBody><InstallButton /></ModalBody>
         </ModalContent>
 
-        <ModalContent isOpen={showNotificationSettings} onClose={handleCloseNotificationSettings}>
-          <ModalHeader onClose={handleCloseNotificationSettings}>Alert Protocols</ModalHeader>
+        <ModalContent isOpen={showNotificationSettings} onClose={() => setShowNotificationSettings(false)}>
+          <ModalHeader onClose={() => setShowNotificationSettings(false)}>Notification Settings</ModalHeader>
           <ModalBody><NotificationSettings /></ModalBody>
         </ModalContent>
 
         <CustomSearchModal open={showSearch} onOpenChange={setShowSearch} />
 
-        <JoinGoalDialog isOpen={showJoinGoalDialog} onClose={handleJoinGoalClose} onGoalJoined={handleGoalJoined} />
-
-        <AlertDialog open={showLeaveConfirm} onOpenChange={setShowLeaveConfirm}>
-          <AlertDialogContent className="rounded-[2.5rem] border-foreground/5 bg-background/80 backdrop-blur-2xl p-8">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-2xl font-black">Abort Mission?</AlertDialogTitle>
-              <AlertDialogDescription className="text-lg font-medium">
-                Are you sure you want to exit the dashboard? Ongoing trajectories will remain active.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="mt-8 gap-4">
-              <AlertDialogCancel className="rounded-2xl h-14 px-8 border-foreground/10 hover:bg-accent font-bold">Stay</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => router.navigate({ to: '/' as any })}
-                className="rounded-2xl h-14 px-8 bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold"
-              >
-                Exit
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <JoinGoalDialog 
+          isOpen={showJoinGoalDialog} 
+          onClose={() => {
+            setShowJoinGoalDialog(false);
+            fetchGoals(true);
+          }} 
+          onGoalJoined={() => {
+            fetchGoals(true);
+            toast({ title: "Goal Joined", description: "You have successfully joined the goal." });
+          }} 
+        />
       </div>
     </>
   );
