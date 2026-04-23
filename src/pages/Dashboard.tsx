@@ -340,6 +340,7 @@ const Dashboard = () => {
                   isLoading={offline ? false : isLoading}
                   onDeleteGoal={confirmDelete}
                   onEditGoal={handleEditGoal}
+                  onLeaveGoal={() => fetchGoals(true)}
                   isDeleting={isDeleting}
                   sortOption={sortOption}
                 />

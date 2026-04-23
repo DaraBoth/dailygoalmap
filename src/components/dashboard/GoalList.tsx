@@ -35,6 +35,7 @@ export interface GoalListProps {
   sortOption: SortOption;
   onDeleteGoal: (goal: Goal, event: React.MouseEvent) => void;
   onEditGoal?: (goal: Goal, event: React.MouseEvent) => void;
+  onLeaveGoal?: (goalId: string) => void;
 }
 
 const GoalList: React.FC<GoalListProps> = React.memo(({
@@ -43,7 +44,8 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
   onDeleteGoal,
   isDeleting,
   sortOption,
-  onEditGoal
+  onEditGoal,
+  onLeaveGoal
 }) => {
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [isLeaving, setIsLeaving] = useState<string | null>(null);
@@ -89,8 +91,7 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
         description: "You have successfully left the goal.",
       });
 
-      // Refresh the page to update the goals list
-      window.location.reload();
+      onLeaveGoal?.(goalId);
     } catch (error) {
       console.error("Error leaving goal:", error);
       toast({
@@ -347,7 +348,11 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
                           </div>
                           <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
                             <CalendarDays className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary/60" />
-                            <span className="truncate">{format(new Date(goal.target_date), isMobile ? 'MMM d' : 'MMM d, yyyy')}</span>
+                            <span className="truncate">{(() => {
+                              if (!goal.target_date) return '—';
+                              const date = new Date(goal.target_date);
+                              return isNaN(date.getTime()) ? '—' : format(date, isMobile ? 'MMM d' : 'MMM d, yyyy');
+                            })()}</span>
                           </div>
                         </div>
                       </div>
