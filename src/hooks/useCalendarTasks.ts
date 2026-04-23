@@ -70,10 +70,8 @@ export const useCalendarTasks = ({
   }, [goalId, enableRealtimeForTasks]); // Added enableRealtimeForTasks to dependencies
 
   const getTasksForDateWrapper = useCallback((date: Date) => {
-    // Prioritize allTasks if provided, otherwise use internal tasks state
-    const currentTasks = allTasks || tasks;
-    return filterTasksByDate(currentTasks, date);
-  }, [allTasks, tasks]); // Removed filterTasksByDate from dependency array
+    return filterTasksByDate(tasks, date);
+  }, [tasks]);
 
   useEffect(() => {
     const loadFinancialData = () => {
@@ -283,7 +281,7 @@ export const useCalendarTasks = ({
       return;
     }
 
-    const tasksList = allTasks || tasks;
+    const tasksList = tasks;
 
     // Handle next task navigation
     if (direction === 'next') {
@@ -340,7 +338,7 @@ export const useCalendarTasks = ({
       const prevDay = getPreviousDay(baseDate);
       updateTaskStates(prevDay, null, 0);
     }
-  }, [selectedDate, selectedTask, selectedTaskIndex, getTasksForDateWrapper, allTasks, tasks]);
+  }, [selectedDate, selectedTask, selectedTaskIndex, getTasksForDateWrapper, tasks]);
 
   // Keep selectedTaskIndex in sync with the actual selectedTask when dialog reopens or tasks change
   useEffect(() => {
@@ -515,7 +513,7 @@ export const useCalendarTasks = ({
     dailySpendingLimit,
     isLoading,
     error,
-    tasks: allTasks || tasks,
+    tasks,
     isAddTaskDialogOpen,
     setIsAddTaskDialogOpen,
     handleDateChange,

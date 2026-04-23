@@ -358,7 +358,7 @@ const GoalDetail: React.FC = () => {
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden">
             <AnimatePresence mode="wait">
               {/* Overview/Tasks View */}
               {(activeTab === 'overview' || activeTab === 'tasks') && (

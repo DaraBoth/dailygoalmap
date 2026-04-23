@@ -43,7 +43,9 @@ const Calendar = ({
 }: CalendarProps) => {
 
   const calendarRef = useRef<HTMLDivElement>(null);
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const [showFAB, setShowFAB] = useState(false);
   const searchParams = useSearch({ strict: false }) as { date?: string; taskId?: string };
   const hasInitializedDate = useRef(false);
   const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
@@ -435,7 +437,16 @@ const Calendar = ({
       ref={calendarRef}
     >
       {isMobile ? (
-        <div className="h-full overflow-y-auto pb-24 sm:pb-28 pt-3 sm:pt-4 pb-safe-or-6 no-scrollbar">
+        <div
+          ref={mobileScrollRef}
+          className="h-full overflow-y-auto pb-24 sm:pb-28 pt-3 sm:pt-4 pb-safe-or-6 no-scrollbar"
+          onScroll={(e) => {
+            const scrollTop = (e.currentTarget as HTMLDivElement).scrollTop;
+            // The CalendarHeader "Add" button is approx 80px from the top.
+            // Show FAB only after user scrolls past it.
+            setShowFAB(scrollTop > 80);
+          }}
+        >
           <div className="px-2 sm:px-0">
             <CalendarContainer
               selectedDate={selectedDate}
@@ -449,6 +460,7 @@ const Calendar = ({
               onAddTask={handleAddTask}
               onOpenAddTaskDialog={() => setIsAddTaskDialogOpen(true)}
               onOpenTaskDetails={handleOpenTaskDetails}
+              showFAB={showFAB}
             />
           </div>
 

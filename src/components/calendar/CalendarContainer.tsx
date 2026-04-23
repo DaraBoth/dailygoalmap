@@ -19,6 +19,7 @@ interface CalendarContainerProps {
   onAddTask: (description: string, date: Date, time?: string) => void;
   onOpenAddTaskDialog: () => void;
   onOpenTaskDetails?: (task?: Task) => void;
+  showFAB?: boolean;
 }
 
 const CalendarContainer = ({
@@ -32,7 +33,8 @@ const CalendarContainer = ({
   error,
   onAddTask,
   onOpenAddTaskDialog,
-  onOpenTaskDetails
+  onOpenTaskDetails,
+  showFAB = false,
 }: CalendarContainerProps) => {
   const isMobile = useIsMobile();
 
@@ -58,7 +60,7 @@ const CalendarContainer = ({
           </div>
         </div>
       ) : (
-        <div className="relative">
+        <div className="relative w-full overflow-x-hidden">
           <CalendarDisplay
             selectedDate={selectedDate}
             onDateChange={(date) => {
@@ -78,8 +80,8 @@ const CalendarContainer = ({
             }}
           />
 
-          {/* Floating Action Button for mobile */}
-          {isMobile && (
+          {/* Floating Action Button for mobile - only shown when header Add button is off-screen */}
+          {showFAB && (
             <Button
               onClick={onOpenAddTaskDialog}
               variant="orbit"
