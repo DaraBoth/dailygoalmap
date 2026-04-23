@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, PlusCircle, Search, UserPlus, Key, Download, Bell } from "lucide-react";
+import { X, PlusCircle, Search, UserPlus, Key, Download, Bell, Settings2 } from "lucide-react";
 import { Goal } from "@/types/goal";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import { useGoalStatus } from "@/hooks/useGoalStatus";
@@ -280,7 +280,7 @@ const Dashboard = () => {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-9 w-9">
-                        <Bell className="h-4 w-4" />
+                        <Settings2 className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-52 sm:w-56">

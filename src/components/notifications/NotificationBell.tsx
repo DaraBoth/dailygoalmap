@@ -65,27 +65,16 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onUnreadChan
       <SheetContent 
         side="right"
         className={cn(
-          "p-0 overflow-hidden border-l shadow-2xl",
+          "p-0 overflow-hidden border-l shadow-2xl flex flex-col",
           isMobile 
             ? "w-full bg-background/98 backdrop-blur-3xl" 
             : "w-full sm:w-[420px] lg:w-[460px] bg-background/95 backdrop-blur-2xl"
         )}
       >
-        <SheetHeader className="px-4 sm:px-5 py-4 border-b border-border/40 bg-gradient-to-r from-background via-primary/5 to-background">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-base sm:text-lg font-bold tracking-tight">
-              <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Notifications
-              </span>
-            </SheetTitle>
-            {unread > 0 && (
-              <span className="px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-bold border border-red-500/20">
-                {unread} new
-              </span>
-            )}
-          </div>
+        <SheetHeader className="sr-only">
+          <SheetTitle>Notifications</SheetTitle>
         </SheetHeader>
-        <div className="h-[calc(100vh-80px)] overflow-hidden">
+        <div className="flex-1 overflow-hidden">
           <NotificationList 
             onAnyAction={refreshUnread} 
             onUnreadChanged={onUnreadChange} 

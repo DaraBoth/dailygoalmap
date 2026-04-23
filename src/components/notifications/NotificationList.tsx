@@ -6,6 +6,7 @@ import { NotificationItem } from "./NotificationItem";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface NotificationListProps {
   onAnyAction?: () => void;
@@ -243,8 +244,16 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
   );
 
   return (
-    <div className="w-full sm:w-80 md:w-96 rounded-3xl shadow-2xl flex flex-col max-h-[600px] bg-gradient-to-br from-white/80 to-gray-50/70 dark:from-gray-900/95 dark:to-gray-800/90 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/30">
-      <div className="text-sm font-semibold sticky top-0 border-b rounded-t-3xl border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md">
+    <div className={cn(
+      "flex flex-col",
+      isMobile
+        ? "w-full h-full"
+        : "w-full sm:w-80 md:w-96 rounded-3xl shadow-2xl max-h-[600px] bg-gradient-to-br from-white/80 to-gray-50/70 dark:from-gray-900/95 dark:to-gray-800/90 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/30"
+    )}>
+      <div className={cn(
+        "text-sm font-semibold sticky top-0 border-b border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md",
+        !isMobile && "rounded-t-3xl"
+      )}>
         <div className="px-4 sm:px-5 flex sm:flex-row sm:items-center justify-between pt-4 pb-3 gap-3">
           <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
             Notifications
@@ -267,9 +276,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
       </div>
       {/* Scrollable area */}
       <ScrollArea 
-      className={isMobile? `h-[100vh] max-h-[100vh] min-h-[calc(100vh-165px)]` :
-          `h-[90vh] max-h-[75vh] min-h-[200px] hide-scrollbar`
-        } 
+        className={isMobile ? "flex-1 h-full" : "h-[90vh] max-h-[75vh] min-h-[200px] hide-scrollbar"} 
         ref={viewportRef}
       >
         <div className="p-3 sm:p-4 space-y-2">
