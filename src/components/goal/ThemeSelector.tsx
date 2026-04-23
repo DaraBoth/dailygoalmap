@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { GoalTheme } from "@/types/theme";
 import { Switch } from "../ui/switch";
+import { cn } from "@/lib/utils";
 
 interface ThemeSelectorProps {
   userId: string;
