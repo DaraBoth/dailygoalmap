@@ -249,13 +249,16 @@ function RootComponent() {
     window.location.reload();
   };
 
-  // Show loading screen while initializing auth
+  // Show minimal loading screen while initializing auth (fast initial render)
   if (authState.isLoading) {
     return (
-      <EnhancedLoading
-        variant="auth"
-        message="Establishing secure link..."
-      />
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <EnhancedLoading
+          variant="minimal"
+          message="Loading..."
+          fullPage={false}
+        />
+      </div>
     )
   }
 

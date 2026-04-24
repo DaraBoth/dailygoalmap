@@ -138,8 +138,18 @@ const GoalDetail: React.FC = () => {
     const channel = supabase
       .channel(`task-changes-${goalId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `goal_id=eq.${goalId}` }, async (payload) => {
-        const { data, error } = await supabase.from('tasks').select('*').eq('goal_id', goalId);
-        if (!error && data) setTasks(data as Task[]);
+        // Handle realtime updates more efficiently - update only the affected task
+        if (payload.eventType === 'INSERT' && payload.new) {
+          setTasks(prev => [...prev, payload.new as Task]);
+        } else if (payload.eventType === 'UPDATE' && payload.new) {
+          setTasks(prev => prev.map(t => t.id === payload.new.id ? payload.new as Task : t));
+        } else if (payload.eventType === 'DELETE' && payload.old) {
+          setTasks(prev => prev.filter(t => t.id !== payload.old.id));
+        } else {
+          // Fallback: refetch all tasks only if we can't handle the specific change
+          const { data, error } = await supabase.from('tasks').select('*').eq('goal_id', goalId);
+          if (!error && data) setTasks(data as Task[]);
+        }
       })
       .subscribe();
 

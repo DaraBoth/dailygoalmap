@@ -15,5 +15,8 @@ export function useIsMobile() {
     return () => mql.removeEventListener("change", onChange)
   }, [])
 
+  // Coerce to boolean for backward compatibility
+  // Note: Returns false on first render, causing a one-frame layout flash on mobile
+  // This is acceptable for a pure SPA (no SSR hydration issues)
   return !!isMobile
 }

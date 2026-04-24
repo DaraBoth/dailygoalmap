@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Goal, SortOption } from "@/types/goal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { routeCache, CacheKeys } from "@/services/routeCache";
 
 export const useGoals = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -28,6 +29,19 @@ export const useGoals = () => {
         throw new Error("Failed to fetch user information");
       }
       const userId = userData.user.id;
+
+      // Check route cache first (route loader may have preloaded this)
+      const sortKey = `${sortOption.field}_${sortOption.direction}`;
+      const cacheKey = CacheKeys.userGoals(userId, sortKey);
+      const cachedGoals = routeCache.get(cacheKey);
+
+      if (cachedGoals && !silent) {
+        console.log('[useGoals] Using cached goals from route loader');
+        setAllGoals(cachedGoals);
+        applyClientSideFiltering(cachedGoals);
+        setIsLoading(false);
+        return;
+      }
 
       // Fetch goals created by the user
       const { data: createdGoals, error: createdGoalsError } = await supabase
@@ -149,18 +163,11 @@ export const useGoals = () => {
         }
       }
 
+      // Cache the fetched goals for 5 minutes
+      routeCache.set(cacheKey, typedGoals, 5 * 60 * 1000);
+
       setAllGoals(typedGoals);
-
-      // Calculate pagination
-      const totalPages = Math.ceil(typedGoals.length / itemsPerPage);
-      setTotalPages(totalPages);
-
-      // Get paginated goals
-      const startIndex = (currentPage - 1) * itemsPerPage;
-      const endIndex = startIndex + itemsPerPage;
-      const paginatedGoals = typedGoals.slice(startIndex, endIndex);
-
-      setGoals(paginatedGoals);
+      applyClientSideFiltering(typedGoals);
     } catch (error) {
       console.error("Error fetching goals:", error);
       toast({
@@ -171,6 +178,20 @@ export const useGoals = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Helper to apply client-side pagination
+  const applyClientSideFiltering = (typedGoals: Goal[]) => {
+    // Calculate pagination
+    const totalPages = Math.ceil(typedGoals.length / itemsPerPage);
+    setTotalPages(totalPages);
+
+    // Get paginated goals
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedGoals = typedGoals.slice(startIndex, endIndex);
+
+    setGoals(paginatedGoals);
   };
 
   useEffect(() => {

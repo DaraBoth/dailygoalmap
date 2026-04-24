@@ -58,22 +58,27 @@ export const Route = createFileRoute('/dashboard')({
       let profile = routeCache.get(profileKey)
       let fromCache = false
 
-      // If not in cache, fetch from database
-      if (!goals) {
-        goals = await fetchUserGoals(defaultSort)
-        routeCache.set(goalsKey, goals, 5 * 60 * 1000) // Cache for 5 minutes
-      } else {
-        fromCache = true
-      }
+      // If not in cache, fetch from database IN PARALLEL
+      if (!goals || !profile) {
+        const [goalsResult, profileResult] = await Promise.all([
+          goals ? Promise.resolve(goals) : fetchUserGoals(defaultSort),
+          profile ? Promise.resolve(profile) : supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', (context as any).user.id)
+            .single()
+            .then(({ data }) => data)
+        ])
 
-      if (!profile) {
-        const { data: profileData } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', (context as any).user.id)
-          .single()
-        profile = profileData
-        routeCache.set(profileKey, profile, 10 * 60 * 1000) // Cache for 10 minutes
+        if (!goals) {
+          goals = goalsResult
+          routeCache.set(goalsKey, goals, 5 * 60 * 1000) // Cache for 5 minutes
+        }
+
+        if (!profile) {
+          profile = profileResult
+          routeCache.set(profileKey, profile, 10 * 60 * 1000) // Cache for 10 minutes
+        }
       } else {
         fromCache = true
       }

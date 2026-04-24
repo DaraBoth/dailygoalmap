@@ -34,21 +34,21 @@ const GoalDetailHeader: React.FC<GoalDetailHeaderProps> = ({
     <div className="sticky top-0 z-40 w-full border-b border-border bg-background/80 backdrop-blur-xl transition-all duration-300">
       <div className="flex h-16 items-center px-4 md:px-8">
         <div className="flex items-center gap-4 flex-1">
-          {isMobile && onOpenSidebar && (
-            <Button variant="ghost" size="icon" className="-ml-2 mr-1" onClick={onOpenSidebar}>
-              <Menu className="h-5 w-5" />
-            </Button>
-          )}
+          {/* Back button - always visible */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 -ml-2 text-muted-foreground hover:text-foreground"
+            onClick={() => goToDashboard()}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="sr-only">Back to Dashboard</span>
+          </Button>
 
-          {!isMobile && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 -ml-2 text-muted-foreground hover:text-foreground"
-              onClick={() => goToDashboard()}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="sr-only">Back</span>
+          {isMobile && onOpenSidebar && (
+            <Button variant="ghost" size="icon" className="mr-1" onClick={onOpenSidebar}>
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Open Sidebar</span>
             </Button>
           )}
 
