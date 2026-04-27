@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLoaderData, useSearch, useParams } from '@tanstack/react-router';
+import { useLoaderData, useSearch, useParams, useNavigate } from '@tanstack/react-router';
 import { supabase } from '@/integrations/supabase/client';
 import GoalDetailHeader from '@/components/goal/GoalDetailHeader';
 import Calendar from '@/components/Calendar';
@@ -28,6 +28,7 @@ const GoalDetail: React.FC = () => {
   const loaderData = useLoaderData({ from: '/goal/$id' }) as any;
   const search = useSearch({ strict: false }) as any;
   const { toast } = useToast();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { user } = useAuth();
 
@@ -142,7 +143,8 @@ const GoalDetail: React.FC = () => {
         if (payload.eventType === 'INSERT' && payload.new) {
           setTasks(prev => [...prev, payload.new as Task]);
         } else if (payload.eventType === 'UPDATE' && payload.new) {
-          setTasks(prev => prev.map(t => t.id === payload.new.id ? payload.new as Task : t));
+          // Merge payload.new with the existing task to preserve any fields not included in the realtime payload
+          setTasks(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } as Task : t));
         } else if (payload.eventType === 'DELETE' && payload.old) {
           setTasks(prev => prev.filter(t => t.id !== payload.old.id));
         } else {
@@ -269,6 +271,16 @@ const GoalDetail: React.FC = () => {
               <div className="flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-4 lg:px-6">
                 {/* Mobile Menu Button & Back Button */}
                 <div className="flex items-center gap-2">
+                  {/* Back to Dashboard button - always visible */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 flex-shrink-0"
+                    onClick={() => navigate({ to: '/dashboard' })}
+                    title="Back to Dashboard"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
                   {isMobile && (
                     <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
                       <SheetTrigger asChild>
