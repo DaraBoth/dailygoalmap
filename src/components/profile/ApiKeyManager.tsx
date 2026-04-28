@@ -242,7 +242,7 @@ const ApiKeyManager = () => {
                   <SelectTrigger id="key-type" className="h-12 bg-white/[0.03] border-white/10 focus:border-blue-500/50 rounded-xl text-white font-bold">
                     <SelectValue placeholder="Select Service" />
                   </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-white/10 text-white rounded-xl">
+                  <SelectContent className="bg-zinc-900 border-white/10 text-white rounded-xl z-[200]">
                     <SelectItem value="gemini">Google Gemini</SelectItem>
                     <SelectItem value="openai">OpenAI (GPT)</SelectItem>
                     <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
