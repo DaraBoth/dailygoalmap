@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, UserCircle, Camera } from "lucide-react";
+import { Loader2, UserCircle, Camera, Bot, User2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { put } from "@vercel/blob";
@@ -17,6 +17,7 @@ interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
+  preferences: Record<string, unknown> | null;
 }
 
 interface ProfileFormProps {
@@ -29,6 +30,8 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [aboutYou, setAboutYou] = useState("");
+  const [aiInstructions, setAiInstructions] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -58,6 +61,8 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
           setDisplayName(data.display_name || "");
           setBio(data.bio || "");
           setAvatarUrl(data.avatar_url);
+          setAboutYou((data.preferences?.about_you as string) || "");
+          setAiInstructions((data.preferences?.custom_instructions as string) || "");
         } else {
           const { error: insertError } = await supabase
             .from('user_profiles')
@@ -80,6 +85,8 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
           setDisplayName(newProfile.display_name || "");
           setBio(newProfile.bio || "");
           setAvatarUrl(newProfile.avatar_url);
+          setAboutYou("");
+          setAiInstructions("");
         }
       } catch (error: any) {
         console.error("Error fetching profile:", error);
@@ -106,8 +113,10 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
     const nameChanged = displayName !== (profile.display_name || "");
     const bioChanged = bio !== (profile.bio || "");
     const avatarChanged = avatarUrl !== profile.avatar_url;
+    const aboutChanged = aboutYou !== ((profile.preferences?.about_you as string) || "");
+    const instrChanged = aiInstructions !== ((profile.preferences?.custom_instructions as string) || "");
 
-    setHasChanges(nameChanged || bioChanged || avatarChanged);
+    setHasChanges(nameChanged || bioChanged || avatarChanged || aboutChanged || instrChanged);
   }, [displayName, bio, avatarUrl, profile]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,6 +182,14 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("No active session");
 
+      // Build updated preferences (merge with existing)
+      const existingPrefs = (profile.preferences || {}) as Record<string, unknown>;
+      const updatedPrefs = {
+        ...existingPrefs,
+        about_you: aboutYou.trim(),
+        custom_instructions: aiInstructions.trim(),
+      };
+
       // Update profile in database
       const { error } = await supabase
         .from('user_profiles')
@@ -180,6 +197,7 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
           display_name: displayName,
           bio: bio,
           avatar_url: avatarUrl,
+          preferences: updatedPrefs,
           updated_at: new Date().toISOString()
         })
         .eq('id', profile.id);
@@ -197,11 +215,13 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
       if (updateUserError) throw updateUserError;
 
       // Update local state to match saved values
+      const updatedPrefsLocal = { ...(profile.preferences || {}), about_you: aboutYou.trim(), custom_instructions: aiInstructions.trim() };
       setProfile({
         ...profile,
         display_name: displayName,
         bio: bio,
-        avatar_url: avatarUrl
+        avatar_url: avatarUrl,
+        preferences: updatedPrefsLocal,
       });
 
       toast({
@@ -299,6 +319,55 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
           }}
         />
       )}
+
+      {/* AI Personalization Section */}
+      <div className="space-y-6 lg:space-y-8 border border-white/5 rounded-[1.5rem] p-5 lg:p-7 bg-white/[0.01]">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+            <Bot className="h-4 w-4 text-blue-400" />
+          </div>
+          <div>
+            <p className="text-sm font-black text-white tracking-tight">AI Personalization</p>
+            <p className="text-[10px] text-gray-500 font-medium">Help the AI understand who you are</p>
+          </div>
+        </div>
+
+        {/* About You */}
+        <div className="group/field space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <User2 className="h-3.5 w-3.5 text-gray-500 group-focus-within/field:text-blue-400 transition-colors" />
+            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 group-focus-within/field:text-blue-400 transition-colors">
+              About you
+            </Label>
+          </div>
+          <Textarea
+            value={aboutYou}
+            onChange={(e) => setAboutYou(e.target.value)}
+            placeholder="e.g. I'm a software engineer building a SaaS startup. I prefer direct, technical answers."
+            rows={3}
+            className="bg-white/[0.02] border-white/5 focus:border-blue-500/40 focus:ring-4 focus:ring-blue-500/10 rounded-[1.5rem] text-white font-bold placeholder:text-gray-700 transition-all text-sm resize-none py-4 px-5 shadow-inner group-hover/field:border-white/10"
+          />
+          <p className="text-[10px] text-gray-600 px-1">The AI uses this to tailor responses — your role, background, preferences.</p>
+        </div>
+
+        {/* Custom Instructions */}
+        <div className="group/field space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <Bot className="h-3.5 w-3.5 text-gray-500 group-focus-within/field:text-blue-400 transition-colors" />
+            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 group-focus-within/field:text-blue-400 transition-colors">
+              Custom instructions
+            </Label>
+          </div>
+          <Textarea
+            value={aiInstructions}
+            onChange={(e) => setAiInstructions(e.target.value)}
+            placeholder="e.g. Reply concisely. Always suggest breaking tasks into subtasks. Use bullet points."
+            rows={3}
+            className="bg-white/[0.02] border-white/5 focus:border-blue-500/40 focus:ring-4 focus:ring-blue-500/10 rounded-[1.5rem] text-white font-bold placeholder:text-gray-700 transition-all text-sm resize-none py-4 px-5 shadow-inner group-hover/field:border-white/10"
+          />
+          <p className="text-[10px] text-gray-600 px-1">How you want the AI to respond — tone, format, language, behavior.</p>
+        </div>
+      </div>
 
       {/* Form Fields */}
       <div className="grid gap-6 lg:gap-10">

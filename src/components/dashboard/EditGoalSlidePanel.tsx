@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Save, Calendar, Type, FileText, Tag } from "lucide-react";
+import { X, Save, Calendar, Type, FileText, Tag, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { MobileDatePicker } from "@/components/ui/mobile-date-picker";
 import { Goal, GoalType } from "@/types/goal";
 import { useUpdateGoal } from "@/hooks/useUpdateGoal";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
 interface EditGoalSlidePanelProps {
@@ -37,6 +38,8 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [targetDate, setTargetDate] = useState<Date>(new Date());
   const [goalType, setGoalType] = useState<GoalType>("general");
+  const [goalContext, setGoalContext] = useState("");
+  const [goalAiInstructions, setGoalAiInstructions] = useState("");
   const [isClosing, setIsClosing] = useState(false);
 
   const { updateGoal, isLoading } = useUpdateGoal();
@@ -49,7 +52,10 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
       setDescription(goal.description);
       setGoalType(goal.metadata.goal_type);
       setTargetDate(new Date(goal.target_date));
-      
+      // Load preferences
+      const prefs = (goal as any).preferences || {};
+      setGoalContext(prefs.context || "");
+      setGoalAiInstructions(prefs.custom_instructions || "");
       // Handle start date from metadata
       if (goal.metadata.start_date) {
         setStartDate(new Date(goal.metadata.start_date));
@@ -91,6 +97,11 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
     });
 
     if (result.success && result.goal) {
+      // Save preferences separately (not part of the updateGoal hook payload)
+      await supabase
+        .from('goals')
+        .update({ preferences: { context: goalContext.trim(), custom_instructions: goalAiInstructions.trim() } })
+        .eq('id', goal.id);
       onSuccess(result.goal);
       handleClose();
     }
@@ -103,6 +114,9 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
       setDescription(goal.description);
       setGoalType(goal.metadata.goal_type);
       setTargetDate(new Date(goal.target_date));
+      const prefs = (goal as any).preferences || {};
+      setGoalContext(prefs.context || "");
+      setGoalAiInstructions(prefs.custom_instructions || "");
       if (goal.metadata.start_date) {
         setStartDate(new Date(goal.metadata.start_date));
       }
@@ -234,6 +248,38 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
                   placeholder="Select due date"
                   className="bg-white/80 dark:bg-white/10 backdrop-blur-sm border-white/20 dark:border-white/10 rounded-xl"
                 />
+              </div>
+
+              {/* AI Context Section */}
+              <div className="space-y-4 pt-2 border-t border-white/10 dark:border-white/5">
+                <div className="flex items-center gap-2">
+                  <Bot className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">AI Context</span>
+                  <span className="text-[10px] text-gray-400 bg-blue-500/10 px-2 py-0.5 rounded-full">optional</span>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs text-gray-500">What is this goal about?</Label>
+                  <Textarea
+                    value={goalContext}
+                    onChange={(e) => setGoalContext(e.target.value)}
+                    placeholder="e.g. This is a team project to launch our mobile app by Q3. We have 3 developers and a designer."
+                    rows={3}
+                    className="bg-white/80 dark:bg-white/10 backdrop-blur-sm border-white/20 dark:border-white/10 rounded-xl resize-none text-sm"
+                  />
+                  <p className="text-[10px] text-gray-400">AI reads this to give better advice about your goal.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs text-gray-500">Goal-specific AI instructions</Label>
+                  <Textarea
+                    value={goalAiInstructions}
+                    onChange={(e) => setGoalAiInstructions(e.target.value)}
+                    placeholder="e.g. Always prioritize tasks by deadline. Remind me to update the team weekly."
+                    rows={2}
+                    className="bg-white/80 dark:bg-white/10 backdrop-blur-sm border-white/20 dark:border-white/10 rounded-xl resize-none text-sm"
+                  />
+                </div>
               </div>
             </div>
 
