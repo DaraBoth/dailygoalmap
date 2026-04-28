@@ -166,16 +166,16 @@ const AddTaskDialog = ({
       <SheetContent 
         side={isMobile ? "bottom" : "right"}
         className={cn(
-          "p-0 overflow-hidden bg-zinc-950/85 dark:bg-zinc-950/85 backdrop-blur-xl border border-white/10 text-white shadow-2xl flex flex-col",
+          "p-0 overflow-hidden bg-background border-border shadow-2xl flex flex-col",
           isMobile ? "h-[90vh] rounded-t-3xl" : "w-full sm:w-[480px] lg:w-[600px]"
         )}
       >
         <div className="flex flex-col h-full">
           {/* Fixed header */}
-          <SheetHeader className="flex-shrink-0 z-20 bg-white/5 border-b border-white/10 px-4 sm:px-5 py-4 sm:py-5">
-            <SheetTitle className="flex items-center gap-3 text-base sm:text-lg lg:text-xl font-semibold text-white">
+          <SheetHeader className="flex-shrink-0 z-20 bg-muted/30 border-b border-border px-4 sm:px-5 py-4 sm:py-5">
+            <SheetTitle className="flex items-center gap-3 text-base sm:text-lg lg:text-xl font-semibold text-foreground">
               <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                <CalendarClock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
+                <CalendarClock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 dark:text-blue-400" />
               </div>
               Add New Task
             </SheetTitle>
@@ -191,7 +191,7 @@ const AddTaskDialog = ({
                 <form id="add-task-form" onSubmit={handleSubmit} className="space-y-6">
                   {/* Title */}
                   <div className="space-y-2">
-                    <Label htmlFor="task-title" className="text-sm font-medium text-gray-300">
+                    <Label htmlFor="task-title" className="text-sm font-medium text-muted-foreground">
                       Title
                     </Label>
                     <Input
@@ -200,13 +200,13 @@ const AddTaskDialog = ({
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="What needs to be done?"
                       autoFocus
-                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-blue-500/50 focus:ring-blue-500/20 h-11"
+                      className="bg-background border-border h-11"
                     />
                   </div>
 
                   {/* Description */}
                   <div className="space-y-2">
-                    <Label htmlFor="task-description" className="text-sm font-medium text-gray-300">
+                    <Label htmlFor="task-description" className="text-sm font-medium text-muted-foreground">
                       Description
                     </Label>
                     <AutoResizingDescription
@@ -214,14 +214,14 @@ const AddTaskDialog = ({
                       value={taskDescription}
                       onChange={(v) => setTaskDescription(v)}
                       placeholder="Add details..."
-                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-blue-500/50 focus:ring-blue-500/20 min-h-[100px]"
+                      className="bg-background border-border min-h-[100px]"
                     />
                   </div>
 
                   {/* Date and Time Pickers */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-300">Start Date</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">Start Date</Label>
                       <MobileDatePicker
                         date={startDate}
                         minDate={undefined}
@@ -233,12 +233,12 @@ const AddTaskDialog = ({
                           if (moment(next).isAfter(endDate)) setEndDate(next);
                           setSelectedDate(next);
                         }}
-                        className="w-full bg-white/5 border-white/10 text-white"
+                        className="w-full"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-300">End Date</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">End Date</Label>
                       <MobileDatePicker
                         date={endDate}
                         minDate={startDate}
@@ -247,14 +247,14 @@ const AddTaskDialog = ({
                           if (!d) return;
                           setEndDate(moment(d).isBefore(startDate) ? startDate : d);
                         }}
-                        className="w-full bg-white/5 border-white/10 text-white"
+                        className="w-full"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-300">Start Time</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">Start Time</Label>
                       <MobileTimePicker
                         value={dailyStart}
                         onChange={(value) => {
@@ -267,12 +267,11 @@ const AddTaskDialog = ({
                           }
                         }}
                         onBlur={(e) => !e.currentTarget.value && setDailyStart(defaultDailyStart)}
-                        className="bg-white/5 border-white/10 text-white"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-300">End Time</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">End Time</Label>
                       <MobileTimePicker
                         value={dailyEnd}
                         onChange={(value) => {
@@ -285,7 +284,6 @@ const AddTaskDialog = ({
                           }
                         }}
                         onBlur={(e) => !e.currentTarget.value && setDailyEnd(dailyStart)}
-                        className="bg-white/5 border-white/10 text-white"
                       />
                     </div>
                   </div>
@@ -298,16 +296,16 @@ const AddTaskDialog = ({
                       className={cn(
                         "flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-sm",
                         isPriority
-                          ? "bg-red-500/10 border-red-500/20 text-red-400"
-                          : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white"
+                          ? "bg-red-500/10 border-red-500/20 text-red-500 dark:text-red-400"
+                          : "bg-muted/40 border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
                       <AlertCircle className="h-4 w-4" />
                       <span>{isPriority ? "High Priority" : "Normal Priority"}</span>
                     </button>
 
-                    <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-2 rounded-lg">
-                      <Label className="text-sm font-medium text-gray-300">Completed</Label>
+                    <div className="flex items-center gap-3 bg-muted/40 border border-border px-3 py-2 rounded-lg">
+                      <Label className="text-sm font-medium text-muted-foreground">Completed</Label>
                       <Switch checked={completed} onCheckedChange={setCompleted} />
                     </div>
                   </div>
@@ -317,13 +315,13 @@ const AddTaskDialog = ({
           </div>
 
           {/* Fixed button area */}
-          <div className="flex-shrink-0 z-20 p-5 bg-zinc-950/50 backdrop-blur-md border-t border-white/10 mt-auto">
+          <div className="flex-shrink-0 z-20 p-5 bg-background/95 border-t border-border mt-auto">
             <div className="flex gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => { resetForm(); onClose(); }}
-                className="flex-1 bg-transparent border-white/10 text-gray-300 hover:bg-white/5 hover:text-white h-11"
+                className="flex-1 h-11"
               >
                 Cancel
               </Button>
@@ -331,7 +329,7 @@ const AddTaskDialog = ({
                 type="submit"
                 form="add-task-form"
                 disabled={!title.trim() || isSubmitting}
-                className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white h-11 shadow-lg shadow-blue-900/20 border border-blue-500/50"
+                className="flex-[2] h-11"
               >
                 {isSubmitting ? (
                   <><Loader2 className="h-4 w-4 animate-spin mr-2" />Adding...</>

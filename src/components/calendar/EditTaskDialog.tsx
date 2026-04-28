@@ -141,7 +141,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
       <SheetContent 
         side={isMobile ? "bottom" : "right"}
         className={cn(
-          "p-0 overflow-hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/60 dark:border-white/25 text-gray-900 dark:text-white shadow-2xl flex flex-col",
+          "p-0 overflow-hidden bg-background border-border shadow-2xl flex flex-col",
           isMobile ? "h-[90vh] rounded-t-3xl" : "w-full sm:w-[480px] lg:w-[600px]"
         )}
       >
@@ -149,10 +149,10 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
           {/* Fixed header */}
           <div className="flex-shrink-0 z-20 bg-inherit">
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
-            <SheetHeader className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-gray-200/60 dark:border-white/25">
-              <SheetTitle className="flex items-center gap-3 sm:gap-4 text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">
-                <div className="p-1.5 sm:p-2 bg-blue-100/80 dark:bg-blue-900/50 backdrop-blur-sm rounded-lg sm:rounded-xl">
-                  <CalendarClock className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-blue-700 dark:text-blue-300" />
+            <SheetHeader className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-border">
+              <SheetTitle className="flex items-center gap-3 sm:gap-4 text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
+                <div className="p-1.5 sm:p-2 bg-blue-500/10 rounded-lg sm:rounded-xl">
+                  <CalendarClock className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-blue-500 dark:text-blue-400" />
                 </div>
                 Edit Tasks
               </SheetTitle>
@@ -290,7 +290,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
           </div>
         </div>
 
-        <div className="flex-shrink-0 sticky bottom-0 z-20 p-4 border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-sm">
+        <div className="flex-shrink-0 sticky bottom-0 z-20 p-4 border-t border-border bg-background/95 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
