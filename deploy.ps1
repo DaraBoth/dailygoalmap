@@ -65,13 +65,15 @@ if ($Version -ne "") {
 }
 
 # ── 3. Update version.json ────────────────────────────────────────────────────
-$newVersionJson = @{ version = $nextVersion } | ConvertTo-Json -Depth 1
-Set-Content -Path $VersionFile -Value $newVersionJson -Encoding UTF8
+# Write clean single-space JSON (ConvertTo-Json adds double spaces)
+$newVersionJson = "{`n    `"version`": `"$nextVersion`"`n}"
+[System.IO.File]::WriteAllText($VersionFile, $newVersionJson)
 
 # ── 4. Update package.json version field ─────────────────────────────────────
-$pkg = Get-Content $PackageFile -Raw | ConvertFrom-Json
-$pkg.version = $nextVersion
-$pkg | ConvertTo-Json -Depth 20 | Set-Content -Path $PackageFile -Encoding UTF8
+$pkgRaw = Get-Content $PackageFile -Raw
+# Use regex replace to avoid ConvertTo-Json reformatting the whole file
+$pkgRaw = $pkgRaw -replace '"version"\s*:\s*"[^"]*"', "`"version`": `"$nextVersion`""
+[System.IO.File]::WriteAllText($PackageFile, $pkgRaw)
 
 # ── 5. Git add, commit, push ──────────────────────────────────────────────────
 Write-Host ""
