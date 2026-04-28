@@ -1,11 +1,11 @@
 {
     "name":  "orbit",
     "private":  true,
-    "version": "1.8.4",
+    "version": "1.8.5",
     "type":  "module",
     "scripts":  {
                     "dev":  "vite",
-                    "build":  "vite build \u0026\u0026 pnpm run obfuscate",
+                    "build":  "vite build",
                     "obfuscate":  "javascript-obfuscator ./dist --output ./dist --exclude \u0027*.css\u0027",
                     "build:dev":  "vite build --mode development",
                     "lint":  "eslint .",
