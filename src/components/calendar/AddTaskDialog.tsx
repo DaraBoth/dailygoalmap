@@ -199,8 +199,8 @@ const AddTaskDialog = ({
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="What needs to be done?"
-                      autoFocus
-                      className="bg-background border-border h-11"
+                      autoFocus={!isMobile}
+                      className="bg-background border-border h-11 text-base"
                     />
                   </div>
 
@@ -214,7 +214,7 @@ const AddTaskDialog = ({
                       value={taskDescription}
                       onChange={(v) => setTaskDescription(v)}
                       placeholder="Add details..."
-                      className="bg-background border-border min-h-[100px]"
+                      className="bg-background border-border min-h-[100px] text-base"
                     />
                   </div>
 

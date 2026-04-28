@@ -55,9 +55,9 @@ export function MobileDatePicker({
           }
         }}
         className={cn(
-          "w-full h-10 px-3 py-2 text-sm bg-white/50 dark:bg-white/10 backdrop-blur-md border border-white/30 dark:border-white/20 rounded-xl transition-all duration-200",
+          "w-full h-11 px-3 py-2 text-[16px] bg-background border border-border rounded-xl transition-all duration-200",
           "focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50",
-          "text-gray-900 dark:text-white",
+          "text-foreground",
           className
         )}
       />
@@ -76,7 +76,7 @@ export function MobileDatePicker({
         <Button
           variant={"outline"}
           className={cn(
-            "w-full justify-start text-left font-medium bg-white/50 dark:bg-white/10 backdrop-blur-md border-white/30 dark:border-white/20 hover:bg-white/70 dark:hover:bg-white/20 rounded-xl transition-all duration-200",
+            "w-full justify-start text-left font-medium bg-background border-border hover:bg-muted/50 rounded-xl transition-all duration-200",
             !date && "text-muted-foreground",
             className
           )}
