@@ -16,9 +16,9 @@ import chatAIGif from '@/assets/images/image.png';
 import { cn } from '@/lib/utils';
 import { Task } from '@/components/calendar/types';
 import {
-  loadAllApiKeys, loadChatSession, saveChatSession,
+  loadAllApiKeys, loadChatSession, saveChatSession, loadPreferences,
   readAIFile, writeAIFile, listAIFiles, searchWeb, scrapeUrl,
-  type ApiKeys, type StoredChatMessage,
+  type ApiKeys, type StoredChatMessage, type Preferences,
 } from '@/services/aiChatService';
 
 // ── Models ────────────────────────────────────────────────────────────────────
@@ -160,7 +160,10 @@ const toClaudeTools = (defs: ToolDef[]) =>
 
 // ── System prompt (compact to save tokens) ────────────────────────────────────
 
-function buildSystemPrompt(goalId: string, goalTitle: string, tasks: Task[], taskMemory: string[]): string {
+function buildSystemPrompt(
+  goalId: string, goalTitle: string, tasks: Task[], taskMemory: string[],
+  prefs: Preferences = { user: {}, goal: {} }
+): string {
   const todayStr = new Date().toISOString().slice(0, 10);
   const done = tasks.filter(t => t.completed).length;
   const pending = tasks.filter(t => !t.completed);
@@ -174,8 +177,23 @@ function buildSystemPrompt(goalId: string, goalTitle: string, tasks: Task[], tas
     `  ${t.completed ? '✓' : '○'} ${t.id} | "${(t.title || t.description || 'untitled').slice(0, 50)}" | ${t.end_date?.slice(0, 10) || '-'}`;
   const urgent = [...overdue, ...soon].slice(0, 20);
   const rest = tasks.filter(t => !urgent.includes(t)).slice(0, 20);
+
+  // Build preference section (only non-empty values)
+  const up = prefs.user; const gp = prefs.goal;
+  const prefLines: string[] = [];
+  if (up.tone) prefLines.push(`Tone: ${up.tone}`);
+  if (up.language) prefLines.push(`Language: ${up.language}`);
+  if (up.detail_level) prefLines.push(`Detail level: ${up.detail_level}`);
+  if (up.date_format) prefLines.push(`Date format: ${up.date_format}`);
+  if (up.custom_instructions) prefLines.push(`User instruction: ${up.custom_instructions}`);
+  if (gp.focus_area) prefLines.push(`Goal focus: ${gp.focus_area}`);
+  if (gp.reminder_style) prefLines.push(`Reminder style: ${gp.reminder_style}`);
+  if (gp.task_format) prefLines.push(`Task format: ${gp.task_format}`);
+  if (gp.custom_instructions) prefLines.push(`Goal instruction: ${gp.custom_instructions}`);
+
   return `You are a goal assistant for: "${goalTitle}" (goal_id: ${goalId})
 Date: ${todayStr} | ${tasks.length} tasks (${done} done, ${pending.length} pending)
+${prefLines.length ? `\n## Preferences\n${prefLines.join('\n')}` : ''}
 ${urgent.length ? `\n⚠️ Urgent/Soon (${urgent.length}):\n${urgent.map(row).join('\n')}` : ''}
 \n## All Tasks (max 40 shown)\n${[...urgent, ...rest].map(row).join('\n') || '(no tasks)'}
 ${tasks.length > 40 ? `\n... +${tasks.length - 40} more. Use get_tasks for full list.` : ''}
@@ -217,6 +235,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
   const [internalGoalTitle, setInternalGoalTitle] = useState('');
   const [apiKeys, setApiKeys] = useState<ApiKeys>({});
   const [keysLoaded, setKeysLoaded] = useState(false);
+  const [preferences, setPreferences] = useState<Preferences>({ user: {}, goal: {} });
   const [selectedProvider, setSelectedProvider] = useState<Provider>('openai');
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODELS.openai);
   const [enableGoogleSearch, setEnableGoogleSearch] = useState(false);
@@ -244,6 +263,12 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       setKeysLoaded(true);
     });
   }, [userInfo?.id]);
+
+  // Load preferences
+  useEffect(() => {
+    if (!goalId || !userInfo?.id) return;
+    loadPreferences(goalId, userInfo.id).then(setPreferences);
+  }, [goalId, userInfo?.id]);
 
   // Load chat session from Supabase
   useEffect(() => {
@@ -556,7 +581,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
     setMessages(prev => [...prev, { role: 'user', content: text, timestamp: now }]);
     setMessages(prev => [...prev, { role: 'assistant', content: '', timestamp: Date.now(), isStreaming: true }]);
     setInputValue(''); setIsLoading(true); setStatusText('');
-    const sys = buildSystemPrompt(goalId, goalTitle, tasks, taskMemory);
+    const sys = buildSystemPrompt(goalId, goalTitle, tasks, taskMemory, preferences);
     const toolDefs = getToolDefs(enableGoogleSearch && !!apiKeys.serpapi, enableFirecrawl && !!apiKeys.firecrawl);
     try {
       let final = '';

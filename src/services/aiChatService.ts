@@ -41,6 +41,49 @@ export async function loadAllApiKeys(userId: string): Promise<ApiKeys> {
   }
 }
 
+// ── Preferences ───────────────────────────────────────────────────────────────
+
+export interface UserPreferences {
+  tone?: 'concise' | 'detailed' | 'casual' | 'professional';
+  language?: string;
+  date_format?: string;
+  detail_level?: 'low' | 'medium' | 'high';
+  custom_instructions?: string;
+  [key: string]: unknown;
+}
+
+export interface GoalPreferences {
+  focus_area?: string;
+  reminder_style?: string;
+  task_format?: string;
+  custom_instructions?: string;
+  [key: string]: unknown;
+}
+
+export interface Preferences {
+  user: UserPreferences;
+  goal: GoalPreferences;
+}
+
+/**
+ * Load user preferences and goal preferences in two parallel queries.
+ * Falls back to empty objects if columns don't exist yet.
+ */
+export async function loadPreferences(goalId: string, userId: string): Promise<Preferences> {
+  try {
+    const [userRes, goalRes] = await Promise.all([
+      supabase.from('user_profiles').select('preferences').eq('id', userId).single(),
+      supabase.from('goals').select('preferences').eq('id', goalId).single(),
+    ]);
+    return {
+      user: (userRes.data?.preferences as UserPreferences) || {},
+      goal: (goalRes.data?.preferences as GoalPreferences) || {},
+    };
+  } catch {
+    return { user: {}, goal: {} };
+  }
+}
+
 // ── Chat session persistence ───────────────────────────────────────────────────
 
 export interface StoredChatMessage {
