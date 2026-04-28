@@ -10,8 +10,6 @@ export const useGoalSharing = (goalId: string) => {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [members, setMembers] = useState<GoalMember[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
-  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
-
   const fetchShareCode = useCallback(async () => {
     if (!goalId) return;
     
@@ -74,14 +72,7 @@ export const useGoalSharing = (goalId: string) => {
   const fetchMembers = useCallback(async () => {
     if (!goalId) return;
     
-    // Don't fetch again if we've already attempted and received no members
-    // This prevents infinite loops of errors
-    if (hasAttemptedFetch && members.length === 0) {
-      return;
-    }
-    
     setIsLoadingMembers(true);
-    setHasAttemptedFetch(true);
     try {
       // Use RPC function to get members and avoid RLS recursion issues
       const { data, error } = await supabase
@@ -119,7 +110,7 @@ export const useGoalSharing = (goalId: string) => {
     } finally {
       setIsLoadingMembers(false);
     }
-  }, [goalId, hasAttemptedFetch, members.length]);
+  }, [goalId]);
 
   const removeMember = useCallback(async (memberId: string) => {
     if (!goalId) return;

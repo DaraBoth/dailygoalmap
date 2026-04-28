@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Palette, Upload, Trash2, X, Edit2, Check, Globe, ChevronRight } from "lucide-react";
@@ -16,12 +16,14 @@ interface ThemeSelectorProps {
   userId: string;
   currentThemeId?: string;
   onThemeSelect: (themeId: string | null, remove?: boolean) => void;
+  collapsed?: boolean;
 }
 
 export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   userId,
   currentThemeId,
   onThemeSelect,
+  collapsed = false,
 }) => {
   const { themes, loading, createTheme, updateTheme, deleteTheme, uploadThemeImage } =
     useGoalThemes(userId);
@@ -248,13 +250,23 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50">
-          <Palette className="h-4 w-4 shrink-0" />
-          <span className="flex-1 text-left">Theme</span>
-          {currentThemeId && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-semibold">Active</span>
+        <button
+          title="Theme"
+          className={cn(
+            "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50",
+            collapsed ? 'justify-center px-0' : ''
           )}
-          <ChevronRight className="h-3.5 w-3.5 opacity-40" />
+        >
+          <Palette className="h-4 w-4 shrink-0" />
+          {!collapsed && (
+            <>
+              <span className="flex-1 text-left">Theme</span>
+              {currentThemeId && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-semibold">Active</span>
+              )}
+              <ChevronRight className="h-3.5 w-3.5 opacity-40" />
+            </>
+          )}
         </button>
       </SheetTrigger>
 
@@ -266,35 +278,24 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
         )}
       >
         <SheetHeader className="px-5 py-4 flex-shrink-0 border-b border-border/50">
-          <SheetTitle className="flex items-center justify-between text-sm font-semibold">
-            <div className="flex items-center gap-2">
-              <Palette className="h-4 w-4 text-muted-foreground" />
-              <span>{editingTheme ? 'Edit Theme' : 'Goal Themes'}</span>
-            </div>
-            <SheetClose asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md">
-                <X className="h-4 w-4" />
-              </Button>
-            </SheetClose>
+          <SheetTitle className="flex items-center gap-2 text-base font-semibold">
+            <Palette className="h-4 w-4 text-muted-foreground" />
+            <span>{editingTheme ? 'Edit Theme' : 'Goal Themes'}</span>
           </SheetTitle>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 px-5 pb-6 h-full">
-          <div className="space-y-5 pt-4">
+        <ScrollArea className="flex-1 h-full">
+          <div className="space-y-6 p-5">
+
             {/* Create/Edit Theme */}
-            <div className="space-y-4 p-4 border rounded-xl bg-card/60">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-sm">
-                  {editingTheme ? 'Edit Theme' : 'Create New Theme'}
+                <h3 className="text-sm font-semibold">
+                  {editingTheme ? 'Editing: ' + editingTheme.name : 'New Theme'}
                 </h3>
                 {editingTheme && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCancelEdit}
-                    className="h-7 text-xs"
-                  >
-                    Cancel
+                  <Button variant="ghost" size="sm" onClick={handleCancelEdit} className="h-7 text-xs gap-1.5">
+                    <X className="h-3 w-3" /> Cancel
                   </Button>
                 )}
               </div>
@@ -371,24 +372,21 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
               </div>
             </div>
 
+            {/* Divider */}
+            <div className="border-t border-border/50" />
+
             {/* Existing Themes */}
             <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-sm">Your Themes</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">Your Themes</h3>
                 {currentThemeId && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onThemeSelect(null, true)}
-                    className="h-7 text-xs"
-                  >
-                    Remove Theme
+                  <Button variant="ghost" size="sm" onClick={() => onThemeSelect(null, true)} className="h-7 text-xs text-muted-foreground hover:text-destructive gap-1.5">
+                    <X className="h-3 w-3" /> Remove
                   </Button>
                 )}
               </div>
 
-              <ScrollArea className="max-h-[45vh] rounded-xl border border-border/20 bg-foreground/[0.02]">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3">{loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">{loading ? (
                     <p className="text-xs sm:text-sm text-muted-foreground col-span-full text-center py-8 sm:py-10">
                       Loading themes...
                     </p>
@@ -479,8 +477,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                       </Card>
                     ))
                   )}
-                </div>
-              </ScrollArea>
+              </div>
 
             </div>
           </div>

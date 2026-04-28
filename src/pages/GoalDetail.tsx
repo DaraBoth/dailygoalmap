@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from '@/lib/utils';
-import { Menu, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2 } from 'lucide-react';
+import { Menu, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2, PanelLeftClose, PanelLeftOpen, Search, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { ThemeSelector } from '@/components/goal/ThemeSelector';
@@ -44,14 +44,29 @@ const GoalDetail: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [autoOpenTaskId, setAutoOpenTaskId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMembersSheetOpen, setIsMembersSheetOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [memberSearch, setMemberSearch] = useState('');
 
-  const { shareCode, isLoading: shareLoading, isRegenerating, fetchShareCode, regenerateShareCode } = useGoalSharing(goalId);
+  const {
+    shareCode, isLoading: shareLoading, isRegenerating,
+    fetchShareCode, regenerateShareCode,
+    members: sharingMembers, isLoadingMembers,
+    fetchMembers, removeMember,
+  } = useGoalSharing(goalId);
+
+  // Use sharing members (from RPC with display_name) when available, fall back to loader members
+  const displayMembers = sharingMembers.length > 0 ? sharingMembers : members;
+
+  const filteredMembers = displayMembers.filter(m =>
+    (m.user_profiles?.display_name || '').toLowerCase().includes(memberSearch.toLowerCase())
+  );
 
   const handleOpenMembersSheet = () => {
     setIsMembersSheetOpen(true);
     if (!shareCode) fetchShareCode();
+    fetchMembers();
   };
 
   const handleCopyShareCode = () => {
@@ -194,9 +209,12 @@ const GoalDetail: React.FC = () => {
       <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-background" style={backgroundStyle}>
 
         {/* Sidebar - Desktop Only (Vercel-style) */}
-        <aside className="hidden lg:flex flex-col w-56 xl:w-60 border-r border-border/50 bg-background/80 backdrop-blur-xl shrink-0">
-          {/* Back + Goal Switcher */}
-          <div className="flex items-center gap-2 p-3 border-b border-border/50">
+        <aside className={cn(
+          "hidden lg:flex flex-col border-r border-border/50 bg-background/80 backdrop-blur-xl shrink-0 transition-all duration-300",
+          isSidebarCollapsed ? "w-14" : "w-56 xl:w-60"
+        )}>
+          {/* Back + Goal Switcher + Collapse */}
+          <div className="flex items-center gap-1 p-2 border-b border-border/50">
             <Button
               variant="ghost"
               size="icon"
@@ -206,22 +224,37 @@ const GoalDetail: React.FC = () => {
             >
               <ArrowLeft className="h-3.5 w-3.5" />
             </Button>
-            <div className="flex-1 min-w-0">
-              <GoalSwitcher />
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="flex-1 min-w-0">
+                <GoalSwitcher />
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0 ml-auto"
+              onClick={() => setIsSidebarCollapsed(v => !v)}
+              title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {isSidebarCollapsed
+                ? <PanelLeftOpen className="h-3.5 w-3.5" />
+                : <PanelLeftClose className="h-3.5 w-3.5" />}
+            </Button>
           </div>
 
           {/* Progress Section */}
-          <div className="px-4 py-3 border-b border-border/50">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-muted-foreground">Progress</span>
-              <span className="text-xs font-semibold tabular-nums">{Math.round(progress)}%</span>
+          {!isSidebarCollapsed && (
+            <div className="px-4 py-3 border-b border-border/50">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs text-muted-foreground">Progress</span>
+                <span className="text-xs font-semibold tabular-nums">{Math.round(progress)}%</span>
+              </div>
+              <Progress value={progress} className="h-1 bg-border" />
+              <p className="text-[11px] text-muted-foreground mt-1.5">
+                {completedTasksCount} / {tasks.length} tasks done
+              </p>
             </div>
-            <Progress value={progress} className="h-1 bg-border" />
-            <p className="text-[11px] text-muted-foreground mt-1.5">
-              {completedTasksCount} / {tasks.length} tasks done
-            </p>
-          </div>
+          )}
 
           {/* Navigation */}
           <nav className="flex-1 p-2 space-y-0.5">
@@ -229,15 +262,17 @@ const GoalDetail: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
+                title={isSidebarCollapsed ? item.label : undefined}
                 className={cn(
                   "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                  isSidebarCollapsed ? 'justify-center px-0' : '',
                   activeTab === item.id
                     ? "bg-accent text-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                 )}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
+                {!isSidebarCollapsed && <span>{item.label}</span>}
               </button>
             ))}
           </nav>
@@ -246,12 +281,20 @@ const GoalDetail: React.FC = () => {
           <div className="px-2 py-2 border-t border-border/50">
             <button
               onClick={handleOpenMembersSheet}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              title={isSidebarCollapsed ? 'Members' : undefined}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50",
+                isSidebarCollapsed ? 'justify-center px-0' : ''
+              )}
             >
               <Users className="h-4 w-4 shrink-0" />
-              <span className="flex-1 text-left">Members</span>
-              <span className="text-[11px] tabular-nums bg-accent px-1.5 py-0.5 rounded-sm">{members.length}</span>
-              <ChevronRight className="h-3.5 w-3.5 opacity-40" />
+              {!isSidebarCollapsed && (
+                <>
+                  <span className="flex-1 text-left">Members</span>
+                  <span className="text-[11px] tabular-nums bg-accent px-1.5 py-0.5 rounded-sm">{displayMembers.length}</span>
+                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
+                </>
+              )}
             </button>
           </div>
 
@@ -262,6 +305,7 @@ const GoalDetail: React.FC = () => {
                 userId={user.id}
                 currentThemeId={currentTheme?.id}
                 onThemeSelect={handleThemeChange}
+                collapsed={isSidebarCollapsed}
               />
             </div>
           )}
@@ -420,15 +464,15 @@ const GoalDetail: React.FC = () => {
 
       {/* Members Sheet */}
       <Sheet open={isMembersSheetOpen} onOpenChange={setIsMembersSheetOpen}>
-        <SheetContent side={isMobile ? 'bottom' : 'right'} className={cn('p-0 flex flex-col', isMobile ? 'h-[85vh] rounded-t-2xl' : 'w-80')}>
-          <SheetHeader className="px-5 py-4 border-b border-border/50 shrink-0">
-            <SheetTitle className="flex items-center gap-2 text-sm font-semibold">
+        <SheetContent side={isMobile ? 'bottom' : 'right'} className={cn('p-0 flex flex-col', isMobile ? 'h-[88vh] rounded-t-2xl' : 'w-88 sm:w-96')}>
+          <SheetHeader className="px-5 pt-5 pb-4 border-b border-border/50 shrink-0">
+            <SheetTitle className="flex items-center gap-2 text-base font-semibold">
               <Users className="h-4 w-4" />
               Members &amp; Sharing
             </SheetTitle>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto space-y-0">
             {/* Share Code */}
             <div className="px-5 py-4 border-b border-border/50">
               <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-3">Invite Code</p>
@@ -439,25 +483,12 @@ const GoalDetail: React.FC = () => {
                   <Input
                     readOnly
                     value={shareCode}
-                    className="h-9 font-mono text-sm bg-accent/30 border-border/50 flex-1"
+                    className="h-9 font-mono text-xs bg-accent/30 border-border/50 flex-1"
                   />
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="h-9 w-9 shrink-0"
-                    onClick={handleCopyShareCode}
-                    title="Copy code"
-                  >
+                  <Button size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={handleCopyShareCode} title="Copy code">
                     {copiedCode ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="h-9 w-9 shrink-0"
-                    onClick={regenerateShareCode}
-                    disabled={isRegenerating}
-                    title="Generate new code"
-                  >
+                  <Button size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={regenerateShareCode} disabled={isRegenerating} title="Regenerate code">
                     <RefreshCw className={cn('h-4 w-4', isRegenerating && 'animate-spin')} />
                   </Button>
                 </div>
@@ -471,22 +502,67 @@ const GoalDetail: React.FC = () => {
 
             {/* Member List */}
             <div className="px-5 py-4">
-              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-3">Members · {members.length}</p>
-              <div className="space-y-1">
-                {members.map(m => (
-                  <div key={m.user_id} className="flex items-center gap-3 py-2 px-1 rounded-md group hover:bg-accent/40 transition-colors">
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarImage src={m.user_profiles?.avatar_url || undefined} />
-                      <AvatarFallback className="text-xs">{(m.user_profiles?.display_name || 'U').substring(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{m.user_profiles?.display_name || 'Unknown'}</p>
-                      <p className="text-[11px] text-muted-foreground capitalize">{m.role}</p>
-                    </div>
-                    {m.role === 'creator' && <Crown className="h-3.5 w-3.5 text-yellow-500 shrink-0" />}
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                  Members &middot; {displayMembers.length}
+                </p>
               </div>
+
+              {/* Search */}
+              <div className="relative mb-3">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Search by name..."
+                  value={memberSearch}
+                  onChange={e => setMemberSearch(e.target.value)}
+                  className="h-8 pl-8 text-xs bg-accent/30 border-border/50"
+                />
+              </div>
+
+              {isLoadingMembers ? (
+                <div className="space-y-2">
+                  {[1,2,3].map(i => (
+                    <div key={i} className="flex items-center gap-3 py-2">
+                      <div className="h-8 w-8 rounded-full bg-accent animate-pulse shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="h-3 w-24 bg-accent rounded animate-pulse" />
+                        <div className="h-2.5 w-16 bg-accent/60 rounded animate-pulse" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : filteredMembers.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-6">No members found</p>
+              ) : (
+                <div className="space-y-0.5">
+                  {filteredMembers.map(m => (
+                    <div key={m.user_id} className="flex items-center gap-3 py-2 px-2 rounded-md group hover:bg-accent/40 transition-colors">
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={m.user_profiles?.avatar_url || undefined} />
+                        <AvatarFallback className="text-xs">{(m.user_profiles?.display_name || 'U').substring(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{m.user_profiles?.display_name || 'Unknown'}</p>
+                        <p className="text-[11px] text-muted-foreground capitalize">{m.role}</p>
+                      </div>
+                      {m.role === 'creator'
+                        ? <Crown className="h-3.5 w-3.5 text-yellow-500 shrink-0" />
+                        : m.user_id !== user?.id && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                            onClick={() => removeMember(m.id)}
+                            title="Remove member"
+                          >
+                            <UserMinus className="h-3.5 w-3.5" />
+                          </Button>
+                        )
+                      }
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </SheetContent>
