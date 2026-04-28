@@ -75,9 +75,9 @@ function buildSystemPrompt(goalId: string, goalTitle: string, tasks: Task[]): st
   const now = new Date().toISOString();
 
   const taskList = tasks.map(t => {
-    const status = t.completed ? '??done' : '?[ ] pending';
+    const status = t.completed ? '[x] done' : '[ ] pending';
     const dateRange = t.start_date
-      ? `${t.start_date.slice(0, 10)}${t.end_date && t.end_date !== t.start_date ? ` ??${t.end_date.slice(0, 10)}` : ''}`
+      ? `${t.start_date.slice(0, 10)}${t.end_date && t.end_date !== t.start_date ? ` -> ${t.end_date.slice(0, 10)}` : ''}`
       : 'no date';
     return `  - id:${t.id} | ${status} | "${t.title || t.description}" | ${dateRange}`;
   }).join('\n');
@@ -264,10 +264,10 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
 
         const { error } = await supabase.from('tasks').update(patch).eq('id', u.task_id);
         if (error) {
-          results.push(`??Failed to update task ${u.task_id}: ${error.message}`);
+          results.push(`[FAILED] Failed to update task ${u.task_id}: ${error.message}`);
         } else {
           setTasks(prev => prev.map(t => t.id === u.task_id ? { ...t, ...patch } as Task : t));
-          results.push(`??Updated task ${u.task_id}${typeof u.completed === 'boolean' ? ` ??${u.completed ? 'done' : 'pending'}` : ''}`);
+          results.push(`[OK] Updated task ${u.task_id}${typeof u.completed === 'boolean' ? ` -> ${u.completed ? 'done' : 'pending'}` : ''}`);
         }
       }
 
@@ -288,13 +288,13 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     if (!inputValue.trim() || isLoading) return;
 
     if (!openaiKey) {
-      toast({ title: 'No OpenAI API key', description: 'Add your OpenAI key in Profile ??API Keys.', variant: 'destructive' });
+      toast({ title: 'No OpenAI API key', description: 'Add your OpenAI key in Profile > API Keys.', variant: 'destructive' });
       return;
     }
 
     const now = Date.now();
     if (now - lastMessageTime < MIN_MESSAGE_INTERVAL) {
-      toast({ title: 'Please wait', description: 'Slow down a bit ?' });
+      toast({ title: 'Please wait', description: 'Slow down a bit :)' });
       return;
     }
 
@@ -467,7 +467,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
         const updated = [...prev];
         const last = updated[updated.length - 1];
         if (last?.role === 'assistant') {
-          updated[updated.length - 1] = { ...last, content: `? ${msg}`, isStreaming: false };
+          updated[updated.length - 1] = { ...last, content: `Error: ${msg}`, isStreaming: false };
         }
         return updated;
       });
@@ -558,7 +558,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
             {/* No-key banner */}
             {!keyLoading && !openaiKey && (
               <div className="mx-3 mt-3 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
-                Add your OpenAI key in <strong>Profile ??API Keys</strong> to start chatting.
+                Add your OpenAI key in <strong>Profile &gt; API Keys</strong> to start chatting.
               </div>
             )}
 
