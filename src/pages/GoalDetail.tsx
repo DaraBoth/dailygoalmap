@@ -12,11 +12,13 @@ import { GoalTheme } from '@/types/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { GoalChatWidget } from '@/components/goal/GoalChatWidget';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useGoalSharing } from '@/hooks/useGoalSharing';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from '@/lib/utils';
-import { Menu, LayoutDashboard, BarChart2, ArrowLeft } from 'lucide-react';
+import { Menu, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { ThemeSelector } from '@/components/goal/ThemeSelector';
@@ -42,6 +44,22 @@ const GoalDetail: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [autoOpenTaskId, setAutoOpenTaskId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMembersSheetOpen, setIsMembersSheetOpen] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const { shareCode, isLoading: shareLoading, isRegenerating, fetchShareCode, regenerateShareCode } = useGoalSharing(goalId);
+
+  const handleOpenMembersSheet = () => {
+    setIsMembersSheetOpen(true);
+    if (!shareCode) fetchShareCode();
+  };
+
+  const handleCopyShareCode = () => {
+    if (!shareCode) return;
+    navigator.clipboard.writeText(shareCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
 
   const goalTitle = currentGoalData?.title || '';
   const goalDescription = currentGoalData?.description || '';
@@ -224,31 +242,22 @@ const GoalDetail: React.FC = () => {
             ))}
           </nav>
 
-          {/* Team Members */}
-          {members.length > 0 && (
-            <div className="px-4 py-3 border-t border-border/50">
-              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                Members · {members.length}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {members.slice(0, 6).map(m => (
-                  <Avatar key={m.user_id} className="h-6 w-6">
-                    <AvatarImage src={m.user_profiles?.avatar_url || undefined} />
-                    <AvatarFallback className="text-[9px]">{m.user_profiles?.display_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                ))}
-                {members.length > 6 && (
-                  <div className="h-6 w-6 rounded-full bg-accent flex items-center justify-center text-[9px] font-semibold text-muted-foreground">
-                    +{members.length - 6}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Members Button */}
+          <div className="px-2 py-2 border-t border-border/50">
+            <button
+              onClick={handleOpenMembersSheet}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50"
+            >
+              <Users className="h-4 w-4 shrink-0" />
+              <span className="flex-1 text-left">Members</span>
+              <span className="text-[11px] tabular-nums bg-accent px-1.5 py-0.5 rounded-sm">{members.length}</span>
+              <ChevronRight className="h-3.5 w-3.5 opacity-40" />
+            </button>
+          </div>
 
           {/* Theme Selector */}
           {user?.id && (
-            <div className="px-4 py-3 border-t border-border/50">
+            <div className="px-2 py-2 border-t border-border/50">
               <ThemeSelector
                 userId={user.id}
                 currentThemeId={currentTheme?.id}
@@ -307,8 +316,19 @@ const GoalDetail: React.FC = () => {
                           </button>
                         ))}
                       </nav>
+                      <div className="px-2 py-2 border-t border-border/50">
+                        <button
+                          onClick={() => { setIsSidebarOpen(false); handleOpenMembersSheet(); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                        >
+                          <Users className="h-4 w-4 shrink-0" />
+                          <span className="flex-1 text-left">Members</span>
+                          <span className="text-[11px] tabular-nums bg-accent px-1.5 py-0.5 rounded-sm">{members.length}</span>
+                          <ChevronRight className="h-3.5 w-3.5 opacity-40" />
+                        </button>
+                      </div>
                       {user?.id && (
-                        <div className="px-4 py-3 border-t border-border/50">
+                        <div className="px-2 py-2 border-t border-border/50">
                           <ThemeSelector userId={user.id} currentThemeId={currentTheme?.id} onThemeSelect={handleThemeChange} />
                         </div>
                       )}
@@ -396,7 +416,81 @@ const GoalDetail: React.FC = () => {
       </div>
 
       {/* Chat Widget */}
-      <GoalChatWidget goalId={goalId} userInfo={user} />
+      <GoalChatWidget goalId={goalId} userInfo={user} tasks={tasks} goalTitle={goalTitle} />
+
+      {/* Members Sheet */}
+      <Sheet open={isMembersSheetOpen} onOpenChange={setIsMembersSheetOpen}>
+        <SheetContent side={isMobile ? 'bottom' : 'right'} className={cn('p-0 flex flex-col', isMobile ? 'h-[85vh] rounded-t-2xl' : 'w-80')}>
+          <SheetHeader className="px-5 py-4 border-b border-border/50 shrink-0">
+            <SheetTitle className="flex items-center gap-2 text-sm font-semibold">
+              <Users className="h-4 w-4" />
+              Members &amp; Sharing
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto">
+            {/* Share Code */}
+            <div className="px-5 py-4 border-b border-border/50">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-3">Invite Code</p>
+              {shareLoading ? (
+                <div className="h-9 bg-accent/50 rounded-md animate-pulse" />
+              ) : shareCode ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={shareCode}
+                    className="h-9 font-mono text-sm bg-accent/30 border-border/50 flex-1"
+                  />
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-9 w-9 shrink-0"
+                    onClick={handleCopyShareCode}
+                    title="Copy code"
+                  >
+                    {copiedCode ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-9 w-9 shrink-0"
+                    onClick={regenerateShareCode}
+                    disabled={isRegenerating}
+                    title="Generate new code"
+                  >
+                    <RefreshCw className={cn('h-4 w-4', isRegenerating && 'animate-spin')} />
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" size="sm" onClick={fetchShareCode} className="w-full h-9 text-xs gap-2">
+                  <Share2 className="h-3.5 w-3.5" /> Get Share Code
+                </Button>
+              )}
+              <p className="text-[11px] text-muted-foreground mt-2">Share this code so others can join this goal.</p>
+            </div>
+
+            {/* Member List */}
+            <div className="px-5 py-4">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-3">Members · {members.length}</p>
+              <div className="space-y-1">
+                {members.map(m => (
+                  <div key={m.user_id} className="flex items-center gap-3 py-2 px-1 rounded-md group hover:bg-accent/40 transition-colors">
+                    <Avatar className="h-8 w-8 shrink-0">
+                      <AvatarImage src={m.user_profiles?.avatar_url || undefined} />
+                      <AvatarFallback className="text-xs">{(m.user_profiles?.display_name || 'U').substring(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{m.user_profiles?.display_name || 'Unknown'}</p>
+                      <p className="text-[11px] text-muted-foreground capitalize">{m.role}</p>
+                    </div>
+                    {m.role === 'creator' && <Crown className="h-3.5 w-3.5 text-yellow-500 shrink-0" />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 };

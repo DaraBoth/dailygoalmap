@@ -33,6 +33,8 @@ interface GoalChatWidgetProps {
     display_name?: string;
   } | null;
   isPopupMode?: boolean;
+  tasks?: Task[];
+  goalTitle?: string;
 }
 
 // ??? OpenAI-only models ??????????????????????????????????????????????????????
@@ -145,7 +147,7 @@ const TOOLS = [
 
 // ??? Component ???????????????????????????????????????????????????????????????
 
-export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo, isPopupMode = false }) => {
+export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo, isPopupMode = false, tasks: propTasks, goalTitle: propGoalTitle }) => {
   const [isOpen, setIsOpen] = useState(isPopupMode);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -156,9 +158,13 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
   const [keyLoading, setKeyLoading] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [goalTitle, setGoalTitle] = useState('');
+  const [internalTasks, setInternalTasks] = useState<Task[]>([]);
+  const [internalGoalTitle, setInternalGoalTitle] = useState('');
   const [statusText, setStatusText] = useState('');
+
+  // Use prop tasks when provided (preferred - avoids user_id RLS filtering issues)
+  const tasks = propTasks ?? internalTasks;
+  const goalTitle = propGoalTitle ?? internalGoalTitle;
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -196,19 +202,19 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
     loadKey();
   }, [userInfo?.id]);
 
-  // ?? Load goal data + tasks ????????????????????????????????????????????????
+  // Load goal data + tasks only when not provided as props
   useEffect(() => {
-    if (!goalId) return;
+    if (!goalId || propTasks !== undefined) return;
     const load = async () => {
       const [goalRes, tasksRes] = await Promise.all([
         supabase.from('goals').select('title').eq('id', goalId).single(),
         supabase.from('tasks').select('*').eq('goal_id', goalId).order('start_date'),
       ]);
-      if (goalRes.data?.title) setGoalTitle(goalRes.data.title);
-      if (tasksRes.data) setTasks(tasksRes.data as Task[]);
+      if (goalRes.data?.title) setInternalGoalTitle(goalRes.data.title);
+      if (tasksRes.data) setInternalTasks(tasksRes.data as Task[]);
     };
     load();
-  }, [goalId]);
+  }, [goalId, propTasks]);
 
   // ?? Persist messages ??????????????????????????????????????????????????????
   useEffect(() => {
@@ -266,7 +272,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({ goalId, userInfo
         if (error) {
           results.push(`[FAILED] Failed to update task ${u.task_id}: ${error.message}`);
         } else {
-          setTasks(prev => prev.map(t => t.id === u.task_id ? { ...t, ...patch } as Task : t));
+          setInternalTasks(prev => prev.map(t => t.id === u.task_id ? { ...t, ...patch } as Task : t));
           results.push(`[OK] Updated task ${u.task_id}${typeof u.completed === 'boolean' ? ` -> ${u.completed ? 'done' : 'pending'}` : ''}`);
         }
       }
