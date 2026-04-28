@@ -92,46 +92,41 @@ export const DeadlineNotifications: React.FC<DeadlineNotificationsProps> = React
         className="mb-6"
       >
         {/* Summary Banner */}
-        <Card className="p-4 border border-foreground/5 bg-background/40 backdrop-blur-xl shadow-lg rounded-[2rem] overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-red-500/10 -z-10" />
-          <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-orange-500/10 border border-orange-500/20">
+        <Card className="border border-border/50 bg-background/80 backdrop-blur-xl shadow-sm overflow-hidden rounded-xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-red-500/5 -z-10" />
+          <div className="p-3 sm:p-4 relative z-10">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 shrink-0 mt-0.5">
                 {overdueGoals.length > 0 ? (
-                  <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400 animate-pulse" />
+                  <AlertTriangle className="h-4 w-4 text-orange-500 animate-pulse" />
                 ) : dueTodayGoals.length > 0 ? (
-                  <Clock className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                  <Clock className="h-4 w-4 text-orange-500" />
                 ) : (
-                  <Timer className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                  <Timer className="h-4 w-4 text-orange-500" />
                 )}
               </div>
-              <div>
-                <h3 className="font-black text-foreground tracking-tight">
-                  Trajectory Alerts
-                </h3>
-                <p className="text-sm font-medium text-muted-foreground">
-                  {notificationMessage}
-                </p>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-foreground">Deadline Alerts</h3>
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notificationMessage}</p>
               </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowDetails(!showDetails)}
-                className="rounded-xl border-foreground/10 bg-background/50 hover:bg-accent font-bold"
-              >
-                {showDetails ? "Stow Details" : "Scan Orbits"}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleDismiss}
-                className="h-10 w-10 border-foreground/5 rounded-xl text-muted-foreground hover:text-foreground transition-all"
-              >
-                <X className="h-5 w-5" />
-              </Button>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDetails(!showDetails)}
+                  className="h-7 px-2 text-xs rounded-md hover:bg-accent"
+                >
+                  {showDetails ? "Hide" : "Details"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDismiss}
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
           </div>
         </Card>
@@ -207,22 +202,19 @@ export const DeadlineNotifications: React.FC<DeadlineNotificationsProps> = React
               )}
 
               {/* Quick Actions */}
-              <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+              <div className="pt-3 border-t border-border/50">
                 <div className="flex flex-wrap gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      // Focus on most urgent goal
                       const mostUrgent = overdueGoals[0] || dueTodayGoals[0] || approachingGoals[0];
-                      if (mostUrgent) {
-                        handleGoalAction(mostUrgent.id, "Focus mode");
-                      }
+                      if (mostUrgent) handleGoalAction(mostUrgent.id, "Focus mode");
                     }}
-                    className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+                    className="text-xs h-7"
                   >
-                    <Focus className="h-4 w-4 mr-2" />
-                    Focus on Most Urgent
+                    <Focus className="h-3.5 w-3.5 mr-1.5" />
+                    Focus Most Urgent
                   </Button>
                 </div>
               </div>

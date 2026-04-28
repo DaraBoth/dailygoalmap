@@ -10,16 +10,15 @@ import { useToast } from '@/hooks/use-toast';
 import { Task } from '@/components/calendar/types';
 import { GoalTheme } from '@/types/theme';
 import { useAuth } from '@/hooks/useAuth';
-import { GoalChatWidgetN8N } from '@/components/goal/GoalChatWidgetN8N';
+import { GoalChatWidget } from '@/components/goal/GoalChatWidget';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from '@/lib/utils';
-import { Menu, LayoutDashboard, ListTodo, PieChart, ChevronLeft, CalendarDays, Users } from 'lucide-react';
+import { Menu, LayoutDashboard, BarChart2, ArrowLeft } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
 import { ThemeSelector } from '@/components/goal/ThemeSelector';
 import { GoalSwitcher } from '@/components/goal/GoalSwitcher';
 
@@ -168,228 +167,195 @@ const GoalDetail: React.FC = () => {
     : {};
 
   const navItems = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'tasks', label: 'Tasks', icon: ListTodo },
-    { id: 'analytics', label: 'Analytics', icon: PieChart },
+    { id: 'overview', label: 'Tasks', icon: LayoutDashboard },
+    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
   ];
 
   return (
     <>
       <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-background" style={backgroundStyle}>
 
-        {/* Sidebar - Desktop Only */}
-        <aside className="hidden lg:flex flex-col w-64 xl:w-72 border-r border-border/40 bg-card/95 backdrop-blur-xl">
-          {/* Sidebar Header */}
-          <div className="p-3 xl:p-4 border-b border-border/40">
-            <GoalSwitcher />
+        {/* Sidebar - Desktop Only (Vercel-style) */}
+        <aside className="hidden lg:flex flex-col w-56 xl:w-60 border-r border-border/50 bg-background/80 backdrop-blur-xl shrink-0">
+          {/* Back + Goal Switcher */}
+          <div className="flex items-center gap-2 p-3 border-b border-border/50">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
+              onClick={() => navigate({ to: '/dashboard' })}
+              title="Back to Dashboard"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+            </Button>
+            <div className="flex-1 min-w-0">
+              <GoalSwitcher />
+            </div>
           </div>
 
           {/* Progress Section */}
-          <div className="p-3 xl:p-4 space-y-3">
-            <div className="flex justify-between text-xs font-semibold text-muted-foreground">
-              <span>Progress</span>
-              <span className="text-primary">{Math.round(progress)}%</span>
+          <div className="px-4 py-3 border-b border-border/50">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-muted-foreground">Progress</span>
+              <span className="text-xs font-semibold tabular-nums">{Math.round(progress)}%</span>
             </div>
-            <Progress value={progress} className="h-2" />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{completedTasksCount} of {tasks.length} tasks</span>
-              {currentGoalData?.target_date && (
-                <span className="truncate">{new Date(currentGoalData.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-              )}
-            </div>
+            <Progress value={progress} className="h-1 bg-border" />
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              {completedTasksCount} / {tasks.length} tasks done
+            </p>
           </div>
 
-          <Separator className="bg-border/40" />
-
           {/* Navigation */}
-          <nav className="flex-1 p-2 xl:p-3 space-y-1">
+          <nav className="flex-1 p-2 space-y-0.5">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className={cn(
-                  "w-full flex items-center gap-2 xl:gap-3 px-2.5 xl:px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                   activeTab === item.id
-                    ? "bg-secondary text-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                 )}
               >
-                <item.icon className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{item.label}</span>
+                <item.icon className="h-4 w-4 shrink-0" />
+                <span>{item.label}</span>
               </button>
             ))}
           </nav>
 
           {/* Team Members */}
           {members.length > 0 && (
-            <>
-              <Separator className="bg-border/40" />
-              <div className="p-3 xl:p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Team
-                  </span>
-                  <span className="text-xs text-muted-foreground">{members.length}</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {members.slice(0, 8).map(m => (
-                    <Avatar key={m.user_id} className="h-7 w-7 xl:h-8 xl:w-8">
-                      <AvatarImage src={m.user_profiles?.avatar_url || undefined} />
-                      <AvatarFallback className="text-[10px] xl:text-xs">{m.user_profiles?.display_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                  ))}
-                  {members.length > 8 && (
-                    <div className="h-7 w-7 xl:h-8 xl:w-8 rounded-full bg-secondary flex items-center justify-center text-[10px] xl:text-xs font-semibold">
-                      +{members.length - 8}
-                    </div>
-                  )}
-                </div>
+            <div className="px-4 py-3 border-t border-border/50">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                Members · {members.length}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {members.slice(0, 6).map(m => (
+                  <Avatar key={m.user_id} className="h-6 w-6">
+                    <AvatarImage src={m.user_profiles?.avatar_url || undefined} />
+                    <AvatarFallback className="text-[9px]">{m.user_profiles?.display_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                ))}
+                {members.length > 6 && (
+                  <div className="h-6 w-6 rounded-full bg-accent flex items-center justify-center text-[9px] font-semibold text-muted-foreground">
+                    +{members.length - 6}
+                  </div>
+                )}
               </div>
-            </>
+            </div>
           )}
 
           {/* Theme Selector */}
           {user?.id && (
-            <>
-              <Separator className="bg-border/40" />
-              <div className="p-3 xl:p-4">
-                <ThemeSelector
-                  userId={user.id}
-                  currentThemeId={currentTheme?.id}
-                  onThemeSelect={handleThemeChange}
-                />
-              </div>
-            </>
+            <div className="px-4 py-3 border-t border-border/50">
+              <ThemeSelector
+                userId={user.id}
+                currentThemeId={currentTheme?.id}
+                onThemeSelect={handleThemeChange}
+              />
+            </div>
           )}
         </aside>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col min-w-0 bg-background/95 backdrop-blur-xl overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Header */}
-          <header className="sticky top-0 z-40 border-b border-border/40 bg-background/95 backdrop-blur-xl">
-            <div className="w-full">
-              <div className="flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-4 lg:px-6">
-                {/* Mobile Menu Button & Back Button */}
-                <div className="flex items-center gap-2">
-                  {/* Back to Dashboard button - always visible */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 flex-shrink-0"
-                    onClick={() => navigate({ to: '/dashboard' })}
-                    title="Back to Dashboard"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  {isMobile && (
-                    <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-                      <SheetTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-9 w-9">
-                          <Menu className="h-4 w-4" />
-                        </Button>
-                      </SheetTrigger>
-                      <SheetContent side="left" className="p-0 w-[85vw] max-w-sm">
-                        {/* Mobile Sidebar Content */}
-                        <div className="flex flex-col h-full">
-                          <div className="p-4 border-b border-border/40">
-                            <GoalSwitcher />
-                          </div>
-
-                          <div className="p-4 space-y-3">
-                            <div className="flex justify-between text-xs font-semibold text-muted-foreground">
-                              <span>Progress</span>
-                              <span className="text-primary">{Math.round(progress)}%</span>
-                            </div>
-                            <Progress value={progress} className="h-2" />
-                            <div className="text-xs text-muted-foreground">
-                              {completedTasksCount} of {tasks.length} tasks
-                            </div>
-                          </div>
-
-                          <Separator className="bg-border/40" />
-
-                          <nav className="flex-1 p-3 space-y-1">
-                            {navItems.map((item) => (
-                              <button
-                                key={item.id}
-                                onClick={() => {
-                                  setActiveTab(item.id);
-                                  setIsSidebarOpen(false);
-                                }}
-                                className={cn(
-                                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                                  activeTab === item.id
-                                    ? "bg-secondary text-foreground"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                                )}
-                              >
-                                <item.icon className="h-4 w-4" />
-                                <span>{item.label}</span>
-                              </button>
-                            ))}
-                          </nav>
-
-                          {user?.id && (
-                            <>
-                              <Separator className="bg-border/40" />
-                              <div className="p-4">
-                                <ThemeSelector
-                                  userId={user.id}
-                                  currentThemeId={currentTheme?.id}
-                                  onThemeSelect={handleThemeChange}
-                                />
-                              </div>
-                            </>
-                          )}
+          <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+            <div className="flex h-12 items-center gap-2 px-3 sm:px-4">
+              {/* Mobile: back + hamburger */}
+              <div className="flex items-center gap-1 lg:hidden">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  onClick={() => navigate({ to: '/dashboard' })}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Menu className="h-4 w-4" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="p-0 w-72">
+                    <div className="flex flex-col h-full">
+                      <div className="p-4 border-b border-border/50">
+                        <GoalSwitcher />
+                      </div>
+                      <div className="px-4 py-3 border-b border-border/50">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs text-muted-foreground">Progress</span>
+                          <span className="text-xs font-semibold">{Math.round(progress)}%</span>
                         </div>
-                      </SheetContent>
-                    </Sheet>
-                  )}
-                </div>
-
-                {/* Goal Title */}
-                <h1 className="flex-1 text-sm sm:text-base lg:text-lg font-semibold truncate">{goalTitle}</h1>
-
-                {/* Desktop Navigation Tabs */}
-                <nav className="hidden lg:flex items-center gap-1">
-                  {navItems.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveTab(item.id)}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap",
-                        activeTab === item.id
-                          ? "bg-secondary text-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                        <Progress value={progress} className="h-1" />
+                        <p className="text-[11px] text-muted-foreground mt-1">{completedTasksCount} / {tasks.length} tasks</p>
+                      </div>
+                      <nav className="flex-1 p-2 space-y-0.5">
+                        {navItems.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }}
+                            className={cn(
+                              "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                              activeTab === item.id ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                            )}
+                          >
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.label}</span>
+                          </button>
+                        ))}
+                      </nav>
+                      {user?.id && (
+                        <div className="px-4 py-3 border-t border-border/50">
+                          <ThemeSelector userId={user.id} currentThemeId={currentTheme?.id} onThemeSelect={handleThemeChange} />
+                        </div>
                       )}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.label}</span>
-                    </button>
-                  ))}
-                </nav>
-
-                {/* Mobile Tab Indicator */}
-                {isMobile && (
-                  <div className="text-xs font-medium text-muted-foreground capitalize px-2 py-1 bg-secondary/50 rounded-md">
-                    {activeTab}
-                  </div>
-                )}
+                    </div>
+                  </SheetContent>
+                </Sheet>
               </div>
+
+              {/* Goal Title */}
+              <h1 className="flex-1 text-sm font-semibold truncate text-foreground">{goalTitle}</h1>
+
+              {/* Desktop tab pills */}
+              <nav className="hidden lg:flex items-center gap-1">
+                {navItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                      activeTab === item.id
+                        ? "bg-accent text-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                    )}
+                  >
+                    <item.icon className="h-3.5 w-3.5" />
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </nav>
+
+              {/* Mobile active tab pill */}
+              <span className="lg:hidden text-xs font-medium text-muted-foreground px-2 py-1 bg-accent/50 rounded-md capitalize">
+                {navItems.find(n => n.id === activeTab)?.label ?? activeTab}
+              </span>
             </div>
           </header>
 
           {/* Main Content Area */}
           <main className="flex-1 overflow-y-auto overflow-x-hidden">
             <AnimatePresence mode="wait">
-              {/* Overview/Tasks View */}
-              {(activeTab === 'overview' || activeTab === 'tasks') && (
+              {activeTab === 'overview' && (
                 <motion.div
                   key="calendar"
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.15 }}
                   className="h-full"
                 >
                   <Calendar
@@ -405,14 +371,13 @@ const GoalDetail: React.FC = () => {
                 </motion.div>
               )}
 
-              {/* Analytics View */}
               {activeTab === 'analytics' && (
                 <motion.div
                   key="analytics"
-                  initial={{ opacity: 0, x: 20 }}
+                  initial={{ opacity: 0, x: 16 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ duration: 0.15 }}
                   className="h-full overflow-y-auto p-4 sm:p-6"
                 >
                   <div className="max-w-7xl mx-auto">
@@ -431,7 +396,7 @@ const GoalDetail: React.FC = () => {
       </div>
 
       {/* Chat Widget */}
-      <GoalChatWidgetN8N goalId={goalId} userInfo={user} />
+      <GoalChatWidget goalId={goalId} userInfo={user} />
     </>
   );
 };
