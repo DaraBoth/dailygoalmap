@@ -18,7 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from '@/lib/utils';
-import { Menu, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2, PanelLeftClose, PanelLeftOpen, Search, Trash2 } from 'lucide-react';
+import { Menu, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2, PanelLeftClose, PanelLeftOpen, Search, Trash2, UserPlus } from 'lucide-react';
+import { searchUsers, sendInvitation, SearchUser } from '@/services/internalNotifications';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { ThemeSelector } from '@/components/goal/ThemeSelector';
@@ -48,6 +49,10 @@ const GoalDetail: React.FC = () => {
   const [isMembersSheetOpen, setIsMembersSheetOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
+  const [inviteSearch, setInviteSearch] = useState('');
+  const [inviteResults, setInviteResults] = useState<SearchUser[]>([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [sentInvites, setSentInvites] = useState<Set<string>>(new Set());
 
   const {
     shareCode, isLoading: shareLoading, isRegenerating,
@@ -65,8 +70,51 @@ const GoalDetail: React.FC = () => {
 
   const handleOpenMembersSheet = () => {
     setIsMembersSheetOpen(true);
+    setInviteSearch('');
+    setInviteResults([]);
     if (!shareCode) fetchShareCode();
     fetchMembers();
+  };
+
+  // Debounced search for users to invite (exclude existing members)
+  useEffect(() => {
+    if (!inviteSearch.trim()) {
+      setInviteResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingUsers(true);
+      try {
+        const results = await searchUsers(inviteSearch, 8);
+        const memberUserIds = new Set(displayMembers.map(m => m.user_id));
+        setInviteResults(results.filter(u => !memberUserIds.has(u.id)));
+      } finally {
+        setIsSearchingUsers(false);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [inviteSearch, displayMembers]);
+
+  const handleInvite = async (targetUser: SearchUser) => {
+    if (!user?.id) return;
+    setSentInvites(prev => new Set(prev).add(targetUser.id));
+    const result = await sendInvitation(goalId, targetUser.id, {
+      goal_title: goalTitle,
+      url: `/goal/${goalId}`,
+    });
+    if (!result.ok) {
+      toast({
+        title: "Couldn't send invitation",
+        description: result.error || 'Please try again.',
+        variant: 'destructive',
+      });
+      setSentInvites(prev => { const s = new Set(prev); s.delete(targetUser.id); return s; });
+    } else {
+      toast({
+        title: 'Invitation sent',
+        description: `${targetUser.display_name || targetUser.email || 'User'} was invited to join.`,
+      });
+    }
   };
 
   const handleCopyShareCode = () => {
@@ -562,6 +610,69 @@ const GoalDetail: React.FC = () => {
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+
+            {/* Invite Section */}
+            <div className="px-5 py-4 border-t border-border/50">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-3">Invite Members</p>
+              <div className="relative mb-3">
+                <UserPlus className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Search by name or email..."
+                  value={inviteSearch}
+                  onChange={e => setInviteSearch(e.target.value)}
+                  className="h-8 pl-8 text-xs bg-accent/30 border-border/50"
+                />
+              </div>
+
+              {isSearchingUsers ? (
+                <div className="space-y-2">
+                  {[1, 2].map(i => (
+                    <div key={i} className="flex items-center gap-3 py-2">
+                      <div className="h-8 w-8 rounded-full bg-accent animate-pulse shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="h-3 w-24 bg-accent rounded animate-pulse" />
+                        <div className="h-2.5 w-16 bg-accent/60 rounded animate-pulse" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : inviteSearch.trim() && inviteResults.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4">No users found</p>
+              ) : inviteResults.length > 0 ? (
+                <div className="space-y-0.5">
+                  {inviteResults.map(u => (
+                    <div key={u.id} className="flex items-center gap-3 py-2 px-2 rounded-md hover:bg-accent/40 transition-colors">
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={u.avatar_url || undefined} />
+                        <AvatarFallback className="text-xs">
+                          {(u.display_name || u.email || 'U').substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{u.display_name || 'User'}</p>
+                        {u.email && <p className="text-[11px] text-muted-foreground truncate">{u.email}</p>}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={sentInvites.has(u.id) ? 'outline' : 'default'}
+                        className="h-7 text-xs px-2.5 gap-1 shrink-0"
+                        onClick={() => handleInvite(u)}
+                        disabled={sentInvites.has(u.id)}
+                      >
+                        {sentInvites.has(u.id)
+                          ? <><Check className="h-3.5 w-3.5" /> Invited</>
+                          : <><UserPlus className="h-3.5 w-3.5" /> Invite</>
+                        }
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-4">
+                  Type a name or email to search
+                </p>
               )}
             </div>
           </div>
