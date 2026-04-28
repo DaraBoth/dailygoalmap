@@ -442,7 +442,7 @@ const GoalDetail: React.FC = () => {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -16 }}
                   transition={{ duration: 0.15 }}
-                  className="h-full overflow-y-auto p-4 sm:p-6"
+                  className="h-full overflow-y-auto px-4 sm:px-6 pt-0 pb-6"
                 >
                   <div className="max-w-7xl mx-auto">
                     <SmartAnalytics
