@@ -124,10 +124,18 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
     end: endOfMonth(currentMonth)
   });
 
-  // Get tasks for a specific day
+  // Get tasks for a specific day — support both legacy 'date' field and DB 'start_date'
   const getTasksForDay = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    return allTasks.filter(task => task.date === dateStr);
+    const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+    return allTasks.filter(task => {
+      const raw = task.date || task.start_date;
+      if (!raw) return false;
+      const taskDateKey = DATE_ONLY_RE.test(raw)
+        ? raw
+        : format(new Date(raw), 'yyyy-MM-dd');
+      return taskDateKey === dateStr;
+    });
   };
 
   return (
@@ -185,7 +193,7 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
                       <div className="space-y-1">
                         {tasksForDay.map((task, index) => (
                           <div key={index} className="text-xs p-1 bg-secondary rounded-sm">
-                            <div className="font-semibold truncate">{task.description}</div>
+                            <div className="font-semibold truncate">{task.title || task.description}</div>
                             <div className="text-[10px] text-muted-foreground truncate">
                               Goal: {task.goalTitle}
                             </div>
@@ -219,7 +227,9 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
               <h3 className="font-medium mb-2">Tasks in selected date range:</h3>
               <ScrollArea className="h-[200px]">
                 {allTasks.filter(task => {
-                  const taskDate = new Date(task.date);
+                  const raw = task.date || task.start_date;
+                  if (!raw) return false;
+                  const taskDate = new Date(raw);
                   return (
                     selectedDateRange.from &&
                     taskDate >= selectedDateRange.from &&
@@ -229,7 +239,9 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
                   <div className="space-y-2">
                     {allTasks
                       .filter(task => {
-                        const taskDate = new Date(task.date);
+                        const raw = task.date || task.start_date;
+                        if (!raw) return false;
+                        const taskDate = new Date(raw);
                         return (
                           selectedDateRange.from &&
                           taskDate >= selectedDateRange.from &&
@@ -238,9 +250,9 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
                       })
                       .map((task, index) => (
                         <div key={index} className="p-2 border rounded-md">
-                          <div className="font-medium">{task.description}</div>
+                          <div className="font-medium">{task.title || task.description}</div>
                           <div className="text-sm text-muted-foreground">
-                            Date: {task.date}
+                            Date: {task.date || task.start_date}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             Goal: {task.goalTitle}
