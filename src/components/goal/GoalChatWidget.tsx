@@ -130,6 +130,34 @@ function getToolDefs(enableSearch: boolean, enableFirecrawl: boolean): ToolDef[]
       parameters: { type: 'object', properties: {} },
     },
     {
+      name: 'get_member_stats',
+      description: 'Get task completion statistics per goal member for a given period. Use this to answer questions like "who completed the most tasks today / this week / this month?". Returns a ranked list per member with completed, pending, and total task counts.',
+      parameters: {
+        type: 'object',
+        properties: {
+          period: {
+            type: 'string',
+            enum: ['today', 'week', 'month', 'all'],
+            description: 'Time period to analyse. Defaults to "all".',
+          },
+        },
+      },
+    },
+    {
+      name: 'get_goal_analytics',
+      description: 'Get overall goal progress analytics: completion rate over time, tasks by day/week, overdue counts, and a breakdown by member. Use this to build charts or summaries.',
+      parameters: {
+        type: 'object',
+        properties: {
+          group_by: {
+            type: 'string',
+            enum: ['day', 'week', 'month'],
+            description: 'How to group the completion timeline. Defaults to "day".',
+          },
+        },
+      },
+    },
+    {
       name: 'read_file',
       description: 'Read a file from the AI workspace (private assistant notes/plans for this goal). Not a source of truth for real tasks.',
       parameters: { type: 'object', properties: { filename: { type: 'string' } }, required: ['filename'] },
@@ -241,7 +269,12 @@ Rules:
 - If referencing a task, use task title or a short human label.
 - Be concise, use markdown.
 - Use write_file/read_file only for assistant notes that persist across conversations.
-- Use get_tasks to refresh task list.`;
+- Use get_tasks to refresh task list.
+- For analytics questions (who completed most tasks, progress over time, etc.) use get_member_stats or get_goal_analytics.
+- When returning analytics, ALWAYS include a chart using a fenced \`\`\`chart block with valid JSON.
+- Chart JSON format: { "type": "bar"|"line"|"pie", "title": "...", "data": [...], "xKey": "name", "series": [{"key":"...", "label":"...", "color":"#hex"}] }
+- For pie charts use "yKey" instead of "series".
+- Charts are rendered inline by the UI — always produce them for any report or comparison.`;
 }
 
 // ── Chat message type ─────────────────────────────────────────────────────────
@@ -469,6 +502,108 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       ].join('\n');
 
       return `Total tasks: ${(data || []).length}\n\n${table}`;
+    }
+    if (name === 'get_member_stats') {
+      setStatusText('Fetching member stats...');
+      const period = String(args.period || 'all');
+      const now = new Date();
+      let since: string | null = null;
+      if (period === 'today') {
+        since = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      } else if (period === 'week') {
+        const d = new Date(now); d.setDate(d.getDate() - 7); since = d.toISOString();
+      } else if (period === 'month') {
+        const d = new Date(now); d.setMonth(d.getMonth() - 1); since = d.toISOString();
+      }
+
+      // Fetch members with profiles
+      const { data: members } = await supabase.rpc('get_goal_members', { p_goal_id: goalId });
+
+      // Fetch all tasks for this goal (possibly filtered by updated_at)
+      let q = supabase.from('tasks').select('id,title,completed,user_id,updated_at').eq('goal_id', goalId);
+      if (since) q = q.gte('updated_at', since);
+      const { data: allTasks } = await q;
+
+      const memberMap: Record<string, { name: string; completed: number; pending: number; total: number }> = {};
+      for (const m of (members || [])) {
+        const uid = m.user_id || m.id;
+        memberMap[uid] = {
+          name: m.user_profiles?.display_name || m.display_name || m.email || uid.slice(0, 8),
+          completed: 0, pending: 0, total: 0,
+        };
+      }
+      for (const t of (allTasks || [])) {
+        const uid = t.user_id;
+        if (!memberMap[uid]) memberMap[uid] = { name: uid.slice(0, 8), completed: 0, pending: 0, total: 0 };
+        memberMap[uid].total++;
+        if (t.completed) memberMap[uid].completed++;
+        else memberMap[uid].pending++;
+      }
+
+      const rows = Object.values(memberMap)
+        .sort((a, b) => b.completed - a.completed)
+        .map(m => `| ${m.name} | ${m.completed} | ${m.pending} | ${m.total} |`)
+        .join('\n');
+
+      const periodLabel = period === 'today' ? 'Today' : period === 'week' ? 'Last 7 days' : period === 'month' ? 'Last 30 days' : 'All time';
+      const chartData = JSON.stringify({
+        type: 'bar',
+        title: `Tasks Completed per Member — ${periodLabel}`,
+        data: Object.values(memberMap).sort((a, b) => b.completed - a.completed).map(m => ({ name: m.name, completed: m.completed, pending: m.pending })),
+        xKey: 'name',
+        series: [
+          { key: 'completed', label: 'Completed', color: '#22c55e' },
+          { key: 'pending', label: 'Pending', color: '#f59e0b' },
+        ],
+      });
+
+      return `## Member Stats — ${periodLabel}\n\n| Member | Completed | Pending | Total |\n| --- | --- | --- | --- |\n${rows}\n\n\`\`\`chart\n${chartData}\n\`\`\``;
+    }
+    if (name === 'get_goal_analytics') {
+      setStatusText('Fetching analytics...');
+      const groupBy = String(args.group_by || 'day');
+
+      const { data: allTasks } = await supabase.from('tasks').select('id,title,completed,user_id,start_date,end_date,updated_at').eq('goal_id', goalId);
+      const taskList = allTasks || [];
+
+      // Group completions by period
+      const buckets: Record<string, { done: number; total: number }> = {};
+      for (const t of taskList) {
+        const d = new Date(t.updated_at || t.start_date || Date.now());
+        let key: string;
+        if (groupBy === 'week') {
+          const weekNum = Math.ceil((d.getDate() + new Date(d.getFullYear(), d.getMonth(), 1).getDay()) / 7);
+          key = `${d.getFullYear()}-W${String(d.getMonth() + 1).padStart(2,'0')}-${weekNum}`;
+        } else if (groupBy === 'month') {
+          key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        } else {
+          key = d.toISOString().slice(0, 10);
+        }
+        if (!buckets[key]) buckets[key] = { done: 0, total: 0 };
+        buckets[key].total++;
+        if (t.completed) buckets[key].done++;
+      }
+
+      const timelineData = Object.entries(buckets)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .slice(-30)
+        .map(([name, v]) => ({ name, completed: v.done, total: v.total }));
+
+      const overdue = taskList.filter(t => !t.completed && t.end_date && t.end_date.slice(0, 10) < new Date().toISOString().slice(0, 10)).length;
+      const completionRate = taskList.length > 0 ? ((taskList.filter(t => t.completed).length / taskList.length) * 100).toFixed(1) : '0';
+
+      const chartData = JSON.stringify({
+        type: 'line',
+        title: `Task Completion Timeline (by ${groupBy})`,
+        data: timelineData,
+        xKey: 'name',
+        series: [
+          { key: 'completed', label: 'Completed', color: '#22c55e' },
+          { key: 'total', label: 'Total', color: '#3b82f6' },
+        ],
+      });
+
+      return `## Goal Analytics\n\n- **Total tasks:** ${taskList.length}\n- **Completed:** ${taskList.filter(t => t.completed).length} (${completionRate}%)\n- **Pending:** ${taskList.filter(t => !t.completed).length}\n- **Overdue:** ${overdue}\n\n\`\`\`chart\n${chartData}\n\`\`\``;
     }
     if (name === 'read_file') {
       if (!userInfo?.id) return '[FAIL] Not authenticated';

@@ -33,7 +33,16 @@ export const Route = createFileRoute('/goal/$id')({
     const accessResult = await checkCurrentUserGoalAccess(goalId)
     
     if (!accessResult.goalExists) {
-      throw new Error('Goal not found')
+      // Goal doesn't exist — redirect unauthenticated users to login,
+      // authenticated users to dashboard
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        throw redirect({
+          to: '/login',
+          search: { redirect: location.href } as any,
+        })
+      }
+      throw redirect({ to: '/dashboard' })
     }
     
     if (!accessResult.hasAccess) {
@@ -114,14 +123,6 @@ export const Route = createFileRoute('/goal/$id')({
         .eq('goal_id', goalId)
         .order('start_date', { ascending: true })
       tasksData = normalizeTaskList(data as any[])
-      const rawData = (data as any[]) || [];
-      const dateKeys = [...new Set(rawData.map((t: any) => (t.start_date || '').slice(0, 10)))].sort();
-      console.log('[Loader] tasks from DB', {
-        total: rawData.length,
-        completedCount: rawData.filter((t: any) => t.completed).length,
-        dateKeysPresent: dateKeys,
-        completedTasks: rawData.filter((t: any) => t.completed).map((t: any) => ({ id: t.id, title: t.title, start_date: t.start_date, end_date: t.end_date, completed: t.completed })),
-      });
       // Keep a short-lived cache only for background navigation helpers.
       routeCache.set(tasksKey, tasksData, 15 * 1000)
 

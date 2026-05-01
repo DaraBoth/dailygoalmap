@@ -283,7 +283,11 @@ const TodaysTasks: React.FC = React.memo(() => {
 
       const { error } = await supabase
         .from('tasks')
-        .update({ completed: true })
+        .update({
+          completed: true,
+          updated_at: new Date().toISOString(),
+          updated_by: user.id,
+        })
         .in('id', incompleteTasks.map(task => task.id));
 
       if (error) throw error;

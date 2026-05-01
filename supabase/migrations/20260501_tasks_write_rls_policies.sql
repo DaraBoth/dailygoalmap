@@ -9,9 +9,38 @@
 -- and every user could read/write all rows).
 ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 
--- Helper: returns true if the current user has access to the goal
--- (goal owner OR goal member)
--- Used in all policies below.
+-- Fix the SELECT policy to include goal owners.
+-- The original policy only covered task creators, goal members, and public goals
+-- but NOT goal owners — so after enabling RLS, owners couldn't see member-created tasks.
+DROP POLICY IF EXISTS "Users can view tasks from accessible goals" ON tasks;
+CREATE POLICY "Users can view tasks from accessible goals"
+ON tasks
+FOR SELECT
+USING (
+  -- Task creator
+  auth.uid() = user_id
+  OR
+  -- Goal owner can see all tasks in their goals
+  EXISTS (
+    SELECT 1 FROM goals
+    WHERE goals.id = tasks.goal_id
+      AND goals.user_id = auth.uid()
+  )
+  OR
+  -- Goal member can see all tasks in shared goals
+  EXISTS (
+    SELECT 1 FROM goal_members
+    WHERE goal_members.goal_id = tasks.goal_id
+      AND goal_members.user_id = auth.uid()
+  )
+  OR
+  -- Anyone can see tasks from public goals
+  EXISTS (
+    SELECT 1 FROM goals
+    WHERE goals.id = tasks.goal_id
+      AND goals.is_public = true
+  )
+);
 
 -- INSERT: any goal owner or member can insert tasks
 DROP POLICY IF EXISTS "Users can insert tasks into accessible goals" ON tasks;

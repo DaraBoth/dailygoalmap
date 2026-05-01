@@ -13,6 +13,7 @@ import { toast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { useSearch } from "@tanstack/react-router";
+import { supabase } from '@/integrations/supabase/client';
 
 // Utility: parse YYYY-MM-DD URL param as a local Date to avoid UTC offsets
 const getDefaultMonth = (dateParam: string | null): Date => {
@@ -40,25 +41,38 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
       try {
         const allGoalTasks: any[] = [];
 
-        // Collect tasks from all goals
+        // Collect tasks from all goals — prefer DB (authoritative) over localStorage
         for (const goal of goals) {
-          // First try to get tasks from localStorage
-          const tasksKey = `tasks-${goal.id}`;
-          const storedTasks = localStorage.getItem(tasksKey);
+          const { data: dbTasks, error: dbError } = await supabase
+            .from('tasks')
+            .select('*')
+            .eq('goal_id', goal.id);
 
-          if (storedTasks) {
-            const parsedTasks = JSON.parse(storedTasks);
-            // Add goal reference to each task
-            const tasksWithGoal = parsedTasks.map((task: any) => ({
+          if (!dbError && dbTasks && dbTasks.length > 0) {
+            const tasksWithGoal = dbTasks.map((task: any) => ({
               ...task,
               goalId: goal.id,
-              goalTitle: goal.title
+              goalTitle: goal.title,
             }));
             allGoalTasks.push(...tasksWithGoal);
+          } else {
+            // Fallback to localStorage when offline or DB unavailable
+            const tasksKey = `tasks-${goal.id}`;
+            const storedTasks = localStorage.getItem(tasksKey);
+            if (storedTasks) {
+              try {
+                const parsedTasks = JSON.parse(storedTasks);
+                const tasksWithGoal = parsedTasks.map((task: any) => ({
+                  ...task,
+                  goalId: goal.id,
+                  goalTitle: goal.title,
+                }));
+                allGoalTasks.push(...tasksWithGoal);
+              } catch {
+                // ignore malformed localStorage data
+              }
+            }
           }
-
-          // If no tasks in localStorage, potentially fetch from API or database
-          // This is a placeholder for where you'd add that logic
         }
 
         setAllTasks(allGoalTasks);

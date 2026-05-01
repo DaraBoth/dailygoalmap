@@ -209,12 +209,14 @@ const ScrollPicker = ({ items, selectedIndex, onSelect, className }: ScrollPicke
       </Button>
 
       {/* Scrollable container */}
+      {/* paddingTop/Bottom = containerHeight/2 - itemHeight/2 = 88 - 28 = 60px so that
+          the item at selectedIndex is centred on the selection indicator, not at the top. */}
       <div
         ref={scrollContainerRef}
         className="absolute inset-0 flex flex-col cursor-grab active:cursor-grabbing select-none"
         onMouseDown={handlePointerDown as any}
         onTouchStart={handlePointerDown as any}
-        style={{ transform: `translateY(${-(selectedIndex * itemHeight)}px)` }}
+        style={{ transform: `translateY(${-(selectedIndex * itemHeight)}px)`, paddingTop: '60px', paddingBottom: '60px' }}
       >
         {items.map((item, index) => (
           <div
@@ -273,9 +275,14 @@ export function MobileScrollTimePicker({
   const periodIndex = isPM ? 1 : 0;
 
   const handleHourChange = (index: number) => {
-    const newHour24 = index + 1 + (isPM ? 12 : 0);
-    const newHour24Normalized = newHour24 % 24;
-    const newTime = `${String(newHour24Normalized).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    const displayHour = index + 1; // 1–12
+    // Standard 12-hour → 24-hour conversion:
+    //   12 AM = 00, 1–11 AM = 1–11
+    //   12 PM = 12, 1–11 PM = 13–23
+    const newHour24 = isPM
+      ? (displayHour === 12 ? 12 : displayHour + 12)
+      : (displayHour === 12 ? 0  : displayHour);
+    const newTime = `${String(newHour24).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
     setTempTime(newTime);
   };
 

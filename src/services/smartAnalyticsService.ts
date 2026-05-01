@@ -53,6 +53,18 @@ export async function generateSmartInsights(
 }
 
 /**
+ * Returns the date a completed task was finished (updated_at preferred over created_at).
+ * Returns null for incomplete tasks or when no valid date is available.
+ */
+function getCompletedAt(task: Task): Date | null {
+  if (!task.completed) return null;
+  const raw = task.updated_at || task.created_at;
+  if (!raw) return null;
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/**
  * Perform basic statistical analysis on tasks
  */
 function analyzeTaskData(tasks: Task[], targetDate?: string): SmartAnalyticsData {
@@ -263,9 +275,10 @@ function calculateRecentActivity(tasks: Task[]): number {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  const recentCompletions = tasks.filter(t =>
-    t.completed && new Date(t.created_at) >= sevenDaysAgo
-  ).length;
+  const recentCompletions = tasks.filter(t => {
+    const d = getCompletedAt(t);
+    return d !== null && d >= sevenDaysAgo;
+  }).length;
 
   const totalTasks = tasks.length;
   if (totalTasks === 0) return 0;
@@ -280,8 +293,10 @@ function calculateConsistency(tasks: Task[]): number {
   const completedTasks = tasks.filter(t => t.completed);
   if (completedTasks.length < 3) return 50; // Not enough data
 
-  const completionDates = completedTasks.map(t => new Date(t.created_at).getTime());
-  completionDates.sort((a, b) => a - b);
+  const completionDates = completedTasks
+    .map(t => getCompletedAt(t)?.getTime())
+    .filter((v): v is number => v !== undefined)
+    .sort((a, b) => a - b);
 
   // Calculate variance in completion intervals
   const intervals: number[] = [];
@@ -312,10 +327,13 @@ function analyzeVelocityTrend(tasks: Task[]): 'increasing' | 'stable' | 'decreas
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
   const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const recentWeek = completedTasks.filter(t => new Date(t.created_at) >= oneWeekAgo).length;
+  const recentWeek = completedTasks.filter(t => {
+    const d = getCompletedAt(t);
+    return d !== null && d >= oneWeekAgo;
+  }).length;
   const previousWeek = completedTasks.filter(t => {
-    const date = new Date(t.created_at);
-    return date >= twoWeeksAgo && date < oneWeekAgo;
+    const d = getCompletedAt(t);
+    return d !== null && d >= twoWeeksAgo && d < oneWeekAgo;
   }).length;
 
   if (recentWeek > previousWeek * 1.2) return 'increasing';
@@ -334,7 +352,8 @@ function estimateCompletion(tasks: Task[], pendingTasks: number, targetDate?: st
 
   // Calculate average completion rate
   const sortedCompletions = completedTasks
-    .map(t => new Date(t.created_at).getTime())
+    .map(t => getCompletedAt(t)?.getTime())
+    .filter((v): v is number => v !== undefined)
     .sort((a, b) => a - b);
 
   const timeSpan = sortedCompletions[sortedCompletions.length - 1] - sortedCompletions[0];
@@ -365,11 +384,12 @@ function calculateInactiveDays(tasks: Task[]): number {
     return 0;
   }
 
-  const lastCompletion = completedTasks.reduce((latest, t) =>
-    new Date(t.created_at) > new Date(latest.created_at) ? t : latest
-  );
+  const lastCompletedAt = completedTasks.reduce((latest, t) => {
+    const d = getCompletedAt(t);
+    return d && d.getTime() > latest ? d.getTime() : latest;
+  }, 0);
 
-  return Math.floor((new Date().getTime() - new Date(lastCompletion.created_at).getTime()) / (1000 * 60 * 60 * 24));
+  return Math.floor((new Date().getTime() - lastCompletedAt) / (1000 * 60 * 60 * 24));
 }
 
 /**
@@ -385,12 +405,19 @@ export function calculateDailyTrend(tasks: Task[]): Array<{ date: string; comple
     date.setDate(date.getDate() - i);
     const dateStr = date.toISOString().split('T')[0];
 
+    // Count tasks scheduled for this day (by start_date)
     const dayTasks = tasks.filter(task => {
-      const taskDate = new Date(task.created_at).toISOString().split('T')[0];
+      const taskDate = task.start_date
+        ? new Date(task.start_date).toISOString().split('T')[0]
+        : (task.created_at ? new Date(task.created_at).toISOString().split('T')[0] : null);
       return taskDate === dateStr;
     });
 
-    const completed = dayTasks.filter(t => t.completed).length;
+    // Count tasks completed on this day (by updated_at, falling back to created_at)
+    const completed = tasks.filter(t => {
+      const d = getCompletedAt(t);
+      return d !== null && d.toISOString().split('T')[0] === dateStr;
+    }).length;
 
     result.push({
       date: dateStr,
@@ -409,9 +436,11 @@ export function calculateStreak(tasks: Task[]): { current: number; longest: numb
   const completedTasks = tasks.filter(t => t.completed);
   if (completedTasks.length === 0) return { current: 0, longest: 0 };
 
-  // Get unique completion dates
+  // Get unique completion dates (use updated_at for when task was completed)
   const completionDates = new Set(
-    completedTasks.map(t => new Date(t.created_at).toISOString().split('T')[0])
+    completedTasks
+      .map(t => getCompletedAt(t)?.toISOString().split('T')[0])
+      .filter((d): d is string => d !== undefined)
   );
   const sortedDates = Array.from(completionDates).sort();
 
@@ -469,8 +498,8 @@ export function calculateTimeDistribution(tasks: Task[]): Array<{ hour: number; 
   const completedTasks = tasks.filter(t => t.completed);
 
   completedTasks.forEach(task => {
-    const hour = new Date(task.created_at).getHours();
-    distribution[hour].count++;
+    const d = getCompletedAt(task);
+    if (d) distribution[d.getHours()].count++;
   });
 
   return distribution;
@@ -486,11 +515,12 @@ export function calculateVelocityData(tasks: Task[]): Array<{ week: string; velo
   const weeks = new Map<string, number>();
 
   completedTasks.forEach(task => {
-    const date = new Date(task.created_at);
+    const date = getCompletedAt(task);
+    if (!date) return;
     // Get week start (Monday)
     const dayOfWeek = date.getDay();
-    const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    const weekStart = new Date(date.setDate(diff));
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
     const weekKey = weekStart.toISOString().split('T')[0];
 
     weeks.set(weekKey, (weeks.get(weekKey) || 0) + 1);

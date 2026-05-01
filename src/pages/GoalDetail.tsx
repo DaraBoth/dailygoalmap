@@ -142,6 +142,31 @@ const GoalDetail: React.FC = () => {
   const completedTasksCount = tasks.filter(t => t.completed).length;
   const progress = tasks.length > 0 ? (completedTasksCount / tasks.length) * 100 : 0;
 
+  // Ensure the goal owner (current user) is always present in the analytics member list.
+  // get_goal_members only returns goal_members rows — it does not include the goal owner
+  // unless they explicitly joined as a member too.
+  const analyticsMembers = React.useMemo(() => {
+    if (!user) return displayMembers;
+    const ownerInList = displayMembers.some(m => m.user_id === user.id);
+    if (ownerInList) return displayMembers;
+    const ownerEntry = {
+      id: `owner-${user.id}`,
+      goal_id: goalId,
+      user_id: user.id,
+      joined_at: currentGoalData?.created_at || new Date().toISOString(),
+      role: 'creator' as const,
+      user_profiles: {
+        display_name:
+          user.user_metadata?.display_name ||
+          user.user_metadata?.name ||
+          user.email?.split('@')[0] ||
+          'You',
+        avatar_url: user.user_metadata?.avatar_url,
+      },
+    };
+    return [ownerEntry, ...displayMembers];
+  }, [displayMembers, user, goalId, currentGoalData?.created_at]);
+
   // Update last seen when user views this goal
   useEffect(() => {
     if (!goalId || !user?.id) return;
@@ -177,11 +202,7 @@ const GoalDetail: React.FC = () => {
         }
       }
       if (loaderData.members) setMembers(loaderData.members);
-      if (loaderData.tasks) {
-        const normalized = normalizeTaskList(loaderData.tasks);
-        console.log('[GoalDetail] setTasks from loaderData', { total: normalized.length, completedCount: normalized.filter(t => t.completed).length, tasks: normalized });
-        setTasks(normalized);
-      }
+      if (loaderData.tasks) setTasks(normalizeTaskList(loaderData.tasks));
     }
   }, [loaderData]);
 
@@ -514,7 +535,7 @@ const GoalDetail: React.FC = () => {
                     <SmartAnalytics
                       goalId={goalId}
                       tasks={tasks}
-                      members={displayMembers}
+                      members={analyticsMembers}
                       goalTitle={goalTitle}
                       goalDescription={goalDescription}
                       targetDate={currentGoalData?.target_date}

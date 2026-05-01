@@ -16,7 +16,7 @@ import { Task } from "./calendar/types";
 import { useToast } from "@/hooks/use-toast";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 import { cn } from "@/lib/utils";
-import { getTaskAnchorDate, getTaskDateKey } from "./calendar/utils/dateUtils";
+import { getTaskAnchorDate } from "./calendar/utils/dateUtils";
 
 
 interface CalendarProps {
@@ -90,27 +90,6 @@ const Calendar = ({
     if (!selectedDate) return [];
     return getTasksForDateWrapper(selectedDate);
   }, [selectedDate, getTasksForDateWrapper]);
-
-  useEffect(() => {
-    if (!selectedDate) return;
-    const dayKey = formatYMD(selectedDate);
-    const completedTasks = tasks.filter(t => t.completed);
-    const tasksForDay = tasks.filter(t => {
-      const s = getTaskDateKey(t.start_date);
-      const e = getTaskDateKey(t.end_date);
-      return s && e && s <= dayKey && dayKey <= e;
-    });
-    const dateKeysInState = [...new Set(tasks.map(t => getTaskDateKey(t.start_date)).filter(Boolean))].sort();
-    console.log('[Calendar Debug] summary', {
-      selectedDate: dayKey,
-      totalTasks: tasks.length,
-      completedCount: completedTasks.length,
-      tasksMatchingSelectedDay: tasksForDay.length,
-      completedTasksMatchingDay: tasksForDay.filter(t => t.completed).length,
-      dateKeysInState,
-      completedTasks: completedTasks.map(t => ({ id: t.id, title: t.title, startKey: getTaskDateKey(t.start_date), endKey: getTaskDateKey(t.end_date) })),
-    });
-  }, [selectedDate, tasks]);
 
   useEffect(() => {
     if (externalSelectedDate && externalOnDateChange) {

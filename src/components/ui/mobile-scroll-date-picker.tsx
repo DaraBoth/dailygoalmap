@@ -210,12 +210,14 @@ const ScrollPicker = ({ items, selectedIndex, onSelect, className }: ScrollPicke
       </Button>
 
       {/* Scrollable container */}
+      {/* paddingTop/Bottom = containerHeight/2 - itemHeight/2 = 88 - 28 = 60px so that
+          the item at selectedIndex is centred on the selection indicator, not at the top. */}
       <div
         ref={scrollContainerRef}
         className="absolute inset-0 flex flex-col cursor-grab active:cursor-grabbing select-none"
         onMouseDown={handlePointerDown as any}
         onTouchStart={handlePointerDown as any}
-        style={{ transform: `translateY(${-(selectedIndex * itemHeight)}px)` }}
+        style={{ transform: `translateY(${-(selectedIndex * itemHeight)}px)`, paddingTop: '60px', paddingBottom: '60px' }}
       >
         {items.map((item, index) => (
           <div

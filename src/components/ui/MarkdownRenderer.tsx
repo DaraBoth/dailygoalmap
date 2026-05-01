@@ -6,6 +6,7 @@ import rehypeKatex from 'rehype-katex';
 import rehypeHighlight from 'rehype-highlight';
 import { Copy } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import { ChartRenderer } from './ChartRenderer';
 
 interface MarkdownRendererProps {
     content: string;
@@ -38,29 +39,22 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                 className="
                     prose prose-sm dark:prose-invert max-w-none break-words overflow-x-auto
                     prose-pre:bg-[#1e1e1e] prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded-xl prose-pre:overflow-x-auto prose-pre:shadow-lg
-                    prose-code:bg-gray-800/80 prose-code:text-emerald-400 prose-code:px-2 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
-                    prose-p:my-3 prose-p:leading-relaxed prose-p:text-base prose-p:break-words
-                    prose-headings:font-bold prose-headings:mt-6 prose-headings:mb-3 prose-headings:text-foreground
-                    prose-h1:text-3xl prose-h1:border-b prose-h1:pb-2 prose-h2:text-2xl prose-h3:text-xl
-                    prose-ul:my-3 prose-ul:space-y-1 prose-ol:my-3 prose-ol:space-y-1
-                    prose-li:my-1 prose-li:leading-relaxed
-                    prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:pl-4 prose-blockquote:italic
-                    prose-blockquote:text-gray-600 dark:prose-blockquote:text-gray-400
-                    prose-blockquote:bg-blue-50/50 dark:prose-blockquote:bg-blue-950/20
+                    prose-code:bg-muted prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
+                    prose-p:my-2 prose-p:leading-relaxed prose-p:text-foreground prose-p:break-words
+                    prose-headings:font-bold prose-headings:mt-5 prose-headings:mb-2 prose-headings:text-foreground
+                    prose-h1:text-2xl prose-h1:border-b prose-h1:pb-2 prose-h1:border-border
+                    prose-h2:text-xl prose-h3:text-lg
+                    prose-ul:my-2 prose-ul:space-y-1 prose-ol:my-2 prose-ol:space-y-1
+                    prose-li:my-0.5 prose-li:leading-relaxed prose-li:text-foreground
+                    prose-blockquote:border-l-4 prose-blockquote:border-primary/60 prose-blockquote:pl-4 prose-blockquote:italic
+                    prose-blockquote:text-muted-foreground
+                    prose-blockquote:bg-muted/40
                     prose-blockquote:py-2 prose-blockquote:rounded-r-lg
-                    prose-table:border-collapse prose-table:w-full prose-table:my-4 prose-table:shadow-md prose-table:rounded-lg prose-table:overflow-hidden
-                    prose-thead:bg-gradient-to-r prose-thead:from-blue-600 prose-thead:to-blue-700
-                    dark:prose-thead:from-blue-800 dark:prose-thead:to-blue-900
-                    prose-th:border prose-th:border-blue-400/30 prose-th:p-3 prose-th:font-bold
-                    prose-th:text-white prose-th:text-left prose-th:text-sm prose-th:uppercase prose-th:tracking-wide
-                    prose-tr:border-b prose-tr:border-gray-200 dark:prose-tr:border-gray-700
-                    prose-tr:transition-colors hover:prose-tr:bg-gray-50 dark:hover:prose-tr:bg-gray-800/50
-                    prose-td:border prose-td:border-gray-200 dark:prose-td:border-gray-700 prose-td:p-3 prose-td:text-sm
-                    prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline prose-a:font-medium
                     prose-strong:font-bold prose-strong:text-foreground
-                    prose-em:italic
+                    prose-em:italic prose-em:text-foreground
+                    prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-a:font-medium
                     prose-img:rounded-xl prose-img:shadow-lg prose-img:my-4
-                    prose-hr:border-gray-300 dark:prose-hr:border-gray-700 prose-hr:my-6
+                    prose-hr:border-border prose-hr:my-6
                     "
             >
                 <ReactMarkdown
@@ -70,7 +64,13 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                         /* ================= CODE ================= */
                         code({ className, children, ...props }) {
                             const match = /language-(\w+)/.exec(className || '');
+                            const lang = match?.[1];
                             const isInline = !match;
+
+                            // Render chart blocks as interactive charts
+                            if (lang === 'chart') {
+                                return <ChartRenderer raw={String(children).replace(/\n$/, '')} />;
+                            }
 
                             if (isInline) {
                                 return (
@@ -94,7 +94,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                                                     description: 'Code copied to clipboard.',
                                                 });
                                             }}
-                                            className="px-3 py-1.5 text-xs bg-blue-700 text-white rounded-md font-medium shadow-lg flex items-center gap-1.5"
+                                            className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md font-medium shadow-lg flex items-center gap-1.5"
                                         >
                                             <Copy className="w-3 h-3" />
                                             Copy
@@ -102,9 +102,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                                     </div>
 
                                     {/* LANGUAGE LABEL */}
-                                    {match && (
+                                    {lang && (
                                         <div className="absolute left-3 top-3 text-xs text-gray-400 font-mono uppercase tracking-wider">
-                                            {match[1]}
+                                            {lang}
                                         </div>
                                     )}
 
@@ -123,24 +123,14 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="
-                                        inline-flex items-center gap-1 px-3 py-1.5 my-1
-                                        border bg-background/50 hover:bg-accent rounded-md text-sm font-medium
+                                        inline-flex items-center gap-1 px-2.5 py-1 my-0.5
+                                        border border-border bg-background/70 hover:bg-accent rounded-md text-sm font-medium text-primary
                                         transition-all shadow-sm hover:shadow-md no-underline
                                     "
                                 >
                                     {children}
-                                    <svg
-                                        className="w-3 h-3"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                                        />
+                                    <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                     </svg>
                                 </a>
                             );
@@ -149,23 +139,25 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                         /* ================= TABLE ================= */
                         table({ children }) {
                             return (
-                                <div className="overflow-x-auto no-scrollbar my-2 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md">
-                                    <div className="inline-block min-w-full align-middle">
-                                        <table className="w-full table-auto border-collapse">
-                                            {children}
-                                        </table>
-                                    </div>
+                                <div className="overflow-x-auto my-3 rounded-lg border border-border shadow-sm">
+                                    <table className="w-full min-w-full table-auto border-collapse">
+                                        {children}
+                                    </table>
                                 </div>
                             );
                         },
 
                         thead({ children }) {
-                            return <thead className="bg-muted/50">{children}</thead>;
+                            return (
+                                <thead className="bg-primary/10 dark:bg-primary/20 border-b border-border">
+                                    {children}
+                                </thead>
+                            );
                         },
 
                         tbody({ children }) {
                             return (
-                                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                                <tbody className="divide-y divide-border">
                                     {children}
                                 </tbody>
                             );
@@ -173,44 +165,24 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 
                         th({ children }) {
                             return (
-                                <th
-                                    className="
-                                        px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider
-                                        border border-blue-400/30 whitespace-nowrap min-w-[120px]
-                                    "
-                                >
+                                <th className="px-4 py-2.5 text-left text-xs font-bold text-foreground uppercase tracking-wider whitespace-nowrap border-r border-border/50 last:border-r-0">
                                     {children}
                                 </th>
                             );
                         },
 
                         td({ children }) {
-                            const content = String(children);
+                            const contentStr = String(children);
                             const urlRegex = /(https?:\/\/[^\s]+)/g;
-
                             return (
-                                <td
-                                    className="
-                                        px-4 py-3 text-sm text-gray-900 dark:text-gray-100
-                                        border border-gray-200 dark:border-gray-700
-                                        whitespace-nowrap min-w-[120px]
-                                    "
-                                >
-                                    {urlRegex.test(content)
-                                        ? content.split(urlRegex).map((part, i) =>
+                                <td className="px-4 py-2.5 text-sm text-foreground border-r border-border/30 last:border-r-0 whitespace-nowrap">
+                                    {urlRegex.test(contentStr)
+                                        ? contentStr.split(urlRegex).map((part, i) =>
                                             urlRegex.test(part) ? (
-                                                <a
-                                                    key={i}
-                                                    href={part}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                                                >
+                                                <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">
                                                     {part}
                                                 </a>
-                                            ) : (
-                                                part
-                                            )
+                                            ) : part
                                         )
                                         : children}
                                 </td>
@@ -219,7 +191,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 
                         tr({ children }) {
                             return (
-                                <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                <tr className="hover:bg-muted/40 transition-colors">
                                     {children}
                                 </tr>
                             );
@@ -234,16 +206,12 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             {isStreaming && TypingLoader}
 
             {/* COPY MESSAGE BUTTON */}
-            {!noCopy && !isLoading && !isStreaming && copyMessage && (
+            {!noCopy && !isLoading && !isStreaming && (
                 <button
                     onClick={(e) => copyMessage(e)}
-                    className="
-                        text-xs px-2 py-1 rounded-md
-                        bg-gray-300
-                        dark:bg-gray-700 dark:hover:bg-gray-600
-                    "
+                    className="mt-1 text-xs px-2 py-1 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
                 >
-                    <Copy className="w-5 h-5" />
+                    <Copy className="w-4 h-4" />
                 </button>
             )}
         </div>
