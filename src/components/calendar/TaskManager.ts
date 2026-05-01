@@ -79,7 +79,7 @@ export const useTaskManager = ({ goalId, goalTitle, goalDescription }: TaskManag
             goal_id: goalId,
             completed: newCompletedState
           }
-        });
+        }, 'online_write_failed');
         
         await registerSyncEvent();
       }
@@ -92,7 +92,7 @@ export const useTaskManager = ({ goalId, goalTitle, goalDescription }: TaskManag
           goal_id: goalId,
           completed: newCompletedState
         }
-      });
+      }, 'offline');
       
       await registerSyncEvent();
     }
@@ -142,7 +142,7 @@ export const useTaskManager = ({ goalId, goalTitle, goalDescription }: TaskManag
               end_date: newTask.end_date,
               completed: newTask.completed
             }
-          });
+          }, 'online_write_failed');
           
           await registerSyncEvent();
         }
@@ -160,7 +160,7 @@ export const useTaskManager = ({ goalId, goalTitle, goalDescription }: TaskManag
             end_date: newTask.end_date,
             completed: newTask.completed
           }
-        });
+        }, 'offline');
         
         await registerSyncEvent();
       }

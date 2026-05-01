@@ -1,4 +1,103 @@
 -- ============================================
+-- FIX conversation_memory TABLE SCHEMA MISMATCH
+-- The table was created with 'content TEXT'+'metadata JSONB' columns
+-- but the app code expects 'memory_value JSONB'. Run this first.
+-- ============================================
+
+ALTER TABLE conversation_memory ADD COLUMN IF NOT EXISTS memory_value JSONB;
+
+UPDATE conversation_memory
+SET memory_value = to_jsonb(content)
+WHERE memory_value IS NULL AND content IS NOT NULL AND content != '';
+
+UPDATE conversation_memory SET memory_value = 'null'::jsonb WHERE memory_value IS NULL;
+
+ALTER TABLE conversation_memory ALTER COLUMN memory_value SET DEFAULT 'null'::jsonb;
+ALTER TABLE conversation_memory ALTER COLUMN memory_value SET NOT NULL;
+
+ALTER TABLE conversation_memory DROP CONSTRAINT IF EXISTS conversation_memory_memory_type_check;
+ALTER TABLE conversation_memory ADD CONSTRAINT conversation_memory_memory_type_check
+CHECK (memory_type IN (
+  'chat_session', 'chat_history', 'task_memory',
+  'ai_file', 'task_mapping', 'context', 'preference'
+));
+
+-- ============================================
+
+-- INSERT: any authenticated user who owns the goal or is a member can create tasks
+DROP POLICY IF EXISTS "Users can insert tasks into accessible goals" ON tasks;
+CREATE POLICY "Users can insert tasks into accessible goals"
+ON tasks
+FOR INSERT
+WITH CHECK (
+  auth.uid() = user_id
+  AND (
+    EXISTS (
+      SELECT 1 FROM goals
+      WHERE goals.id = tasks.goal_id
+      AND goals.user_id = auth.uid()
+    )
+    OR
+    EXISTS (
+      SELECT 1 FROM goal_members
+      WHERE goal_members.goal_id = tasks.goal_id
+      AND goal_members.user_id = auth.uid()
+    )
+  )
+);
+
+-- UPDATE: task owner OR any goal member can update (needed for completion toggle by members)
+DROP POLICY IF EXISTS "Users can update tasks in accessible goals" ON tasks;
+CREATE POLICY "Users can update tasks in accessible goals"
+ON tasks
+FOR UPDATE
+USING (
+  auth.uid() = user_id
+  OR
+  EXISTS (
+    SELECT 1 FROM goal_members
+    WHERE goal_members.goal_id = tasks.goal_id
+    AND goal_members.user_id = auth.uid()
+  )
+  OR
+  EXISTS (
+    SELECT 1 FROM goals
+    WHERE goals.id = tasks.goal_id
+    AND goals.user_id = auth.uid()
+  )
+)
+WITH CHECK (
+  auth.uid() = user_id
+  OR
+  EXISTS (
+    SELECT 1 FROM goal_members
+    WHERE goal_members.goal_id = tasks.goal_id
+    AND goal_members.user_id = auth.uid()
+  )
+  OR
+  EXISTS (
+    SELECT 1 FROM goals
+    WHERE goals.id = tasks.goal_id
+    AND goals.user_id = auth.uid()
+  )
+);
+
+-- DELETE: only the task owner or goal owner can delete tasks
+DROP POLICY IF EXISTS "Users can delete their own tasks" ON tasks;
+CREATE POLICY "Users can delete their own tasks"
+ON tasks
+FOR DELETE
+USING (
+  auth.uid() = user_id
+  OR
+  EXISTS (
+    SELECT 1 FROM goals
+    WHERE goals.id = tasks.goal_id
+    AND goals.user_id = auth.uid()
+  )
+);
+
+-- ============================================
 -- UPDATE NOTIFICATIONS TABLE TYPE CONSTRAINT
 -- Add task-related notification types to support real-time notifications
 -- ============================================
@@ -28,7 +127,15 @@ ALTER TABLE notifications REPLICA IDENTITY FULL;
 
 -- Add notifications table to the supabase_realtime publication
 -- This enables real-time subscriptions in the client
-ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'notifications'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+  END IF;
+END $$;
 
 -- ============================================
 -- CONVERSATION MEMORY TABLE
@@ -61,6 +168,14 @@ ON conversation_memory(memory_type);
 
 CREATE INDEX IF NOT EXISTS idx_conversation_memory_expires 
 ON conversation_memory(expires_at);
+
+-- Unique constraint required for upsert onConflict: 'session_id,memory_key'
+ALTER TABLE conversation_memory
+DROP CONSTRAINT IF EXISTS conversation_memory_session_id_memory_key_key;
+
+ALTER TABLE conversation_memory
+ADD CONSTRAINT conversation_memory_session_id_memory_key_key
+UNIQUE (session_id, memory_key);
 
 -- RLS Policies
 ALTER TABLE conversation_memory ENABLE ROW LEVEL SECURITY;

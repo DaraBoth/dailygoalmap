@@ -166,6 +166,14 @@ export const useCalendarTasks = ({
 
     const newCompletedState = !taskToUpdate.completed;
     const updatedAt = new Date().toISOString();
+    const taskDate = new Date(taskToUpdate.start_date);
+    const currentUrl = new URL(window.location.toString());
+    currentUrl.searchParams.set('date', formatYMD(taskDate));
+    currentUrl.searchParams.set('taskId', taskId);
+    window.history.replaceState({}, '', currentUrl.toString());
+
+    setSelectedDate(taskDate);
+    setSelectedTaskIndex(0);
     
     // Update local state FIRST for immediate UI feedback
     const updatedTasks = tasks.map(task => 
@@ -199,9 +207,10 @@ export const useCalendarTasks = ({
       
       // Send internal notification only (push notifications handled by database trigger)
       const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
+      const taskDateYmd = formatYMD(startDate);
       
       // Build a deep link URL so notification opens the goal page with date and task selected
-      const deepLinkUrl = `/goal/${goalId}?date=${encodeURIComponent(startDate.toISOString())}&taskId=${encodeURIComponent(taskId)}`;
+      const deepLinkUrl = `/goal/${goalId}?date=${encodeURIComponent(taskDateYmd)}&taskId=${encodeURIComponent(taskId)}`;
 
       await createTaskUpdateNotification(
         goalId,
@@ -213,7 +222,7 @@ export const useCalendarTasks = ({
           action: newCompletedState ? 'completed' : 'reopened',
           datetime: datetimeInfo,
           url: deepLinkUrl,
-          task_date: startDate.toISOString().split('T')[0] // Add task date for notification
+          task_date: taskDateYmd // Add task date for notification
         }
       );
     } catch (error) {
@@ -470,6 +479,7 @@ export const useCalendarTasks = ({
         ? new Date(`2000-01-01T${newTask.daily_start_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
         : '';
       const datetimeInfo = timeStr ? `${dateStr} at ${timeStr}` : dateStr;
+      const taskDateYmd = formatYMD(startDate);
 
       // Send internal notification only (push notifications handled by database trigger)
       const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
@@ -483,7 +493,7 @@ export const useCalendarTasks = ({
           task_id: taskId,
           action: 'added',
           datetime: datetimeInfo,
-          task_date: startDate.toISOString().split('T')[0] // Add task date for notification
+          task_date: taskDateYmd // Add task date for notification
         }
       );
 

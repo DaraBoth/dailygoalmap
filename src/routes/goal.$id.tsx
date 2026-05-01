@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react'
 import { checkCurrentUserGoalAccess } from '@/utils/goalAccess'
 import { supabase } from '@/integrations/supabase/client'
 import { routeCache, CacheKeys } from '@/services/routeCache'
+import { normalizeTaskList } from '@/components/calendar/taskNormalization'
 
 // Lazy load the GoalDetail component
 const GoalDetailPage = lazy(() => import('@/pages/GoalDetail'))
@@ -78,7 +79,7 @@ export const Route = createFileRoute('/goal/$id')({
 
       let goalData = routeCache.get(goalKey)
       let membersData = routeCache.get(membersKey)
-      let tasksData = routeCache.get(tasksKey)
+      let tasksData = null
       let fromCache = false
 
       // Fetch goal data if not cached
@@ -106,19 +107,16 @@ export const Route = createFileRoute('/goal/$id')({
         fromCache = true
       }
 
-      // Fetch tasks data if not cached
-      if (!tasksData) {
-        const { data } = await supabase
-          .from('tasks')
-          .select('*')
-          .eq('goal_id', goalId)
-          .order('completed', { ascending: true })
-          .order('start_date', { ascending: true })
-        tasksData = data || []
-        routeCache.set(tasksKey, tasksData, 1 * 60 * 1000) // Cache for 1 minute (tasks change frequently)
-      } else {
-        fromCache = true
-      }
+      // Always fetch tasks fresh to avoid stale completion state after quick navigation.
+      const { data } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('goal_id', goalId)
+        .order('completed', { ascending: true })
+        .order('start_date', { ascending: true })
+      tasksData = normalizeTaskList(data as any[])
+      // Keep a short-lived cache only for background navigation helpers.
+      routeCache.set(tasksKey, tasksData, 15 * 1000)
 
       const loadTime = performance.now() - startTime
       console.log(`Goal ${goalId} data loaded in ${loadTime.toFixed(2)}ms ${fromCache ? '(cached)' : '(fresh)'}`)

@@ -7,18 +7,27 @@ export const isOnline = (): boolean => {
   return navigator.onLine;
 };
 
+type OfflineSyncReason = 'offline' | 'online_write_failed';
+
 // Save a task for sync when offline
-export const saveTaskForSync = (task: any): void => {
+export const saveTaskForSync = (task: any, reason: OfflineSyncReason = 'offline'): void => {
   if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
     navigator.serviceWorker.controller.postMessage({
       type: 'SAVE_FOR_SYNC',
       task
     });
-    
-    toast({
-      title: "Task Saved Offline",
-      description: "This task will be synced when you're back online.",
-    });
+
+    if (reason === 'online_write_failed') {
+      toast({
+        title: "Task Saved Locally",
+        description: "Couldn't reach the server right now. We'll retry sync automatically.",
+      });
+    } else {
+      toast({
+        title: "Task Saved Offline",
+        description: "This task will be synced when you're back online.",
+      });
+    }
   } else {
     toast({
       title: "Error",
@@ -36,7 +45,12 @@ export const registerSyncEvent = async (): Promise<boolean> => {
       
       // Check if the SyncManager is available in this browser
       if ('SyncManager' in window) {
-        await (registration as any).sync.register('sync-tasks');
+        try {
+          await (registration as any).sync.register('sync-tasks');
+        } catch (syncErr: any) {
+          // NotAllowedError occurs on localhost or when permission is not granted — ignore silently
+          if (syncErr?.name !== 'NotAllowedError') throw syncErr;
+        }
         return true;
       } else {
         // Fallback for browsers that don't support background sync
@@ -109,7 +123,7 @@ export const saveTaskOperation = async (
         operation,
         taskData,
         timestamp: new Date().toISOString()
-      });
+      }, 'online_write_failed');
       return false;
     }
   } else {
@@ -118,7 +132,7 @@ export const saveTaskOperation = async (
       operation,
       taskData,
       timestamp: new Date().toISOString()
-    });
+    }, 'offline');
     await registerSyncEvent();
     return true;
   }

@@ -141,12 +141,20 @@ const TodaysTasks: React.FC = React.memo(() => {
       const taskToUpdate = tasksForToday.find(t => t.id === taskId);
       if (!taskToUpdate) throw new Error("Task not found");
 
-      const { error } = await supabase
+      const { data: updatedRows, error } = await supabase
         .from('tasks')
-        .update({ completed: newStatus })
-        .eq('id', taskId);
+        .update({
+          completed: newStatus,
+          updated_at: new Date().toISOString(),
+          updated_by: user.id,
+        })
+        .eq('id', taskId)
+        .select('id');
 
       if (error) throw error;
+      if (!updatedRows || updatedRows.length === 0) {
+        throw new Error("Task completion update was blocked and not saved.");
+      }
 
       setTasksForToday(prevTasks =>
         prevTasks.map(task =>
@@ -539,7 +547,7 @@ const TodaysTasks: React.FC = React.memo(() => {
                                 <div className="flex items-center justify-between text-xs text-foreground/70 dark:text-muted-foreground mt-1">
                                   <span>{task.is_anytime ? 'Anytime' : (task.daily_start_time && task.daily_end_time ? `${task.daily_start_time.slice(0, 5)} - ${task.daily_end_time.slice(0, 5)}` : '')}</span>
                                   {task.goals && (
-                                    <SmartLink to={`/goal/${task.goal_id}?date=${encodeURIComponent(task.start_date)}&taskId=${encodeURIComponent(task.id)}`} className="truncate text-foreground/80 dark:text-muted-foreground hover:text-primary">
+                                    <SmartLink to={`/goal/${task.goal_id}?date=${encodeURIComponent(String(task.start_date).slice(0, 10))}&taskId=${encodeURIComponent(task.id)}`} className="truncate text-foreground/80 dark:text-muted-foreground hover:text-primary">
                                       {task.goals.title}
                                     </SmartLink>
                                   )}

@@ -123,7 +123,14 @@ const Calendar = ({
 
     if (dateParam) {
       const fromUrl = parseYMD(dateParam);
-      if (fromUrl) parsedDate = fromUrl;
+      if (fromUrl) {
+        parsedDate = fromUrl;
+      } else {
+        const fallbackDate = new Date(dateParam);
+        if (!Number.isNaN(fallbackDate.getTime())) {
+          parsedDate = fallbackDate;
+        }
+      }
     }
 
     // Always set the selected date from URL parameter
@@ -140,6 +147,7 @@ const Calendar = ({
         const taskDate = new Date(found.start_date);
         setSelectedDate(taskDate);
         handleDateChange(taskDate);
+        syncTaskSelectionInUrl(found, taskDate);
 
         const tasksForTaskDate = getTasksForDateWrapper(taskDate);
         const idx = tasksForTaskDate.findIndex(t => t.id === found.id);
@@ -166,6 +174,7 @@ const Calendar = ({
       const taskDate = new Date(found.start_date);
       setSelectedDate(taskDate);
       handleDateChange(taskDate);
+      syncTaskSelectionInUrl(found, taskDate);
       const tasksForTaskDate = getTasksForDateWrapper(taskDate);
       const idx = tasksForTaskDate.findIndex(t => t.id === found.id);
       setSelectedTask(found);

@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Task, TaskManagerProps } from "./types";
 import { format } from "date-fns";
+import { normalizeTaskList } from "./taskNormalization";
 
 // Define a key rotation pool with fallback keys
 const FALLBACK_API_KEYS = [
@@ -35,45 +36,7 @@ export async function fetchUserTasks(goalId: string): Promise<Task[]> {
       throw error;
     }
     
-    if (taskData && taskData.length > 0) {
-      // Convert database tasks to Task objects
-      const convertedTasks = taskData.map((task: any) => {
-        // Handle legacy tasks that might not have start_date/end_date
-        let startDate = task.start_date;
-        let endDate = task.end_date;
-
-        // If start_date/end_date are missing, use the legacy 'date' field
-        if (!startDate && task.date) {
-          startDate = task.date;
-          endDate = task.date;
-        }
-
-        // Ensure we have valid dates
-        if (!startDate) {
-          const now = new Date().toISOString();
-          startDate = now;
-          endDate = now;
-        }
-
-        return {
-          id: task.id,
-          description: task.description,
-          completed: task.completed,
-          user_id: task.user_id,
-          updated_by: task.updated_by,
-          title: task.title,
-          start_date: startDate,
-          end_date: endDate || startDate,
-          daily_start_time: task.daily_start_time,
-          daily_end_time: task.daily_end_time,
-          created_at: task.created_at,
-          updated_at: task.updated_at,
-        };
-      });
-      return convertedTasks;
-    }
-    
-    return [];
+    return normalizeTaskList(taskData as any[]);
   } catch (error) {
     console.error("Error fetching tasks from database:", error);
     throw error;
@@ -120,7 +83,8 @@ export async function saveTaskToSupabase(task: Task, goalId: string): Promise<vo
 
       if (goalData) {
   // Build a deep link to the new task so recipients can open it directly
-  const deepLinkNew = `/goal/${goalId}?date=${encodeURIComponent(task.start_date)}&taskId=${encodeURIComponent(task.id)}`;
+  const taskDateOnly = String(task.start_date).slice(0, 10);
+  const deepLinkNew = `/goal/${goalId}?date=${encodeURIComponent(taskDateOnly)}&taskId=${encodeURIComponent(task.id)}`;
 
   // Resolve to an absolute URL using Vite env if provided, otherwise use current origin
   const viteEnv = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
@@ -170,7 +134,7 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
     // Get task and goal info for notifications
     const { data: task, error: taskError } = await supabase
       .from('tasks')
-      .select('goal_id, title')
+    .select('goal_id, title, start_date')
       .eq('id', taskId)
       .single();
 
@@ -178,17 +142,22 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
       throw new Error("Failed to get task information");
     }
 
-    const { error } = await supabase
+    const { data: updatedRows, error } = await supabase
       .from('tasks')
       .update({ 
         completed: completed, 
         updated_at: new Date().toISOString(),
         updated_by: user.id,
       })
-      .eq('id', taskId);
+      .eq('id', taskId)
+      .select('id');
     
     if (error) {
       throw error;
+    }
+
+    if (!updatedRows || updatedRows.length === 0) {
+      throw new Error("Task completion update was not persisted. Check tasks UPDATE policy/RLS.");
     }
 
     // Send notifications to goal members about task completion
@@ -197,7 +166,8 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
       const { createTaskUpdateNotification } = await import("@/services/internalNotifications");
       
       // Build deep link to the task
-  const deepLinkComplete = `/goal/${task.goal_id}?taskId=${encodeURIComponent(taskId)}&date=${encodeURIComponent(new Date().toISOString())}`;
+  const completedTaskDate = String(task.start_date || '').slice(0, 10);
+  const deepLinkComplete = `/goal/${task.goal_id}?taskId=${encodeURIComponent(taskId)}&date=${encodeURIComponent(completedTaskDate)}`;
   const viteEnv2 = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
   const publicBase2 = (viteEnv2 && viteEnv2.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);
   const absoluteDeepLinkComplete = publicBase2 ? (String(publicBase2).replace(/\/$/, '') + deepLinkComplete) : deepLinkComplete;

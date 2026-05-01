@@ -14,6 +14,7 @@ import {
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ModernTaskItem } from "./ModernTaskItem";
+import { filterTasksByDate } from "./utils/dateUtils";
 
 interface TaskSidebarProps {
   tasks: Task[];
@@ -47,14 +48,7 @@ const TaskSidebar = React.memo(({
       ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate())
       : new Date();
 
-    const filteredTasks = tasks.filter((task) => {
-      if (!task.start_date || !task.end_date) return false;
-      const start = new Date(task.start_date);
-      const end = new Date(task.end_date);
-      const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-      const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-      return startDay <= target && target <= endDay;
-    });
+    const filteredTasks = filterTasksByDate(tasks as any[], target);
 
     // Sort: incomplete first, completed last
     return filteredTasks.sort((a, b) => {

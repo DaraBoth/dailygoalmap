@@ -1,5 +1,17 @@
 
 import { isSameDay, format, parseISO, isValid, addDays, subDays } from "date-fns";
+import { parseYMD } from "@/utils/parseYMD";
+
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const parseTaskDate = (raw?: string | null): Date | null => {
+  if (!raw) return null;
+  if (DATE_ONLY_RE.test(raw)) {
+    return parseYMD(raw);
+  }
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
 
 /**
  * Filters tasks for a specific date
@@ -24,8 +36,11 @@ export const filterTasksByDate = (tasks: any[], date: Date) => {
         return false;
       }
 
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+      const start = parseTaskDate(startDate);
+      const end = parseTaskDate(endDate);
+      if (!start || !end) {
+        return false;
+      }
       const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
       const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
       return startDay <= day && day <= endDay;

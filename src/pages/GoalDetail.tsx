@@ -25,6 +25,7 @@ import { Progress } from '@/components/ui/progress';
 import { ThemeSelector } from '@/components/goal/ThemeSelector';
 import { GoalSwitcher } from '@/components/goal/GoalSwitcher';
 import { formatDistanceToNow } from 'date-fns';
+import { normalizeTaskList, normalizeTaskRecord } from '@/components/calendar/taskNormalization';
 
 const GoalDetail: React.FC = () => {
   const { id: goalId } = useParams({ from: '/goal/$id' });
@@ -41,7 +42,7 @@ const GoalDetail: React.FC = () => {
   const [currentGoalData, setCurrentGoalData] = useState(goalData);
   const [currentTheme, setCurrentTheme] = useState<GoalTheme | null>(goalTheme);
   const [members, setMembers] = useState<GoalMember[]>(loaderData?.members || []);
-  const [tasks, setTasks] = useState<Task[]>(loaderData?.tasks || []);
+  const [tasks, setTasks] = useState<Task[]>(normalizeTaskList(loaderData?.tasks || []));
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [activeTab, setActiveTab] = useState("overview");
   const [autoOpenTaskId, setAutoOpenTaskId] = useState<string | null>(null);
@@ -176,7 +177,7 @@ const GoalDetail: React.FC = () => {
         }
       }
       if (loaderData.members) setMembers(loaderData.members);
-      if (loaderData.tasks) setTasks(loaderData.tasks);
+      if (loaderData.tasks) setTasks(normalizeTaskList(loaderData.tasks));
     }
   }, [loaderData]);
 
@@ -233,16 +234,17 @@ const GoalDetail: React.FC = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `goal_id=eq.${goalId}` }, async (payload) => {
         // Handle realtime updates more efficiently - update only the affected task
         if (payload.eventType === 'INSERT' && payload.new) {
-          setTasks(prev => [...prev, payload.new as Task]);
+          const normalizedNew = normalizeTaskRecord(payload.new as any);
+          setTasks(prev => [...prev, normalizedNew]);
         } else if (payload.eventType === 'UPDATE' && payload.new) {
           // Merge payload.new with the existing task to preserve any fields not included in the realtime payload
-          setTasks(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } as Task : t));
+          setTasks(prev => prev.map(t => t.id === payload.new.id ? normalizeTaskRecord({ ...t, ...(payload.new as any) }) : t));
         } else if (payload.eventType === 'DELETE' && payload.old) {
           setTasks(prev => prev.filter(t => t.id !== payload.old.id));
         } else {
           // Fallback: refetch all tasks only if we can't handle the specific change
           const { data, error } = await supabase.from('tasks').select('*').eq('goal_id', goalId);
-          if (!error && data) setTasks(data as Task[]);
+          if (!error && data) setTasks(normalizeTaskList(data as any[]));
         }
       })
       .subscribe();
