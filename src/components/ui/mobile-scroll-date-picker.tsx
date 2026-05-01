@@ -325,7 +325,7 @@ export function MobileScrollDatePicker({
   }, [isOpen, date]);
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onCancel()} modal={false}>
       <SheetContent side="bottom" className="h-auto rounded-t-2xl">
         <SheetHeader className="mb-4">
           <SheetTitle>Select Date</SheetTitle>

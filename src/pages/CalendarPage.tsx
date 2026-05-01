@@ -14,6 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { useSearch } from "@tanstack/react-router";
 import { supabase } from '@/integrations/supabase/client';
+import { normalizeTaskRecord } from '@/components/calendar/taskNormalization';
 
 // Utility: parse YYYY-MM-DD URL param as a local Date to avoid UTC offsets
 const getDefaultMonth = (dateParam: string | null): Date => {
@@ -50,7 +51,7 @@ const AllTasksCalendar = ({ displayMonth, initialDate }: { displayMonth: Date; i
 
           if (!dbError && dbTasks && dbTasks.length > 0) {
             const tasksWithGoal = dbTasks.map((task: any) => ({
-              ...task,
+              ...normalizeTaskRecord(task),
               goalId: goal.id,
               goalTitle: goal.title,
             }));
