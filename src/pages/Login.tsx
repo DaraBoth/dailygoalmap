@@ -1,45 +1,46 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SmartLink } from "@/components/ui/SmartLink";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Mail, Lock, Sparkles, Shield, Eye, EyeOff, TrendingUp } from "lucide-react";
+import { Loader2, Mail, Lock, Eye, EyeOff, Chrome, UserCircle2, X, Plus, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Separator } from "@/components/ui/separator";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import LogoAvatar from "@/components/ui/LogoAvatar";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import GlobalBackground from "@/components/ui/GlobalBackground";
+import { getSavedAccounts, saveAccount, removeAccount, type SavedAccount } from "@/utils/savedAccounts";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
+  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
+  const [showSaved, setShowSaved] = useState(false);
   const { toast } = useToast();
   const { goToDashboard } = useRouterNavigation();
+
+  useEffect(() => {
+    setSavedAccounts(getSavedAccounts());
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      toast({
-        title: "Missing fields",
-        description: "Please enter both email and password.",
-        variant: "destructive",
-      });
+      toast({ title: "Missing fields", description: "Please enter both email and password.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
     setEmailNotConfirmed(false);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         if (error.message.includes("Email not confirmed")) {
           setEmailNotConfirmed(true);
@@ -47,25 +48,46 @@ const Login = () => {
         }
         throw error;
       }
+      // Save account info for switcher
+      if (data.user) {
+        const meta = data.user.user_metadata;
+        saveAccount({
+          id: data.user.id,
+          email: data.user.email ?? email,
+          fullName: meta?.full_name || meta?.name || email.split("@")[0],
+          avatarUrl: meta?.avatar_url,
+        });
+        setSavedAccounts(getSavedAccounts());
+      }
       await goToDashboard();
-      toast({ title: "Welcome back!", description: "You've successfully logged in." });
+      toast({ title: "Welcome back!" });
     } catch (error: any) {
-      toast({
-        title: "Login failed",
-        description: error.message || "Invalid email or password.",
-        variant: "destructive",
-      });
+      toast({ title: "Login failed", description: error.message || "Invalid email or password.", variant: "destructive" });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/dashboard` },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      toast({ title: "Google login failed", description: error.message, variant: "destructive" });
+      setIsGoogleLoading(false);
     }
   };
 
   const resendConfirmationEmail = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      const { error } = await supabase.auth.resend({ type: "signup", email });
       if (error) throw error;
-      toast({ title: "Confirmation Email Sent", description: "Please check your email." });
+      toast({ title: "Confirmation email sent", description: "Please check your inbox." });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -86,7 +108,6 @@ const Login = () => {
       });
       if (error) throw error;
       setResetSent(true);
-      toast({ title: "Reset email sent" });
     } catch (error: any) {
       toast({ title: "Reset failed", description: error.message, variant: "destructive" });
     } finally {
@@ -94,161 +115,216 @@ const Login = () => {
     }
   };
 
+  const handleSelectSavedAccount = (account: SavedAccount) => {
+    setEmail(account.email);
+    setShowSaved(false);
+    // Focus password field
+    setTimeout(() => document.getElementById("password")?.focus(), 100);
+  };
+
+  const handleRemoveSavedAccount = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    removeAccount(id);
+    setSavedAccounts(getSavedAccounts());
+  };
+
   return (
     <>
       <title>{isForgotPassword ? "Reset Password | Orbit" : "Log In | Orbit"}</title>
-      <div className="min-h-screen relative flex items-center justify-center p-4 selection:bg-primary/30">
+      <div className="min-h-screen relative flex items-center justify-center p-4 bg-background">
         <GlobalBackground />
 
-        <div className="absolute top-8 left-8 z-50">
-          <SmartLink to="/">
-            <Button variant="ghost" className="hover:bg-primary/10 hover:text-primary rounded-xl font-bold transition-all">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
-          </SmartLink>
-        </div>
-
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="relative w-full max-w-[1100px] grid lg:grid-cols-2 bg-background/40 backdrop-blur-3xl rounded-[3rem] border border-foreground/5 shadow-2xl overflow-hidden"
+          initial={{ y: 24, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="relative w-full max-w-sm"
         >
-          {/* Brand Panel */}
-          <div className="hidden lg:flex flex-col justify-between p-16 bg-foreground text-background relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent pointer-events-none" />
-            <div className="relative z-10">
-              <div className="flex items-center gap-4 mb-12">
-                <LogoAvatar size={48} />
-                <span className="font-black text-3xl tracking-tighter">Orbit</span>
-              </div>
-              <h1 className="text-5xl font-black tracking-tighter leading-none mb-6">
-                {isForgotPassword ? "Reset your password." : "Welcome back."}
-              </h1>
-              <p className="text-xl font-bold opacity-60 max-w-sm leading-relaxed">
-                Log in to continue tracking your goals and staying on top of what matters.
-              </p>
-            </div>
-
-            <div className="relative z-10 space-y-6">
-              <div className="flex items-center gap-4 p-4 bg-background/5 rounded-2xl border border-background/10 backdrop-blur-sm">
-                <div className="p-2 bg-primary/20 rounded-xl"><Shield className="h-5 w-5 text-primary" /></div>
-                <div>
-                  <div className="text-xs font-black uppercase tracking-widest opacity-40">Security</div>
-                  <div className="text-sm font-bold uppercase tracking-tighter">Your data is encrypted</div>
-                </div>
-              </div>
-            </div>
+          {/* Logo */}
+          <div className="flex flex-col items-center mb-8">
+            <LogoAvatar size={56} />
+            <h1 className="mt-3 text-2xl font-bold tracking-tight">Orbit</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {isForgotPassword ? "Reset your password" : "Log in to your account"}
+            </p>
           </div>
 
-          {/* Form Panel */}
-          <div className="p-8 lg:p-16 flex flex-col justify-center">
-            <div className="mb-12">
-              <h2 className="text-3xl font-black tracking-tight mb-2">
-                {isForgotPassword ? "Reset Password" : "Log In"}
-              </h2>
-              <p className="text-muted-foreground font-medium">
-                {isForgotPassword ? "Enter your email and we'll send you a reset link." : "Enter your email and password to continue."}
-              </p>
-            </div>
-
-            {isForgotPassword && resetSent ? (
+          {/* Saved Accounts Panel */}
+          <AnimatePresence>
+            {!isForgotPassword && savedAccounts.length > 0 && (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="space-y-8"
+                exit={{ opacity: 0, y: -8 }}
+                className="mb-4"
               >
-                <div className="p-8 rounded-3xl bg-green-500/10 border border-green-500/20 text-green-500 text-center">
-                  <Mail className="h-12 w-12 mx-auto mb-4" />
-                  <h3 className="text-xl font-black mb-2 uppercase tracking-tighter">Email Sent</h3>
-                  <p className="font-bold opacity-80">Check your inbox for the password reset link.</p>
-                </div>
-                <Button
-                  onClick={() => { setIsForgotPassword(false); setResetSent(false); }}
-                  className="w-full h-14 rounded-2xl font-black uppercase tracking-widest bg-foreground text-background hover:bg-foreground/90 transition-all border-none"
+                <button
+                  onClick={() => setShowSaved(!showSaved)}
+                  className="w-full flex items-center justify-between px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-medium hover:bg-accent transition-colors"
                 >
+                  <div className="flex items-center gap-2">
+                    <UserCircle2 className="h-4 w-4 text-muted-foreground" />
+                    <span>Saved accounts ({savedAccounts.length})</span>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showSaved ? "rotate-180" : ""}`} />
+                </button>
+
+                <AnimatePresence>
+                  {showSaved && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-1 bg-card border border-border rounded-xl overflow-hidden divide-y divide-border">
+                        {savedAccounts.map((acc) => (
+                          <button
+                            key={acc.id}
+                            onClick={() => handleSelectSavedAccount(acc)}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors text-left group"
+                          >
+                            {acc.avatarUrl ? (
+                              <img src={acc.avatarUrl} alt={acc.fullName} className="h-8 w-8 rounded-full object-cover" />
+                            ) : (
+                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+                                {acc.fullName?.[0]?.toUpperCase() || "?"}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{acc.fullName}</p>
+                              <p className="text-xs text-muted-foreground truncate">{acc.email}</p>
+                            </div>
+                            <button
+                              onClick={(e) => handleRemoveSavedAccount(e, acc.id)}
+                              className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-all"
+                              title="Remove saved account"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </button>
+                        ))}
+                        <SmartLink to="/register" className="block">
+                          <div className="flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors text-muted-foreground text-sm">
+                            <div className="h-8 w-8 rounded-full border-2 border-dashed border-border flex items-center justify-center">
+                              <Plus className="h-3.5 w-3.5" />
+                            </div>
+                            Add another account
+                          </div>
+                        </SmartLink>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="bg-card border border-border rounded-2xl shadow-sm p-6 space-y-5">
+            {isForgotPassword && resetSent ? (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 text-center">
+                <div className="p-5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400">
+                  <Mail className="h-8 w-8 mx-auto mb-2" />
+                  <p className="font-semibold text-sm">Email sent!</p>
+                  <p className="text-xs mt-1 opacity-80">Check your inbox for the reset link.</p>
+                </div>
+                <Button onClick={() => { setIsForgotPassword(false); setResetSent(false); }} variant="outline" className="w-full h-11 rounded-xl">
                   Back to Log In
                 </Button>
               </motion.div>
             ) : (
-              <form onSubmit={isForgotPassword ? handlePasswordReset : handleLogin} className="space-y-6">
-                <div className="space-y-4">
-                  <div className="relative group">
-                    <Label className="text-[10px] font-black uppercase tracking-widest mb-2 block ml-1 text-muted-foreground/60">Email</Label>
-                    <Mail className="absolute left-4 top-[38px] h-5 w-5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-                    <Input
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="h-14 pl-12 rounded-2xl border-foreground/5 bg-foreground/[0.02] focus:bg-background transition-all font-bold"
-                      required
-                    />
+              <>
+                {!isForgotPassword && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleGoogleLogin}
+                      disabled={isGoogleLoading}
+                      className="w-full h-11 rounded-xl font-medium border-border hover:bg-accent flex items-center gap-2"
+                    >
+                      {isGoogleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Chrome className="h-4 w-4" />}
+                      Continue with Google
+                    </Button>
+
+                    <div className="flex items-center gap-3">
+                      <Separator className="flex-1" />
+                      <span className="text-xs text-muted-foreground">or</span>
+                      <Separator className="flex-1" />
+                    </div>
+                  </>
+                )}
+
+                <form onSubmit={isForgotPassword ? handlePasswordReset : handleLogin} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="h-11 pl-10 rounded-xl"
+                        required
+                      />
+                    </div>
                   </div>
 
                   {!isForgotPassword && (
-                    <div className="relative group">
-                      <div className="flex justify-between items-center mb-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted-foreground/60">Password</Label>
-                        <button
-                          type="button"
-                          onClick={() => setIsForgotPassword(true)}
-                          className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary/80 transition-colors"
-                        >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="password" className="text-xs font-medium text-muted-foreground">Password</Label>
+                        <button type="button" onClick={() => setIsForgotPassword(true)} className="text-xs text-primary hover:underline">
                           Forgot password?
                         </button>
                       </div>
-                      <Lock className="absolute left-4 top-[38px] h-5 w-5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="h-14 pl-12 pr-12 rounded-2xl border-foreground/5 bg-foreground/[0.02] focus:bg-background transition-all font-bold"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-[32px] p-2 hover:bg-primary/10 rounded-xl text-muted-foreground/40 hover:text-primary transition-all"
-                      >
-                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="h-11 pl-10 pr-10 rounded-xl"
+                          required
+                        />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground">
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {emailNotConfirmed && (
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs space-y-1">
+                      <p>Please verify your email before logging in.</p>
+                      <button onClick={resendConfirmationEmail} className="underline hover:no-underline font-medium">
+                        Resend confirmation email
                       </button>
                     </div>
                   )}
-                </div>
 
-                {emailNotConfirmed && (
-                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold space-y-2">
-                    <p>Please confirm your email before logging in.</p>
-                    <button onClick={resendConfirmationEmail} className="underline hover:text-amber-600 uppercase tracking-widest block">Resend confirmation email</button>
-                  </div>
-                )}
+                  <Button type="submit" disabled={isLoading} className="w-full h-11 rounded-xl font-semibold">
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : isForgotPassword ? "Send Reset Link" : "Log In"}
+                  </Button>
 
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full h-16 rounded-2xl font-black uppercase tracking-[0.2em] bg-primary text-white hover:bg-primary/90 shadow-[0_20px_40px_-10px_rgba(var(--primary),0.3)] transition-all hover:scale-[1.02] active:scale-[0.98] border-none"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  ) : (
-                    isForgotPassword ? "Send Reset Link" : "Log In"
+                  {isForgotPassword && (
+                    <button type="button" onClick={() => setIsForgotPassword(false)} className="w-full text-xs text-center text-muted-foreground hover:text-foreground">
+                      Back to Log In
+                    </button>
                   )}
-                </Button>
-
-                <div className="text-center pt-8 border-t border-foreground/5">
-                  <p className="text-sm font-bold text-muted-foreground">
-                    Don't have an account?{" "}
-                    <SmartLink to="/register" className="text-foreground hover:text-primary transition-colors underline underline-offset-4 decoration-primary/30">
-                      Sign up
-                    </SmartLink>
-                  </p>
-                </div>
-              </form>
+                </form>
+              </>
             )}
           </div>
+
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Don't have an account?{" "}
+            <SmartLink to="/register" className="text-primary font-medium hover:underline">Sign up</SmartLink>
+          </p>
         </motion.div>
       </div>
     </>
