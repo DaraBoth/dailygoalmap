@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import { format, parse } from "date-fns";
-import { X, Check } from "lucide-react";
+import { X, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -24,32 +24,69 @@ const ScrollPicker = ({ items, selectedIndex, onSelect, className }: ScrollPicke
   const [currentOffset, setCurrentOffset] = useState(0);
   const velocity = useRef(0);
   const lastTime = useRef(0);
+  const lastOffset = useRef(0);
+  const animationRef = useRef<number | null>(null);
 
-  const itemHeight = 48;
+  const itemHeight = 56;
 
   useEffect(() => {
     if (scrollContainerRef.current) {
       const targetOffset = -(selectedIndex * itemHeight);
       scrollContainerRef.current.style.transform = `translateY(${targetOffset}px)`;
-      scrollContainerRef.current.style.transition = "transform 0.3s ease-out";
+      scrollContainerRef.current.style.transition = "transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
       setCurrentOffset(targetOffset);
+      lastOffset.current = targetOffset;
     }
   }, [selectedIndex]);
 
-  const finishScroll = (finalOffset: number) => {
-    if (scrollContainerRef.current) {
-      const snappedIndex = Math.round(-finalOffset / itemHeight);
-      const clampedIndex = Math.max(0, Math.min(snappedIndex, items.length - 1));
-      const targetOffset = -(clampedIndex * itemHeight);
-      
-      scrollContainerRef.current.style.transition = "transform 0.3s ease-out";
-      scrollContainerRef.current.style.transform = `translateY(${targetOffset}px)`;
-      setCurrentOffset(targetOffset);
-      onSelect(clampedIndex);
+  const decelerateScroll = (initialVelocity: number, startOffset: number) => {
+    let currentVel = initialVelocity;
+    let currentPos = startOffset;
+    const maxOffset = 0;
+    const minOffset = -(items.length - 1) * itemHeight;
+
+    const animate = () => {
+      currentVel *= 0.92; // friction
+
+      if (Math.abs(currentVel) > 0.5) {
+        currentPos += currentVel;
+        const clampedPos = Math.max(minOffset, Math.min(currentPos, maxOffset));
+        
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.style.transition = "none";
+          scrollContainerRef.current.style.transform = `translateY(${clampedPos}px)`;
+        }
+        setCurrentOffset(clampedPos);
+        lastOffset.current = clampedPos;
+
+        animationRef.current = requestAnimationFrame(animate);
+      } else {
+        // Snap to nearest item
+        if (scrollContainerRef.current) {
+          const snappedIndex = Math.round(-currentPos / itemHeight);
+          const clampedIndex = Math.max(0, Math.min(snappedIndex, items.length - 1));
+          const targetOffset = -(clampedIndex * itemHeight);
+
+          scrollContainerRef.current.style.transition = "transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+          scrollContainerRef.current.style.transform = `translateY(${targetOffset}px)`;
+          setCurrentOffset(targetOffset);
+          lastOffset.current = targetOffset;
+          onSelect(clampedIndex);
+        }
+      }
+    };
+
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
     }
+    animationRef.current = requestAnimationFrame(animate);
   };
 
   const handlePointerDown = (e: React.PointerEvent | React.MouseEvent | React.TouchEvent) => {
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+    
     setIsDragging(true);
     const clientY = "clientY" in e ? e.clientY : ("touches" in e ? e.touches[0].clientY : 0);
     setStartY(clientY);
@@ -63,14 +100,28 @@ const ScrollPicker = ({ items, selectedIndex, onSelect, className }: ScrollPicke
 
   const handlePointerUp = () => {
     setIsDragging(false);
-    finishScroll(currentOffset + velocity.current * 100);
+    if (Math.abs(velocity.current) > 2) {
+      decelerateScroll(velocity.current, currentOffset);
+    } else {
+      const snappedIndex = Math.round(-currentOffset / itemHeight);
+      const clampedIndex = Math.max(0, Math.min(snappedIndex, items.length - 1));
+      const targetOffset = -(clampedIndex * itemHeight);
+
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.style.transition = "transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+        scrollContainerRef.current.style.transform = `translateY(${targetOffset}px)`;
+      }
+      setCurrentOffset(targetOffset);
+      lastOffset.current = targetOffset;
+      onSelect(clampedIndex);
+    }
   };
 
   const handlePointerMove = (clientY: number) => {
     if (!isDragging || !scrollContainerRef.current) return;
 
     const delta = clientY - startY;
-    const newOffset = currentOffset + delta;
+    const newOffset = lastOffset.current + delta;
     const maxOffset = 0;
     const minOffset = -(items.length - 1) * itemHeight;
 
@@ -79,11 +130,9 @@ const ScrollPicker = ({ items, selectedIndex, onSelect, className }: ScrollPicke
     setCurrentOffset(clampedOffset);
     
     const now = Date.now();
-    const timeDelta = Math.max(1, now - lastTime.current);
-    velocity.current = delta / timeDelta;
+    const timeDelta = Math.max(5, now - lastTime.current);
+    velocity.current = delta / (timeDelta / 16); // Normalize to 60fps
     lastTime.current = now;
-    
-    setStartY(clientY);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -92,6 +141,14 @@ const ScrollPicker = ({ items, selectedIndex, onSelect, className }: ScrollPicke
 
   const handleTouchMove = (e: React.TouchEvent) => {
     handlePointerMove(e.touches[0].clientY);
+  };
+
+  const stepBy = (delta: number) => {
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+    const nextIndex = Math.max(0, Math.min(selectedIndex + delta, items.length - 1));
+    onSelect(nextIndex);
   };
 
   useEffect(() => {
@@ -127,6 +184,30 @@ const ScrollPicker = ({ items, selectedIndex, onSelect, className }: ScrollPicke
 
       {/* Bottom fade overlay */}
       <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none z-20" />
+
+      <Button
+        type="button"
+        variant="secondary"
+        size="icon"
+        onClick={() => stepBy(-1)}
+        disabled={selectedIndex <= 0}
+        className="absolute top-1 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full z-30 bg-background/90 border border-border/70"
+        aria-label="Move up"
+      >
+        <ChevronUp className="h-4 w-4" />
+      </Button>
+
+      <Button
+        type="button"
+        variant="secondary"
+        size="icon"
+        onClick={() => stepBy(1)}
+        disabled={selectedIndex >= items.length - 1}
+        className="absolute bottom-1 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full z-30 bg-background/90 border border-border/70"
+        aria-label="Move down"
+      >
+        <ChevronDown className="h-4 w-4" />
+      </Button>
 
       {/* Scrollable container */}
       <div
