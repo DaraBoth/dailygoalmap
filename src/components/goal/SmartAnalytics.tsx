@@ -37,6 +37,7 @@ import {
   TrendingUpIcon
 } from 'lucide-react';
 import { Task } from '@/components/calendar/types';
+import { GoalMember } from '@/types/goal';
 import {
   generateSmartInsights,
   SmartInsight,
@@ -53,9 +54,11 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface SmartAnalyticsProps {
   tasks: Task[];
+  members?: GoalMember[];
   goalTitle: string;
   goalDescription: string;
   targetDate?: string;
@@ -63,6 +66,7 @@ interface SmartAnalyticsProps {
 
 const SmartAnalytics: React.FC<SmartAnalyticsProps> = ({
   tasks,
+  members = [],
   goalTitle,
   goalDescription,
   targetDate
@@ -71,6 +75,7 @@ const SmartAnalytics: React.FC<SmartAnalyticsProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [activeView, setActiveView] = useState<'overview' | 'trends' | 'insights'>('overview');
+  const [memberReportPeriod, setMemberReportPeriod] = useState<'week' | 'month'>('week');
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -132,6 +137,43 @@ const SmartAnalytics: React.FC<SmartAnalyticsProps> = ({
     { name: 'Activity', value: productivityBreakdown.recentActivity, fill: '#f59e0b' },
     { name: 'Consistency', value: productivityBreakdown.consistency, fill: '#8b5cf6' }
   ];
+
+  const memberCompletionReport = React.useMemo(() => {
+    if (members.length === 0) return [] as Array<{ user_id: string; name: string; avatar?: string; completed: number }>;
+
+    const now = new Date();
+    const rangeStart = new Date(now);
+    if (memberReportPeriod === 'week') {
+      rangeStart.setDate(now.getDate() - 6);
+      rangeStart.setHours(0, 0, 0, 0);
+    } else {
+      rangeStart.setDate(1);
+      rangeStart.setHours(0, 0, 0, 0);
+    }
+
+    const memberMap = new Map<string, { user_id: string; name: string; avatar?: string; completed: number }>();
+    members.forEach((m) => {
+      memberMap.set(m.user_id, {
+        user_id: m.user_id,
+        name: m.user_profiles?.display_name || 'Unknown',
+        avatar: m.user_profiles?.avatar_url,
+        completed: 0,
+      });
+    });
+
+    tasks.forEach((task) => {
+      if (!task.completed) return;
+      const actorId = task.updated_by || task.user_id;
+      if (!actorId) return;
+      const completedAt = task.updated_at ? new Date(task.updated_at) : (task.created_at ? new Date(task.created_at) : null);
+      if (!completedAt || isNaN(completedAt.getTime())) return;
+      if (completedAt < rangeStart || completedAt > now) return;
+      const member = memberMap.get(actorId);
+      if (member) member.completed += 1;
+    });
+
+    return Array.from(memberMap.values()).sort((a, b) => b.completed - a.completed);
+  }, [members, tasks, memberReportPeriod]);
 
   // Load smart insights
   useEffect(() => {
@@ -459,6 +501,53 @@ const SmartAnalytics: React.FC<SmartAnalyticsProps> = ({
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm sm:text-base font-medium">Member Completion Report</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant={memberReportPeriod === 'week' ? 'default' : 'outline'}
+                  className="h-8 px-3"
+                  onClick={() => setMemberReportPeriod('week')}
+                >
+                  Week
+                </Button>
+                <Button
+                  size="sm"
+                  variant={memberReportPeriod === 'month' ? 'default' : 'outline'}
+                  className="h-8 px-3"
+                  onClick={() => setMemberReportPeriod('month')}
+                >
+                  Month
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {memberCompletionReport.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No members to report yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {memberCompletionReport.map((member) => (
+                    <div key={member.user_id} className="flex items-center justify-between rounded-md border border-border/50 bg-muted/20 px-3 py-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={member.avatar} />
+                          <AvatarFallback>{member.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <p className="text-sm font-medium truncate">{member.name}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-semibold">{member.completed}</p>
+                        <p className="text-[11px] text-muted-foreground">completed</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
             {/* Weekly Progress Chart with gradient */}
             <Card className="min-w-0" data-chart="weekly-progress">

@@ -234,6 +234,7 @@ Rules:
 - When user asks to delete tasks, use delete_task.
 - Use get_tasks whenever you need a fresh task list before acting.
 - For all-day tasks, set is_anytime=true and do not send daily_start_time/daily_end_time.
+- When presenting tasks to users, format task lists as a markdown table for readability.
 - task.md is private assistant scratch notes only; never treat task.md as official user task storage.
 - Use exact task UUIDs internally for tool calls only.
 - NEVER reveal raw UUIDs, database IDs, goal_id, or task_id in user-facing responses.
@@ -448,8 +449,26 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
     if (name === 'get_tasks') {
       const { data } = await supabase.from('tasks').select('*').eq('goal_id', goalId).order('created_at', { ascending: false });
       if (data) setInternalTasks(data as Task[]);
-      const list = (data || []).map((t: Task) => `  ${t.completed ? '✓' : '○'} ${t.id} | "${t.title}" | ${t.end_date?.slice(0, 10) || '-'}`).join('\n');
-      return `${(data || []).length} tasks:\n${list}`;
+      const rows = (data || []).map((t: Task) => {
+        const safeTitle = (t.title || '').replace(/\|/g, '\\|');
+        const status = t.completed ? 'Done' : 'Pending';
+        const date = t.end_date?.slice(0, 10) || '-';
+        const anytimeStatus = t.is_anytime ? 'Anytime' : 'Scheduled';
+        const time = t.is_anytime
+          ? 'Anytime'
+          : (t.daily_start_time && t.daily_end_time
+            ? `${t.daily_start_time.slice(0, 5)} - ${t.daily_end_time.slice(0, 5)}`
+            : '-');
+        return `| ${safeTitle || 'Untitled'} | ${status} | ${anytimeStatus} | ${date} | ${time} |`;
+      }).join('\n');
+
+      const table = [
+        '| Task | Status | Anytime Status | Due Date | Time |',
+        '| --- | --- | --- | --- | --- |',
+        rows || '| (no tasks) | - | - | - | - |',
+      ].join('\n');
+
+      return `Total tasks: ${(data || []).length}\n\n${table}`;
     }
     if (name === 'read_file') {
       if (!userInfo?.id) return '[FAIL] Not authenticated';

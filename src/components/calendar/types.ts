@@ -6,6 +6,7 @@ export interface Task {
   description: string;
   completed: boolean;
   user_id: string;
+  updated_by?: string | null;
   created_at?: string;
   updated_at?: string;
   // Unified datetime fields

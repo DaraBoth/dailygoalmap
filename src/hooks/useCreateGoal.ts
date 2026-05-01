@@ -90,7 +90,7 @@ export interface GoalMetadata {
 export interface CreateGoalPayload {
   title: string;
   description?: string;
-  target_date: Date;
+  target_date?: Date | null;
   start_date?: Date;
   metadata: GoalMetadata;
 }
@@ -179,7 +179,7 @@ export function useCreateGoal() {
           {
             title: payload.title,
             description: payload.description || "",
-            target_date: payload.target_date.toISOString().split("T")[0],
+            target_date: payload.target_date ? payload.target_date.toISOString().split("T")[0] : null,
             user_id: userData.user.id,
             status: "active",
             metadata,
