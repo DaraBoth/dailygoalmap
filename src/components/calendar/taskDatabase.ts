@@ -60,6 +60,7 @@ export async function fetchUserTasks(goalId: string): Promise<Task[]> {
           description: task.description,
           completed: task.completed,
           user_id: task.user_id,
+          updated_by: task.updated_by,
           title: task.title,
           start_date: startDate,
           end_date: endDate || startDate,
@@ -181,7 +182,8 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
       .from('tasks')
       .update({ 
         completed: completed, 
-        updated_at: new Date().toISOString() 
+        updated_at: new Date().toISOString(),
+        updated_by: user.id,
       })
       .eq('id', taskId);
     

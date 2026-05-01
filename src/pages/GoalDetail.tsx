@@ -160,7 +160,7 @@ const GoalDetail: React.FC = () => {
     const taskParam = search?.task || search?.taskId;
     if (taskParam) {
       setAutoOpenTaskId(taskParam);
-      setActiveTab("tasks");
+      setActiveTab("overview");
     }
   }, [search]);
 

@@ -165,11 +165,12 @@ export const useCalendarTasks = ({
     if (!taskToUpdate) return;
 
     const newCompletedState = !taskToUpdate.completed;
+    const updatedAt = new Date().toISOString();
     
     // Update local state FIRST for immediate UI feedback
     const updatedTasks = tasks.map(task => 
       task.id === taskId 
-        ? { ...task, completed: newCompletedState } 
+        ? { ...task, completed: newCompletedState, updated_at: updatedAt } 
         : task
     );
     setTasks(updatedTasks);
@@ -178,7 +179,8 @@ export const useCalendarTasks = ({
     if (selectedTask && selectedTask.id === taskId) {
       const updatedSelectedTask = {
         ...selectedTask,
-        completed: newCompletedState
+        completed: newCompletedState,
+        updated_at: updatedAt
       };
       setSelectedTask(updatedSelectedTask);
     }

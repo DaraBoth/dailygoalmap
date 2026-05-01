@@ -107,6 +107,13 @@ const Calendar = ({
     }
   };
 
+  const syncTaskSelectionInUrl = (task: Task, taskDate: Date) => {
+    const currentUrl = new URL(window.location.toString());
+    currentUrl.searchParams.set('date', formatYMD(taskDate));
+    currentUrl.searchParams.set('taskId', task.id);
+    window.history.replaceState({}, '', currentUrl.toString());
+  };
+
   useEffect(() => {
     if (hasInitializedDate.current) return;
 
@@ -211,6 +218,11 @@ const Calendar = ({
       const tasksForTaskDate = getTasksForDateWrapper(taskDate);
       const taskIndex = tasksForTaskDate.findIndex(t => t.id === task.id);
       setSelectedTaskIndex(taskIndex >= 0 ? taskIndex : 0);
+      syncTaskSelectionInUrl(task, taskDate);
+
+      if (externalOnDateChange) {
+        externalOnDateChange(taskDate);
+      }
     }
 
     // Only open dialog on mobile, desktop uses the TaskDetailsPanel
@@ -500,12 +512,7 @@ const Calendar = ({
               onDeleteTask={handleDeleteTask}
               goalId={goalId}
               onTaskClick={(task) => {
-                setSelectedTask(task);
-                const taskDate = new Date(task.start_date);
-                setSelectedDate(taskDate);
-                const tasksForTaskDate = getTasksForDateWrapper(taskDate);
-                const taskIndex = tasksForTaskDate.findIndex(t => t.id === task.id);
-                setSelectedTaskIndex(taskIndex >= 0 ? taskIndex : 0);
+                handleOpenTaskDetails(task);
               }}
             />
           </div>
