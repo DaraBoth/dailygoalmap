@@ -141,13 +141,28 @@ const TodaysTasks: React.FC = React.memo(() => {
       const taskToUpdate = tasksForToday.find(t => t.id === taskId);
       if (!taskToUpdate) throw new Error("Task not found");
 
+      const fallbackDate = taskToUpdate.start_date || taskToUpdate.end_date || taskToUpdate.created_at || new Date().toISOString();
+      const normalizedDate = new Date(fallbackDate);
+      const normalizedIso = Number.isNaN(normalizedDate.getTime())
+        ? new Date().toISOString()
+        : normalizedDate.toISOString();
+
+      const updatePayload: Record<string, any> = {
+        completed: newStatus,
+        updated_at: new Date().toISOString(),
+        updated_by: user.id,
+      };
+
+      if (!taskToUpdate.start_date) {
+        updatePayload.start_date = normalizedIso;
+      }
+      if (!taskToUpdate.end_date) {
+        updatePayload.end_date = taskToUpdate.start_date || normalizedIso;
+      }
+
       const { data: updatedRows, error } = await supabase
         .from('tasks')
-        .update({
-          completed: newStatus,
-          updated_at: new Date().toISOString(),
-          updated_by: user.id,
-        })
+        .update(updatePayload)
         .eq('id', taskId)
         .select('id');
 

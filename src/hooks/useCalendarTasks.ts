@@ -10,6 +10,7 @@ import {
   findNextDayWithTasks,
   findPreviousDayWithTasks,
   filterTasksByDate,
+  getTaskAnchorDate,
   getNextDay,
   getPreviousDay
 } from "@/components/calendar/utils/dateUtils";
@@ -166,7 +167,7 @@ export const useCalendarTasks = ({
 
     const newCompletedState = !taskToUpdate.completed;
     const updatedAt = new Date().toISOString();
-    const taskDate = new Date(taskToUpdate.start_date);
+    const taskDate = getTaskAnchorDate(taskToUpdate as any);
     const currentUrl = new URL(window.location.toString());
     currentUrl.searchParams.set('date', formatYMD(taskDate));
     currentUrl.searchParams.set('taskId', taskId);
@@ -198,7 +199,7 @@ export const useCalendarTasks = ({
       await toggleTaskCompletion(tasks, taskId);
       
       // Format datetime for notification
-      const startDate = new Date(taskToUpdate.start_date);
+      const startDate = getTaskAnchorDate(taskToUpdate as any);
       const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       const timeStr = taskToUpdate.daily_start_time 
         ? new Date(`2000-01-01T${taskToUpdate.daily_start_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
@@ -241,7 +242,7 @@ export const useCalendarTasks = ({
   };
 
   const handleNavigateTask = useCallback((direction: 'next' | 'prev' | 'current', specificIndex?: number) => {
-    const baseDate = selectedTask ? new Date(selectedTask.start_date) : selectedDate;
+    const baseDate = selectedTask ? getTaskAnchorDate(selectedTask as any) : selectedDate;
     if (!baseDate) return;
 
     // Always derive the tasks list from the currently selected task's day if available

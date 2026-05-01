@@ -109,18 +109,20 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
       const ownGoalIds = ownGoals?.map(g => g.id) || [];
       const allGoalIds = [...new Set([...memberGoalIds, ...ownGoalIds])];
 
-      // Search for tasks - from user's goals or shared goals
-      let taskQuery = supabase
-        .from('tasks')
-        .select('*, user_profiles!tasks_user_id_profiles_fkey(*)')
-        .or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
-        .order('start_date', { ascending: false });
-
+      // Search for tasks - only within goals the user owns or is a member of.
+      // If they have no accessible goals, return empty immediately to prevent a full-table scan.
+      let tasks: any[] = [];
+      let tasksError: any = null;
       if (allGoalIds.length > 0) {
-        taskQuery = taskQuery.in('goal_id', allGoalIds);
+        const { data, error } = await supabase
+          .from('tasks')
+          .select('*, user_profiles!tasks_user_id_profiles_fkey(*)')
+          .in('goal_id', allGoalIds)
+          .or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+          .order('start_date', { ascending: false });
+        tasks = data || [];
+        tasksError = error;
       }
-
-      const { data: tasks, error: tasksError } = await taskQuery;
 
       if (tasksError) {
         console.error("Tasks search error:", tasksError);

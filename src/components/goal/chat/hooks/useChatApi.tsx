@@ -161,13 +161,33 @@ export const useChatApi = () => {
         console.error("Error searching goals:", goalsError);
       }
       
-      // Search tasks using better ilike search and include shared goal tasks
-      const { data: tasks, error: tasksError } = await supabase
-        .from('tasks')
-        .select('*, goal_id')
-        .ilike('description', `%${query}%`)
-        .or(`user_id.eq.${user.id},goal_id.in.(select goal_id from goal_members where user_id = '${user.id}')`)
-        .limit(10);
+      // Search tasks: only within goals the user owns or is a member of.
+      // Fetch accessible goal IDs first, then filter tasks by them.
+      const { data: memberGoalRows } = await supabase
+        .from('goal_members')
+        .select('goal_id')
+        .eq('user_id', user.id);
+      const { data: ownGoalRows } = await supabase
+        .from('goals')
+        .select('id')
+        .eq('user_id', user.id);
+      const accessibleGoalIds = [
+        ...(memberGoalRows || []).map((r: any) => r.goal_id),
+        ...(ownGoalRows || []).map((r: any) => r.id),
+      ];
+
+      let tasks: any[] = [];
+      let tasksError: any = null;
+      if (accessibleGoalIds.length > 0) {
+        const { data, error } = await supabase
+          .from('tasks')
+          .select('*, goal_id')
+          .in('goal_id', accessibleGoalIds)
+          .ilike('description', `%${query}%`)
+          .limit(10);
+        tasks = data || [];
+        tasksError = error;
+      }
       
       if (tasksError) {
         console.error("Error searching tasks:", tasksError);

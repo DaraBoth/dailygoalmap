@@ -13,11 +13,31 @@ const parseTaskDate = (raw?: string | null): Date | null => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+export const getTaskDateKey = (raw?: string | null): string | null => {
+  if (!raw) return null;
+
+  const str = String(raw).trim();
+
+  // Date-only values should be used as-is (already local day semantics).
+  if (DATE_ONLY_RE.test(str)) {
+    return str;
+  }
+
+  // Datetime values must be converted to local date key to avoid UTC day drift.
+  const parsed = parseTaskDate(str);
+  return parsed ? format(parsed, 'yyyy-MM-dd') : null;
+};
+
+export const getTaskAnchorDate = (task: { start_date?: string | null; date?: string | null }): Date => {
+  const key = getTaskDateKey(task.start_date || task.date);
+  return parseYMD(key) || new Date();
+};
+
 /**
  * Filters tasks for a specific date
  */
 export const filterTasksByDate = (tasks: any[], date: Date) => {
-  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayKey = format(date, 'yyyy-MM-dd');
   return tasks
     .filter(task => {
       // Handle legacy tasks that might not have start_date/end_date
@@ -36,14 +56,12 @@ export const filterTasksByDate = (tasks: any[], date: Date) => {
         return false;
       }
 
-      const start = parseTaskDate(startDate);
-      const end = parseTaskDate(endDate);
-      if (!start || !end) {
+      const startKey = getTaskDateKey(startDate);
+      const endKey = getTaskDateKey(endDate);
+      if (!startKey || !endKey) {
         return false;
       }
-      const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-      const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-      return startDay <= day && day <= endDay;
+      return startKey <= dayKey && dayKey <= endKey;
     })
     .sort((a, b) => {
       // Sort by daily_start_time when available; else by start_date
@@ -52,7 +70,9 @@ export const filterTasksByDate = (tasks: any[], date: Date) => {
       }
       if (a.daily_start_time) return -1;
       if (b.daily_start_time) return 1;
-      return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
+      const aKey = getTaskDateKey(a.start_date || a.date) || '';
+      const bKey = getTaskDateKey(b.start_date || b.date) || '';
+      return aKey.localeCompare(bKey);
     });
 };
 

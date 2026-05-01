@@ -177,7 +177,11 @@ const GoalDetail: React.FC = () => {
         }
       }
       if (loaderData.members) setMembers(loaderData.members);
-      if (loaderData.tasks) setTasks(normalizeTaskList(loaderData.tasks));
+      if (loaderData.tasks) {
+        const normalized = normalizeTaskList(loaderData.tasks);
+        console.log('[GoalDetail] setTasks from loaderData', { total: normalized.length, completedCount: normalized.filter(t => t.completed).length, tasks: normalized });
+        setTasks(normalized);
+      }
     }
   }, [loaderData]);
 

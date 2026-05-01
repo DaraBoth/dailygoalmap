@@ -134,7 +134,7 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
     // Get task and goal info for notifications
     const { data: task, error: taskError } = await supabase
       .from('tasks')
-    .select('goal_id, title, start_date')
+      .select('goal_id, title, start_date, end_date, created_at')
       .eq('id', taskId)
       .single();
 
@@ -142,13 +142,29 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
       throw new Error("Failed to get task information");
     }
 
+    const fallbackDate = task.start_date || task.end_date || task.created_at || new Date().toISOString();
+    const normalizedDate = new Date(fallbackDate);
+    const normalizedIso = Number.isNaN(normalizedDate.getTime())
+      ? new Date().toISOString()
+      : normalizedDate.toISOString();
+
+    const updatePayload: Record<string, any> = {
+      completed: completed,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    };
+
+    // Backfill missing datetime fields so day-based rendering can reliably find the task after refresh.
+    if (!task.start_date) {
+      updatePayload.start_date = normalizedIso;
+    }
+    if (!task.end_date) {
+      updatePayload.end_date = task.start_date || normalizedIso;
+    }
+
     const { data: updatedRows, error } = await supabase
       .from('tasks')
-      .update({ 
-        completed: completed, 
-        updated_at: new Date().toISOString(),
-        updated_by: user.id,
-      })
+      .update(updatePayload)
       .eq('id', taskId)
       .select('id');
     
@@ -166,7 +182,7 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
       const { createTaskUpdateNotification } = await import("@/services/internalNotifications");
       
       // Build deep link to the task
-  const completedTaskDate = String(task.start_date || '').slice(0, 10);
+  const completedTaskDate = String(task.start_date || task.end_date || normalizedIso).slice(0, 10);
   const deepLinkComplete = `/goal/${task.goal_id}?taskId=${encodeURIComponent(taskId)}&date=${encodeURIComponent(completedTaskDate)}`;
   const viteEnv2 = (typeof import.meta !== 'undefined') ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env : undefined;
   const publicBase2 = (viteEnv2 && viteEnv2.VITE_PUBLIC_URL) || (typeof window !== 'undefined' ? window.location.origin : undefined);

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { parseYMD, formatYMD } from '@/utils/parseYMD';
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -16,6 +16,7 @@ import { Task } from "./calendar/types";
 import { useToast } from "@/hooks/use-toast";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 import { cn } from "@/lib/utils";
+import { getTaskAnchorDate, getTaskDateKey } from "./calendar/utils/dateUtils";
 
 
 interface CalendarProps {
@@ -85,6 +86,32 @@ const Calendar = ({
     isLoadingAllTasks
   });
 
+  const currentDateTasks = useMemo(() => {
+    if (!selectedDate) return [];
+    return getTasksForDateWrapper(selectedDate);
+  }, [selectedDate, getTasksForDateWrapper]);
+
+  useEffect(() => {
+    if (!selectedDate) return;
+    const dayKey = formatYMD(selectedDate);
+    const completedTasks = tasks.filter(t => t.completed);
+    const tasksForDay = tasks.filter(t => {
+      const s = getTaskDateKey(t.start_date);
+      const e = getTaskDateKey(t.end_date);
+      return s && e && s <= dayKey && dayKey <= e;
+    });
+    const dateKeysInState = [...new Set(tasks.map(t => getTaskDateKey(t.start_date)).filter(Boolean))].sort();
+    console.log('[Calendar Debug] summary', {
+      selectedDate: dayKey,
+      totalTasks: tasks.length,
+      completedCount: completedTasks.length,
+      tasksMatchingSelectedDay: tasksForDay.length,
+      completedTasksMatchingDay: tasksForDay.filter(t => t.completed).length,
+      dateKeysInState,
+      completedTasks: completedTasks.map(t => ({ id: t.id, title: t.title, startKey: getTaskDateKey(t.start_date), endKey: getTaskDateKey(t.end_date) })),
+    });
+  }, [selectedDate, tasks]);
+
   useEffect(() => {
     if (externalSelectedDate && externalOnDateChange) {
       setSelectedDate(externalSelectedDate);
@@ -144,7 +171,7 @@ const Calendar = ({
     if (taskParam && tasks.length > 0) {
       const found = tasks.find(t => t.id === taskParam);
       if (found) {
-        const taskDate = new Date(found.start_date);
+        const taskDate = getTaskAnchorDate(found as any);
         setSelectedDate(taskDate);
         handleDateChange(taskDate);
         syncTaskSelectionInUrl(found, taskDate);
@@ -171,7 +198,7 @@ const Calendar = ({
 
     const found = tasks.find(t => t.id === idToOpen);
     if (found) {
-      const taskDate = new Date(found.start_date);
+      const taskDate = getTaskAnchorDate(found as any);
       setSelectedDate(taskDate);
       handleDateChange(taskDate);
       syncTaskSelectionInUrl(found, taskDate);
@@ -222,7 +249,7 @@ const Calendar = ({
     if (task) {
       // If a specific task is provided, select it
       setSelectedTask(task);
-      const taskDate = new Date(task.start_date);
+      const taskDate = getTaskAnchorDate(task as any);
       setSelectedDate(taskDate);
       const tasksForTaskDate = getTasksForDateWrapper(taskDate);
       const taskIndex = tasksForTaskDate.findIndex(t => t.id === task.id);
@@ -437,7 +464,7 @@ const Calendar = ({
         <div className="flex flex-col items-center">
           <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-0.5 animate-pulse">Stream</span>
           <span className="text-[11px] font-bold text-muted-foreground tracking-tighter">
-            {String(selectedTaskIndex + 1).padStart(2, '0')} <span className="text-muted-foreground/50">/</span> {String(getTasksForDateWrapper(selectedDate || new Date()).length).padStart(2, '0')}
+            {String(selectedTaskIndex + 1).padStart(2, '0')} <span className="text-muted-foreground/50">/</span> {String(currentDateTasks.length).padStart(2, '0')}
           </span>
         </div>
 
@@ -495,7 +522,7 @@ const Calendar = ({
           <div className="pb-safe-or-6 mt-2 sm:mt-3">
             <TaskList
               selectedDate={selectedDate}
-              tasks={selectedDate ? getTasksForDateWrapper(selectedDate) : []}
+              tasks={currentDateTasks}
               onTaskClick={handleOpenTaskDetails}
               onToggleTaskCompletion={handleToggleTaskCompletion}
               onEdit={handleEditTask}
