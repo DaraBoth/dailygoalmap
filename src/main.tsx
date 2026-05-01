@@ -35,8 +35,8 @@ window.addEventListener("beforeinstallprompt", (event: Event) => {
   }
 });
 
-// Register service worker for PWA functionality
-if ('serviceWorker' in navigator) {
+// Register service worker only in production to avoid dev-module interception issues.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', async () => {
     try {
       await registerServiceWorker();

@@ -43,7 +43,7 @@ export function MobileDatePicker({
             !date && "text-muted-foreground",
             className
           )}
-          onClick={() => setOpen(true)}
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); setOpen(true); }}
         >
           <CalendarIcon className="mr-3 h-4 w-4 text-blue-500 dark:text-blue-400" />
           {date ? format(date, "yyyy-MM-dd") : <span>{placeholder}</span>}

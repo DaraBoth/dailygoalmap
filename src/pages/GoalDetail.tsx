@@ -506,6 +506,7 @@ const GoalDetail: React.FC = () => {
                 >
                   <div className="max-w-7xl mx-auto">
                     <SmartAnalytics
+                      goalId={goalId}
                       tasks={tasks}
                       members={displayMembers}
                       goalTitle={goalTitle}

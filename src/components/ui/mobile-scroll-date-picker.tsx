@@ -22,39 +22,54 @@ const ScrollPicker = ({ items, selectedIndex, onSelect, className }: ScrollPicke
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
   const [currentOffset, setCurrentOffset] = useState(0);
+  const velocity = useRef(0);
+  const lastTime = useRef(0);
 
-  const itemHeight = 40;
+  const itemHeight = 48;
 
   useEffect(() => {
     if (scrollContainerRef.current) {
       const targetOffset = -(selectedIndex * itemHeight);
       scrollContainerRef.current.style.transform = `translateY(${targetOffset}px)`;
+      scrollContainerRef.current.style.transition = "transform 0.3s ease-out";
       setCurrentOffset(targetOffset);
     }
   }, [selectedIndex]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    setStartY(e.clientY);
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
+  const finishScroll = (finalOffset: number) => {
     if (scrollContainerRef.current) {
-      const snappedIndex = Math.round(-currentOffset / itemHeight);
+      const snappedIndex = Math.round(-finalOffset / itemHeight);
       const clampedIndex = Math.max(0, Math.min(snappedIndex, items.length - 1));
-      onSelect(clampedIndex);
-
       const targetOffset = -(clampedIndex * itemHeight);
+      
+      scrollContainerRef.current.style.transition = "transform 0.3s ease-out";
       scrollContainerRef.current.style.transform = `translateY(${targetOffset}px)`;
       setCurrentOffset(targetOffset);
+      onSelect(clampedIndex);
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent | React.MouseEvent | React.TouchEvent) => {
+    setIsDragging(true);
+    const clientY = "clientY" in e ? e.clientY : ("touches" in e ? e.touches[0].clientY : 0);
+    setStartY(clientY);
+    lastTime.current = Date.now();
+    velocity.current = 0;
+    
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.transition = "none";
+    }
+  };
+
+  const handlePointerUp = () => {
+    setIsDragging(false);
+    finishScroll(currentOffset + velocity.current * 100);
+  };
+
+  const handlePointerMove = (clientY: number) => {
     if (!isDragging || !scrollContainerRef.current) return;
 
-    const delta = e.clientY - startY;
+    const delta = clientY - startY;
     const newOffset = currentOffset + delta;
     const maxOffset = 0;
     const minOffset = -(items.length - 1) * itemHeight;
@@ -62,16 +77,35 @@ const ScrollPicker = ({ items, selectedIndex, onSelect, className }: ScrollPicke
     const clampedOffset = Math.max(minOffset, Math.min(newOffset, maxOffset));
     scrollContainerRef.current.style.transform = `translateY(${clampedOffset}px)`;
     setCurrentOffset(clampedOffset);
-    setStartY(e.clientY);
+    
+    const now = Date.now();
+    const timeDelta = Math.max(1, now - lastTime.current);
+    velocity.current = delta / timeDelta;
+    lastTime.current = now;
+    
+    setStartY(clientY);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    handlePointerMove(e.clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    handlePointerMove(e.touches[0].clientY);
   };
 
   useEffect(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove as any);
-      window.addEventListener("mouseup", handleMouseUp);
+      window.addEventListener("mouseup", handlePointerUp);
+      window.addEventListener("touchmove", handleTouchMove as any, { passive: false });
+      window.addEventListener("touchend", handlePointerUp);
+      
       return () => {
         window.removeEventListener("mousemove", handleMouseMove as any);
-        window.removeEventListener("mouseup", handleMouseUp);
+        window.removeEventListener("mouseup", handlePointerUp);
+        window.removeEventListener("touchmove", handleTouchMove as any);
+        window.removeEventListener("touchend", handlePointerUp);
       };
     }
   }, [isDragging, currentOffset]);
@@ -79,32 +113,39 @@ const ScrollPicker = ({ items, selectedIndex, onSelect, className }: ScrollPicke
   return (
     <div
       className={cn(
-        "relative w-full h-40 overflow-hidden bg-background border border-border rounded-xl",
+        "relative w-full h-44 overflow-hidden bg-gradient-to-b from-background/50 to-background/80 border border-border/40 rounded-2xl",
         className
       )}
     >
+      {/* Top fade overlay */}
+      <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-background to-transparent pointer-events-none z-20" />
+      
       {/* Selection indicator */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="h-10 w-full border-t border-b border-primary/20 bg-primary/5" />
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+        <div className="h-14 w-full border-t-2 border-b-2 border-blue-500/50 bg-blue-500/5 rounded-lg" />
       </div>
+
+      {/* Bottom fade overlay */}
+      <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none z-20" />
 
       {/* Scrollable container */}
       <div
         ref={scrollContainerRef}
-        className="absolute inset-0 flex flex-col transition-transform duration-300 ease-out cursor-grab active:cursor-grabbing"
-        onMouseDown={handleMouseDown}
+        className="absolute inset-0 flex flex-col cursor-grab active:cursor-grabbing select-none"
+        onMouseDown={handlePointerDown as any}
+        onTouchStart={handlePointerDown as any}
         style={{ transform: `translateY(${-(selectedIndex * itemHeight)}px)` }}
       >
         {items.map((item, index) => (
           <div
             key={index}
             className={cn(
-              "flex items-center justify-center h-10 text-sm font-medium transition-colors",
+              "flex items-center justify-center font-semibold transition-all duration-150 pointer-events-none",
               index === selectedIndex
-                ? "text-foreground"
-                : "text-muted-foreground hover:text-foreground"
+                ? "text-lg text-foreground"
+                : "text-base text-foreground/50"
             )}
-            style={{ height: `${itemHeight}px` }}
+            style={{ height: `${itemHeight}px`, minHeight: `${itemHeight}px` }}
           >
             {item}
           </div>

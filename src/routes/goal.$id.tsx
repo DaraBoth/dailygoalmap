@@ -14,7 +14,6 @@ const GoalDetailLoading = () => (
   <div className="flex items-center justify-center min-h-screen bg-background">
     <EnhancedLoading
       variant="goal"
-      message="Loading goal details..."
       className="min-h-[500px]"
     />
   </div>

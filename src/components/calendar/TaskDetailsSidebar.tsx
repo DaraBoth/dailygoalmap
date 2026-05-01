@@ -83,7 +83,7 @@ const TaskDetailsSidebar = ({
           {selectedTask ? (
             <div className="h-full flex flex-col">
               {/* Header */}
-              <SheetHeader className="flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-b border-border/50">
+              <SheetHeader className="flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-b border-border/50 pr-14 sm:pr-16">
                 <div className="flex items-center justify-between gap-3">
                   <SheetTitle className="text-xs sm:text-sm text-muted-foreground font-medium truncate">{goalTitle}</SheetTitle>
                   

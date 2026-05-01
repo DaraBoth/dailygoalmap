@@ -128,7 +128,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto no-scrollbar">
             <div className="px-4 sm:px-5 py-5 pb-10">
-              <form id="edit-task-form" onSubmit={handleSubmit} className="space-y-5">
+              <form id="edit-task-form" onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === 'Enter' && e.target !== e.currentTarget) e.preventDefault(); }} className="space-y-5">
                 {/* Title */}
                 <div className="space-y-2">
                   <Label htmlFor="task-title" className="text-sm font-medium text-muted-foreground">
@@ -160,7 +160,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                 </div>
 
                 {/* Dates */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3" onClick={(e) => e.stopPropagation()}>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
                       <Calendar className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />

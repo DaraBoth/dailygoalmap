@@ -269,7 +269,9 @@ self.addEventListener('fetch', (event) => {
       url.pathname.match(/\.(js|mjs|jsx|ts|tsx)$/) ||
       url.pathname.includes('/@') || // Vite special paths
       url.pathname.includes('/node_modules/')) {
-    event.respondWith(fetch(event.request));
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
     return;
   }
 
