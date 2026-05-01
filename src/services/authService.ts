@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { clearCurrentAccountPreference } from '@/utils/savedAccounts';
 import type { User, Session } from '@supabase/supabase-js';
 
 export interface AuthState {
@@ -81,6 +82,7 @@ class AuthService {
         } else if (event === 'SIGNED_OUT') {
           this.updateAuthState(null, null);
           this.clearStoredSession();
+          clearCurrentAccountPreference();
         }
       });
 
@@ -287,9 +289,10 @@ class AuthService {
    */
   public async signOut(): Promise<void> {
     try {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       this.updateAuthState(null, null);
       this.clearStoredSession();
+      clearCurrentAccountPreference();
     } catch (error) {
       console.error('Sign out error:', error);
       throw error;

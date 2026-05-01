@@ -20,7 +20,7 @@ const HeroSection: React.FC = () => {
           >
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/20 to-purple-500/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-            <span className="relative text-sm font-bold tracking-wide text-foreground/80">New: AI-Powered Insights 2.0</span>
+            <span className="relative text-sm font-bold tracking-wide text-foreground/80">New: Smarter daily plans</span>
             <Sparkles className="relative h-4 w-4 text-yellow-500 animate-bounce" />
           </motion.div>
 
@@ -32,16 +32,16 @@ const HeroSection: React.FC = () => {
             className="max-w-4xl space-y-6"
           >
             <h1 className="text-6xl sm:text-7xl lg:text-8xl font-black leading-[1.1] tracking-tight">
-              <span className="text-foreground">Scale Your</span>
+              <span className="text-foreground">Reach Your</span>
               <br />
               <span className="bg-gradient-to-b from-primary via-blue-400 to-blue-600 bg-clip-text text-transparent">
-                Orbit
+                Goals
               </span>
             </h1>
 
             <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto font-medium">
-              Transform your complex aspirations into an <span className="text-foreground font-bold">automated orbit</span> of success.
-              Let AI handle the breakdown, you focus on the achievement.
+              Turn big goals into clear daily tasks.
+              Let AI help with planning while you focus on getting things done.
             </p>
           </motion.div>
 
@@ -55,7 +55,7 @@ const HeroSection: React.FC = () => {
             <SmartLink to="/register">
               <Button size="lg" className="text-lg px-10 py-8 h-auto rounded-2xl shadow-[0_20px_40px_-12px_rgba(59,130,246,0.3)] hover:shadow-[0_25px_50px_-12px_rgba(59,130,246,0.4)] transition-all bg-primary hover:bg-primary/90 border-0">
                 <span className="flex items-center font-bold tracking-wide">
-                  Start Your Orbit
+                  Get Started
                   <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
                 </span>
               </Button>
@@ -63,7 +63,7 @@ const HeroSection: React.FC = () => {
 
             <SmartLink to="/login">
               <Button variant="outline" size="lg" className="text-lg px-10 py-8 h-auto rounded-2xl backdrop-blur-md border hover:bg-accent transition-all font-bold">
-                View Demo
+                Log In
               </Button>
             </SmartLink>
           </motion.div>

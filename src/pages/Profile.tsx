@@ -49,7 +49,7 @@ const Profile = () => {
 
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
       if (error) throw error;
 
       toast({
@@ -91,7 +91,6 @@ const Profile = () => {
           <div className="absolute -bottom-[10%] left-[20%] w-[35%] h-[35%] bg-indigo-600/10 rounded-full blur-[120px]"></div>
         </div>
 
-        {/* Header */}
         <header className="sticky top-0 z-40 w-full bg-zinc-950/60 backdrop-blur-xl border-b border-white/5">
           <div className="container mx-auto px-4 lg:px-6 h-16 lg:h-20 flex items-center justify-between">
             <div className="flex items-center gap-6">

@@ -11,11 +11,12 @@ import { Separator } from "@/components/ui/separator";
 import LogoAvatar from "@/components/ui/LogoAvatar";
 import { motion, AnimatePresence } from "framer-motion";
 import GlobalBackground from "@/components/ui/GlobalBackground";
-import { getSavedAccounts, saveAccount, removeAccount, type SavedAccount } from "@/utils/savedAccounts";
+import { getSavedAccounts, saveAccount, removeAccount, setCurrentAccountPreference, type SavedAccount } from "@/utils/savedAccounts";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [saveOnDevice, setSaveOnDevice] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -48,16 +49,22 @@ const Login = () => {
         }
         throw error;
       }
-      // Save account info for switcher
-      if (data.user) {
+      // Save account info for switcher only when user opts in.
+      if (data.user && saveOnDevice) {
         const meta = data.user.user_metadata;
         saveAccount({
           id: data.user.id,
           email: data.user.email ?? email,
           fullName: meta?.full_name || meta?.name || email.split("@")[0],
           avatarUrl: meta?.avatar_url,
+          accessToken: data.session?.access_token,
+          refreshToken: data.session?.refresh_token,
         });
         setSavedAccounts(getSavedAccounts());
+      }
+      // Set this account as the current preference
+      if (data.user) {
+        setCurrentAccountPreference(data.user.id);
       }
       await goToDashboard();
       toast({ title: "Welcome back!" });
@@ -115,17 +122,83 @@ const Login = () => {
     }
   };
 
-  const handleSelectSavedAccount = (account: SavedAccount) => {
+  const handleSelectSavedAccount = async (account: SavedAccount) => {
+    // One-tap login when we have stored tokens for this account.
+    if (account.accessToken && account.refreshToken) {
+      setShowSaved(false);
+      setIsLoading(true);
+      try {
+        const { error } = await supabase.auth.setSession({
+          access_token: account.accessToken,
+          refresh_token: account.refreshToken,
+        });
+
+        if (error) throw error;
+
+        // Set this as the current account preference
+        setCurrentAccountPreference(account.id);
+        await goToDashboard();
+        return;
+      } catch {
+        // If token-based login fails (expired/revoked), fall back to password login.
+        toast({
+          title: "Session expired",
+          description: "Please log in once with password to refresh one-tap login.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      toast({
+        title: "One-tap not ready yet",
+        description: "Please log in once with password and keep save-account enabled.",
+      });
+    }
+
     setEmail(account.email);
     setShowSaved(false);
-    // Focus password field
     setTimeout(() => document.getElementById("password")?.focus(), 100);
   };
 
-  const handleRemoveSavedAccount = (e: React.MouseEvent, id: string) => {
+  const handleRemoveSavedAccount = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    removeAccount(id);
-    setSavedAccounts(getSavedAccounts());
+    
+    try {
+      // Try to revoke the session using global scope for this specific account
+      const account = getSavedAccounts().find((a) => a.id === id);
+      if (account?.accessToken && account?.refreshToken) {
+        // Set session temporarily to revoke it
+        const { error } = await supabase.auth.setSession({
+          access_token: account.accessToken,
+          refresh_token: account.refreshToken,
+        });
+        
+        if (!error) {
+          // Now sign out globally to revoke this session
+          await supabase.auth.signOut({ scope: 'global' });
+          // Restore original session (if user was logged in)
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          if (currentSession) {
+            await supabase.auth.setSession({
+              access_token: currentSession.access_token,
+              refresh_token: currentSession.refresh_token,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error revoking account session:', error);
+      // Continue with removal even if revocation fails
+    } finally {
+      // Always remove from saved accounts list
+      removeAccount(id);
+      setSavedAccounts(getSavedAccounts());
+      toast({
+        title: "Account removed",
+        description: "This saved account has been removed and can no longer be used for one-tap login.",
+      });
+    }
   };
 
   return (
@@ -305,6 +378,18 @@ const Login = () => {
                         Resend confirmation email
                       </button>
                     </div>
+                  )}
+
+                  {!isForgotPassword && (
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={saveOnDevice}
+                        onChange={(e) => setSaveOnDevice(e.target.checked)}
+                        className="h-4 w-4 rounded border-border"
+                      />
+                      Save this account on this device
+                    </label>
                   )}
 
                   <Button type="submit" disabled={isLoading} className="w-full h-11 rounded-xl font-semibold">

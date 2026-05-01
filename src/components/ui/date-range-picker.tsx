@@ -11,6 +11,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileScrollDatePicker } from "@/components/ui/mobile-scroll-date-picker";
 
 export type DateRange = {
   from?: Date;
@@ -28,6 +30,70 @@ export function DatePickerWithRange({
   dateRange,
   onRangeChange,
 }: DatePickerWithRangeProps) {
+  const isMobile = useIsMobile();
+  const [showFromPicker, setShowFromPicker] = React.useState(false);
+  const [showToPicker, setShowToPicker] = React.useState(false);
+
+  // Mobile mode: Use scroll pickers
+  if (isMobile) {
+    return (
+      <div className={cn("space-y-3", className)}>
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-muted-foreground">From Date</label>
+          <Button
+            variant="outline"
+            className="w-full justify-start text-left"
+            onClick={() => setShowFromPicker(true)}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {dateRange?.from ? format(dateRange.from, "LLL dd, y") : "Pick start date"}
+          </Button>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-muted-foreground">To Date</label>
+          <Button
+            variant="outline"
+            className="w-full justify-start text-left"
+            onClick={() => setShowToPicker(true)}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {dateRange?.to ? format(dateRange.to, "LLL dd, y") : "Pick end date"}
+          </Button>
+        </div>
+
+        {/* From date picker */}
+        <MobileScrollDatePicker
+          date={dateRange?.from || new Date()}
+          isOpen={showFromPicker}
+          onConfirm={(date) => {
+            onRangeChange({ 
+              ...dateRange,
+              from: date 
+            });
+            setShowFromPicker(false);
+          }}
+          onCancel={() => setShowFromPicker(false)}
+        />
+
+        {/* To date picker */}
+        <MobileScrollDatePicker
+          date={dateRange?.to || new Date()}
+          isOpen={showToPicker}
+          onConfirm={(date) => {
+            onRangeChange({ 
+              ...dateRange,
+              to: date 
+            });
+            setShowToPicker(false);
+          }}
+          onCancel={() => setShowToPicker(false)}
+        />
+      </div>
+    );
+  }
+
+  // Desktop mode: Use popover with calendar
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>

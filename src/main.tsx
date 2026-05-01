@@ -12,15 +12,14 @@ import { initializePerformanceMonitoring } from './services/performanceMonitor'
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
 window.addEventListener("beforeinstallprompt", (event: Event) => {
-  // Prevent the default mini-infobar from appearing
-  event.preventDefault();
-
   if (!deferredPrompt) {
     // Cast the event to BeforeInstallPromptEvent
     deferredPrompt = event as BeforeInstallPromptEvent;
+    // Prevent the default mini-infobar from appearing
+    event.preventDefault();
     console.log("beforeinstallprompt event captured");
 
-    // Optionally, show a custom install button
+    // Show custom install button if available
     const installButton = document.getElementById("install-button");
     if (installButton) {
       installButton.style.display = "block";
