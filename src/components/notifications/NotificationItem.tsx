@@ -9,7 +9,7 @@ import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import { formatDistanceToNow } from "date-fns";
 import {
   Mail,
-  UserMinus,
+  DoorOpen,
   UserX,
   Target,
   CheckCircle,
@@ -122,7 +122,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
       case 'removal':
         return <UserX className="h-4 w-4" />;
       case 'member_left':
-        return <UserMinus className="h-4 w-4" />;
+        return <DoorOpen className="h-4 w-4" />;
       case 'task_created':
         return <Plus className="h-4 w-4" />;
       case 'task_deleted':

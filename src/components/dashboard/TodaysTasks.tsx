@@ -413,15 +413,15 @@ const TodaysTasks: React.FC = React.memo(() => {
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed inset-x-0 bottom-0 bg-background/95 backdrop-blur-md border-t shadow-lg rounded-t-2xl max-h-[85vh] overflow-hidden z-[100]"
+                className="fixed inset-x-0 bottom-0 bg-background border-t border-border/60 shadow-lg rounded-t-2xl max-h-[85vh] overflow-hidden z-40"
               >
-                <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border/40 bg-muted/30 sticky top-0 z-10">
-                  <h2 className="text-base sm:text-lg font-semibold">Today's Tasks</h2>
+                <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border/60 bg-background/95 sticky top-0 z-10">
+                  <h2 className="text-base sm:text-lg font-semibold text-foreground">Today's Tasks</h2>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setIsTasksVisible(false)}
-                    className="rounded-xl h-9"
+                    className="rounded-xl h-9 bg-background text-foreground border-border/60 hover:bg-accent"
                   >
                     Close
                   </Button>
@@ -455,7 +455,7 @@ const TodaysTasks: React.FC = React.memo(() => {
                         variant="outline"
                         size="sm"
                         onClick={() => setIsFilterOpen(s => !s)}
-                        className="w-full h-10 rounded-xl"
+                        className="w-full h-10 rounded-xl bg-background text-foreground border-border/60 hover:bg-accent"
                       >
                         Filter Goals
                       </Button>
@@ -497,8 +497,8 @@ const TodaysTasks: React.FC = React.memo(() => {
                     </div>
                   </div>
 
-                  <Card className="rounded-xl">
-                    <CardContent className="max-h-[50vh] overflow-y-auto p-0">
+                  <Card className="rounded-xl border border-border/60 bg-card">
+                    <CardContent className="max-h-[50vh] overflow-y-auto p-0 bg-card">
                       {loading ? (
                         <div className="space-y-3 p-4">
                           <Skeleton className="h-16 w-full rounded-xl" />
@@ -518,7 +518,7 @@ const TodaysTasks: React.FC = React.memo(() => {
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -10 }}
-                              className="flex items-start space-x-2 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
+                              className="flex items-start space-x-2 p-3 rounded-lg bg-background border border-border/40 hover:bg-accent/40 transition-colors cursor-pointer"
                               onClick={() => handleTaskClick(task)}
                             >
                               <Checkbox
@@ -531,15 +531,15 @@ const TodaysTasks: React.FC = React.memo(() => {
                               <div className="flex-1 min-w-0">
                                 <label
                                   htmlFor={`task-${task.id}`}
-                                  className={`text-sm cursor-pointer ${task.completed ? "line-through text-muted-foreground" : ""
+                                  className={`text-sm font-medium text-foreground cursor-pointer ${task.completed ? "line-through text-muted-foreground" : ""
                                     }`}
                                 >
                                   {task.title || task.description}
                                 </label>
-                                <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+                                <div className="flex items-center justify-between text-xs text-foreground/70 dark:text-muted-foreground mt-1">
                                   <span>{task.daily_start_time && task.daily_end_time ? `${task.daily_start_time.slice(0, 5)} - ${task.daily_end_time.slice(0, 5)}` : ''}</span>
                                   {task.goals && (
-                                    <SmartLink to={`/goal/${task.goal_id}?date=${encodeURIComponent(task.start_date)}&taskId=${encodeURIComponent(task.id)}`} className="truncate">
+                                    <SmartLink to={`/goal/${task.goal_id}?date=${encodeURIComponent(task.start_date)}&taskId=${encodeURIComponent(task.id)}`} className="truncate text-foreground/80 dark:text-muted-foreground hover:text-primary">
                                       {task.goals.title}
                                     </SmartLink>
                                   )}
@@ -558,7 +558,7 @@ const TodaysTasks: React.FC = React.memo(() => {
 
           {!isTasksVisible && (
             <Button
-              className="fixed inset-x-0 bottom-0 rounded-t-2xl h-12 z-[100] border-t border-border/40 bg-background/80 backdrop-blur-md text-base font-medium"
+              className="fixed inset-x-0 bottom-0 rounded-t-2xl h-12 z-40 border-t border-border/60 bg-background text-foreground shadow-md text-base font-medium"
               onClick={() => setIsTasksVisible(true)}
             >
               View Today's Tasks
@@ -571,7 +571,7 @@ const TodaysTasks: React.FC = React.memo(() => {
 
       {
         !isMobile && (
-          <Card className="border border-foreground/5 rounded-2xl xl:rounded-[2.5rem] bg-background/40 backdrop-blur-xl shadow-xl overflow-hidden">
+          <Card className="border border-foreground/10 rounded-2xl xl:rounded-[2.5rem] bg-background/85 backdrop-blur-xl shadow-xl overflow-hidden">
             <CardHeader className="pb-3 sm:pb-4 pt-5 sm:pt-6 xl:pt-8 px-4 sm:px-6 xl:px-8">
               <div className="flex items-center space-x-3 sm:space-x-4 mb-3 sm:mb-4 flex-row">
                 <div className="p-2 sm:p-2.5 xl:p-3 bg-primary/10 rounded-xl xl:rounded-2xl ring-1 ring-primary/20">
@@ -581,7 +581,7 @@ const TodaysTasks: React.FC = React.memo(() => {
                   <CardTitle className="text-lg sm:text-xl xl:text-2xl font-bold xl:font-black tracking-tight">
                     Mission Logs
                   </CardTitle>
-                  <CardDescription className="font-semibold xl:font-bold text-muted-foreground/60 uppercase text-[9px] sm:text-[10px] tracking-wider xl:tracking-widest">
+                  <CardDescription className="font-semibold xl:font-bold text-muted-foreground uppercase text-[9px] sm:text-[10px] tracking-wider xl:tracking-widest">
                     {format(new Date(), 'EEEE, MMMM d, yyyy')}
                   </CardDescription>
                 </div>
@@ -692,7 +692,7 @@ const TodaysTasks: React.FC = React.memo(() => {
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 10 }}
-                      className="flex items-start space-x-4 p-4 bg-foreground/[0.02] backdrop-blur-sm border border-foreground/[0.05] rounded-[1.5rem] hover:bg-foreground/[0.05] hover:shadow-lg hover:border-primary/20 transition-all duration-300 cursor-pointer group/item"
+                      className="flex items-start space-x-4 p-4 bg-background/90 backdrop-blur-sm border border-border/50 rounded-[1.5rem] hover:bg-background hover:shadow-lg hover:border-primary/20 transition-all duration-300 cursor-pointer group/item"
                       onClick={() => handleTaskClick(task)}
                     >
                       <Checkbox
@@ -718,7 +718,7 @@ const TodaysTasks: React.FC = React.memo(() => {
                           )}
                           {task.goals && (
                             <span
-                              className="text-muted-foreground/60 font-black uppercase tracking-widest truncate max-w-[120px]"
+                              className="text-foreground/70 dark:text-muted-foreground font-black uppercase tracking-widest truncate max-w-[120px]"
                             >
                               {task.goals.title}
                             </span>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { DoorOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 import { Goal, SortOption } from "@/types/goal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -277,7 +278,7 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
                                   className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl hover:bg-destructive/10 hover:text-destructive transition-all"
                                   data-ignore-navigation="true"
                                 >
-                                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
+                                  <DoorOpen className="h-4 w-4 sm:h-5 sm:w-5" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>

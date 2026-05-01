@@ -65,7 +65,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onUnreadChan
       <SheetContent 
         side="right"
         className={cn(
-          "p-0 overflow-hidden border-l shadow-2xl flex flex-col",
+          "p-0 overflow-hidden border-l shadow-2xl flex flex-col !rounded-none",
+          "[&>button]:md:hidden",
           isMobile 
             ? "w-full bg-background/98 backdrop-blur-3xl" 
             : "w-full sm:w-[420px] lg:w-[460px] bg-background/95 backdrop-blur-2xl"
