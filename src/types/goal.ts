@@ -41,7 +41,8 @@ export interface Goal {
   id: string;
   title: string;
   description: string;
-  target_date: string;
+  target_date: string | null;
+  no_duration?: boolean;
   status: string;
   created_at: string;
   updated_at: string;

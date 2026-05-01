@@ -146,3 +146,22 @@ CHECK (duration_minutes IS NULL OR duration_minutes >= 0);
 -- 5) Helpful index for newest-first task lists
 CREATE INDEX IF NOT EXISTS idx_tasks_goal_created_at
 ON tasks(goal_id, created_at DESC);
+
+-- ============================================
+-- GOALS: NO DURATION FLAG
+-- Prevents no-duration goals from being treated as due-today
+-- ============================================
+
+-- 1) Add column (idempotent)
+ALTER TABLE goals
+ADD COLUMN IF NOT EXISTS no_duration boolean NOT NULL DEFAULT false;
+
+-- 2) Backfill from metadata.no_duration for existing rows (safe)
+UPDATE goals
+SET no_duration = true
+WHERE COALESCE(no_duration, false) = false
+  AND COALESCE((metadata ->> 'no_duration')::boolean, false) = true;
+
+-- 3) Optional index for filtering no-duration goals quickly
+CREATE INDEX IF NOT EXISTS idx_goals_no_duration
+ON goals(no_duration);

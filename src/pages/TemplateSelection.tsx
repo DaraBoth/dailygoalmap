@@ -52,6 +52,7 @@ export function TemplateSelectionPage() {
       title: quickTitle.trim(),
       description: '',
       target_date: noDuration ? null : defaultTargetDate,
+      no_duration: noDuration,
       start_date: new Date(),
       metadata: {
         version: 1,

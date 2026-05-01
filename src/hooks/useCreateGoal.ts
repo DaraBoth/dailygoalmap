@@ -91,6 +91,7 @@ export interface CreateGoalPayload {
   title: string;
   description?: string;
   target_date?: Date | null;
+  no_duration?: boolean;
   start_date?: Date;
   metadata: GoalMetadata;
 }
@@ -176,14 +177,15 @@ export function useCreateGoal() {
       const { data: goalData, error: goalError } = await supabase
         .from("goals")
         .insert([
-          {
+          ({
             title: payload.title,
             description: payload.description || "",
             target_date: payload.target_date ? payload.target_date.toISOString().split("T")[0] : null,
+            no_duration: payload.no_duration ?? !payload.target_date,
             user_id: userData.user.id,
             status: "active",
             metadata,
-          },
+          } as any),
         ])
         .select()
         .single();

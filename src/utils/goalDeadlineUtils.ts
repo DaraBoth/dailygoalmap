@@ -23,11 +23,25 @@ export interface GoalDeadlineInfo {
  * Calculate deadline status and information for a goal
  */
 export const calculateGoalDeadlineInfo = (goal: Goal): GoalDeadlineInfo => {
+  const isNoDuration = Boolean(goal.no_duration || goal.metadata?.no_duration);
   const targetDateStr = goal.target_date || new Date().toISOString().split('T')[0];
   const targetDate = parseISO(targetDateStr);
   const startDateStr = goal.metadata?.start_date || new Date().toISOString().split('T')[0];
   const startDate = parseISO(startDateStr);
   const today = new Date();
+
+  if (isNoDuration) {
+    return {
+      status: "on_track",
+      daysRemaining: 0,
+      daysElapsed: Math.max(0, differenceInDays(today, startDate)),
+      totalDays: 0,
+      progressPercentage: 0,
+      urgencyLevel: "low",
+      statusMessage: "No deadline",
+      actionSuggestions: ["View tasks", "Update progress"],
+    };
+  }
   
   // Calculate days
   const daysRemaining = differenceInDays(targetDate, today);
