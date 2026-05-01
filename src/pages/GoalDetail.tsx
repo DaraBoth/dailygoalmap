@@ -24,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { ThemeSelector } from '@/components/goal/ThemeSelector';
 import { GoalSwitcher } from '@/components/goal/GoalSwitcher';
+import { formatDistanceToNow } from 'date-fns';
 
 const GoalDetail: React.FC = () => {
   const { id: goalId } = useParams({ from: '/goal/$id' });
@@ -67,6 +68,17 @@ const GoalDetail: React.FC = () => {
   const filteredMembers = displayMembers.filter(m =>
     (m.user_profiles?.display_name || '').toLowerCase().includes(memberSearch.toLowerCase())
   );
+
+  const getLastSeenLabel = (lastSeen?: string | null) => {
+    if (!lastSeen) return 'Last seen: not available';
+    const parsed = new Date(lastSeen);
+    if (isNaN(parsed.getTime())) return 'Last seen: not available';
+
+    const minutesAgo = Math.floor((Date.now() - parsed.getTime()) / 60000);
+    if (minutesAgo <= 2) return 'Active now';
+
+    return `Last seen ${formatDistanceToNow(parsed, { addSuffix: true })}`;
+  };
 
   const handleOpenMembersSheet = () => {
     setIsMembersSheetOpen(true);
@@ -592,6 +604,7 @@ const GoalDetail: React.FC = () => {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{m.user_profiles?.display_name || 'Unknown'}</p>
                         <p className="text-[11px] text-muted-foreground capitalize">{m.role}</p>
+                        <p className="text-[11px] text-muted-foreground/80">{getLastSeenLabel(m.last_seen)}</p>
                       </div>
                       {m.role === 'creator'
                         ? <Crown className="h-3.5 w-3.5 text-yellow-500 shrink-0" />

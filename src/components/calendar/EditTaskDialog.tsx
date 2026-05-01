@@ -29,6 +29,8 @@ interface EditTaskDialogProps {
       end_date?: Date | null;
       daily_start_time?: string | null;
       daily_end_time?: string | null;
+      is_anytime?: boolean;
+      duration_minutes?: number | null;
       completed?: boolean;
     }
   ) => void;
@@ -46,6 +48,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [dailyStart, setDailyStart] = useState<string>("09:00");
   const [dailyEnd, setDailyEnd] = useState<string>("10:00");
+  const [isAnytime, setIsAnytime] = useState<boolean>(false);
   const [completed, setCompleted] = useState<boolean>(false);
   const isMobile = useIsMobile();
 
@@ -61,6 +64,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
       if (task.end_date) setEndDate(new Date(task.end_date));
       if (task.daily_start_time) setDailyStart(task.daily_start_time.slice(0, 5));
       if (task.daily_end_time) setDailyEnd(task.daily_end_time.slice(0, 5));
+      setIsAnytime(!!task.is_anytime);
       setCompleted(!!task.completed);
     }
   }, [task]);
@@ -80,8 +84,10 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
         title: title,
         start_date: startDate,
         end_date: endDate,
-        daily_start_time: dailyStart,
-        daily_end_time: dailyEnd,
+        daily_start_time: isAnytime ? null : dailyStart,
+        daily_end_time: isAnytime ? null : dailyEnd,
+        is_anytime: isAnytime,
+        duration_minutes: isAnytime ? null : Math.max(0, differenceInCalendarDays(new Date(`2000-01-02T${dailyEnd}:00`), new Date(`2000-01-02T${dailyStart}:00`)) * 1440 + (parseInt(dailyEnd.slice(0,2))*60 + parseInt(dailyEnd.slice(3,5))) - (parseInt(dailyStart.slice(0,2))*60 + parseInt(dailyStart.slice(3,5)))) ,
         completed,
       };
 
@@ -184,30 +190,32 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                 </div>
 
                 {/* Times */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
-                      Start Time
-                    </Label>
-                    <MobileTimePicker
-                      value={dailyStart}
-                      onChange={(value) => setDailyStart(value || taskTime)}
-                      onBlur={(e) => !e.currentTarget.value && setDailyStart(taskTime)}
-                    />
+                {!isAnytime && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
+                        Start Time
+                      </Label>
+                      <MobileTimePicker
+                        value={dailyStart}
+                        onChange={(value) => setDailyStart(value || taskTime)}
+                        onBlur={(e) => !e.currentTarget.value && setDailyStart(taskTime)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
+                        End Time
+                      </Label>
+                      <MobileTimePicker
+                        value={dailyEnd}
+                        onChange={(value) => setDailyEnd(value || dailyStart)}
+                        onBlur={(e) => !e.currentTarget.value && setDailyEnd(dailyStart)}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
-                      End Time
-                    </Label>
-                    <MobileTimePicker
-                      value={dailyEnd}
-                      onChange={(value) => setDailyEnd(value || dailyStart)}
-                      onBlur={(e) => !e.currentTarget.value && setDailyEnd(dailyStart)}
-                    />
-                  </div>
-                </div>
+                )}
 
                 {startDate.toDateString() !== endDate.toDateString() && (
                   <p className="text-xs text-muted-foreground">
@@ -215,7 +223,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                   </p>
                 )}
 
-                {/* Priority & Completed */}
+                {/* Priority, Anytime & Completed */}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <button
                     type="button"
@@ -230,6 +238,11 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                     <AlertCircle className="h-4 w-4" />
                     <span>{isPriority ? "High Priority" : "Normal Priority"}</span>
                   </button>
+
+                  <div className="flex items-center gap-3 bg-muted/40 border border-border px-3 py-2 rounded-lg">
+                    <Label className="text-sm font-medium text-muted-foreground">Anytime</Label>
+                    <Switch checked={isAnytime} onCheckedChange={setIsAnytime} />
+                  </div>
 
                   <div className="flex items-center gap-3 bg-muted/40 border border-border px-3 py-2 rounded-lg">
                     <Label className="text-sm font-medium text-muted-foreground">Completed</Label>

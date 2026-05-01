@@ -105,3 +105,44 @@ SELECT table_name, column_name, data_type
 FROM information_schema.columns 
 WHERE table_name = 'conversation_memory'
 ORDER BY ordinal_position;
+
+-- ============================================
+-- TASK TIME MIGRATION: ANYTIME + DURATION
+-- Adds support for all-day/anytime tasks and explicit duration in minutes
+-- ============================================
+
+-- 1) Add new columns (idempotent)
+ALTER TABLE tasks
+ADD COLUMN IF NOT EXISTS is_anytime boolean NOT NULL DEFAULT false;
+
+ALTER TABLE tasks
+ADD COLUMN IF NOT EXISTS duration_minutes integer;
+
+-- 2) Backfill anytime for tasks that have no explicit time
+UPDATE tasks
+SET is_anytime = true
+WHERE is_anytime = false
+  AND daily_start_time IS NULL
+  AND daily_end_time IS NULL;
+
+-- 3) Backfill duration for timed tasks
+UPDATE tasks
+SET duration_minutes = GREATEST(
+  0,
+  EXTRACT(EPOCH FROM (daily_end_time - daily_start_time)) / 60
+)::integer
+WHERE duration_minutes IS NULL
+  AND daily_start_time IS NOT NULL
+  AND daily_end_time IS NOT NULL;
+
+-- 4) Keep data valid
+ALTER TABLE tasks
+DROP CONSTRAINT IF EXISTS tasks_duration_minutes_non_negative;
+
+ALTER TABLE tasks
+ADD CONSTRAINT tasks_duration_minutes_non_negative
+CHECK (duration_minutes IS NULL OR duration_minutes >= 0);
+
+-- 5) Helpful index for newest-first task lists
+CREATE INDEX IF NOT EXISTS idx_tasks_goal_created_at
+ON tasks(goal_id, created_at DESC);

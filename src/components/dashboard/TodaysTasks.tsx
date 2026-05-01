@@ -113,13 +113,13 @@ const TodaysTasks: React.FC = React.memo(() => {
 
       const { data: tasksData, error } = await supabase
         .from('tasks')
-        .select('id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, goal_id, goals(title)')
+        .select('id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, is_anytime, goal_id, created_at, goals(title)')
         .in('goal_id', goalIdsToQuery)
         // Include tasks that span today (start <= end of today AND end >= start of today)
         .lt('start_date', tomorrow.toISOString())
         .gte('end_date', today.toISOString())
         .order('completed', { ascending: true })
-        .order('daily_start_time', { ascending: true })
+        .order('created_at', { ascending: false })
 
       if (error) throw error;
       setTasksForToday(tasksData || []);
@@ -537,7 +537,7 @@ const TodaysTasks: React.FC = React.memo(() => {
                                   {task.title || task.description}
                                 </label>
                                 <div className="flex items-center justify-between text-xs text-foreground/70 dark:text-muted-foreground mt-1">
-                                  <span>{task.daily_start_time && task.daily_end_time ? `${task.daily_start_time.slice(0, 5)} - ${task.daily_end_time.slice(0, 5)}` : ''}</span>
+                                  <span>{task.is_anytime ? 'Anytime' : (task.daily_start_time && task.daily_end_time ? `${task.daily_start_time.slice(0, 5)} - ${task.daily_end_time.slice(0, 5)}` : '')}</span>
                                   {task.goals && (
                                     <SmartLink to={`/goal/${task.goal_id}?date=${encodeURIComponent(task.start_date)}&taskId=${encodeURIComponent(task.id)}`} className="truncate text-foreground/80 dark:text-muted-foreground hover:text-primary">
                                       {task.goals.title}
@@ -711,9 +711,9 @@ const TodaysTasks: React.FC = React.memo(() => {
                           {task.title || task.description}
                         </label>
                         <div className="flex items-center justify-between text-[10px] mt-3">
-                          {task.daily_start_time && task.daily_end_time && (
+                          {(task.is_anytime || (task.daily_start_time && task.daily_end_time)) && (
                             <span className="bg-primary/5 text-primary px-2.5 py-1 rounded-lg border border-primary/10 font-black uppercase tracking-tighter">
-                              {task.daily_start_time.slice(0, 5)} - {task.daily_end_time.slice(0, 5)}
+                              {task.is_anytime ? 'Anytime' : `${task.daily_start_time.slice(0, 5)} - ${task.daily_end_time.slice(0, 5)}`}
                             </span>
                           )}
                           {task.goals && (

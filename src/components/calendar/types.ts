@@ -14,6 +14,8 @@ export interface Task {
   end_date: string;          // ISO datetime (date portion used for day)
   daily_start_time?: string | null; // 'HH:MM:SS'
   daily_end_time?: string | null;   // 'HH:MM:SS'
+  is_anytime?: boolean | null;
+  duration_minutes?: number | null;
   tags?: string[];          // Array of task tags
 }
 

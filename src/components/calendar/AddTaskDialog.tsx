@@ -39,6 +39,8 @@ interface AddTaskDialogProps {
       end_date?: Date;
       daily_start_time?: string;
       daily_end_time?: string;
+      is_anytime?: boolean;
+      duration_minutes?: number | null;
       completed?: boolean;
     }
   ) => void;
@@ -68,6 +70,7 @@ const AddTaskDialog = ({
 
   const [dailyStart, setDailyStart] = useState<string>(defaultDailyStart);
   const [dailyEnd, setDailyEnd] = useState<string>(defaultDailyEnd);
+  const [isAnytime, setIsAnytime] = useState<boolean>(false);
 
   const [completed, setCompleted] = useState<boolean>(false);
   const [isScrollable, setIsScrollable] = useState(false);
@@ -125,18 +128,23 @@ const AddTaskDialog = ({
       const description = rawDesc ? (isPriority ? `🔴 ${rawDesc}` : rawDesc) : "";
 
       const { s: finalStart, e: finalEnd } = clampTimes(dailyStart, dailyEnd);
+      const durationMinutes = isAnytime
+        ? null
+        : Math.max(0, moment(finalEnd, "HH:mm").diff(moment(finalStart, "HH:mm"), 'minutes'));
 
       const range = {
         title: title || undefined,
         start_date: startDate,
         end_date: endDate,
-        daily_start_time: finalStart,
-        daily_end_time: finalEnd,
+        daily_start_time: isAnytime ? undefined : finalStart,
+        daily_end_time: isAnytime ? undefined : finalEnd,
+        is_anytime: isAnytime,
+        duration_minutes: durationMinutes,
         completed,
       };
 
       // remove taskTime — pass `finalStart` for the time arg.
-      await onAddTask(description, selectedDate, finalStart, range);
+      await onAddTask(description, selectedDate, isAnytime ? undefined : finalStart, range);
 
       resetForm();
       onClose();
@@ -153,6 +161,7 @@ const AddTaskDialog = ({
     setTaskDescription("");
     setIsPriority(false);
     setCompleted(false);
+    setIsAnytime(false);
     setStartDate(defaultDate);
     setEndDate(defaultDate);
     setDailyStart(nowReset.format("HH:mm"));
@@ -252,44 +261,46 @@ const AddTaskDialog = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Start Time</Label>
-                      <MobileTimePicker
-                        value={dailyStart}
-                        onChange={(value) => {
-                          const newStart = value || dailyStart;
-                          if (moment(newStart, "HH:mm").isAfter(moment(dailyEnd, "HH:mm"))) {
-                            setDailyStart(moment(newStart, "HH:mm").format("HH:mm"));
-                            setDailyEnd(moment(newStart, "HH:mm").format("HH:mm"));
-                          } else {
-                            setDailyStart(moment(newStart, "HH:mm").format("HH:mm"));
-                          }
-                        }}
-                        onBlur={(e) => !e.currentTarget.value && setDailyStart(defaultDailyStart)}
-                      />
-                    </div>
+                  {!isAnytime && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">Start Time</Label>
+                        <MobileTimePicker
+                          value={dailyStart}
+                          onChange={(value) => {
+                            const newStart = value || dailyStart;
+                            if (moment(newStart, "HH:mm").isAfter(moment(dailyEnd, "HH:mm"))) {
+                              setDailyStart(moment(newStart, "HH:mm").format("HH:mm"));
+                              setDailyEnd(moment(newStart, "HH:mm").format("HH:mm"));
+                            } else {
+                              setDailyStart(moment(newStart, "HH:mm").format("HH:mm"));
+                            }
+                          }}
+                          onBlur={(e) => !e.currentTarget.value && setDailyStart(defaultDailyStart)}
+                        />
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">End Time</Label>
-                      <MobileTimePicker
-                        value={dailyEnd}
-                        onChange={(value) => {
-                          const newEnd = value || dailyEnd;
-                          if (moment(newEnd, "HH:mm").isBefore(moment(dailyStart, "HH:mm"))) {
-                            setDailyStart(moment(newEnd, "HH:mm").format("HH:mm"));
-                            setDailyEnd(moment(newEnd, "HH:mm").format("HH:mm"));
-                          } else {
-                            setDailyEnd(moment(newEnd, "HH:mm").format("HH:mm"));
-                          }
-                        }}
-                        onBlur={(e) => !e.currentTarget.value && setDailyEnd(dailyStart)}
-                      />
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">End Time</Label>
+                        <MobileTimePicker
+                          value={dailyEnd}
+                          onChange={(value) => {
+                            const newEnd = value || dailyEnd;
+                            if (moment(newEnd, "HH:mm").isBefore(moment(dailyStart, "HH:mm"))) {
+                              setDailyStart(moment(newEnd, "HH:mm").format("HH:mm"));
+                              setDailyEnd(moment(newEnd, "HH:mm").format("HH:mm"));
+                            } else {
+                              setDailyEnd(moment(newEnd, "HH:mm").format("HH:mm"));
+                            }
+                          }}
+                          onBlur={(e) => !e.currentTarget.value && setDailyEnd(dailyStart)}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Priority & Completed */}
-                  <div className="flex items-center justify-between pt-2">
+                  {/* Priority, Anytime & Completed */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap pt-2">
                     <button
                       type="button"
                       onClick={() => setIsPriority(!isPriority)}
@@ -303,6 +314,11 @@ const AddTaskDialog = ({
                       <AlertCircle className="h-4 w-4" />
                       <span>{isPriority ? "High Priority" : "Normal Priority"}</span>
                     </button>
+
+                    <div className="flex items-center gap-3 bg-muted/40 border border-border px-3 py-2 rounded-lg">
+                      <Label className="text-sm font-medium text-muted-foreground">Anytime</Label>
+                      <Switch checked={isAnytime} onCheckedChange={setIsAnytime} />
+                    </div>
 
                     <div className="flex items-center gap-3 bg-muted/40 border border-border px-3 py-2 rounded-lg">
                       <Label className="text-sm font-medium text-muted-foreground">Completed</Label>

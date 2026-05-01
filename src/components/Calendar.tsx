@@ -235,6 +235,8 @@ const Calendar = ({
       end_date?: Date | null;
       daily_start_time?: string | null;
       daily_end_time?: string | null;
+      is_anytime?: boolean;
+      duration_minutes?: number | null;
       completed?: boolean;
     }
   ) => {
@@ -251,8 +253,11 @@ const Calendar = ({
       updates.title = range?.title ?? null;
       updates.start_date = (range?.start_date || date)?.toISOString();
       updates.end_date = (range?.end_date || date)?.toISOString();
-      updates.daily_start_time = (range?.daily_start_time || (time ? `${time}` : null)) ? `${range?.daily_start_time || time}:00` : null;
-      updates.daily_end_time = (range?.daily_end_time || (time ? `${time}` : null)) ? `${range?.daily_end_time || time}:00` : null;
+      const isAnytime = !!range?.is_anytime;
+      updates.is_anytime = isAnytime;
+      updates.daily_start_time = isAnytime ? null : ((range?.daily_start_time || (time ? `${time}` : null)) ? `${range?.daily_start_time || time}:00` : null);
+      updates.daily_end_time = isAnytime ? null : ((range?.daily_end_time || (time ? `${time}` : null)) ? `${range?.daily_end_time || time}:00` : null);
+      updates.duration_minutes = typeof range?.duration_minutes === 'number' ? range.duration_minutes : null;
       if (typeof range?.completed !== 'undefined') updates.completed = range?.completed;
 
       // Create updated task object with updated_at field
@@ -262,8 +267,10 @@ const Calendar = ({
         title: range?.title ?? taskToUpdate.title,
         start_date: (range?.start_date || date).toISOString(),
         end_date: (range?.end_date || date).toISOString(),
-        daily_start_time: (range?.daily_start_time || (time ? `${time}` : null)) ? `${range?.daily_start_time || time}:00` : null,
-        daily_end_time: (range?.daily_end_time || (time ? `${time}` : null)) ? `${range?.daily_end_time || time}:00` : null,
+        is_anytime: !!range?.is_anytime,
+        daily_start_time: range?.is_anytime ? null : ((range?.daily_start_time || (time ? `${time}` : null)) ? `${range?.daily_start_time || time}:00` : null),
+        daily_end_time: range?.is_anytime ? null : ((range?.daily_end_time || (time ? `${time}` : null)) ? `${range?.daily_end_time || time}:00` : null),
+        duration_minutes: typeof range?.duration_minutes === 'number' ? range.duration_minutes : null,
         updated_at: new Date().toISOString(),
         ...(typeof range?.completed !== 'undefined' ? { completed: range.completed } : {}),
       };

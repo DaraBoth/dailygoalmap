@@ -375,6 +375,8 @@ export const useCalendarTasks = ({
       end_date?: Date;
       daily_start_time?: string; // 'HH:mm'
       daily_end_time?: string;   // 'HH:mm'
+      is_anytime?: boolean;
+      duration_minutes?: number | null;
       completed?: boolean;
     }
   ) => {
@@ -410,6 +412,8 @@ export const useCalendarTasks = ({
         end_date?: string;
         daily_start_time?: string | null;
         daily_end_time?: string | null;
+        is_anytime?: boolean;
+        duration_minutes?: number | null;
       } = {
         id: taskId,
         goal_id: goalId,
@@ -424,10 +428,13 @@ export const useCalendarTasks = ({
       const endForInsert = range?.end_date ? new Date(range.end_date) : startForInsert;
       payload.start_date = startForInsert.toISOString();
       payload.end_date = endForInsert.toISOString();
-      const startTimeStr = range?.daily_start_time || time || null;
-      const endTimeStr = range?.daily_end_time || time || null;
+      const isAnytime = !!range?.is_anytime;
+      const startTimeStr = isAnytime ? null : (range?.daily_start_time || time || null);
+      const endTimeStr = isAnytime ? null : (range?.daily_end_time || time || null);
+      payload.is_anytime = isAnytime;
       payload.daily_start_time = startTimeStr ? `${startTimeStr}:00` : null;
       payload.daily_end_time = endTimeStr ? `${endTimeStr}:00` : null;
+      payload.duration_minutes = typeof range?.duration_minutes === 'number' ? range.duration_minutes : null;
 
       const { error: saveError } = await supabase
         .from('tasks')
@@ -447,6 +454,8 @@ export const useCalendarTasks = ({
         end_date: endForInsert.toISOString(),
         daily_start_time: startTimeStr ? `${startTimeStr}:00` : null,
         daily_end_time: endTimeStr ? `${endTimeStr}:00` : null,
+        is_anytime: isAnytime,
+        duration_minutes: typeof range?.duration_minutes === 'number' ? range.duration_minutes : null,
       };
 
       const updatedTasks = [...tasks, newTask];

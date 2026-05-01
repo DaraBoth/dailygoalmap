@@ -79,6 +79,12 @@ function getToolDefs(enableSearch: boolean, enableFirecrawl: boolean): ToolDef[]
                 completed: { type: 'boolean' },
                 title: { type: 'string' },
                 description: { type: 'string' },
+                start_date: { type: 'string', description: 'YYYY-MM-DD' },
+                end_date: { type: 'string', description: 'YYYY-MM-DD' },
+                daily_start_time: { type: 'string', description: 'HH:mm (omit when is_anytime=true)' },
+                daily_end_time: { type: 'string', description: 'HH:mm (omit when is_anytime=true)' },
+                is_anytime: { type: 'boolean', description: 'True for all-day/anytime tasks' },
+                duration_minutes: { type: 'number', description: 'Optional duration in minutes' },
               },
               required: ['task_id'],
             },
@@ -98,9 +104,24 @@ function getToolDefs(enableSearch: boolean, enableFirecrawl: boolean): ToolDef[]
           description: { type: 'string' },
           start_date: { type: 'string', description: 'YYYY-MM-DD' },
           end_date: { type: 'string', description: 'YYYY-MM-DD' },
+          daily_start_time: { type: 'string', description: 'HH:mm (omit when is_anytime=true)' },
+          daily_end_time: { type: 'string', description: 'HH:mm (omit when is_anytime=true)' },
+          is_anytime: { type: 'boolean', description: 'True for all-day/anytime tasks' },
+          duration_minutes: { type: 'number', description: 'Optional duration in minutes' },
           is_priority: { type: 'boolean' },
         },
         required: ['title'],
+      },
+    },
+    {
+      name: 'delete_task',
+      description: 'Delete a task by its UUID.',
+      parameters: {
+        type: 'object',
+        properties: {
+          task_id: { type: 'string', description: 'Task UUID from the task list' },
+        },
+        required: ['task_id'],
       },
     },
     {
@@ -110,12 +131,12 @@ function getToolDefs(enableSearch: boolean, enableFirecrawl: boolean): ToolDef[]
     },
     {
       name: 'read_file',
-      description: 'Read a file from the AI workspace (persistent notes/plans for this goal).',
+      description: 'Read a file from the AI workspace (private assistant notes/plans for this goal). Not a source of truth for real tasks.',
       parameters: { type: 'object', properties: { filename: { type: 'string' } }, required: ['filename'] },
     },
     {
       name: 'write_file',
-      description: 'Write or update a file in the AI workspace. Use for notes, plans, summaries that persist across conversations.',
+      description: 'Write or update a file in the AI workspace for private assistant notes/plans/summaries. Do not use files to create or store official user tasks.',
       parameters: {
         type: 'object',
         properties: {
@@ -158,6 +179,12 @@ const toGeminiTools = (defs: ToolDef[]) =>
 const toClaudeTools = (defs: ToolDef[]) =>
   defs.map(t => ({ name: t.name, description: t.description, input_schema: t.parameters }));
 
+const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
+
+function redactSensitiveIds(text: string): string {
+  return text.replace(UUID_PATTERN, '[redacted-id]');
+}
+
 // ── System prompt (compact to save tokens) ────────────────────────────────────
 
 function buildSystemPrompt(
@@ -199,7 +226,21 @@ ${urgent.length ? `\n⚠️ Urgent/Soon (${urgent.length}):\n${urgent.map(row).j
 ${tasks.length > 40 ? `\n... +${tasks.length - 40} more. Use get_tasks for full list.` : ''}
 ${taskMemory.length ? `\n## Remembered IDs\n${taskMemory.join(', ')}` : ''}
 
-Rules: ALWAYS call tools for task operations. Use exact task UUIDs. Be concise, use markdown. Use write_file to save notes that should persist. Use get_tasks to refresh task list.`;
+Rules:
+- ALWAYS call tools for task operations.
+- Database is the single source of truth for tasks.
+- When user asks to create tasks, use create_task.
+- When user asks to update tasks, use update_tasks.
+- When user asks to delete tasks, use delete_task.
+- Use get_tasks whenever you need a fresh task list before acting.
+- For all-day tasks, set is_anytime=true and do not send daily_start_time/daily_end_time.
+- task.md is private assistant scratch notes only; never treat task.md as official user task storage.
+- Use exact task UUIDs internally for tool calls only.
+- NEVER reveal raw UUIDs, database IDs, goal_id, or task_id in user-facing responses.
+- If referencing a task, use task title or a short human label.
+- Be concise, use markdown.
+- Use write_file/read_file only for assistant notes that persist across conversations.
+- Use get_tasks to refresh task list.`;
 }
 
 // ── Chat message type ─────────────────────────────────────────────────────────
@@ -322,10 +363,11 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
 
   // Update last assistant message content
   const pushAssistant = useCallback((content: string, streaming = true) => {
+    const safeContent = redactSensitiveIds(content);
     setMessages(prev => {
       const u = [...prev];
       const l = u[u.length - 1];
-      if (l?.role === 'assistant') u[u.length - 1] = { ...l, content, isStreaming: streaming };
+      if (l?.role === 'assistant') u[u.length - 1] = { ...l, content: safeContent, isStreaming: streaming };
       return u;
     });
   }, []);
@@ -333,7 +375,18 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
   // Tool execution
   const executeTool = useCallback(async (name: string, args: Record<string, unknown>): Promise<string> => {
     if (name === 'update_tasks') {
-      const updates = args.updates as Array<{ task_id: string; completed?: boolean; title?: string; description?: string }>;
+      const updates = args.updates as Array<{
+        task_id: string;
+        completed?: boolean;
+        title?: string;
+        description?: string;
+        start_date?: string;
+        end_date?: string;
+        daily_start_time?: string;
+        daily_end_time?: string;
+        is_anytime?: boolean;
+        duration_minutes?: number;
+      }>;
       const memIds = args.save_to_memory as string[] | undefined;
       const results: string[] = [];
       for (const u of updates) {
@@ -341,6 +394,18 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
         if (typeof u.completed === 'boolean') patch.completed = u.completed;
         if (u.title) patch.title = u.title;
         if (u.description) patch.description = u.description;
+        if (u.start_date) patch.start_date = new Date(u.start_date).toISOString();
+        if (u.end_date) patch.end_date = new Date(u.end_date).toISOString();
+        if (typeof u.is_anytime === 'boolean') {
+          patch.is_anytime = u.is_anytime;
+          if (u.is_anytime) {
+            patch.daily_start_time = null;
+            patch.daily_end_time = null;
+          }
+        }
+        if (u.daily_start_time && patch.is_anytime !== true) patch.daily_start_time = `${u.daily_start_time}:00`;
+        if (u.daily_end_time && patch.is_anytime !== true) patch.daily_end_time = `${u.daily_end_time}:00`;
+        if (typeof u.duration_minutes === 'number') patch.duration_minutes = u.duration_minutes;
         const { error } = await supabase.from('tasks').update(patch).eq('id', u.task_id);
         if (error) results.push(`[FAIL] ${u.task_id}: ${error.message}`);
         else { setInternalTasks(prev => prev.map(t => t.id === u.task_id ? { ...t, ...patch } as Task : t)); results.push(`[OK] ${u.task_id}${typeof u.completed === 'boolean' ? ` → ${u.completed ? 'done' : 'pending'}` : ' updated'}`); }
@@ -352,6 +417,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       const now = new Date().toISOString();
       const titleStr = String(args.title);
       const desc = args.is_priority ? `🔴 ${args.description || ''}`.trim() : (args.description ? String(args.description) : null);
+      const isAnytime = !!args.is_anytime;
       const { data, error } = await supabase.from('tasks').insert({
         goal_id: goalId,
         user_id: userInfo?.id ?? '',
@@ -359,6 +425,10 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
         description: desc,
         start_date: args.start_date ? String(args.start_date) : now,
         end_date: args.end_date ? String(args.end_date) : now,
+        daily_start_time: isAnytime ? null : (args.daily_start_time ? `${String(args.daily_start_time)}:00` : null),
+        daily_end_time: isAnytime ? null : (args.daily_end_time ? `${String(args.daily_end_time)}:00` : null),
+        is_anytime: isAnytime,
+        duration_minutes: typeof args.duration_minutes === 'number' ? args.duration_minutes : null,
         completed: false,
         created_at: now,
         updated_at: now,
@@ -367,8 +437,16 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       if (data) setInternalTasks(prev => [...prev, data as Task]);
       return `[OK] Created "${args.title}" (id: ${data?.id})`;
     }
+    if (name === 'delete_task') {
+      const taskId = String(args.task_id || '');
+      if (!taskId) return '[FAIL] Missing task_id';
+      const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+      if (error) return `[FAIL] Delete task: ${error.message}`;
+      setInternalTasks(prev => prev.filter(t => t.id !== taskId));
+      return `[OK] Deleted task ${taskId}`;
+    }
     if (name === 'get_tasks') {
-      const { data } = await supabase.from('tasks').select('*').eq('goal_id', goalId).order('start_date');
+      const { data } = await supabase.from('tasks').select('*').eq('goal_id', goalId).order('created_at', { ascending: false });
       if (data) setInternalTasks(data as Task[]);
       const list = (data || []).map((t: Task) => `  ${t.completed ? '✓' : '○'} ${t.id} | "${t.title}" | ${t.end_date?.slice(0, 10) || '-'}`).join('\n');
       return `${(data || []).length} tasks:\n${list}`;
