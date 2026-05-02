@@ -16,6 +16,7 @@ import { openCalendarOptionsDialog } from "@/utils/calendarIntegration";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatTaskDate, formatTaskDateRange, formatTaskTimeRange } from "./taskDateTime";
 
 interface TaskDetailsDialogProps {
   isOpen: boolean;
@@ -178,10 +179,16 @@ const TaskDetailsDialog = ({
                 <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 flex items-center justify-between bg-white/80 dark:bg-white/15 backdrop-blur-sm rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 border border-gray-200/60 dark:border-white/25">
                   <div className="flex items-center">
                     <CalendarIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 text-blue-500" />
-                    {selectedDate ? format(selectedDate, "MMM d, yyyy") : ''}
+                    {selectedDate ? format(selectedDate, "MMM d, yyyy") : formatTaskDate(selectedTask?.start_date)}
                   </div>
                   <div className="text-xs font-medium">
-                    {selectedTask && selectedTask.daily_start_time && selectedTask.daily_end_time && `${selectedTask.daily_start_time.slice(0, 5)} - ${selectedTask.daily_end_time.slice(0, 5)}`}
+                    {selectedTask
+                      ? formatTaskTimeRange(
+                          selectedTask.daily_start_time,
+                          selectedTask.daily_end_time,
+                          selectedTask.is_anytime,
+                        )
+                      : ''}
                   </div>
                 </div>
 
@@ -250,14 +257,18 @@ const TaskDetailsDialog = ({
 
                       {/* Task metadata */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                        {selectedTask.daily_start_time && selectedTask.daily_end_time && (
+                        {(selectedTask.is_anytime || (selectedTask.daily_start_time && selectedTask.daily_end_time)) && (
                           <div className="bg-blue-50/80 dark:bg-blue-950/30 backdrop-blur-sm rounded-lg sm:rounded-xl p-2.5 sm:p-3 border border-blue-200/60 dark:border-blue-800/50">
                             <div className="flex items-center gap-1.5 sm:gap-2">
                               <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-500"></div>
-                              <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Time Range</span>
+                              <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Time</span>
                             </div>
                             <p className="text-xs sm:text-sm font-semibold text-blue-800 dark:text-blue-200 mt-0.5 sm:mt-1">
-                              {selectedTask.daily_start_time.slice(0, 5)} - {selectedTask.daily_end_time.slice(0, 5)}
+                              {formatTaskTimeRange(
+                                selectedTask.daily_start_time,
+                                selectedTask.daily_end_time,
+                                selectedTask.is_anytime,
+                              )}
                             </p>
                           </div>
                         )}
@@ -269,7 +280,7 @@ const TaskDetailsDialog = ({
                               <span className="text-xs font-medium text-purple-700 dark:text-purple-300">Multi-day Task</span>
                             </div>
                             <p className="text-sm font-semibold text-purple-800 dark:text-purple-200 mt-1">
-                              {format(new Date(selectedTask.start_date), "MMM d")} - {format(new Date(selectedTask.end_date), "MMM d")}
+                              {formatTaskDateRange(selectedTask.start_date, selectedTask.end_date)}
                             </p>
                           </div>
                         )}
@@ -414,7 +425,9 @@ const TaskDetailsDialog = ({
                               </p>
                             </div>
                             <span className="text-xs text-muted-foreground">
-                              {task.daily_start_time && task.daily_end_time ? `${task.daily_start_time.slice(0, 5)} - ${task.daily_end_time.slice(0, 5)}` : ''}
+                              {task.is_anytime
+                                ? 'Anytime'
+                                : formatTaskTimeRange(task.daily_start_time, task.daily_end_time, task.is_anytime)}
                             </span>
                           </div>
                         </motion.div>

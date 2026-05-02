@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   X, ArrowUp, ChevronDown, Bot, Sparkles, CheckSquare, Loader2,
-  Settings2, Globe, Search, FileText, ChevronRight,
+  Settings2, Globe, Search, FileText, ChevronRight, Paperclip, Clipboard,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -109,7 +109,7 @@ function getToolDefs(enableSearch: boolean, enableFirecrawl: boolean): ToolDef[]
           daily_end_time: { type: 'string', description: 'HH:mm (omit when is_anytime=true)' },
           is_anytime: { type: 'boolean', description: 'True for all-day/anytime tasks' },
           duration_minutes: { type: 'number', description: 'Optional duration in minutes' },
-          is_priority: { type: 'boolean' },
+          tags: { type: 'array', items: { type: 'string' }, description: 'Optional tags e.g. ["work"], ["health"]' },
         },
         required: ['title'],
       },
@@ -214,6 +214,15 @@ function redactSensitiveIds(text: string): string {
   return text.replace(UUID_PATTERN, '[redacted-id]');
 }
 
+function hasMeaningfulText(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  const lowered = trimmed.toLowerCase();
+  const blocked = new Set(['unknown', 'n/a', 'na', 'none', 'untitled', 'task', 'todo', 'description']);
+  return !blocked.has(lowered);
+}
+
 // ── System prompt (compact to save tokens) ────────────────────────────────────
 
 function buildSystemPrompt(
@@ -256,13 +265,17 @@ ${tasks.length > 40 ? `\n... +${tasks.length - 40} more. Use get_tasks for full 
 ${taskMemory.length ? `\n## Remembered IDs\n${taskMemory.join(', ')}` : ''}
 
 Rules:
-- ALWAYS call tools for task operations.
-- Database is the single source of truth for tasks.
-- When user asks to create tasks, use create_task.
-- When user asks to update tasks, use update_tasks.
-- When user asks to delete tasks, use delete_task.
 - Use get_tasks whenever you need a fresh task list before acting.
-- For all-day tasks, set is_anytime=true and do not send daily_start_time/daily_end_time.
+- For all-day tasks, set is_anytime=true and omit daily_start_time/daily_end_time.
+- ALWAYS provide a meaningful, specific title. NEVER use "Untitled", empty string, or placeholder text.
+- start_date and end_date: use YYYY-MM-DD format (e.g., ${todayStr}).
+- daily_start_time / daily_end_time: use HH:mm format (e.g., "09:00", "17:30"). Do NOT include seconds.
+- If images are attached by the user, analyze them and extract task information from them (notes, to-do lists, reminders, schedules visible in the images).
+- If images are attached by the user, perform OCR-like extraction and identify: main task title, supporting description, date, time, and whether it is anytime.
+- For each detected item in the image, create one task using create_task with correct fields.
+- If an image includes multiple checklist lines, create multiple tasks.
+- If date or time is missing in the image, ask one short clarification question before creating.
+- Never create a task with placeholder title/description such as "unknown", "n/a", or "untitled".
 - When presenting tasks to users, format task lists as a markdown table for readability.
 - task.md is private assistant scratch notes only; never treat task.md as official user task storage.
 - Use exact task UUIDs internally for tool calls only.
@@ -282,6 +295,7 @@ Rules:
 
 interface ChatMessage extends StoredChatMessage {
   isStreaming?: boolean;
+  images?: Array<{ dataUrl: string; mimeType: string }>;
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -317,6 +331,8 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODELS.openai);
   const [enableGoogleSearch, setEnableGoogleSearch] = useState(false);
   const [enableFirecrawl, setEnableFirecrawl] = useState(false);
+  const [attachedImages, setAttachedImages] = useState<Array<{ dataUrl: string; mimeType: string }>>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tasks = propTasks ?? internalTasks;
   const goalTitle = propGoalTitle ?? internalGoalTitle;
@@ -463,7 +479,12 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       const now = new Date().toISOString();
       const rawTitle = typeof args.title === 'string' ? args.title.trim() : '';
       const descText = typeof args.description === 'string' ? args.description.trim() : '';
-      const titleStr = rawTitle || (descText ? descText.slice(0, 80) : 'Untitled task');
+      const titleStr = hasMeaningfulText(rawTitle)
+        ? rawTitle
+        : (hasMeaningfulText(descText) ? descText.slice(0, 80) : '');
+      if (!titleStr) {
+        return '[FAIL] Create task: missing meaningful title/description. Ask user for clearer task details from the image/text.';
+      }
       const parseIsoOrFallback = (raw: unknown, fallback: string) => {
         if (!raw) return fallback;
         const parsed = new Date(String(raw));
@@ -474,7 +495,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       const endIso = new Date(endIsoCandidate).getTime() < new Date(startIso).getTime()
         ? startIso
         : endIsoCandidate;
-      const desc = args.is_priority ? `🔴 ${args.description || ''}`.trim() : (args.description ? String(args.description) : null);
+      const desc = hasMeaningfulText(descText) ? descText : null;
       const isAnytime = !!args.is_anytime;
       const { data, error } = await supabase.from('tasks').insert({
         goal_id: goalId,
@@ -487,6 +508,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
         daily_end_time: isAnytime ? null : (args.daily_end_time ? `${String(args.daily_end_time)}:00` : null),
         is_anytime: isAnytime,
         duration_minutes: typeof args.duration_minutes === 'number' ? args.duration_minutes : null,
+        tags: Array.isArray(args.tags) ? args.tags : [],
         completed: false,
         created_at: now,
         updated_at: now,
@@ -671,12 +693,19 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
 
   // OpenAI streaming
   const callOpenAI = useCallback(async (
-    sys: string, hist: ChatMessage[], text: string, tools: ReturnType<typeof toOpenAITools>
+    sys: string, hist: ChatMessage[], text: string, tools: ReturnType<typeof toOpenAITools>,
+    images?: Array<{ dataUrl: string; mimeType: string }>
   ): Promise<string> => {
+    const userContent: unknown = images?.length
+      ? [
+          ...images.map(img => ({ type: 'image_url', image_url: { url: img.dataUrl } })),
+          { type: 'text', text },
+        ]
+      : text;
     const msgs = [
       { role: 'system', content: sys },
       ...hist.filter(m => !m.isStreaming).map(m => ({ role: m.role, content: m.content })),
-      { role: 'user', content: text },
+      { role: 'user', content: userContent },
     ];
     abortRef.current = new AbortController();
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -727,11 +756,16 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
 
   // Gemini streaming
   const callGemini = useCallback(async (
-    sys: string, hist: ChatMessage[], text: string, tools: ReturnType<typeof toGeminiTools>
+    sys: string, hist: ChatMessage[], text: string, tools: ReturnType<typeof toGeminiTools>,
+    images?: Array<{ dataUrl: string; mimeType: string }>
   ): Promise<string> => {
+    const userParts = [
+      ...(images?.map(img => ({ inlineData: { mimeType: img.mimeType, data: img.dataUrl.split(',')[1] } })) ?? []),
+      { text },
+    ];
     const contents = [
       ...hist.filter(m => !m.isStreaming).map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-      { role: 'user', parts: [{ text }] },
+      { role: 'user', parts: userParts },
     ];
     const body = { contents, systemInstruction: { parts: [{ text: sys }] }, tools, generationConfig: { temperature: 0.7 } };
     abortRef.current = new AbortController();
@@ -773,11 +807,21 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
 
   // Claude streaming (via Supabase edge function proxy)
   const callClaude = useCallback(async (
-    sys: string, hist: ChatMessage[], text: string, tools: ReturnType<typeof toClaudeTools>
+    sys: string, hist: ChatMessage[], text: string, tools: ReturnType<typeof toClaudeTools>,
+    images?: Array<{ dataUrl: string; mimeType: string }>
   ): Promise<string> => {
+    const userContent: unknown = images?.length
+      ? [
+          ...images.map(img => ({
+            type: 'image',
+            source: { type: 'base64', media_type: img.mimeType, data: img.dataUrl.split(',')[1] },
+          })),
+          { type: 'text', text },
+        ]
+      : text;
     const claudeMsgs = [
       ...hist.filter(m => !m.isStreaming).map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-      { role: 'user' as const, content: text },
+      { role: 'user' as const, content: userContent },
     ];
     const { data: { session } } = await supabase.auth.getSession();
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
@@ -827,23 +871,26 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
   // Main send handler
   const handleSendMessage = useCallback(async () => {
     const text = inputValue.trim();
-    if (!text || isLoading) return;
+    if ((!text && !attachedImages.length) || isLoading) return;
+    const effectiveText = text || 'Read this image and extract tasks with title, description, date, and time. Create one or multiple tasks based on what you detect.';
     const currentKey = apiKeys[selectedProvider];
     if (!currentKey) { toast({ title: `No ${PROVIDER_LABELS[selectedProvider]} key`, description: 'Add it in Profile > API Keys.', variant: 'destructive' }); return; }
     const now = Date.now();
     if (now - lastMsgTimeRef.current < 2000) { toast({ title: 'Too fast!' }); return; }
     lastMsgTimeRef.current = now;
     const historySnapshot = [...messages];
-    setMessages(prev => [...prev, { role: 'user', content: text, timestamp: now }]);
+    const imagesSnapshot = [...attachedImages];
+    setMessages(prev => [...prev, { role: 'user', content: effectiveText, timestamp: now, images: imagesSnapshot.length ? imagesSnapshot : undefined }]);
     setMessages(prev => [...prev, { role: 'assistant', content: '', timestamp: Date.now(), isStreaming: true }]);
-    setInputValue(''); setIsLoading(true); setStatusText('');
+    setInputValue(''); setAttachedImages([]); setIsLoading(true); setStatusText('');
     const sys = buildSystemPrompt(goalId, goalTitle, tasks, taskMemory, preferences);
     const toolDefs = getToolDefs(enableGoogleSearch && !!apiKeys.serpapi, enableFirecrawl && !!apiKeys.firecrawl);
     try {
       let final = '';
-      if (selectedProvider === 'openai') final = await callOpenAI(sys, historySnapshot, text, toOpenAITools(toolDefs));
-      else if (selectedProvider === 'gemini') final = await callGemini(sys, historySnapshot, text, toGeminiTools(toolDefs));
-      else final = await callClaude(sys, historySnapshot, text, toClaudeTools(toolDefs));
+      const imgs = imagesSnapshot.length ? imagesSnapshot : undefined;
+      if (selectedProvider === 'openai') final = await callOpenAI(sys, historySnapshot, effectiveText, toOpenAITools(toolDefs), imgs);
+      else if (selectedProvider === 'gemini') final = await callGemini(sys, historySnapshot, effectiveText, toGeminiTools(toolDefs), imgs);
+      else final = await callClaude(sys, historySnapshot, effectiveText, toClaudeTools(toolDefs), imgs);
       pushAssistant(final || '(no response)', false);
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') {
@@ -853,13 +900,60 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       setMessages(prev => { const u = [...prev]; const l = u[u.length - 1]; if (l?.role === 'assistant') u[u.length - 1] = { ...l, content: `Error: ${msg}`, isStreaming: false }; return u; });
       toast({ title: 'Error', description: msg, variant: 'destructive' });
     } finally { setIsLoading(false); setStatusText(''); abortRef.current = null; }
-  }, [inputValue, isLoading, apiKeys, selectedProvider, goalId, goalTitle, tasks, taskMemory, enableGoogleSearch, enableFirecrawl, messages, callOpenAI, callGemini, callClaude, pushAssistant]);
+  }, [inputValue, attachedImages, isLoading, apiKeys, selectedProvider, goalId, goalTitle, tasks, taskMemory, preferences, enableGoogleSearch, enableFirecrawl, messages, callOpenAI, callGemini, callClaude, pushAssistant]);
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
     setMessages(prev => { const u = [...prev]; const l = u[u.length - 1]; if (l?.isStreaming) u[u.length - 1] = { ...l, isStreaming: false }; return u; });
     setIsLoading(false); setStatusText('');
   }, []);
+
+    const handleImageFiles = useCallback((files: FileList | File[]) => {
+      Array.from(files).filter(f => f.type.startsWith('image/')).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const dataUrl = e.target?.result as string;
+          setAttachedImages(prev => [...prev, { dataUrl, mimeType: file.type }]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }, []);
+
+    const handlePasteClipboard = useCallback(async () => {
+      try {
+        const items = await navigator.clipboard.read();
+        let found = false;
+        for (const item of items) {
+          const imageType = item.types.find(t => t.startsWith('image/'));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            const reader = new FileReader();
+            reader.onload = e => {
+              const dataUrl = e.target?.result as string;
+              setAttachedImages(prev => [...prev, { dataUrl, mimeType: imageType }]);
+            };
+            reader.readAsDataURL(blob);
+            found = true;
+          }
+        }
+        if (!found) toast({ title: 'No image in clipboard' });
+      } catch {
+        toast({ title: 'Cannot read clipboard', description: 'Try pasting directly (Ctrl+V / Cmd+V).' });
+      }
+    }, []);
+
+    const handleTextareaPaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const blob = item.getAsFile();
+          if (blob) handleImageFiles([blob]);
+          return;
+        }
+      }
+    }, [handleImageFiles]);
 
   const clearChat = useCallback(() => {
     setMessages([]); setTaskMemory([]);
@@ -1022,7 +1116,18 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
                     </div>
                   )}
                   {msg.role === 'user' && (
-                    <div className="max-w-[80%] bg-primary text-primary-foreground px-3 py-2 rounded-2xl rounded-tr-sm text-sm break-words">{msg.content}</div>
+                    <div className="max-w-[80%] space-y-1.5">
+                      {msg.images?.length ? (
+                        <div className="flex flex-wrap gap-1 justify-end">
+                          {msg.images.map((img, idx) => (
+                            <img key={idx} src={img.dataUrl} alt="attachment" className="max-h-48 max-w-full rounded-xl border border-border/50 object-cover" />
+                          ))}
+                        </div>
+                      ) : null}
+                      {msg.content && (
+                        <div className="bg-primary text-primary-foreground px-3 py-2 rounded-2xl rounded-tr-sm text-sm break-words">{msg.content}</div>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}
@@ -1068,18 +1173,53 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
               </div>
 
               <div className="relative">
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={e => { if (e.target.files) { handleImageFiles(e.target.files); e.target.value = ''; } }}
+                />
+                {/* Image previews */}
+                {attachedImages.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pb-2">
+                    {attachedImages.map((img, i) => (
+                      <div key={i} className="relative group">
+                        <img src={img.dataUrl} alt="" className="h-14 w-14 object-cover rounded-lg border border-border/50" />
+                        <button
+                          type="button"
+                          onClick={() => setAttachedImages(prev => prev.filter((_, idx) => idx !== i))}
+                          className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-destructive text-destructive-foreground rounded-full text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <textarea ref={textareaRef} value={inputValue} onChange={e => setInputValue(e.target.value)}
-                  placeholder={currentKey ? 'Message...' : `Add ${providerLabel} key in Profile`}
+                  placeholder={currentKey ? 'Message or paste an image...' : `Add ${providerLabel} key in Profile`}
                   rows={1} disabled={isLoading || !currentKey}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
-                  className="w-full resize-none overflow-hidden px-3 py-2.5 pr-11 rounded-xl border border-border bg-background text-sm max-h-32 outline-none focus:ring-1 focus:ring-border disabled:opacity-50 placeholder:text-muted-foreground"
+                  onPaste={handleTextareaPaste}
+                  className="w-full resize-none overflow-hidden px-3 py-2.5 pr-20 rounded-xl border border-border bg-background text-sm max-h-32 outline-none focus:ring-1 focus:ring-border disabled:opacity-50 placeholder:text-muted-foreground"
                 />
-                <Button size="icon" onClick={isLoading ? stopStreaming : handleSendMessage}
-                  disabled={!isLoading && (!inputValue.trim() || !currentKey)}
-                  variant={isLoading ? 'destructive' : 'default'} className="absolute right-2 bottom-2 h-7 w-7 rounded-lg"
-                >
-                  {isLoading ? <X className="h-3.5 w-3.5" /> : <ArrowUp className="h-3.5 w-3.5" />}
-                </Button>
+                <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                  <Button size="icon" type="button" variant="ghost" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground"
+                    title="Attach image" disabled={isLoading || !currentKey}
+                    onClick={() => fileInputRef.current?.click()}
+                  ><Paperclip className="h-3.5 w-3.5" /></Button>
+                  <Button size="icon" type="button" variant="ghost" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground"
+                    title="Paste image from clipboard" disabled={isLoading || !currentKey}
+                    onClick={handlePasteClipboard}
+                  ><Clipboard className="h-3.5 w-3.5" /></Button>
+                  <Button size="icon" onClick={isLoading ? stopStreaming : handleSendMessage}
+                    disabled={!isLoading && ((!inputValue.trim() && !attachedImages.length) || !currentKey)}
+                    variant={isLoading ? 'destructive' : 'default'} className="h-7 w-7 rounded-lg"
+                  >
+                    {isLoading ? <X className="h-3.5 w-3.5" /> : <ArrowUp className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
               </div>
             </div>
           </motion.div>

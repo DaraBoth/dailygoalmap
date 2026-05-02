@@ -163,6 +163,7 @@ export const updateGoal = async (goalId: string, goalData: Partial<Goal>): Promi
     if (goalData.title !== undefined) goalToUpdate.title = goalData.title;
     if (goalData.description !== undefined) goalToUpdate.description = goalData.description;
     if (goalData.target_date !== undefined) goalToUpdate.target_date = goalData.target_date;
+    if (goalData.no_duration !== undefined) goalToUpdate.no_duration = goalData.no_duration;
     if (goalData.status !== undefined) goalToUpdate.status = goalData.status;
     if (goalData.metadata !== undefined) goalToUpdate.metadata = goalData.metadata;
 

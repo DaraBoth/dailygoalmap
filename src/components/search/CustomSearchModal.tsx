@@ -164,8 +164,17 @@ const CustomSearchModal: React.FC<CustomSearchModalProps> = ({ open, onOpenChang
 
   const handleSelectItem = (path: string) => {
     if (path.startsWith('/goal/')) {
-      const goalId = path.split('/goal/')[1];
-      goToGoal(goalId);
+      const parsed = new URL(path, window.location.origin);
+      const goalId = parsed.pathname.replace('/goal/', '');
+      const taskId = parsed.searchParams.get('taskId') || parsed.searchParams.get('task');
+      const date = parsed.searchParams.get('date');
+
+      goToGoal(goalId, {
+        search: {
+          ...(taskId ? { taskId } : {}),
+          ...(date ? { date } : {}),
+        },
+      });
     }
     onOpenChange(false);
   };

@@ -20,6 +20,7 @@ import { openCalendarOptionsDialog } from "@/utils/calendarIntegration";
 import { useToast } from "@/hooks/use-toast";
 import { MarkdownRenderer } from "../ui/MarkdownRenderer";
 import { cn } from "@/lib/utils";
+import { formatTaskDateRange, formatTaskTimeRange } from "./taskDateTime";
 
 interface TaskDetailsPanelProps {
   selectedTask: Task | null;
@@ -80,19 +81,11 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   }
 
   // ?? Helpers ????????????????????????????????????????????????????????????????
-  const startDate = new Date(selectedTask.start_date);
-  const endDate = new Date(selectedTask.end_date);
-  const isMultiDay = selectedTask.start_date?.slice(0, 10) !== selectedTask.end_date?.slice(0, 10);
-  const hasTime = !!(selectedTask.daily_start_time && selectedTask.daily_end_time);
-
-  const formatTime = (t: string) => {
-    const [h, m] = t.split(":").map(Number);
-    const d = new Date();
-    d.setHours(h, m);
-    return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  };
+  const hasTime = !!(selectedTask.is_anytime || selectedTask.daily_start_time);
 
   const createdAt = selectedTask.created_at ? new Date(selectedTask.created_at) : null;
+  const updatedAt = selectedTask.updated_at ? new Date(selectedTask.updated_at) : null;
+  const wasUpdated = updatedAt && isValid(updatedAt) && createdAt && Math.abs(updatedAt.getTime() - createdAt.getTime()) > 5000;
   const hasDescription = selectedTask.description && selectedTask.description !== selectedTask.title;
 
   // ?? Main view ??????????????????????????????????????????????????????????????
@@ -209,9 +202,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
               <PropertyRow label="Date">
                 <span className="flex items-center gap-1.5 text-sm text-foreground">
                   <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                  {isMultiDay
-                    ? `${format(startDate, "MMM d")} ??${format(endDate, "MMM d, yyyy")}`
-                    : format(isValid(startDate) ? startDate : new Date(), "MMM d, yyyy")}
+                  {formatTaskDateRange(selectedTask.start_date, selectedTask.end_date)}
                 </span>
               </PropertyRow>
 
@@ -219,7 +210,11 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                 <PropertyRow label="Time">
                   <span className="flex items-center gap-1.5 text-sm text-foreground">
                     <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    {formatTime(selectedTask.daily_start_time!)} ??{formatTime(selectedTask.daily_end_time!)}
+                    {formatTaskTimeRange(
+                      selectedTask.daily_start_time,
+                      selectedTask.daily_end_time,
+                      selectedTask.is_anytime,
+                    )}
                   </span>
                 </PropertyRow>
               )}
@@ -244,6 +239,13 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                 <PropertyRow label="Created">
                   <span className="text-sm text-muted-foreground">
                     {format(createdAt, "MMM d, yyyy 'at' h:mm a")}
+                  </span>
+                </PropertyRow>
+              )}
+              {wasUpdated && (
+                <PropertyRow label="Updated">
+                  <span className="text-sm text-muted-foreground">
+                    {format(updatedAt!, "MMM d, yyyy 'at' h:mm a")}
                   </span>
                 </PropertyRow>
               )}

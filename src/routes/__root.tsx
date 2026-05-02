@@ -1,4 +1,4 @@
-import { createRootRoute, Outlet } from '@tanstack/react-router'
+import { createRootRoute, Outlet, useRouterState } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ThemeProvider } from "@/components/theme/ThemeProvider"
@@ -40,9 +40,43 @@ export const UserContext = React.createContext<{
 
 function RootComponent() {
   const isMobile = useIsMobile()
+  const isNavigating = useRouterState({
+    select: (state: any) => state?.status === 'pending' || state?.isLoading,
+  })
   const [user, setUser] = React.useState<any>(null)
   const [authState, setAuthState] = React.useState<AuthState>(authService.getAuthState())
   const [updateAvailable, setUpdateAvailable] = React.useState(false)
+  const [routeProgress, setRouteProgress] = React.useState(0)
+  const [showRouteProgress, setShowRouteProgress] = React.useState(false)
+
+  React.useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null
+    let hideTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+    if (isNavigating) {
+      setShowRouteProgress(true)
+      setRouteProgress(12)
+
+      intervalId = setInterval(() => {
+        setRouteProgress((prev) => {
+          if (prev >= 92) return prev
+          const delta = prev < 50 ? 10 : prev < 75 ? 5 : 2
+          return Math.min(92, prev + delta)
+        })
+      }, 140)
+    } else if (showRouteProgress) {
+      setRouteProgress(100)
+      hideTimeoutId = setTimeout(() => {
+        setShowRouteProgress(false)
+        setRouteProgress(0)
+      }, 220)
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId)
+      if (hideTimeoutId) clearTimeout(hideTimeoutId)
+    }
+  }, [isNavigating, showRouteProgress])
 
   // Subscribe to auth service updates and initialize app
   React.useEffect(() => {
@@ -267,6 +301,14 @@ function RootComponent() {
       <ThemeProvider defaultTheme="dark" storageKey="theme-preference">
         <link rel="manifest" href="/manifest.json" />
         <QueryClientProvider client={queryClient}>
+          {showRouteProgress && (
+            <div className="fixed left-0 right-0 top-0 z-[100] h-1 bg-transparent pointer-events-none">
+              <div
+                className="h-full bg-gradient-to-r from-primary via-blue-500 to-cyan-400 shadow-[0_0_10px_rgba(59,130,246,0.6)] transition-[width] duration-200 ease-out"
+                style={{ width: `${routeProgress}%` }}
+              />
+            </div>
+          )}
           <div className="min-h-screen bg-background">
             <Outlet />
           </div>

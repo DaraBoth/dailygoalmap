@@ -6,7 +6,7 @@ import { MobileTimePicker } from "@/components/ui/mobile-time-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AutoResizingDescription } from "./AutoResizingDescription";
-import { CalendarClock, Clock, Calendar, Trash2, AlertCircle } from "lucide-react";
+import { CalendarClock, Clock, Calendar, Trash2, AlertTriangle } from "lucide-react";
 import { differenceInCalendarDays } from "date-fns";
 import { Task } from "./types";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -43,38 +43,58 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
   const [taskDescription, setTaskDescription] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [taskTime, setTaskTime] = useState("09:00");
-  const [isPriority, setIsPriority] = useState(false);
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [dailyStart, setDailyStart] = useState<string>("09:00");
   const [dailyEnd, setDailyEnd] = useState<string>("10:00");
   const [isAnytime, setIsAnytime] = useState<boolean>(false);
   const [completed, setCompleted] = useState<boolean>(false);
+  const [timeError, setTimeError] = useState<string | null>(null);
   const isMobile = useIsMobile();
+
+  // helpers
+  const toMins = (t: string) => { const [h = "0", m = "0"] = t.split(":"); return parseInt(h) * 60 + parseInt(m); };
+  const fromMins = (n: number) => `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
+  const isSameDayTask = startDate.toDateString() === endDate.toDateString();
+
+  const handleStartTimeChange = (value: string) => {
+    const v = value || "09:00";
+    setDailyStart(v);
+    setTimeError(null);
+    if (isSameDayTask) {
+      if (toMins(v) >= toMins(dailyEnd)) setDailyEnd(fromMins(Math.min(toMins(v) + 60, 23 * 60 + 59)));
+    }
+  };
+
+  const handleEndTimeChange = (value: string) => {
+    const v = value || dailyEnd;
+    if (isSameDayTask && toMins(v) < toMins(dailyStart)) {
+      setTimeError("End time cannot be before start time on the same day.");
+      return;
+    }
+    setTimeError(null);
+    setDailyEnd(v);
+  };
 
   useEffect(() => {
     if (task) {
       const description = task.description.replace(/🔴\s*/, '');
       setTaskDescription(description);
       setSelectedDate(new Date(task.start_date));
-      setIsPriority(task.description.includes('🔴'));
       setTitle(task.title || "");
       if (task.start_date) setStartDate(new Date(task.start_date));
       if (task.end_date) setEndDate(new Date(task.end_date));
 
-      // Treat as "anytime" if the task has no time and is_anytime isn't explicitly false.
-      // This prevents the 09:00/10:00 defaults from being silently saved.
       const hasTime = !!task.daily_start_time;
       const anytime = !hasTime || !!task.is_anytime;
       setIsAnytime(anytime);
 
-      // Always reset time states so stale values from a previous edit don't carry over.
       const startTime = hasTime ? task.daily_start_time!.slice(0, 5) : "09:00";
       const endTime = task.daily_end_time ? task.daily_end_time.slice(0, 5) : "10:00";
       setDailyStart(startTime);
       setDailyEnd(endTime);
       setTaskTime(startTime);
-
+      setTimeError(null);
       setCompleted(!!task.completed);
     }
   }, [task]);
@@ -82,22 +102,25 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (task && title.trim()) {
-      const raw = taskDescription.trim();
-      const description = raw ? (isPriority ? `🔴 ${raw}` : raw) : '';
-      // Use dailyStart as the main single-date time anchor if single-day
+      const description = taskDescription.trim();
       const combinedDateTime = new Date(selectedDate);
       const [hours, minutes] = (dailyStart || taskTime).split(':');
       combinedDateTime.setHours(parseInt(hours), parseInt(minutes));
 
-      // Determine multi-day by comparing start and end
+      const finalStart = dailyStart || "09:00";
+      const finalEnd = dailyEnd || finalStart;
+      const durationMinutes = isAnytime
+        ? null
+        : Math.max(0, toMins(finalEnd) + differenceInCalendarDays(endDate, startDate) * 1440 - toMins(finalStart));
+
       const range = {
         title: title,
         start_date: startDate,
         end_date: endDate,
-        daily_start_time: isAnytime ? null : dailyStart,
-        daily_end_time: isAnytime ? null : dailyEnd,
+        daily_start_time: isAnytime ? null : finalStart,
+        daily_end_time: isAnytime ? null : finalEnd,
         is_anytime: isAnytime,
-        duration_minutes: isAnytime ? null : Math.max(0, differenceInCalendarDays(new Date(`2000-01-02T${dailyEnd}:00`), new Date(`2000-01-02T${dailyStart}:00`)) * 1440 + (parseInt(dailyEnd.slice(0,2))*60 + parseInt(dailyEnd.slice(3,5))) - (parseInt(dailyStart.slice(0,2))*60 + parseInt(dailyStart.slice(3,5)))) ,
+        duration_minutes: durationMinutes,
         completed,
       };
 
@@ -180,7 +203,14 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                       date={startDate}
                       minDate={undefined}
                       maxDate={endDate}
-                      setDate={(d) => { if (!d) return; setStartDate(d); if (d > endDate) setEndDate(d); setSelectedDate(d); }}
+                      setDate={(d) => {
+                        if (!d) return;
+                        setStartDate(d);
+                        if (d > endDate) setEndDate(d);
+                        else if (d.toDateString() !== endDate.toDateString() && toMins(dailyEnd) < toMins(dailyStart)) setDailyEnd("23:59");
+                        setSelectedDate(d);
+                        setTimeError(null);
+                      }}
                       className="w-full"
                     />
                   </div>
@@ -193,7 +223,13 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                       date={endDate}
                       minDate={startDate}
                       maxDate={undefined}
-                      setDate={(d) => { if (!d) return; setEndDate(d < startDate ? startDate : d); }}
+                      setDate={(d) => {
+                        if (!d) return;
+                        const next = d < startDate ? startDate : d;
+                        setEndDate(next);
+                        if (next.toDateString() !== startDate.toDateString() && toMins(dailyEnd) < toMins(dailyStart)) setDailyEnd("23:59");
+                        setTimeError(null);
+                      }}
                       className="w-full"
                     />
                   </div>
@@ -201,29 +237,35 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
 
                 {/* Times */}
                 {!isAnytime && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
-                        Start Time
-                      </Label>
-                      <MobileTimePicker
-                        value={dailyStart}
-                        onChange={(value) => setDailyStart(value || taskTime)}
-                        onBlur={(e) => !e.currentTarget.value && setDailyStart(taskTime)}
-                      />
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
+                          Start Time
+                        </Label>
+                        <MobileTimePicker
+                          value={dailyStart}
+                          onChange={handleStartTimeChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
+                          End Time
+                        </Label>
+                        <MobileTimePicker
+                          value={dailyEnd}
+                          onChange={handleEndTimeChange}
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
-                        End Time
-                      </Label>
-                      <MobileTimePicker
-                        value={dailyEnd}
-                        onChange={(value) => setDailyEnd(value || dailyStart)}
-                        onBlur={(e) => !e.currentTarget.value && setDailyEnd(dailyStart)}
-                      />
-                    </div>
+                    {timeError && (
+                      <p className="flex items-center gap-1.5 text-xs text-destructive">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                        {timeError}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -233,28 +275,14 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                   </p>
                 )}
 
-                {/* Priority, Anytime & Completed */}
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => setIsPriority(!isPriority)}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-sm",
-                      isPriority
-                        ? "bg-red-500/10 border-red-500/20 text-red-500 dark:text-red-400"
-                        : "bg-muted/40 border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
-                    <AlertCircle className="h-4 w-4" />
-                    <span>{isPriority ? "High Priority" : "Normal Priority"}</span>
-                  </button>
-
-                  <div className="flex items-center gap-3 bg-muted/40 border border-border px-3 py-2 rounded-lg">
+                {/* Anytime & Completed */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between bg-muted/40 border border-border px-3 py-2.5 rounded-lg">
                     <Label className="text-sm font-medium text-muted-foreground">Anytime</Label>
-                    <Switch checked={isAnytime} onCheckedChange={setIsAnytime} />
+                    <Switch checked={isAnytime} onCheckedChange={(v) => { setIsAnytime(v); setTimeError(null); }} />
                   </div>
 
-                  <div className="flex items-center gap-3 bg-muted/40 border border-border px-3 py-2 rounded-lg">
+                  <div className="flex items-center justify-between bg-muted/40 border border-border px-3 py-2.5 rounded-lg">
                     <Label className="text-sm font-medium text-muted-foreground">Completed</Label>
                     <Switch checked={completed} onCheckedChange={setCompleted} />
                   </div>
@@ -268,7 +296,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
             <Button
               type="submit"
               form="edit-task-form"
-              disabled={!title.trim()}
+              disabled={!title.trim() || !!timeError}
               className="w-full h-11"
             >
               Update Task

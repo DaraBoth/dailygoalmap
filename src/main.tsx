@@ -9,64 +9,32 @@ import { initializeRoutePreloading } from './services/routePreloader'
 import { initializeRouteCache } from './services/routeCache'
 import { initializePerformanceMonitoring } from './services/performanceMonitor'
 
-let deferredPrompt: BeforeInstallPromptEvent | null = null;
+const shouldRegisterServiceWorker =
+  'serviceWorker' in navigator &&
+  (import.meta.env.PROD || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
 
-window.addEventListener("beforeinstallprompt", (event: Event) => {
-  if (!deferredPrompt) {
-    // Cast the event to BeforeInstallPromptEvent
-    deferredPrompt = event as BeforeInstallPromptEvent;
-    // Prevent the default mini-infobar from appearing
-    event.preventDefault();
-    console.log("beforeinstallprompt event captured");
-
-    // Show custom install button if available
-    const installButton = document.getElementById("install-button");
-    if (installButton) {
-      installButton.style.display = "block";
-      installButton.addEventListener("click", async () => {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          const choiceResult = await deferredPrompt.userChoice;
-          console.log("User choice:", choiceResult.outcome);
-          deferredPrompt = null; // Reset the prompt
-        }
-      });
+window.addEventListener('load', async () => {
+  try {
+    if (shouldRegisterServiceWorker) {
+      await registerServiceWorker()
+      console.log('Service Worker registered successfully')
     }
+
+    initializeClientApi()
+
+    const favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement | null
+    if (favicon) {
+      favicon.href = `/logo/newlogo.png?${new Date().getTime()}`
+    }
+
+    checkInstallability()
+    initializeRoutePreloading()
+    initializeRouteCache()
+    initializePerformanceMonitoring()
+  } catch (error) {
+    console.error('App bootstrap failed:', error)
   }
-});
-
-// Register service worker only in production to avoid dev-module interception issues.
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', async () => {
-    try {
-      await registerServiceWorker();
-      console.log('Service Worker registered successfully');
-
-      // Initialize client API for offline support
-      initializeClientApi();
-
-      // Force reload favicon
-      const favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
-      if (favicon) {
-        favicon.href = `/logo/newlogo.png?${new Date().getTime()}`;
-      }
-
-      // Check if app can be installed
-      checkInstallability();
-
-      // Initialize route preloading for better performance
-      initializeRoutePreloading();
-
-      // Initialize route caching
-      initializeRouteCache();
-
-      // Initialize performance monitoring
-      initializePerformanceMonitoring();
-    } catch (error) {
-      console.error('Service Worker registration failed:', error);
-    }
-  });
-}
+})
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

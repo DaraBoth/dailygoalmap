@@ -111,6 +111,16 @@ export function useRouterNavigation() {
     await navigateTo('/profile', { preload })
   }, [navigateTo])
 
+  const goToProfileTab = useCallback(async (
+    tab: string,
+    preload = true,
+  ) => {
+    await navigateTo('/profile', {
+      preload,
+      search: { tab },
+    })
+  }, [navigateTo])
+
   /**
    * Navigate to login with redirect parameter
    */
@@ -157,6 +167,7 @@ export function useRouterNavigation() {
     goToDashboard,
     goToGoal,
     goToProfile,
+    goToProfileTab,
     goToLogin,
     goToRegister,
     goToHome,

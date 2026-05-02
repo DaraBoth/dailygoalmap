@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import moment from "moment";
 import {
   Sheet,
   SheetContent,
@@ -15,10 +14,9 @@ import {
   CalendarClock,
   Clock,
   Calendar,
-  X,
   Check,
-  AlertCircle,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Switch } from "@/components/ui/switch";
@@ -56,28 +54,45 @@ const AddTaskDialog = ({
   const [title, setTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date>(defaultDate);
-
-  const [isPriority, setIsPriority] = useState(false);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [startDate, setStartDate] = useState<Date>(defaultDate);
   const [endDate, setEndDate] = useState<Date>(defaultDate);
-
-  // daily start/end: default to now / +1 hour (HH:mm)
-  const now = moment();
-  const defaultDailyStart = now.format("HH:mm");
-  const defaultDailyEnd = now.add(1, "hour").format("HH:mm");
-
-  const [dailyStart, setDailyStart] = useState<string>(defaultDailyStart);
-  const [dailyEnd, setDailyEnd] = useState<string>(defaultDailyEnd);
+  const [dailyStart, setDailyStart] = useState<string>("09:00");
+  const [dailyEnd, setDailyEnd] = useState<string>("10:00");
   const [isAnytime, setIsAnytime] = useState<boolean>(false);
-
   const [completed, setCompleted] = useState<boolean>(false);
+  const [timeError, setTimeError] = useState<string | null>(null);
   const [isScrollable, setIsScrollable] = useState(false);
 
   // Refs for scroll detection
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // helpers
+  const toMins = (t: string) => { const [h = "0", m = "0"] = t.split(":"); return parseInt(h) * 60 + parseInt(m); };
+  const fromMins = (n: number) => `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
+  const isSameDayTask = startDate.toDateString() === endDate.toDateString();
+
+  const handleStartTimeChange = (value: string) => {
+    const v = value || "09:00";
+    setDailyStart(v);
+    setTimeError(null);
+    if (isSameDayTask) {
+      const startMins = toMins(v);
+      const endMins = toMins(dailyEnd);
+      if (startMins >= endMins) setDailyEnd(fromMins(Math.min(startMins + 60, 23 * 60 + 59)));
+    }
+  };
+
+  const handleEndTimeChange = (value: string) => {
+    const v = value || dailyEnd;
+    if (isSameDayTask && toMins(v) < toMins(dailyStart)) {
+      setTimeError("End time cannot be before start time on the same day.");
+      return;
+    }
+    setTimeError(null);
+    setDailyEnd(v);
+  };
 
   // Update selectedDate when defaultDate changes
   useEffect(() => {
@@ -107,30 +122,16 @@ const AddTaskDialog = ({
     }
   }, [isOpen, title, taskDescription, startDate, endDate, dailyStart, dailyEnd]);
 
-  const clampTimes = (s: string, e: string) => {
-    // Ensure format HH:mm
-    const start = moment(s, "HH:mm");
-    const end = moment(e, "HH:mm");
-    if (end.isBefore(start)) {
-      // If end is before start, set end = start (the rule)
-      return { s: start.format("HH:mm"), e: start.format("HH:mm") };
-    }
-    return { s: start.format("HH:mm"), e: end.format("HH:mm") };
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
     setIsSubmitting(true);
     try {
-      const rawDesc = taskDescription.trim();
-      const description = rawDesc ? (isPriority ? `🔴 ${rawDesc}` : rawDesc) : "";
-
-      const { s: finalStart, e: finalEnd } = clampTimes(dailyStart, dailyEnd);
-      const durationMinutes = isAnytime
-        ? null
-        : Math.max(0, moment(finalEnd, "HH:mm").diff(moment(finalStart, "HH:mm"), 'minutes'));
+      const description = taskDescription.trim();
+      const finalStart = dailyStart || "09:00";
+      const finalEnd = dailyEnd || "10:00";
+      const durationMinutes = isAnytime ? null : Math.max(0, toMins(finalEnd) - toMins(finalStart));
 
       const range = {
         title: title || undefined,
@@ -143,9 +144,7 @@ const AddTaskDialog = ({
         completed,
       };
 
-      // remove taskTime — pass `finalStart` for the time arg.
       await onAddTask(description, selectedDate, isAnytime ? undefined : finalStart, range);
-
       resetForm();
       onClose();
     } catch (error) {
@@ -156,16 +155,15 @@ const AddTaskDialog = ({
   };
 
   const resetForm = () => {
-    const nowReset = moment();
     setTitle("");
     setTaskDescription("");
-    setIsPriority(false);
     setCompleted(false);
     setIsAnytime(false);
+    setTimeError(null);
     setStartDate(defaultDate);
     setEndDate(defaultDate);
-    setDailyStart(nowReset.format("HH:mm"));
-    setDailyEnd(nowReset.add(1, "hour").format("HH:mm"));
+    setDailyStart("09:00");
+    setDailyEnd("10:00");
   };
 
   const isMobile = useIsMobile();
@@ -237,10 +235,11 @@ const AddTaskDialog = ({
                         maxDate={endDate}
                         setDate={(d) => {
                           if (!d) return;
-                          const next = d;
-                          setStartDate(next);
-                          if (moment(next).isAfter(endDate)) setEndDate(next);
-                          setSelectedDate(next);
+                          setStartDate(d);
+                          if (d > endDate) setEndDate(d);
+                          else if (d.toDateString() !== endDate.toDateString() && toMins(dailyEnd) < toMins(dailyStart)) setDailyEnd("23:59");
+                          setSelectedDate(d);
+                          setTimeError(null);
                         }}
                         className="w-full"
                       />
@@ -254,7 +253,10 @@ const AddTaskDialog = ({
                         maxDate={undefined}
                         setDate={(d) => {
                           if (!d) return;
-                          setEndDate(moment(d).isBefore(startDate) ? startDate : d);
+                          const next = d < startDate ? startDate : d;
+                          setEndDate(next);
+                          if (next.toDateString() !== startDate.toDateString() && toMins(dailyEnd) < toMins(dailyStart)) setDailyEnd("23:59");
+                          setTimeError(null);
                         }}
                         className="w-full"
                       />
@@ -262,65 +264,47 @@ const AddTaskDialog = ({
                   </div>
 
                   {!isAnytime && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Start Time</Label>
-                        <MobileTimePicker
-                          value={dailyStart}
-                          onChange={(value) => {
-                            const newStart = value || dailyStart;
-                            if (moment(newStart, "HH:mm").isAfter(moment(dailyEnd, "HH:mm"))) {
-                              setDailyStart(moment(newStart, "HH:mm").format("HH:mm"));
-                              setDailyEnd(moment(newStart, "HH:mm").format("HH:mm"));
-                            } else {
-                              setDailyStart(moment(newStart, "HH:mm").format("HH:mm"));
-                            }
-                          }}
-                          onBlur={(e) => !e.currentTarget.value && setDailyStart(defaultDailyStart)}
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
+                            Start Time
+                          </Label>
+                          <MobileTimePicker
+                            value={dailyStart}
+                            onChange={handleStartTimeChange}
+                          />
+                        </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">End Time</Label>
-                        <MobileTimePicker
-                          value={dailyEnd}
-                          onChange={(value) => {
-                            const newEnd = value || dailyEnd;
-                            if (moment(newEnd, "HH:mm").isBefore(moment(dailyStart, "HH:mm"))) {
-                              setDailyStart(moment(newEnd, "HH:mm").format("HH:mm"));
-                              setDailyEnd(moment(newEnd, "HH:mm").format("HH:mm"));
-                            } else {
-                              setDailyEnd(moment(newEnd, "HH:mm").format("HH:mm"));
-                            }
-                          }}
-                          onBlur={(e) => !e.currentTarget.value && setDailyEnd(dailyStart)}
-                        />
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
+                            End Time
+                          </Label>
+                          <MobileTimePicker
+                            value={dailyEnd}
+                            onChange={handleEndTimeChange}
+                          />
+                        </div>
                       </div>
+                      {timeError && (
+                        <p className="flex items-center gap-1.5 text-xs text-destructive mt-1">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                          {timeError}
+                        </p>
+                      )}
                     </div>
                   )}
 
-                  {/* Priority, Anytime & Completed */}
-                  <div className="flex items-center justify-between gap-2 flex-wrap pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsPriority(!isPriority)}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-sm",
-                        isPriority
-                          ? "bg-red-500/10 border-red-500/20 text-red-500 dark:text-red-400"
-                          : "bg-muted/40 border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      <AlertCircle className="h-4 w-4" />
-                      <span>{isPriority ? "High Priority" : "Normal Priority"}</span>
-                    </button>
-
-                    <div className="flex items-center gap-3 bg-muted/40 border border-border px-3 py-2 rounded-lg">
+                  {/* Anytime & Completed */}
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div className="flex items-center justify-between bg-muted/40 border border-border px-3 py-2.5 rounded-lg">
                       <Label className="text-sm font-medium text-muted-foreground">Anytime</Label>
-                      <Switch checked={isAnytime} onCheckedChange={setIsAnytime} />
+                      <Switch checked={isAnytime} onCheckedChange={(v) => { setIsAnytime(v); setTimeError(null); }} />
                     </div>
 
-                    <div className="flex items-center gap-3 bg-muted/40 border border-border px-3 py-2 rounded-lg">
+                    <div className="flex items-center justify-between bg-muted/40 border border-border px-3 py-2.5 rounded-lg">
                       <Label className="text-sm font-medium text-muted-foreground">Completed</Label>
                       <Switch checked={completed} onCheckedChange={setCompleted} />
                     </div>
@@ -344,7 +328,7 @@ const AddTaskDialog = ({
               <Button
                 type="submit"
                 form="add-task-form"
-                disabled={!title.trim() || isSubmitting}
+                disabled={!title.trim() || isSubmitting || !!timeError}
                 className="flex-[2] h-11"
               >
                 {isSubmitting ? (

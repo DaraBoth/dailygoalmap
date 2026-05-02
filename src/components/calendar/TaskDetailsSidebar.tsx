@@ -11,6 +11,7 @@ import { openCalendarOptionsDialog } from "@/utils/calendarIntegration";
 import { MarkdownRenderer } from "../ui/MarkdownRenderer";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatTaskDate, formatTaskTimeRange } from "./taskDateTime";
 
 interface TaskDetailsSidebarProps {
   isOpen: boolean;
@@ -169,19 +170,23 @@ const TaskDetailsSidebar = ({
                       </div>
                       <div className="flex items-center gap-2 text-xs sm:text-sm text-foreground">
                         <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                        {selectedDate ? format(selectedDate, 'MMM d, yyyy') : format(new Date(selectedTask.start_date), 'MMM d, yyyy')}
+                        {selectedDate ? format(selectedDate, 'MMM d, yyyy') : formatTaskDate(selectedTask.start_date)}
                       </div>
                     </div>
 
                     {/* Time Property */}
-                    {selectedTask.daily_start_time && (
+                    {(selectedTask.is_anytime || selectedTask.daily_start_time) && (
                       <div className="group flex items-center hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-md transition-colors">
                         <div className="w-20 sm:w-24 lg:w-32 shrink-0">
                           <span className="text-xs font-medium text-muted-foreground">Time</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs sm:text-sm text-foreground">
                           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                          {selectedTask.daily_start_time.slice(0, 5)} - {selectedTask.daily_end_time?.slice(0, 5) ?? '...'}
+                          {formatTaskTimeRange(
+                            selectedTask.daily_start_time,
+                            selectedTask.daily_end_time,
+                            selectedTask.is_anytime,
+                          )}
                         </div>
                       </div>
                     )}
@@ -214,6 +219,22 @@ const TaskDetailsSidebar = ({
                         {format(new Date(selectedTask.created_at), "MMM d, yyyy 'at' h:mm a")}
                       </span>
                     </div>
+                    {/* Updated Property */}
+                    {(() => {
+                      const created = new Date(selectedTask.created_at);
+                      const updated = selectedTask.updated_at ? new Date(selectedTask.updated_at) : null;
+                      if (!updated || Math.abs(updated.getTime() - created.getTime()) <= 5000) return null;
+                      return (
+                        <div className="group flex items-center hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-md transition-colors">
+                          <div className="w-20 sm:w-24 lg:w-32 shrink-0">
+                            <span className="text-xs font-medium text-muted-foreground">Updated</span>
+                          </div>
+                          <span className="text-xs sm:text-sm text-muted-foreground">
+                            {format(updated, "MMM d, yyyy 'at' h:mm a")}
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Description (Notion-style content block) */}

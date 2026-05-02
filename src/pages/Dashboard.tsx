@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, PlusCircle, Search, UserPlus, Key, Download, Bell, Settings2 } from "lucide-react";
+import { X, Search } from "lucide-react";
 import { Goal } from "@/types/goal";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import { useGoalStatus } from "@/hooks/useGoalStatus";
@@ -13,7 +13,6 @@ import TodaysTasks from "@/components/dashboard/TodaysTasks";
 import { DeadlineNotifications } from "@/components/dashboard/DeadlineNotifications";
 import EditGoalSlidePanel from "@/components/dashboard/EditGoalSlidePanel";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
-import ApiKeyGuide from "@/components/dashboard/ApiKeyGuide";
 import InstallButton from "@/components/pwa/InstallButton";
 import NotificationSettings from "@/components/pwa/NotificationSettings";
 import CustomSearchModal from "@/components/search/CustomSearchModal";
@@ -26,13 +25,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
 import {
   Pagination,
   PaginationContent,
@@ -72,13 +64,12 @@ const Dashboard = () => {
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [showSearch, setShowSearch] = useState(false);
   const [showJoinGoalDialog, setShowJoinGoalDialog] = useState(false);
-  const [showApiKeyGuide, setShowApiKeyGuide] = useState(false);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [offline, setOffline] = useState(!navigator.onLine);
   const [offlineGoals, setOfflineGoals] = useState<Goal[]>([]);
   const isMobile = useIsMobile();
-  const { goToGoal } = useRouterNavigation();
+  const { goToGoal, goToProfileTab } = useRouterNavigation();
   const { markGoalAsComplete, archiveGoal } = useGoalStatus();
   const {
     goals,
@@ -215,7 +206,7 @@ const Dashboard = () => {
               <div className="flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-4 max-w-[1600px] mx-auto">
                 {/* Logo */}
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <LogoAvatar size={isMobile ? 28 : 32} />
+                  {!isMobile && <LogoAvatar size={32} />}
                   <span className="font-bold text-base sm:text-xl truncate">Orbit</span>
                 </div>
 
@@ -245,63 +236,18 @@ const Dashboard = () => {
                     <Search className="h-4 w-4" />
                   </Button>
 
-                  {/* Join Goal - Desktop Only */}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setShowJoinGoalDialog(true)}
-                          className="hidden lg:flex h-9 w-9"
-                        >
-                          <UserPlus className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Join Goal</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  {/* Create Goal */}
-                  <Button
-                    onClick={handleToggleForm}
-                    size="sm"
-                    className="gap-1.5 sm:gap-2 rounded-lg h-9 text-xs sm:text-sm px-2.5 sm:px-4"
-                  >
-                    <PlusCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">New Goal</span>
-                    <span className="sm:hidden">New</span>
-                  </Button>
-
-                  {/* Notification Bell */}
                   <NotificationBell onUnreadChange={() => {}} />
 
-                  {/* Settings Menu */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-9 w-9">
-                        <Settings2 className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52 sm:w-56">
-                      <DropdownMenuItem onClick={() => setShowJoinGoalDialog(true)} className="lg:hidden">
-                        <UserPlus className="mr-2 h-4 w-4" /> Join Goal
-                      </DropdownMenuItem>
-                      {isMobile && <DropdownMenuSeparator />}
-                      <DropdownMenuItem onClick={() => setShowApiKeyGuide(true)}>
-                        <Key className="mr-2 h-4 w-4" /> API Keys
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowInstallButton(true)}>
-                        <Download className="mr-2 h-4 w-4" /> Install App
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowNotificationSettings(true)}>
-                        <Bell className="mr-2 h-4 w-4" /> Notifications
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
                   {/* User Menu */}
-                  <UserMenu />
+                  <UserMenu
+                    mobileDashboardActions={{
+                      onAddGoal: handleToggleForm,
+                      onJoinGoal: () => setShowJoinGoalDialog(true),
+                      onOpenApiKeyGuide: () => goToProfileTab('api-keys'),
+                      onOpenInstallGuide: () => setShowInstallButton(true),
+                      onOpenNotificationSettings: () => setShowNotificationSettings(true),
+                    }}
+                  />
                 </div>
               </div>
             </div>
@@ -440,15 +386,6 @@ const Dashboard = () => {
           onConfirm={handleGoalDeleted}
           goalTitle={goalToDelete?.title || ""}
         />
-
-        <ModalContent isOpen={showApiKeyGuide} onClose={() => setShowApiKeyGuide(false)}>
-          <ModalHeader onClose={() => setShowApiKeyGuide(false)}>API Configuration</ModalHeader>
-          <ModalBody>
-            <ApiKeyGuide onKeyAdded={() => {
-              toast({ title: "API Key Added", description: "Your API key has been successfully added." });
-            }} />
-          </ModalBody>
-        </ModalContent>
 
         <ModalContent isOpen={showInstallButton} onClose={() => setShowInstallButton(false)}>
           <ModalHeader onClose={() => setShowInstallButton(false)}>Install App</ModalHeader>

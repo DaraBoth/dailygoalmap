@@ -6,7 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 export interface UpdateGoalPayload {
   title: string;
   description: string;
-  target_date: Date;
+  target_date?: Date | null;
+  no_duration?: boolean;
   start_date?: Date;
   metadata: GoalMetadata;
 }
@@ -41,11 +42,14 @@ export const useUpdateGoal = () => {
       const goalData: Partial<Goal> = {
         title: payload.title,
         description: payload.description || "",
-        target_date: (() => {
-          const date = new Date(payload.target_date);
-          date.setDate(date.getDate() + 1);
-          return date.toISOString().split("T")[0];
-        })(),
+        target_date: payload.no_duration || !payload.target_date
+          ? null
+          : (() => {
+            const date = new Date(payload.target_date as Date);
+            date.setDate(date.getDate() + 1);
+            return date.toISOString().split("T")[0];
+          })(),
+        no_duration: !!payload.no_duration,
         metadata,
       };
 

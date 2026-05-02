@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileScrollTimePicker } from "@/components/ui/mobile-scroll-time-picker";
+import { formatTimeForDisplay } from "@/components/calendar/taskDateTime";
 
 interface MobileTimePickerProps {
   value: string;
@@ -28,6 +29,7 @@ export function MobileTimePicker({
     return (
       <>
         <button
+          type="button"
           onClick={() => setOpen(true)}
           className={cn(
             "w-full h-11 px-3 py-2 text-[16px] bg-background border border-border rounded-xl transition-all duration-200",
@@ -38,7 +40,7 @@ export function MobileTimePicker({
           )}
         >
           <Clock className="h-4 w-4 mr-3 text-blue-500 dark:text-blue-400" />
-          {value ? value : placeholder}
+          {value ? formatTimeForDisplay(value) : placeholder}
         </button>
         <MobileScrollTimePicker
           time={value || "00:00"}

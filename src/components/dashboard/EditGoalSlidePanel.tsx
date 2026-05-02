@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MobileDatePicker } from "@/components/ui/mobile-date-picker";
 import { Goal, GoalType } from "@/types/goal";
@@ -37,6 +38,7 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [targetDate, setTargetDate] = useState<Date>(new Date());
+  const [noDuration, setNoDuration] = useState(false);
   const [goalType, setGoalType] = useState<GoalType>("general");
   const [goalContext, setGoalContext] = useState("");
   const [goalAiInstructions, setGoalAiInstructions] = useState("");
@@ -51,7 +53,9 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
       setTitle(goal.title);
       setDescription(goal.description);
       setGoalType(goal.metadata.goal_type);
-      setTargetDate(new Date(goal.target_date));
+      const isForever = Boolean(goal.no_duration || goal.metadata?.no_duration || !goal.target_date);
+      setNoDuration(isForever);
+      setTargetDate(goal.target_date ? new Date(goal.target_date) : new Date());
       // Load preferences
       const prefs = (goal as any).preferences || {};
       setGoalContext(prefs.context || "");
@@ -87,12 +91,14 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
     const result = await updateGoal(goal.id, {
       title: title.trim(),
       description: description.trim(),
-      target_date: targetDate,
+      target_date: noDuration ? null : targetDate,
+      no_duration: noDuration,
       start_date: startDate,
       metadata: {
         ...goal.metadata,
         goal_type: goalType,
         start_date: startDate.toISOString(),
+        no_duration: noDuration,
       },
     });
 
@@ -113,7 +119,9 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
       setTitle(goal.title);
       setDescription(goal.description);
       setGoalType(goal.metadata.goal_type);
-      setTargetDate(new Date(goal.target_date));
+      const isForever = Boolean(goal.no_duration || goal.metadata?.no_duration || !goal.target_date);
+      setNoDuration(isForever);
+      setTargetDate(goal.target_date ? new Date(goal.target_date) : new Date());
       const prefs = (goal as any).preferences || {};
       setGoalContext(prefs.context || "");
       setGoalAiInstructions(prefs.custom_instructions || "");
@@ -238,16 +246,28 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
 
               {/* Target Date */}
               <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-sm font-medium">
-                  <Calendar className="h-4 w-4" />
-                  Due Date
-                </Label>
-                <MobileDatePicker
-                  date={targetDate}
-                  setDate={setTargetDate}
-                  placeholder="Select due date"
-                  className="bg-white/80 dark:bg-white/10 backdrop-blur-sm border-white/20 dark:border-white/10 rounded-xl"
-                />
+                <div className="flex items-center justify-between rounded-xl border border-white/20 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 py-2">
+                  <Label className="flex items-center gap-2 text-sm font-medium">
+                    <Calendar className="h-4 w-4" />
+                    Forever (No Due Date)
+                  </Label>
+                  <Switch checked={noDuration} onCheckedChange={setNoDuration} />
+                </div>
+
+                {!noDuration && (
+                  <>
+                    <Label className="flex items-center gap-2 text-sm font-medium">
+                      <Calendar className="h-4 w-4" />
+                      Due Date
+                    </Label>
+                    <MobileDatePicker
+                      date={targetDate}
+                      setDate={setTargetDate}
+                      placeholder="Select due date"
+                      className="bg-white/80 dark:bg-white/10 backdrop-blur-sm border-white/20 dark:border-white/10 rounded-xl"
+                    />
+                  </>
+                )}
               </div>
 
               {/* AI Context Section */}

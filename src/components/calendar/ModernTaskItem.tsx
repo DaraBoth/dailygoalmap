@@ -11,6 +11,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { formatTaskTimeRange } from "./taskDateTime";
 
 interface ModernTaskItemProps {
     task: Task;
@@ -36,13 +37,8 @@ export const ModernTaskItem = memo(({
         onToggleCompletion(task.id);
     };
 
-    const formatTime = (timeStr?: string | null) => {
-        if (!timeStr) return "";
-        return timeStr.slice(0, 5);
-    };
-
-    const timeDisplay = task.daily_start_time
-        ? `${formatTime(task.daily_start_time)}${task.daily_end_time ? `-${formatTime(task.daily_end_time)}` : ''}`
+    const timeDisplay = (task.is_anytime || task.daily_start_time)
+        ? formatTaskTimeRange(task.daily_start_time, task.daily_end_time, task.is_anytime)
         : null;
 
     return (
@@ -110,13 +106,18 @@ export const ModernTaskItem = memo(({
                 </div>
 
                 {/* Time Badge */}
-                {timeDisplay && !task.completed && (
+                {timeDisplay && (
                     <div className="flex items-center gap-1.5">
                         <Badge
                             variant="outline"
-                            className="h-5 px-1.5 text-[10px] font-medium border-primary/20 text-primary bg-primary/5"
+                            className={cn(
+                                "h-5 px-1.5 text-[10px] font-medium",
+                                task.completed
+                                    ? "border-muted-foreground/20 text-muted-foreground/60 bg-transparent"
+                                    : "border-primary/20 text-primary bg-primary/5"
+                            )}
                         >
-                            <Clock className="w-2.5 h-2.5 mr-1" />
+                            {!task.is_anytime && <Clock className="w-2.5 h-2.5 mr-1" />}
                             {timeDisplay}
                         </Badge>
                     </div>

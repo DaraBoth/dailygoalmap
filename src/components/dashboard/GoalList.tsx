@@ -51,6 +51,7 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [isLeaving, setIsLeaving] = useState<string | null>(null);
   const [leavingGoalId, setLeavingGoalId] = useState<string | null>(null);
+  const [openingGoalId, setOpeningGoalId] = useState<string | null>(null);
   const { toast } = useToast();
   const { goToGoal } = useRouterNavigation();
   const isMobile = useIsMobile();
@@ -210,7 +211,7 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
               >
                 <Card
                   className={`relative cursor-pointer group hover:shadow-lg transition-all duration-300 overflow-hidden border bg-card ${deadlineStyling.borderColor}`}
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     const target = e.target as HTMLElement | null;
                     if (target) {
                       let node: HTMLElement | null = target as HTMLElement;
@@ -221,7 +222,8 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
                         node = node.parentElement;
                       }
                     }
-                    goToGoal(goal.id);
+                    setOpeningGoalId(goal.id);
+                    await goToGoal(goal.id);
                   }}
                 >
                   {/* Hover Glow Effect */}
@@ -400,6 +402,19 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
                       </div>
                     </CardContent>
                   </div>
+
+                  {openingGoalId === goal.id && (
+                    <div className="absolute inset-0 bg-background/65 backdrop-blur-[2px] z-20 flex items-center justify-center">
+                      <div className="inline-flex items-center gap-2 rounded-full bg-background/90 border border-border px-3 py-1.5 text-xs font-semibold">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                          className="h-3.5 w-3.5 border-2 border-primary border-t-transparent rounded-full"
+                        />
+                        Opening goal...
+                      </div>
+                    </div>
+                  )}
                 </Card>
               </motion.div>
             );

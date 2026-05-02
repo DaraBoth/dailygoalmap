@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
+import { useSearch } from '@tanstack/react-router';
 import ProfileForm from "@/components/profile/ProfileForm";
 import ApiKeyManager from "@/components/profile/ApiKeyManager";
 import ModelSelector from "@/components/profile/ModelSelector";
@@ -19,8 +20,17 @@ type SettingsTab = 'profile' | 'api-keys' | 'model' | 'notifications' | 'securit
 const Profile = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+  const search = useSearch({ strict: false }) as { tab?: SettingsTab };
   const { goToLogin, goToHistoryOrDashboard } = useRouterNavigation();
   const { toast } = useToast();
+
+  const navItems = [
+    { id: 'profile' as SettingsTab, label: 'Profile', icon: UserIcon, description: 'Update your profile details' },
+    { id: 'api-keys' as SettingsTab, label: 'API Keys', icon: Key, description: 'Manage your API keys for AI services' },
+    { id: 'model' as SettingsTab, label: 'AI Model', icon: Bot, description: 'Choose your preferred AI model' },
+    { id: 'notifications' as SettingsTab, label: 'Notifications', icon: Bell, description: 'Configure notification preferences' },
+    { id: 'security' as SettingsTab, label: 'Security', icon: Lock, description: 'Manage your account security' },
+  ];
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -67,17 +77,16 @@ const Profile = () => {
     }
   };
 
+  useEffect(() => {
+    const nextTab = search?.tab;
+    if (nextTab && navItems.some((item) => item.id === nextTab)) {
+      setActiveTab(nextTab);
+    }
+  }, [navItems, search?.tab]);
+
   if (!user) {
     return <div>Loading...</div>;
   }
-
-  const navItems = [
-    { id: 'profile' as SettingsTab, label: 'Profile', icon: UserIcon, description: 'Update your profile details' },
-    { id: 'api-keys' as SettingsTab, label: 'API Keys', icon: Key, description: 'Manage your API keys for AI services' },
-    { id: 'model' as SettingsTab, label: 'AI Model', icon: Bot, description: 'Choose your preferred AI model' },
-    { id: 'notifications' as SettingsTab, label: 'Notifications', icon: Bell, description: 'Configure notification preferences' },
-    { id: 'security' as SettingsTab, label: 'Security', icon: Lock, description: 'Manage your account security' },
-  ];
 
   return (
     <>

@@ -524,7 +524,7 @@ const TodaysTasks: React.FC = React.memo(() => {
                     </div>
                   </div>
 
-                  <Card className="rounded-xl border border-border/60 bg-card">
+                  <Card className="rounded-xl border border-border bg-card shadow-sm">
                     <CardContent className="max-h-[50vh] overflow-y-auto p-0 bg-card">
                       {loading ? (
                         <div className="space-y-3 p-4">
@@ -598,7 +598,7 @@ const TodaysTasks: React.FC = React.memo(() => {
 
       {
         !isMobile && (
-          <Card className="border border-foreground/10 rounded-2xl xl:rounded-[2.5rem] bg-background/85 backdrop-blur-xl shadow-xl overflow-hidden">
+          <Card className="border border-border dark:border-foreground/10 rounded-2xl xl:rounded-[2.5rem] bg-background/90 backdrop-blur-xl shadow-xl overflow-hidden">
             <CardHeader className="pb-3 sm:pb-4 pt-5 sm:pt-6 xl:pt-8 px-4 sm:px-6 xl:px-8">
               <div className="flex items-center space-x-3 sm:space-x-4 mb-3 sm:mb-4 flex-row">
                 <div className="p-2 sm:p-2.5 xl:p-3 bg-primary/10 rounded-xl xl:rounded-2xl ring-1 ring-primary/20">

@@ -5,6 +5,15 @@
 import { Tool, AgentContext } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 
+function isMeaningful(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  const lowered = trimmed.toLowerCase();
+  const blocked = new Set(['unknown', 'n/a', 'na', 'none', 'untitled', 'task', 'todo', 'description']);
+  return !blocked.has(lowered);
+}
+
 export const taskTools: Tool[] = [
   {
     name: 'insert_new_task',
@@ -40,27 +49,37 @@ export const taskTools: Tool[] = [
           type: 'array',
           description: 'Array of tags like ["travel"], ["food"], ["activity"], ["rest"]'
         },
-        completed: {
-          type: 'string',
-          description: 'Boolean as string: "true" or "false" (default: "false")'
+        is_anytime: {
+          type: 'boolean',
+          description: 'Set true for all-day or anytime tasks; omit daily_start_time/daily_end_time when true'
+        },
+        duration_minutes: {
+          type: 'number',
+          description: 'Optional duration in minutes'
         }
       },
-      required: ['title', 'description', 'start_date', 'end_date', 'daily_start_time', 'daily_end_time']
+      required: ['title', 'start_date', 'end_date']
     },
     handler: async (params, context: AgentContext) => {
+      if (!isMeaningful(params.title)) {
+        throw new Error('Task title must be meaningful and not a placeholder like "unknown" or "untitled".');
+      }
+      const isAnytime = params.is_anytime === true || params.is_anytime === 'true';
       const { data, error } = await supabase
         .from('tasks')
         .insert({
           goal_id: context.goalId,
           user_id: context.userId,
           title: params.title as string,
-          description: params.description as string,
+          description: params.description ? String(params.description) : null,
           start_date: params.start_date as string,
           end_date: params.end_date as string,
-          daily_start_time: params.daily_start_time as string,
-          daily_end_time: params.daily_end_time as string,
+          daily_start_time: isAnytime ? null : (params.daily_start_time ? String(params.daily_start_time) : null),
+          daily_end_time: isAnytime ? null : (params.daily_end_time ? String(params.daily_end_time) : null),
+          is_anytime: isAnytime,
+          duration_minutes: typeof params.duration_minutes === 'number' ? params.duration_minutes : null,
           tags: params.tags as string[] || [],
-          completed: params.completed === 'true' || false
+          completed: false,
         })
         .select()
         .single();
