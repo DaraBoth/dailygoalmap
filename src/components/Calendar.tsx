@@ -77,6 +77,7 @@ const Calendar = ({
     handleNavigateTask,
     handleAddTask,
     getTasksForDateWrapper,
+    setViewedMonth,
     setTasks // Added setTasks to the destructured useCalendarTasks
   } = useCalendarTasks({
     goalId,
@@ -261,6 +262,10 @@ const Calendar = ({
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setIsEditTaskOpen(true);
+  };
+
+  const handleMonthChange = (month: Date) => {
+    setViewedMonth(month);
   };
 
   const handleUpdateTask = async (
@@ -497,6 +502,7 @@ const Calendar = ({
             <CalendarContainer
               selectedDate={selectedDate}
               onDateChange={handleInternalDateChange}
+              onMonthChange={handleMonthChange}
               tasks={tasks}
               getTasksForDate={getTasksForDateWrapper}
               financialData={financialData}
@@ -558,6 +564,7 @@ const Calendar = ({
                   <CalendarContainer
                     selectedDate={selectedDate}
                     onDateChange={handleInternalDateChange}
+                    onMonthChange={handleMonthChange}
                     tasks={tasks}
                     getTasksForDate={getTasksForDateWrapper}
                     financialData={financialData}

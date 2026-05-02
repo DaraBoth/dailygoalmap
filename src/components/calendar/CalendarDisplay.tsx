@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 interface CalendarDisplayProps {
   selectedDate: Date | undefined;
   onDateChange: (date: Date | undefined) => void;
+  onMonthChange?: (month: Date) => void;
   tasks: Task[];
   getTasksForDate: (date: Date) => Task[];
   monthlyIncome?: number;
@@ -23,6 +24,7 @@ interface CalendarDisplayProps {
 const CalendarDisplay = ({
   selectedDate,
   onDateChange,
+  onMonthChange,
   tasks,
   getTasksForDate,
   monthlyIncome,
@@ -39,17 +41,20 @@ const CalendarDisplay = ({
     const newDate = new Date(currentMonth);
     newDate.setMonth(newDate.getMonth() - 1);
     setCurrentMonth(newDate);
+    onMonthChange?.(newDate);
   };
 
   const handleNextMonth = () => {
     const newDate = new Date(currentMonth);
     newDate.setMonth(newDate.getMonth() + 1);
     setCurrentMonth(newDate);
+    onMonthChange?.(newDate);
   };
 
   const handleGoToToday = () => {
     const today = new Date();
     setCurrentMonth(today);
+    onMonthChange?.(today);
     onDateChange(today);
   };
 

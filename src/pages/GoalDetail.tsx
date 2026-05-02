@@ -515,7 +515,6 @@ const GoalDetail: React.FC = () => {
                     goalDescription={goalDescription}
                     selectedDate={selectedDate}
                     onDateChange={setSelectedDate}
-                    allTasks={tasks}
                     autoOpenTaskId={autoOpenTaskId}
                     onAutoOpenTaskHandled={() => setAutoOpenTaskId(null)}
                   />

@@ -2,10 +2,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { formatYMD } from '@/utils/parseYMD';
 import { Task } from "@/components/calendar/types";
-import { useTaskManager } from "@/components/calendar/TaskManager";
 import { supabase } from "@/integrations/supabase/client";
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { useToast } from "@/hooks/use-toast";
+import { normalizeTaskList, normalizeTaskRecord } from "@/components/calendar/taskNormalization";
 import {
   findNextDayWithTasks,
   findPreviousDayWithTasks,
@@ -44,9 +44,9 @@ export const useCalendarTasks = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [viewedMonth, setViewedMonth] = useState<Date>(new Date());
   const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false);
   const { toast } = useToast();
-  const initialLoadCompleted = useRef(false);
   const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
 
   // Update internal tasks state when allTasks prop changes
@@ -57,18 +57,49 @@ export const useCalendarTasks = ({
     }
   }, [allTasks]);
 
-  const { loadTasks, getTasksForDate, toggleTaskCompletion, enableRealtimeForTasks } = useTaskManager({
-    goalId,
-    goalTitle,
-    goalDescription
-  });
+  const getMonthRange = useCallback((month: Date) => {
+    const start = new Date(month.getFullYear(), month.getMonth(), 1, 0, 0, 0, 0);
+    const end = new Date(month.getFullYear(), month.getMonth() + 1, 1, 0, 0, 0, 0);
+    return { start, end };
+  }, []);
 
-  // Enable realtime updates for tasks
-  useEffect(() => {
-    if (goalId) {
-      enableRealtimeForTasks();
+  const overlapsRange = useCallback((task: Partial<Task>, start: Date, end: Date) => {
+    const rawStart = task.start_date || task.end_date;
+    const rawEnd = task.end_date || task.start_date;
+    if (!rawStart || !rawEnd) return false;
+    const tStart = new Date(rawStart);
+    const tEnd = new Date(rawEnd);
+    if (Number.isNaN(tStart.getTime()) || Number.isNaN(tEnd.getTime())) return false;
+    return tStart < end && tEnd >= start;
+  }, []);
+
+  const fetchTasksForMonth = useCallback(async (month: Date) => {
+    if (!goalId) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { start, end } = getMonthRange(month);
+      const { data, error: fetchError } = await supabase
+        .from('tasks')
+        .select('id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, is_anytime, duration_minutes, tags, goal_id, user_id, created_at, updated_at, updated_by')
+        .eq('goal_id', goalId)
+        .lt('start_date', end.toISOString())
+        .gte('end_date', start.toISOString())
+        .order('start_date', { ascending: true });
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      setTasks(normalizeTaskList((data ?? []) as any[]));
+    } catch (err) {
+      console.error('Failed to load month tasks:', err);
+      setError('Failed to load tasks for this month. Please try again.');
+      setTasks([]);
+    } finally {
+      setIsLoading(false);
     }
-  }, [goalId, enableRealtimeForTasks]); // Added enableRealtimeForTasks to dependencies
+  }, [goalId, getMonthRange]);
 
   const getTasksForDateWrapper = useCallback((date: Date) => {
     return filterTasksByDate(tasks, date);
@@ -92,49 +123,72 @@ export const useCalendarTasks = ({
     loadFinancialData();
   }, [goalId]);
 
+  // Debounced month fetch (no cache) for goal-specific calendar mode.
   useEffect(() => {
-    let isMounted = true;
+    if (allTasks) return;
+    const id = window.setTimeout(() => {
+      fetchTasksForMonth(viewedMonth);
+    }, 250);
+    return () => window.clearTimeout(id);
+  }, [allTasks, viewedMonth, fetchTasksForMonth]);
 
-    // If allTasks are provided, we don't need to load tasks internally
-    if (allTasks) {
-      setIsLoading(false);
-      // Ensure tasks state is set if allTasks is available on initial render
-      if (tasks.length === 0 && allTasks.length > 0) {
-        setTasks(allTasks);
-      }
-      return;
+  // Realtime updates: patch only tasks overlapping the currently viewed month.
+  useEffect(() => {
+    if (allTasks || !goalId) return;
+
+    if (realtimeChannelRef.current) {
+      supabase.removeChannel(realtimeChannelRef.current);
+      realtimeChannelRef.current = null;
     }
 
-    // Existing logic for loading tasks if allTasks is not provided
-    const initializeTasks = async () => {
-      if (!isMounted) return;
+    const channel = supabase
+      .channel(`calendar-month-tasks-${goalId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tasks',
+        filter: `goal_id=eq.${goalId}`,
+      }, (payload) => {
+        const { start, end } = getMonthRange(viewedMonth);
 
-      setIsLoading(true);
-      setError(null);
+        if (payload.eventType === 'DELETE' && payload.old) {
+          const oldId = (payload.old as any).id;
+          setTasks(prev => prev.filter(t => t.id !== oldId));
+          return;
+        }
 
-      try {
-        const loadedTasks = await loadTasks();
-        if (isMounted) {
-          setTasks(loadedTasks);
-        }
-      } catch (error) {
-        console.error("Failed to initialize calendar data:", error);
-        if (isMounted) {
-          setError("Failed to load calendar data. Please try again.");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
+        const row = (payload.new || payload.old) as any;
+        if (!row) return;
+        const normalized = normalizeTaskRecord(row);
+        const inMonth = overlapsRange(normalized, start, end);
 
-    initializeTasks();
+        setTasks(prev => {
+          const idx = prev.findIndex(t => t.id === normalized.id);
+
+          if (!inMonth) {
+            return idx >= 0 ? prev.filter(t => t.id !== normalized.id) : prev;
+          }
+
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = normalized;
+            return next;
+          }
+
+          return [...prev, normalized].sort((a, b) => String(a.start_date || '').localeCompare(String(b.start_date || '')));
+        });
+      })
+      .subscribe();
+
+    realtimeChannelRef.current = channel;
 
     return () => {
-      isMounted = false;
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current);
+        realtimeChannelRef.current = null;
+      }
     };
-  }, [loadTasks, allTasks, tasks.length]); // Added tasks.length to dependency array
+  }, [allTasks, goalId, viewedMonth, getMonthRange, overlapsRange]);
 
   const handleDateChange = useCallback((date: Date | undefined) => {
     setSelectedDate(date);
@@ -142,11 +196,11 @@ export const useCalendarTasks = ({
     // Update URL only when a task is pinned (deep-link mode).
     // For normal manual browsing, avoid persisting date in URL to prevent stale re-entry dates.
     const currentUrl = new URL(window.location.toString());
-    const taskIdParam = currentUrl.searchParams.get('taskId');
+    const pinnedTaskId = currentUrl.searchParams.get('taskId');
     const existing = currentUrl.searchParams.get('date');
     const newVal = date ? formatYMD(date) : null;
 
-    const targetDateInUrl = taskIdParam ? newVal : null;
+    const targetDateInUrl = pinnedTaskId ? newVal : null;
 
     // Only update history if the date param actually changed to avoid triggering loops
     if (existing !== targetDateInUrl) {
@@ -159,8 +213,8 @@ export const useCalendarTasks = ({
     }
     
     // Don't auto-select task on date change unless there's a taskId in URL
-    const taskIdParam = new URLSearchParams(window.location.search).get('taskId');
-    if (!taskIdParam) {
+    const selectedTaskId = new URLSearchParams(window.location.search).get('taskId');
+    if (!selectedTaskId) {
       setSelectedTask(null);
       setSelectedTaskIndex(0);
     }
@@ -201,7 +255,11 @@ export const useCalendarTasks = ({
 
     // Now update the backend
     try {
-      await toggleTaskCompletion(tasks, taskId);
+      const { error: toggleError } = await supabase
+        .from('tasks')
+        .update({ completed: newCompletedState, updated_at: updatedAt })
+        .eq('id', taskId);
+      if (toggleError) throw toggleError;
       
       // Format datetime for notification
       const startDate = getTaskAnchorDate(taskToUpdate as any);
@@ -548,6 +606,7 @@ export const useCalendarTasks = ({
     handleNavigateTask,
     handleAddTask,
     getTasksForDateWrapper,
+    setViewedMonth,
     setTasks // Expose setTasks
   };
 };

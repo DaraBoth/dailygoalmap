@@ -10,6 +10,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface CalendarContainerProps {
   selectedDate: Date | undefined;
   onDateChange: (date: Date | undefined) => void;
+  onMonthChange?: (month: Date) => void;
   tasks: Task[];
   getTasksForDate: (date: Date) => Task[];
   financialData: any | null;
@@ -25,6 +26,7 @@ interface CalendarContainerProps {
 const CalendarContainer = ({
   selectedDate,
   onDateChange,
+  onMonthChange,
   tasks,
   getTasksForDate,
   financialData,
@@ -66,6 +68,7 @@ const CalendarContainer = ({
             onDateChange={(date) => {
               onDateChange(date);
             }}
+            onMonthChange={onMonthChange}
             tasks={tasks}
             getTasksForDate={getTasksForDate}
             monthlyIncome={financialData?.monthlyIncome}
