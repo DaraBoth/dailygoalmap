@@ -99,14 +99,18 @@ const Calendar = ({
   }, [externalSelectedDate, externalOnDateChange, handleDateChange, setSelectedDate]);
 
   const handleInternalDateChange = (date: Date) => {
-    handleDateChange(date);
-    // When user selects a date, update URL and state
+    // When user selects a different date manually, clear task focus from notification deep links.
+    setSelectedTask(null);
+    setSelectedTaskIndex(0);
     setIsTaskDetailsOpen(false);
 
-    // Update URL with new date (local yyyy-MM-dd)
+    // Update URL with new date (local yyyy-MM-dd) and remove taskId pin.
     const currentUrl = new URL(window.location.toString());
     currentUrl.searchParams.set('date', formatYMD(date));
+    currentUrl.searchParams.delete('taskId');
     window.history.replaceState({}, '', currentUrl.toString());
+
+    handleDateChange(date);
 
     if (externalOnDateChange) {
       externalOnDateChange(date);
