@@ -84,14 +84,13 @@ export const Route = createFileRoute('/goal/$id')({
       // Try to get cached data first
       const goalKey = CacheKeys.goalDetail(goalId)
       const membersKey = CacheKeys.goalMembers(goalId)
-      const tasksKey = CacheKeys.goalTasks(goalId)
 
       let goalData = routeCache.get(goalKey)
       let membersData = routeCache.get(membersKey)
       let tasksData = null
       let fromCache = false
 
-      // Fetch goal data if not cached
+      // Fetch goal data if not cached — short TTL so edits reflect quickly
       if (!goalData) {
         const { data, error: goalError } = await supabase
           .from('goals')
@@ -101,7 +100,7 @@ export const Route = createFileRoute('/goal/$id')({
 
         if (goalError) throw goalError
         goalData = data
-        routeCache.set(goalKey, goalData, 2 * 60 * 1000) // Cache for 2 minutes
+        routeCache.set(goalKey, goalData, 30 * 1000) // 30s — keeps fast back-nav but avoids stale title/theme
       } else {
         fromCache = true
       }
@@ -111,20 +110,19 @@ export const Route = createFileRoute('/goal/$id')({
         const { data } = await supabase
           .rpc('get_goal_members', { p_goal_id: goalId })
         membersData = data || []
-        routeCache.set(membersKey, membersData, 5 * 60 * 1000) // Cache for 5 minutes
+        routeCache.set(membersKey, membersData, 30 * 1000) // 30s cache — refreshed on every navigation
       } else {
         fromCache = true
       }
 
-      // Always fetch tasks fresh to avoid stale completion state after quick navigation.
-      const { data } = await supabase
+      // Always fetch tasks fresh — same logic as TodaysTasks (no cache, no stale data).
+      const { data: rawTasks, error: tasksError } = await supabase
         .from('tasks')
-        .select('*')
+        .select('id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, is_anytime, duration_minutes, tags, goal_id, user_id, created_at, updated_at, updated_by')
         .eq('goal_id', goalId)
         .order('start_date', { ascending: true })
-      tasksData = normalizeTaskList(data as any[])
-      // Keep a short-lived cache only for background navigation helpers.
-      routeCache.set(tasksKey, tasksData, 15 * 1000)
+      if (tasksError) console.warn('Tasks fetch error:', tasksError.message)
+      tasksData = normalizeTaskList((rawTasks ?? []) as any[])
 
       const loadTime = performance.now() - startTime
       console.log(`Goal ${goalId} data loaded in ${loadTime.toFixed(2)}ms ${fromCache ? '(cached)' : '(fresh)'}`)
@@ -149,9 +147,9 @@ export const Route = createFileRoute('/goal/$id')({
     </Suspense>
   ),
   
-  // Cache the route data for 2 minutes (goals change more frequently)
-  staleTime: 2 * 60 * 1000,
-  
+  // Always re-run the loader on navigation so tasks/goal data are up to date.
+  staleTime: 0,
+
   // Preload when hovering over goal links
   preload: false,
   
