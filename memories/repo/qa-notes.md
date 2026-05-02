@@ -1,2 +1,0 @@
-- 2026-05-02: GoalDetail stale data issues often come from TanStack route staleTime plus custom route cache; keep task data uncached or very short TTL.
-- 2026-05-02: Nested Radix Sheet in EditTaskDialog can close parent sheet; use modal={false} on inner sheet pickers.
