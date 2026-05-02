@@ -214,18 +214,23 @@ const SmartAnalytics: React.FC<SmartAnalyticsProps> = ({
     tasks.forEach(task => {
       const s = task.start_date ? new Date(task.start_date) : null;
       const e = task.end_date ? new Date(task.end_date) : null;
+      const at = task.updated_at ? new Date(task.updated_at) : (task.created_at ? new Date(task.created_at) : null);
+      const completedInPeriod = Boolean(at && !isNaN(at.getTime()) && at >= periodStart && at <= periodEnd);
       const overlapsPeriod = Boolean(s && e && s <= periodEnd && e >= periodStart);
+      const inPeriod = overlapsPeriod || completedInPeriod;
 
-      // Total workload belongs to the task owner.
       const ownerId = task.user_id;
-      if (overlapsPeriod && ownerId && memberMap.has(ownerId)) {
-        memberMap.get(ownerId)!.total += 1;
+      const fallbackUserId = (task as any).updated_by;
+      const totalTargetId = ownerId && memberMap.has(ownerId)
+        ? ownerId
+        : (fallbackUserId && memberMap.has(fallbackUserId) ? fallbackUserId : null);
+
+      // Denominator: total tasks that belonged to this period for this member.
+      if (inPeriod && totalTargetId) {
+        memberMap.get(totalTargetId)!.total += 1;
       }
 
       if (!task.completed) return;
-
-      const at = task.updated_at ? new Date(task.updated_at) : (task.created_at ? new Date(task.created_at) : null);
-      const completedInPeriod = Boolean(at && !isNaN(at.getTime()) && at >= periodStart && at <= periodEnd);
 
       // Include completed tasks if completion happened in period OR task schedule overlaps period.
       if (!completedInPeriod && !overlapsPeriod) return;
