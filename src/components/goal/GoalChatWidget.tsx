@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import chatAIGif from '@/assets/images/image.png';
 import { cn } from '@/lib/utils';
 import { Task } from '@/components/calendar/types';
+import { normalizeTaskList, normalizeTaskRecord } from '@/components/calendar/taskNormalization';
 import {
   loadAllApiKeys, loadChatSession, saveChatSession, loadPreferences,
   readAIFile, writeAIFile, listAIFiles, searchWeb, scrapeUrl,
@@ -291,12 +292,13 @@ export interface GoalChatWidgetProps {
   isPopupMode?: boolean;
   tasks?: Task[];
   goalTitle?: string;
+  onTasksChange?: React.Dispatch<React.SetStateAction<Task[]>>;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
-  goalId, userInfo, isPopupMode = false, tasks: propTasks, goalTitle: propGoalTitle,
+  goalId, userInfo, isPopupMode = false, tasks: propTasks, goalTitle: propGoalTitle, onTasksChange,
 }) => {
   const [isOpen, setIsOpen] = useState(isPopupMode);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -318,6 +320,13 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
 
   const tasks = propTasks ?? internalTasks;
   const goalTitle = propGoalTitle ?? internalGoalTitle;
+
+  const applyTaskMutation = useCallback((updater: (prev: Task[]) => Task[]) => {
+    setInternalTasks(updater);
+    if (onTasksChange) {
+      onTasksChange(updater);
+    }
+  }, [onTasksChange]);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -374,7 +383,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       supabase.from('tasks').select('*').eq('goal_id', goalId).order('start_date'),
     ]).then(([g, t]) => {
       if (g.data?.title) setInternalGoalTitle(g.data.title);
-      if (t.data) setInternalTasks(t.data as Task[]);
+      if (t.data) setInternalTasks(normalizeTaskList(t.data as any[]));
     });
   }, [goalId, propTasks]);
 
@@ -442,7 +451,10 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
         if (typeof u.duration_minutes === 'number') patch.duration_minutes = u.duration_minutes;
         const { error } = await supabase.from('tasks').update(patch).eq('id', u.task_id);
         if (error) results.push(`[FAIL] ${u.task_id}: ${error.message}`);
-        else { setInternalTasks(prev => prev.map(t => t.id === u.task_id ? { ...t, ...patch } as Task : t)); results.push(`[OK] ${u.task_id}${typeof u.completed === 'boolean' ? ` → ${u.completed ? 'done' : 'pending'}` : ' updated'}`); }
+        else {
+          applyTaskMutation(prev => prev.map(t => t.id === u.task_id ? normalizeTaskRecord({ ...(t as any), ...(patch as any) }) : t));
+          results.push(`[OK] ${u.task_id}${typeof u.completed === 'boolean' ? ` → ${u.completed ? 'done' : 'pending'}` : ' updated'}`);
+        }
       }
       setTaskMemory(memIds?.length ? memIds : []);
       return results.join('\n');
@@ -480,7 +492,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
         updated_at: now,
       }).select().single();
       if (error) return `[FAIL] Create task: ${error.message}`;
-      if (data) setInternalTasks(prev => [...prev, data as Task]);
+      if (data) applyTaskMutation(prev => [...prev, normalizeTaskRecord(data as any)]);
       return `[OK] Created "${titleStr}" (id: ${data?.id})`;
     }
     if (name === 'delete_task') {
@@ -488,12 +500,12 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       if (!taskId) return '[FAIL] Missing task_id';
       const { error } = await supabase.from('tasks').delete().eq('id', taskId);
       if (error) return `[FAIL] Delete task: ${error.message}`;
-      setInternalTasks(prev => prev.filter(t => t.id !== taskId));
+      applyTaskMutation(prev => prev.filter(t => t.id !== taskId));
       return `[OK] Deleted task ${taskId}`;
     }
     if (name === 'get_tasks') {
       const { data } = await supabase.from('tasks').select('*').eq('goal_id', goalId).order('created_at', { ascending: false });
-      if (data) setInternalTasks(data as Task[]);
+      if (data) applyTaskMutation(() => normalizeTaskList(data as any[]));
       const rows = (data || []).map((t: Task) => {
         const safeTitle = (t.title || '').replace(/\|/g, '\\|');
         const status = t.completed ? 'Done' : 'Pending';

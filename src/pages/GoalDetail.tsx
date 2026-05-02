@@ -549,7 +549,7 @@ const GoalDetail: React.FC = () => {
       </div>
 
       {/* Chat Widget */}
-      <GoalChatWidget goalId={goalId} userInfo={user} tasks={tasks} goalTitle={goalTitle} />
+      <GoalChatWidget goalId={goalId} userInfo={user} tasks={tasks} goalTitle={goalTitle} onTasksChange={setTasks} />
 
       {/* Members Sheet */}
       <Sheet open={isMembersSheetOpen} onOpenChange={setIsMembersSheetOpen}>

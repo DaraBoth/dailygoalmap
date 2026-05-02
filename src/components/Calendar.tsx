@@ -104,10 +104,10 @@ const Calendar = ({
     setSelectedTaskIndex(0);
     setIsTaskDetailsOpen(false);
 
-    // Update URL with new date (local yyyy-MM-dd) and remove taskId pin.
+    // Clear deep-link params for manual browsing so stale dates are not reused on next entry.
     const currentUrl = new URL(window.location.toString());
-    currentUrl.searchParams.set('date', formatYMD(date));
     currentUrl.searchParams.delete('taskId');
+    currentUrl.searchParams.delete('date');
     window.history.replaceState({}, '', currentUrl.toString());
 
     handleDateChange(date);
@@ -129,9 +129,10 @@ const Calendar = ({
 
     const dateParam = searchParams?.date;
     const taskParam = searchParams?.taskId;
+    const hasTaskDeepLink = Boolean(taskParam || autoOpenTaskId);
     let parsedDate = new Date();
 
-    if (dateParam) {
+    if (hasTaskDeepLink && dateParam) {
       const fromUrl = parseYMD(dateParam);
       if (fromUrl) {
         parsedDate = fromUrl;
@@ -141,6 +142,13 @@ const Calendar = ({
           parsedDate = fallbackDate;
         }
       }
+    }
+
+    // If we entered with a stale date-only param from a previous session, clear it once.
+    if (!hasTaskDeepLink && dateParam) {
+      const currentUrl = new URL(window.location.toString());
+      currentUrl.searchParams.delete('date');
+      window.history.replaceState({}, '', currentUrl.toString());
     }
 
     // Always set the selected date from URL parameter
@@ -168,7 +176,7 @@ const Calendar = ({
     }
 
     hasInitializedDate.current = true;
-  }, [searchParams, selectedDate, handleDateChange, setSelectedDate, setIsTaskDetailsOpen, tasks, getTasksForDateWrapper, setSelectedTask, setSelectedTaskIndex]);
+  }, [searchParams, selectedDate, handleDateChange, setSelectedDate, setIsTaskDetailsOpen, tasks, getTasksForDateWrapper, setSelectedTask, setSelectedTaskIndex, autoOpenTaskId]);
 
 
   // Unified effect: auto-open task detail if autoOpenTaskId (from prop) or taskId param in URL is present

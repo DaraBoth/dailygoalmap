@@ -139,14 +139,19 @@ export const useCalendarTasks = ({
   const handleDateChange = useCallback((date: Date | undefined) => {
     setSelectedDate(date);
     
-    // Update URL when date changes
+    // Update URL only when a task is pinned (deep-link mode).
+    // For normal manual browsing, avoid persisting date in URL to prevent stale re-entry dates.
     const currentUrl = new URL(window.location.toString());
+    const taskIdParam = currentUrl.searchParams.get('taskId');
     const existing = currentUrl.searchParams.get('date');
     const newVal = date ? formatYMD(date) : null;
+
+    const targetDateInUrl = taskIdParam ? newVal : null;
+
     // Only update history if the date param actually changed to avoid triggering loops
-    if (existing !== newVal) {
-      if (newVal) {
-        currentUrl.searchParams.set('date', newVal);
+    if (existing !== targetDateInUrl) {
+      if (targetDateInUrl) {
+        currentUrl.searchParams.set('date', targetDateInUrl);
       } else {
         currentUrl.searchParams.delete('date');
       }
