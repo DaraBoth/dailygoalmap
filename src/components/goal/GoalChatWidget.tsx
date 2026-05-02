@@ -116,12 +116,17 @@ function getToolDefs(enableSearch: boolean, enableFirecrawl: boolean): ToolDef[]
     },
     {
       name: 'delete_task',
-      description: 'Delete a task by UUID or by matching title text within this goal.',
+      description: 'Find and delete a task by natural text (title/date/time) without needing UUID. Use confirm=true only after user confirms the match.',
       parameters: {
         type: 'object',
         properties: {
           task_id: { type: 'string', description: 'Task UUID from the task list' },
-          title_query: { type: 'string', description: 'Task title text to find and delete when task_id is not provided' },
+          title_query: { type: 'string', description: 'Task title text from user, can be partial/fuzzy' },
+          start_date: { type: 'string', description: 'Optional date hint YYYY-MM-DD' },
+          end_date: { type: 'string', description: 'Optional date hint YYYY-MM-DD' },
+          daily_start_time: { type: 'string', description: 'Optional time hint HH:mm' },
+          daily_end_time: { type: 'string', description: 'Optional time hint HH:mm' },
+          confirm: { type: 'boolean', description: 'Set true only after user confirms the matched task to delete' },
         },
         required: [],
       },
@@ -224,6 +229,22 @@ function hasMeaningfulText(value: unknown): boolean {
   return !blocked.has(lowered);
 }
 
+function normalizeText(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function escapeCell(value: string): string {
+  return value.replace(/\|/g, '\\|');
+}
+
+function toDateOnly(isoLike?: string | null): string {
+  return isoLike ? isoLike.slice(0, 10) : '-';
+}
+
+function toTimeOnly(timeLike?: string | null): string {
+  return timeLike ? timeLike.slice(0, 5) : '-';
+}
+
 // ── System prompt (compact to save tokens) ────────────────────────────────────
 
 function buildSystemPrompt(
@@ -268,6 +289,9 @@ ${taskMemory.length ? `\n## Remembered IDs\n${taskMemory.join(', ')}` : ''}
 Rules:
 - NEVER reply with "hold on", "please wait", or similar filler when a tool action is requested.
 - If a user asks to do something with tasks, execute tools immediately in the same turn.
+- NEVER ask users for UUID/task_id.
+- For delete requests, use delete_task with title/date/time hints first (confirm=false), show candidate details, then run delete_task with confirm=true after user confirmation.
+- When presenting delete candidates, show: title, description, duration, task date, task status, created by, updated by, created at, updated at.
 - Use get_tasks whenever you need a fresh task list before acting.
 - For all-day tasks, set is_anytime=true and omit daily_start_time/daily_end_time.
 - ALWAYS provide a meaningful, specific title. NEVER use "Untitled", empty string, or placeholder text.
@@ -524,24 +548,93 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       let taskId = String(args.task_id || '').trim();
       if (!taskId) {
         const titleQuery = String(args.title_query || '').trim();
-        if (!titleQuery) return '[FAIL] Missing task_id/title_query';
-        const { data: matches, error: findError } = await supabase
-          .from('tasks')
-          .select('id,title')
-          .eq('goal_id', goalId)
-          .ilike('title', `%${titleQuery}%`)
-          .limit(3);
-        if (findError) return `[FAIL] Delete task: ${findError.message}`;
-        if (!matches || matches.length === 0) return `[FAIL] No task found for title_query="${titleQuery}"`;
-        if (matches.length > 1) {
-          return `[FAIL] Multiple tasks matched title_query="${titleQuery}": ${matches.map(m => m.title).join(', ')}. Ask user to be more specific or pass task_id.`;
+        const startHint = String(args.start_date || '').trim();
+        const endHint = String(args.end_date || '').trim();
+        const startTimeHint = String(args.daily_start_time || '').trim().slice(0, 5);
+        const endTimeHint = String(args.daily_end_time || '').trim().slice(0, 5);
+        const confirm = args.confirm === true;
+
+        if (!titleQuery && !startHint && !endHint && !startTimeHint && !endTimeHint) {
+          return '[FAIL] Missing delete hints. Provide task name and/or date/time so I can find the closest match.';
         }
-        taskId = matches[0].id;
+
+        const { data: taskPool, error: poolError } = await supabase
+          .from('tasks')
+          .select('id,title,description,duration_minutes,start_date,end_date,daily_start_time,daily_end_time,is_anytime,completed,user_id,updated_by,created_at,updated_at')
+          .eq('goal_id', goalId)
+          .order('updated_at', { ascending: false })
+          .limit(200);
+
+        if (poolError) return `[FAIL] Delete task: ${poolError.message}`;
+        if (!taskPool || taskPool.length === 0) return '[FAIL] No tasks found in this goal.';
+
+        const queryNorm = normalizeText(titleQuery);
+        const queryTokens = queryNorm ? new Set(queryNorm.split(' ').filter(Boolean)) : new Set<string>();
+
+        const scored = taskPool
+          .map(t => {
+            const titleNorm = normalizeText(t.title || '');
+            const descNorm = normalizeText(t.description || '');
+            const textBag = `${titleNorm} ${descNorm}`.trim();
+            const taskTokens = new Set(textBag.split(' ').filter(Boolean));
+            let score = 0;
+
+            if (queryNorm) {
+              if (titleNorm.includes(queryNorm)) score += 10;
+              if (descNorm.includes(queryNorm)) score += 4;
+              for (const token of queryTokens) {
+                if (token && taskTokens.has(token)) score += 2;
+              }
+            }
+
+            if (startHint && toDateOnly(t.start_date) === startHint) score += 6;
+            if (endHint && toDateOnly(t.end_date) === endHint) score += 6;
+            if (startTimeHint && toTimeOnly(t.daily_start_time) === startTimeHint) score += 5;
+            if (endTimeHint && toTimeOnly(t.daily_end_time) === endTimeHint) score += 5;
+
+            return { task: t, score };
+          })
+          .filter(x => x.score > 0)
+          .sort((a, b) => b.score - a.score);
+
+        if (scored.length === 0) {
+          return `[FAIL] No close task match found for "${titleQuery || 'given hints'}". Ask user for a bit more detail (date/time snippet or a few words from title).`;
+        }
+
+        const top = scored.slice(0, 5);
+        const candidateIds = Array.from(new Set(top.flatMap(x => [x.task.user_id, x.task.updated_by]).filter(Boolean))) as string[];
+        const { data: users } = candidateIds.length
+          ? await supabase.from('user_profiles').select('id,display_name').in('id', candidateIds)
+          : { data: [] as Array<{ id: string; display_name: string | null }> };
+        const nameMap = new Map((users || []).map(u => [u.id, u.display_name || 'Unknown']));
+
+        const rows = top
+          .map((x, idx) => {
+            const t = x.task;
+            const title = escapeCell(t.title || '-');
+            const desc = escapeCell((t.description || '-').slice(0, 90));
+            const duration = t.duration_minutes ? `${t.duration_minutes} min` : '-';
+            const dateRange = `${toDateOnly(t.start_date)} -> ${toDateOnly(t.end_date)}`;
+            const timeRange = t.is_anytime ? 'Anytime' : `${toTimeOnly(t.daily_start_time)} - ${toTimeOnly(t.daily_end_time)}`;
+            const status = t.completed ? 'Completed' : 'Pending';
+            const createdBy = escapeCell(nameMap.get(t.user_id) || 'Unknown');
+            const updatedBy = escapeCell(nameMap.get(t.updated_by || '') || createdBy);
+            const createdAt = toDateOnly(t.created_at);
+            const updatedAt = toDateOnly(t.updated_at);
+            return `| ${idx + 1} | ${title} | ${desc} | ${duration} | ${dateRange} | ${timeRange} | ${status} | ${createdBy} | ${updatedBy} | ${createdAt} | ${updatedAt} |`;
+          })
+          .join('\n');
+
+        if (!confirm) {
+          return `[CONFIRM_REQUIRED] I found the closest matches. Please confirm which one to delete (for example: "delete #1" or "delete the first one").\n\n| # | Title | Description | Duration | Task Date | Task Time | Status | Created By | Updated By | Created At | Updated At |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n${rows}`;
+        }
+
+        taskId = top[0].task.id;
       }
       const { error } = await supabase.from('tasks').delete().eq('id', taskId);
       if (error) return `[FAIL] Delete task: ${error.message}`;
       applyTaskMutation(prev => prev.filter(t => t.id !== taskId));
-      return `[OK] Deleted task ${taskId}`;
+      return '[OK] Task deleted successfully.';
     }
     if (name === 'get_tasks') {
       const { data } = await supabase.from('tasks').select('*').eq('goal_id', goalId).order('created_at', { ascending: false });
