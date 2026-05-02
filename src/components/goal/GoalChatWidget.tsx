@@ -126,6 +126,7 @@ function getToolDefs(enableSearch: boolean, enableFirecrawl: boolean): ToolDef[]
           end_date: { type: 'string', description: 'Optional date hint YYYY-MM-DD' },
           daily_start_time: { type: 'string', description: 'Optional time hint HH:mm' },
           daily_end_time: { type: 'string', description: 'Optional time hint HH:mm' },
+          selection_index: { type: 'number', description: 'Optional 1-based index from the confirmation list (e.g., 1, 2, 3)' },
           confirm: { type: 'boolean', description: 'Set true only after user confirms the matched task to delete' },
         },
         required: [],
@@ -291,6 +292,8 @@ Rules:
 - If a user asks to do something with tasks, execute tools immediately in the same turn.
 - NEVER ask users for UUID/task_id.
 - For delete requests, use delete_task with title/date/time hints first (confirm=false), show candidate details, then run delete_task with confirm=true after user confirmation.
+- On confirmation phrases like "delete first/second/that one", call delete_task with confirm=true and selection_index when applicable.
+- Keep UUIDs internal only; never show them to users.
 - When presenting delete candidates, show: title, description, duration, task date, task status, created by, updated by, created at, updated at.
 - Use get_tasks whenever you need a fresh task list before acting.
 - For all-day tasks, set is_anytime=true and omit daily_start_time/daily_end_time.
@@ -552,7 +555,23 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
         const endHint = String(args.end_date || '').trim();
         const startTimeHint = String(args.daily_start_time || '').trim().slice(0, 5);
         const endTimeHint = String(args.daily_end_time || '').trim().slice(0, 5);
+        const selectionIndex = Number(args.selection_index);
         const confirm = args.confirm === true;
+
+        // If user confirmed one of previous candidates, use remembered UUIDs internally.
+        if (confirm && !titleQuery && Number.isInteger(selectionIndex) && selectionIndex > 0 && taskMemory[selectionIndex - 1]) {
+          taskId = taskMemory[selectionIndex - 1];
+        } else if (confirm && !titleQuery && taskMemory.length === 1) {
+          taskId = taskMemory[0];
+        }
+
+        if (taskId) {
+          const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+          if (error) return `[FAIL] Delete task: ${error.message}`;
+          applyTaskMutation(prev => prev.filter(t => t.id !== taskId));
+          setTaskMemory([]);
+          return '[OK] Task deleted successfully.';
+        }
 
         if (!titleQuery && !startHint && !endHint && !startTimeHint && !endTimeHint) {
           return '[FAIL] Missing delete hints. Provide task name and/or date/time so I can find the closest match.';
@@ -602,6 +621,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
         }
 
         const top = scored.slice(0, 5);
+        setTaskMemory(top.map(x => x.task.id));
         const candidateIds = Array.from(new Set(top.flatMap(x => [x.task.user_id, x.task.updated_by]).filter(Boolean))) as string[];
         const { data: users } = candidateIds.length
           ? await supabase.from('user_profiles').select('id,display_name').in('id', candidateIds)
@@ -629,11 +649,16 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
           return `[CONFIRM_REQUIRED] I found the closest matches. Please confirm which one to delete (for example: "delete #1" or "delete the first one").\n\n| # | Title | Description | Duration | Task Date | Task Time | Status | Created By | Updated By | Created At | Updated At |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n${rows}`;
         }
 
-        taskId = top[0].task.id;
+        if (Number.isInteger(selectionIndex) && selectionIndex > 0 && top[selectionIndex - 1]) {
+          taskId = top[selectionIndex - 1].task.id;
+        } else {
+          taskId = top[0].task.id;
+        }
       }
       const { error } = await supabase.from('tasks').delete().eq('id', taskId);
       if (error) return `[FAIL] Delete task: ${error.message}`;
       applyTaskMutation(prev => prev.filter(t => t.id !== taskId));
+      setTaskMemory([]);
       return '[OK] Task deleted successfully.';
     }
     if (name === 'get_tasks') {
