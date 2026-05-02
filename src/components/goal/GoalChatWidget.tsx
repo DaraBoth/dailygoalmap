@@ -116,13 +116,14 @@ function getToolDefs(enableSearch: boolean, enableFirecrawl: boolean): ToolDef[]
     },
     {
       name: 'delete_task',
-      description: 'Delete a task by its UUID.',
+      description: 'Delete a task by UUID or by matching title text within this goal.',
       parameters: {
         type: 'object',
         properties: {
           task_id: { type: 'string', description: 'Task UUID from the task list' },
+          title_query: { type: 'string', description: 'Task title text to find and delete when task_id is not provided' },
         },
-        required: ['task_id'],
+        required: [],
       },
     },
     {
@@ -265,6 +266,8 @@ ${tasks.length > 40 ? `\n... +${tasks.length - 40} more. Use get_tasks for full 
 ${taskMemory.length ? `\n## Remembered IDs\n${taskMemory.join(', ')}` : ''}
 
 Rules:
+- NEVER reply with "hold on", "please wait", or similar filler when a tool action is requested.
+- If a user asks to do something with tasks, execute tools immediately in the same turn.
 - Use get_tasks whenever you need a fresh task list before acting.
 - For all-day tasks, set is_anytime=true and omit daily_start_time/daily_end_time.
 - ALWAYS provide a meaningful, specific title. NEVER use "Untitled", empty string, or placeholder text.
@@ -518,8 +521,23 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       return `[OK] Created "${titleStr}" (id: ${data?.id})`;
     }
     if (name === 'delete_task') {
-      const taskId = String(args.task_id || '');
-      if (!taskId) return '[FAIL] Missing task_id';
+      let taskId = String(args.task_id || '').trim();
+      if (!taskId) {
+        const titleQuery = String(args.title_query || '').trim();
+        if (!titleQuery) return '[FAIL] Missing task_id/title_query';
+        const { data: matches, error: findError } = await supabase
+          .from('tasks')
+          .select('id,title')
+          .eq('goal_id', goalId)
+          .ilike('title', `%${titleQuery}%`)
+          .limit(3);
+        if (findError) return `[FAIL] Delete task: ${findError.message}`;
+        if (!matches || matches.length === 0) return `[FAIL] No task found for title_query="${titleQuery}"`;
+        if (matches.length > 1) {
+          return `[FAIL] Multiple tasks matched title_query="${titleQuery}": ${matches.map(m => m.title).join(', ')}. Ask user to be more specific or pass task_id.`;
+        }
+        taskId = matches[0].id;
+      }
       const { error } = await supabase.from('tasks').delete().eq('id', taskId);
       if (error) return `[FAIL] Delete task: ${error.message}`;
       applyTaskMutation(prev => prev.filter(t => t.id !== taskId));
@@ -702,56 +720,54 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
           { type: 'text', text },
         ]
       : text;
-    const msgs = [
+
+    const msgs: Array<Record<string, unknown>> = [
       { role: 'system', content: sys },
       ...hist.filter(m => !m.isStreaming).map(m => ({ role: m.role, content: m.content })),
       { role: 'user', content: userContent },
     ];
+
     abortRef.current = new AbortController();
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKeys.openai}` },
-      body: JSON.stringify({ model: selectedModel, messages: msgs, tools, tool_choice: 'auto', stream: true, temperature: 0.7 }),
-      signal: abortRef.current.signal,
-    });
-    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
-    let acc = '', toolId = '', toolName = '', toolArgBuf = '', isToolCall = false;
-    for await (const line of streamLines(res.body!.getReader())) {
-      if (!line.startsWith('data: ')) continue;
-      const d = line.slice(6).trim(); if (d === '[DONE]') break;
-      try {
-        const delta = JSON.parse(d)?.choices?.[0]?.delta;
-        if (!delta) continue;
-        if (delta.tool_calls?.[0]) {
-          isToolCall = true; const tc = delta.tool_calls[0];
-          if (tc.id) toolId = tc.id;
-          if (tc.function?.name) { toolName = tc.function.name; setStatusText(`Using ${toolName}...`); }
-          if (tc.function?.arguments) toolArgBuf += tc.function.arguments;
-        }
-        if (delta.content) { acc += delta.content; pushAssistant(acc); }
-      } catch { /* */ }
-    }
-    if (isToolCall && toolName) {
-      let toolArgs: Record<string, unknown> = {}; try { toolArgs = JSON.parse(toolArgBuf); } catch { /* */ }
-      const result = await executeTool(toolName, toolArgs);
-      const followup = [...msgs,
-        { role: 'assistant', content: null, tool_calls: [{ id: toolId, type: 'function', function: { name: toolName, arguments: toolArgBuf } }] },
-        { role: 'tool', tool_call_id: toolId, content: result },
-      ];
-      const res2 = await fetch('https://api.openai.com/v1/chat/completions', {
+    let finalText = '';
+
+    for (let step = 0; step < 5; step++) {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKeys.openai}` },
-        body: JSON.stringify({ model: selectedModel, messages: followup, stream: true }),
+        body: JSON.stringify({ model: selectedModel, messages: msgs, tools, tool_choice: 'auto', temperature: 0.7 }),
+        signal: abortRef.current.signal,
       });
-      let acc2 = '';
-      for await (const line of streamLines(res2.body!.getReader())) {
-        if (!line.startsWith('data: ')) continue;
-        const d = line.slice(6).trim(); if (d === '[DONE]') break;
-        try { const chunk = JSON.parse(d)?.choices?.[0]?.delta?.content; if (chunk) { acc2 += chunk; pushAssistant(acc2); } } catch { /* */ }
+
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e?.error?.message || `HTTP ${res.status}`);
       }
-      return acc2;
+
+      const payload = await res.json();
+      const message = payload?.choices?.[0]?.message;
+      const toolCalls = message?.tool_calls as Array<{ id: string; function: { name: string; arguments: string } }> | undefined;
+
+      if (toolCalls && toolCalls.length > 0) {
+        msgs.push({ role: 'assistant', content: message?.content ?? null, tool_calls: toolCalls });
+
+        for (const tc of toolCalls) {
+          const toolName = tc.function?.name;
+          if (!toolName) continue;
+          setStatusText(`Using ${toolName}...`);
+          let toolArgs: Record<string, unknown> = {};
+          try { toolArgs = JSON.parse(tc.function?.arguments || '{}'); } catch { /* */ }
+          const result = await executeTool(toolName, toolArgs);
+          msgs.push({ role: 'tool', tool_call_id: tc.id, content: result });
+        }
+        continue;
+      }
+
+      finalText = message?.content || '';
+      if (finalText) pushAssistant(finalText, false);
+      return finalText;
     }
-    return acc;
+
+    return finalText || 'Done.';
   }, [apiKeys.openai, selectedModel, executeTool, pushAssistant]);
 
   // Gemini streaming
