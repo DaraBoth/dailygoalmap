@@ -392,26 +392,30 @@ const SmartAnalytics: React.FC<SmartAnalyticsProps> = ({
     <div ref={containerRef} className="space-y-4 sm:space-y-5 pb-8">
 
       {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-primary/10">
-            <Brain className="h-5 w-5 text-primary" />
+      <div className="rounded-2xl border border-border/60 bg-background/70 backdrop-blur-sm px-4 py-3 sm:px-5 sm:py-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
+              <Brain className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold leading-none tracking-tight">Smart Analytics</h2>
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5" /> AI-powered insights
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-base font-semibold leading-none">Smart Analytics</h2>
-            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-              <Sparkles className="h-3 w-3" /> AI-powered insights
-            </p>
-          </div>
+          <Button
+            onClick={handleExportPDF}
+            disabled={isExporting || !smartData}
+            size="sm"
+            variant="outline"
+            className="gap-2 h-9 px-3 rounded-xl border-border/70 bg-background/70 hover:bg-accent"
+          >
+            <Download className="h-3.5 w-3.5" />
+            {isExporting ? 'Exporting...' : 'Export PDF'}
+          </Button>
         </div>
-        <Button
-          onClick={handleExportPDF}
-          disabled={isExporting || !smartData}
-          size="sm" variant="outline" className="gap-2 h-8"
-        >
-          <Download className="h-3.5 w-3.5" />
-          {isExporting ? 'Exporting...' : 'Export PDF'}
-        </Button>
       </div>
 
       {/* â”€â”€ Productivity Score Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
