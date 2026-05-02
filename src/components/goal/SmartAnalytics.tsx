@@ -199,6 +199,13 @@ const SmartAnalytics: React.FC<SmartAnalyticsProps> = ({
   const memberCompletionReport = React.useMemo(() => {
     if (members.length === 0) return [] as Array<{ user_id: string; name: string; avatar?: string; completed: number; total: number; completedTasks: Task[] }>;
 
+    const periodTasks = tasks.filter(task => {
+      const s = task.start_date ? new Date(task.start_date) : null;
+      const e = task.end_date ? new Date(task.end_date) : null;
+      return Boolean(s && e && s <= periodEnd && e >= periodStart);
+    });
+    const periodTotal = periodTasks.length;
+
     const memberMap = new Map<string, { user_id: string; name: string; avatar?: string; completed: number; total: number; completedTasks: Task[] }>();
     members.forEach(m => {
       memberMap.set(m.user_id, {
@@ -206,35 +213,19 @@ const SmartAnalytics: React.FC<SmartAnalyticsProps> = ({
         name: getMemberDisplayName(m),
         avatar: getMemberAvatar(m),
         completed: 0,
-        total: 0,
+        total: periodTotal,
         completedTasks: []
       });
     });
 
     tasks.forEach(task => {
-      const s = task.start_date ? new Date(task.start_date) : null;
-      const e = task.end_date ? new Date(task.end_date) : null;
       const at = task.updated_at ? new Date(task.updated_at) : (task.created_at ? new Date(task.created_at) : null);
       const completedInPeriod = Boolean(at && !isNaN(at.getTime()) && at >= periodStart && at <= periodEnd);
-      const overlapsPeriod = Boolean(s && e && s <= periodEnd && e >= periodStart);
-      const inPeriod = overlapsPeriod || completedInPeriod;
-
-      const ownerId = task.user_id;
-      const fallbackUserId = (task as any).updated_by;
-      const totalTargetId = ownerId && memberMap.has(ownerId)
-        ? ownerId
-        : (fallbackUserId && memberMap.has(fallbackUserId) ? fallbackUserId : null);
-
-      // Denominator: total tasks that belonged to this period for this member.
-      if (inPeriod && totalTargetId) {
-        memberMap.get(totalTargetId)!.total += 1;
-      }
 
       if (!task.completed) return;
+      if (!completedInPeriod) return;
 
-      // Include completed tasks if completion happened in period OR task schedule overlaps period.
-      if (!completedInPeriod && !overlapsPeriod) return;
-
+      const ownerId = task.user_id;
       const actorId = (task as any).updated_by || ownerId;
       const targetId = actorId && memberMap.has(actorId)
         ? actorId
@@ -255,7 +246,7 @@ const SmartAnalytics: React.FC<SmartAnalyticsProps> = ({
           return bDate - aDate;
         })
       }))
-      .sort((a, b) => b.completed - a.completed || b.total - a.total);
+      .sort((a, b) => b.completed - a.completed || a.name.localeCompare(b.name));
   }, [members, tasks, periodStart, periodEnd]);
   const formatTaskDate = (dateString?: string) => {
     if (!dateString) return 'Unknown date';

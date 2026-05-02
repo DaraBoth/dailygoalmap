@@ -226,14 +226,6 @@ export const useCalendarTasks = ({
 
     const newCompletedState = !taskToUpdate.completed;
     const updatedAt = new Date().toISOString();
-    const taskDate = getTaskAnchorDate(taskToUpdate as any);
-    const currentUrl = new URL(window.location.toString());
-    currentUrl.searchParams.set('date', formatYMD(taskDate));
-    currentUrl.searchParams.set('taskId', taskId);
-    window.history.replaceState({}, '', currentUrl.toString());
-
-    setSelectedDate(taskDate);
-    setSelectedTaskIndex(0);
     
     // Update local state FIRST for immediate UI feedback
     const updatedTasks = tasks.map(task => 
