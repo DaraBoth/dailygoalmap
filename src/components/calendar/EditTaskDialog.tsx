@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AutoResizingDescription } from "./AutoResizingDescription";
 import { CalendarClock, Clock, Calendar, Trash2, AlertCircle } from "lucide-react";
-import { format, differenceInCalendarDays } from "date-fns";
+import { differenceInCalendarDays } from "date-fns";
 import { Task } from "./types";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
@@ -57,14 +57,24 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
       const description = task.description.replace(/🔴\s*/, '');
       setTaskDescription(description);
       setSelectedDate(new Date(task.start_date));
-      setTaskTime(task.daily_start_time ? task.daily_start_time.slice(0, 5) : format(new Date(), "HH:mm"));
       setIsPriority(task.description.includes('🔴'));
       setTitle(task.title || "");
       if (task.start_date) setStartDate(new Date(task.start_date));
       if (task.end_date) setEndDate(new Date(task.end_date));
-      if (task.daily_start_time) setDailyStart(task.daily_start_time.slice(0, 5));
-      if (task.daily_end_time) setDailyEnd(task.daily_end_time.slice(0, 5));
-      setIsAnytime(!!task.is_anytime);
+
+      // Treat as "anytime" if the task has no time and is_anytime isn't explicitly false.
+      // This prevents the 09:00/10:00 defaults from being silently saved.
+      const hasTime = !!task.daily_start_time;
+      const anytime = !hasTime || !!task.is_anytime;
+      setIsAnytime(anytime);
+
+      // Always reset time states so stale values from a previous edit don't carry over.
+      const startTime = hasTime ? task.daily_start_time!.slice(0, 5) : "09:00";
+      const endTime = task.daily_end_time ? task.daily_end_time.slice(0, 5) : "10:00";
+      setDailyStart(startTime);
+      setDailyEnd(endTime);
+      setTaskTime(startTime);
+
       setCompleted(!!task.completed);
     }
   }, [task]);
