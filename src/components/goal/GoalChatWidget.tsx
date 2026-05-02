@@ -449,7 +449,19 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
     }
     if (name === 'create_task') {
       const now = new Date().toISOString();
-      const titleStr = String(args.title);
+      const rawTitle = typeof args.title === 'string' ? args.title.trim() : '';
+      const descText = typeof args.description === 'string' ? args.description.trim() : '';
+      const titleStr = rawTitle || (descText ? descText.slice(0, 80) : 'Untitled task');
+      const parseIsoOrFallback = (raw: unknown, fallback: string) => {
+        if (!raw) return fallback;
+        const parsed = new Date(String(raw));
+        return Number.isNaN(parsed.getTime()) ? fallback : parsed.toISOString();
+      };
+      const startIso = parseIsoOrFallback(args.start_date, now);
+      const endIsoCandidate = parseIsoOrFallback(args.end_date, startIso);
+      const endIso = new Date(endIsoCandidate).getTime() < new Date(startIso).getTime()
+        ? startIso
+        : endIsoCandidate;
       const desc = args.is_priority ? `🔴 ${args.description || ''}`.trim() : (args.description ? String(args.description) : null);
       const isAnytime = !!args.is_anytime;
       const { data, error } = await supabase.from('tasks').insert({
@@ -457,8 +469,8 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
         user_id: userInfo?.id ?? '',
         title: titleStr,
         description: desc,
-        start_date: args.start_date ? String(args.start_date) : now,
-        end_date: args.end_date ? String(args.end_date) : now,
+        start_date: startIso,
+        end_date: endIso,
         daily_start_time: isAnytime ? null : (args.daily_start_time ? `${String(args.daily_start_time)}:00` : null),
         daily_end_time: isAnytime ? null : (args.daily_end_time ? `${String(args.daily_end_time)}:00` : null),
         is_anytime: isAnytime,
@@ -469,7 +481,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       }).select().single();
       if (error) return `[FAIL] Create task: ${error.message}`;
       if (data) setInternalTasks(prev => [...prev, data as Task]);
-      return `[OK] Created "${args.title}" (id: ${data?.id})`;
+      return `[OK] Created "${titleStr}" (id: ${data?.id})`;
     }
     if (name === 'delete_task') {
       const taskId = String(args.task_id || '');

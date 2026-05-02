@@ -99,7 +99,9 @@ export function useRouterNavigation() {
     }
     
     // Regular goal detail navigation
-    await navigateTo(`/goal/${goalIdOrAction}`, { preload, search })
+    // If no explicit search is provided, clear stale date/task params from previous visits.
+    const goalSearch = typeof search === 'undefined' ? {} : search
+    await navigateTo(`/goal/${goalIdOrAction}`, { preload, search: goalSearch })
   }, [navigateTo])
 
   /**

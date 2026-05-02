@@ -37,12 +37,16 @@ export const getTaskAnchorDate = (task: { start_date?: string | null; date?: str
  * Filters tasks for a specific date
  */
 export const filterTasksByDate = (tasks: any[], date: Date) => {
-  const dayKey = format(date, 'yyyy-MM-dd');
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEndExclusive = new Date(dayStart);
+  dayEndExclusive.setDate(dayEndExclusive.getDate() + 1);
+
   return tasks
     .filter(task => {
       // Handle legacy tasks that might not have start_date/end_date
       let startDate = task.start_date;
-      let endDate = task.end_date;
+      let endDate = task.end_date || task.start_date;
 
       // If start_date/end_date are missing, use the legacy 'date' field
       if (!startDate && task.date) {
@@ -51,17 +55,18 @@ export const filterTasksByDate = (tasks: any[], date: Date) => {
       }
 
       // Skip tasks that have no date information at all
-      if (!startDate || !endDate) {
-        console.warn('Task has no date information:', task);
+      if (!startDate) {
         return false;
       }
 
-      const startKey = getTaskDateKey(startDate);
-      const endKey = getTaskDateKey(endDate);
-      if (!startKey || !endKey) {
+      const start = parseTaskDate(startDate);
+      const end = parseTaskDate(endDate || startDate);
+      if (!start || !end) {
         return false;
       }
-      return startKey <= dayKey && dayKey <= endKey;
+
+      // Match TodaysTasks overlap logic: taskStart < tomorrow && taskEnd >= today
+      return start < dayEndExclusive && end >= dayStart;
     })
     .sort((a, b) => {
       // Sort by daily_start_time when available; else by start_date
