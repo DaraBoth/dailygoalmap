@@ -1,457 +1,425 @@
-import React, { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
-import { SmartLink } from "@/components/ui/SmartLink";
-import { useRouterNavigation } from "@/hooks/useRouterNavigation";
-import { ClipboardList, CheckCircle } from "@/components/icons/CustomIcons";
-import { PremiumClipboard } from "@/components/icons/PremiumIcons";
-import { supabase } from "@/integrations/supabase/client";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { motion, AnimatePresence } from "framer-motion";
-import { useToast } from "@/hooks/use-toast"; // Update toast import
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
+import { SmartLink } from '@/components/ui/SmartLink';
+import { useRouterNavigation } from '@/hooks/useRouterNavigation';
+import { ClipboardList, CheckCircle } from '@/components/icons/CustomIcons';
+import { PremiumClipboard } from '@/components/icons/PremiumIcons';
+import { supabase } from '@/integrations/supabase/client';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '@/hooks/use-toast';
+
+type TodayTask = {
+  id: string;
+  goal_id: string;
+  title: string | null;
+  description: string | null;
+  completed: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  daily_start_time: string | null;
+  daily_end_time: string | null;
+  is_anytime?: boolean | null;
+  goals?: { title?: string | null } | null;
+};
 
 const TodaysTasks: React.FC = React.memo(() => {
-  const [tasksForToday, setTasksForToday] = useState<any[]>([]);
+  const [tasksForToday, setTasksForToday] = useState<TodayTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [availableGoals, setAvailableGoals] = useState<Array<{ id: string; title: string }>>([]);
   const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isTasksVisible, setIsTasksVisible] = useState(false);
   const [undoTimeout, setUndoTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [previousTasksState, setPreviousTasksState] = useState<any[]>([]);
-  const isMobile = useIsMobile(); const { toast } = useToast(); // Initialize toast
+  const [previousTasksState, setPreviousTasksState] = useState<TodayTask[]>([]);
+
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
   const { goToGoal } = useRouterNavigation();
   const filterRef = useRef<HTMLDivElement | null>(null);
 
+  const fetchTodaysTasks = async () => {
+    setLoading(true);
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return;
 
-  useEffect(() => {
-    fetchTodaysTasks();
-  }, []);
+      const userId = userData.user.id;
 
-  // Close filter dropdown on outside click
-        !isMobile && (
-          <Card className="border border-border/50 dark:border-foreground/10 rounded-2xl xl:rounded-[2.5rem] bg-gradient-to-br from-card via-card/90 to-background backdrop-blur-xl shadow-2xl overflow-hidden">
-            <CardHeader className="pb-4 sm:pb-5 xl:pb-6 pt-6 sm:pt-7 xl:pt-9 px-5 sm:px-7 xl:px-9 border-b border-border/40">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start space-x-4">
-                  <div className="p-3 sm:p-3.5 xl:p-4 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl xl:rounded-2xl ring-1 ring-primary/30 shadow-lg">
-                    <ClipboardList className="h-5 w-5 sm:h-6 xl:h-7 text-primary" />
-                  </div>
-                  <div className="pt-0.5">
-                    <CardTitle className="text-lg sm:text-2xl xl:text-3xl font-black tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                      Today's Mission
-                    </CardTitle>
-                    <CardDescription className="font-bold text-muted-foreground text-xs sm:text-sm mt-1.5 uppercase tracking-widest opacity-80">
-                      {format(new Date(), 'cccc, LLLL d, yyyy')}
-                    </CardDescription>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl sm:text-3xl xl:text-4xl font-black text-primary">
-                    {tasksForToday.filter(t => t.completed).length}/{tasksForToday.length}
-                  </div>
-                  <div className="text-[10px] xl:text-xs text-muted-foreground font-bold uppercase tracking-wider mt-1">
-                    Completed
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-  useEffect(() => {
-              className="flex flex-col pt-5 sm:pt-6 xl:pt-7 min-h-[380px] sm:min-h-[420px] max-h-[520px] sm:max-h-[620px] overflow-auto px-5 sm:px-7 xl:px-9 pb-5 sm:pb-6 xl:pb-7"
-      if (isFilterOpen && filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setIsFilterOpen(false);
-                <div className="flex items-center gap-2">
-    document.addEventListener('click', onClick);
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleUndoMarkAllCompleted}
-                      className="h-8 sm:h-9 px-3.5 text-xs sm:text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-300 rounded-lg transition-all duration-200"
-                    >
-                      ↶ Undo
-                    </Button> :
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={handleMarkAllCompleted}
-                      className="h-8 sm:h-9 px-3.5 text-xs sm:text-sm font-bold bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg transition-all duration-200 flex items-center gap-1.5"
-                    >
-                      <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      <span>Complete All</span>
-                    </Button>}
+      const { data: memberGoals } = await supabase
+        .from('goal_members')
+        .select('goal_id')
+        .eq('user_id', userId);
 
-
+      const { data: ownGoals } = await supabase
         .from('goals')
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsFilterOpen(s => !s)}
-                    className="h-8 sm:h-9 px-3.5 text-xs sm:text-sm font-bold rounded-lg border-border/60 hover:bg-accent transition-all duration-200"
-                  >
-                    🎯 Filter
-                  </Button>
+        .select('id, title')
+        .eq('user_id', userId);
+
+      const memberGoalIds = memberGoals?.map(g => g.goal_id) || [];
+      const ownGoalIds = ownGoals?.map(g => g.id) || [];
+      const allGoalIds = [...new Set([...memberGoalIds, ...ownGoalIds])];
+
       if (allGoalIds.length > 0) {
-                    <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-card border border-border/60 rounded-xl shadow-2xl z-50 p-3 sm:p-4 backdrop-blur-sm">
+        const { data: goalsInfo } = await supabase
           .from('goals')
           .select('id, title')
           .in('id', allGoalIds);
         setAvailableGoals((goalsInfo || []).map(g => ({ id: g.id, title: g.title })));
       } else {
         setAvailableGoals([]);
-                          className="mr-3 h-4 w-4 rounded cursor-pointer"
+      }
 
-                        <label htmlFor="filter-all" className="font-bold text-sm cursor-pointer">
-      const storageKeyBase = 'dg_todays_tasks_selected_goals_v1';
-      const storageKey = `${storageKeyBase}:${userData.user.id}`;
+      const storageKey = `dg_todays_tasks_selected_goals_v1:${userId}`;
       const saved = localStorage.getItem(storageKey);
-                      <div className="max-h-44 sm:max-h-48 overflow-y-auto mt-2 space-y-2">
+      let initialSelected: string[] = [];
+
       if (saved) {
         try {
           const parsed = JSON.parse(saved) as string[];
-          // keep only ids that still exist
           initialSelected = parsed.filter(id => allGoalIds.includes(id));
-        } catch (e) {
+        } catch {
           initialSelected = [];
-                              className="mr-3 h-4 w-4 rounded cursor-pointer"
+        }
+      } else {
+        initialSelected = allGoalIds.slice();
       }
-                            <label htmlFor={`goal-${g.id}`} className="truncate text-sm font-medium cursor-pointer">
-      // Default to all goals selected if nothing saved
-      if (!saved) initialSelected = allGoalIds.slice();
+
       setSelectedGoalIds(initialSelected);
 
-      if (allGoalIds.length === 0) {
-                          <div className="text-xs sm:text-sm text-muted-foreground/60 py-3 text-center">No goals available</div>
+      if (initialSelected.length === 0) {
+        setTasksForToday([]);
         return;
       }
-      // Decide which goal ids to query for tasks based on selection
-      const goalIdsToQuery = initialSelected;
 
-      if (goalIdsToQuery.length === 0) {
-        setTasksForToday([]);
-      }
-                <div className="space-y-3">
-                  <Skeleton className="h-14 sm:h-12 w-full rounded-lg" />
-                  <Skeleton className="h-14 sm:h-12 w-full rounded-lg" />
-                  <Skeleton className="h-14 sm:h-12 w-full rounded-lg" />
-        .in('goal_id', goalIdsToQuery)
-        // Include tasks that span today (start <= end of today AND end >= start of today)
-                <div className="text-center py-10 sm:py-12 xl:py-16 flex flex-col items-center justify-center flex-1">
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id,goal_id,title,description,completed,start_date,end_date,daily_start_time,daily_end_time,goals(title)')
+        .in('goal_id', initialSelected)
+        .lte('start_date', new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString())
         .gte('end_date', today.toISOString())
-                  <p className="text-sm sm:text-base text-muted-foreground/70 font-medium">All caught up! No tasks today.</p>
-                  <p className="text-xs text-muted-foreground/50 mt-2">You're doing great! 🎉</p>
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTasksForToday(tasksData || []);
+      setTasksForToday((data || []) as TodayTask[]);
     } catch (error) {
       console.error("Error fetching today's tasks:", error);
-                  className="space-y-2.5"
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleToggleTaskCompletion = async (taskId: string, currentStatus: boolean) => {
-    const newStatus = !currentStatus;
+  useEffect(() => {
+    fetchTodaysTasks();
+  }, []);
 
-                      className="flex items-start space-x-3 p-3.5 sm:p-4 bg-background/50 border border-border/30 rounded-xl hover:bg-background/80 hover:border-primary/40 hover:shadow-md transition-all duration-200 cursor-pointer group/item"
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
-
-      // Get task data before update for notification
-      const taskToUpdate = tasksForToday.find(t => t.id === taskId);
-      if (!taskToUpdate) throw new Error("Task not found");
-
-                        className="mt-1.5 h-5 w-5 rounded border-border/60 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-      const normalizedDate = new Date(fallbackDate);
-      const normalizedIso = Number.isNaN(normalizedDate.getTime())
-        ? new Date().toISOString()
-        : normalizedDate.toISOString();
-                          className={`text-sm cursor-pointer font-semibold transition-colors block leading-tight mb-1.5 ${task.completed ? "line-through text-muted-foreground/40" : "text-foreground/90 group-hover/item:text-primary"
-      const updatePayload: Record<string, any> = {
-        completed: newStatus,
-        updated_at: new Date().toISOString(),
-        updated_by: user.id,
-      };
-
-                            <span className="bg-primary/8 text-primary/90 px-2.5 py-1 rounded-md border border-primary/15 font-bold uppercase text-[9px] tracking-tight">
-        updatePayload.start_date = normalizedIso;
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (isFilterOpen && filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setIsFilterOpen(false);
       }
-      if (!taskToUpdate.end_date) {
-        updatePayload.end_date = taskToUpdate.start_date || normalizedIso;
-      }
-                              className="text-muted-foreground/70 font-bold uppercase tracking-wide text-[9px] truncate max-w-[140px]"
-      const { data: updatedRows, error } = await supabase
-        .from('tasks')
-        .update(updatePayload)
-        .eq('id', taskId)
-        .select('id');
+    };
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
+  }, [isFilterOpen]);
 
-      if (error) throw error;
-      if (!updatedRows || updatedRows.length === 0) {
-        throw new Error("Task completion update was blocked and not saved.");
-      }
-
-      setTasksForToday(prevTasks =>
-        prevTasks.map(task =>
-          task.id === taskId ? { ...task, completed: newStatus } : task
-        )
-      );
-
-      // Send unified notifications (Toast + Push + Database)
-      try {
-        const { notifyTaskUpdated } = await import('@/services/notificationService');
-
-        // Get goal information
-        const { data: goalData } = await supabase
-          .from('goals')
-          .select('title')
-          .eq('id', taskToUpdate.goal_id)
-          .single();
-
-        const goalTitle = goalData?.title || 'your goal';
-        const action = newStatus ? 'completed' : 'uncompleted';
-
-        await notifyTaskUpdated(
-          taskToUpdate.goal_id,
-          user.id,
-          taskToUpdate.title,
-          taskId,
-          goalTitle,
-          taskToUpdate.start_date,
-          action
-        );
-      } catch (notifError) {
-        console.error('Error sending task completion notifications:', notifError);
-        // Don't throw - task update succeeded
-      }
-    } catch (error) {
-      console.error("Error updating task completion status:", error);
-    }
-  };
-
-  // Persist selection
   const persistSelection = async (userId: string, ids: string[]) => {
-    const storageKeyBase = 'dg_todays_tasks_selected_goals_v1';
-    const storageKey = `${storageKeyBase}:${userId}`;
     try {
-      localStorage.setItem(storageKey, JSON.stringify(ids));
-    } catch (e) {
+      localStorage.setItem(`dg_todays_tasks_selected_goals_v1:${userId}`, JSON.stringify(ids));
+    } catch {
       // ignore
     }
   };
 
-  // Toggle single goal
-  const toggleGoal = async (goalId: string) => {
+  const refetchForSelection = async (selected: string[]) => {
+    if (selected.length === 0) {
+      setTasksForToday([]);
+      return;
+    }
+
+    setLoading(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) return;
-      let next: string[] = [];
-      if (selectedGoalIds.includes(goalId)) {
-        next = selectedGoalIds.filter(id => id !== goalId);
-      } else {
-        next = [...selectedGoalIds, goalId];
-      }
-      // If after update all goals selected, ensure All is checked implicitly (we rely on length equality in UI)
-      setSelectedGoalIds(next);
-      persistSelection(userData.user.id, next);
-      // If none selected, clear tasks
-      if (next.length === 0) {
-        setTasksForToday([]);
-        return;
-      }
-      // Refetch tasks for new selection
-      setLoading(true);
-      await fetchTodaysTasks();
-    } catch (e) {
-      console.error(e);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id,goal_id,title,description,completed,start_date,end_date,daily_start_time,daily_end_time,goals(title)')
+        .in('goal_id', selected)
+        .lte('start_date', new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString())
+        .gte('end_date', today.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTasksForToday((data || []) as TodayTask[]);
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Toggle All: if currently all selected => unselect all, else select all
+  const toggleGoal = async (goalId: string) => {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
+
+    const next = selectedGoalIds.includes(goalId)
+      ? selectedGoalIds.filter(id => id !== goalId)
+      : [...selectedGoalIds, goalId];
+
+    setSelectedGoalIds(next);
+    await persistSelection(userData.user.id, next);
+    await refetchForSelection(next);
+  };
+
   const toggleAll = async () => {
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) return;
-      const allIds = availableGoals.map(g => g.id);
-      let next: string[] = [];
-      const allSelected = selectedGoalIds.length === allIds.length && allIds.length > 0;
-      if (allSelected) {
-        next = [];
-      } else {
-        next = allIds.slice();
-      }
-      setSelectedGoalIds(next);
-      persistSelection(userData.user.id, next);
-      setLoading(true);
-      await fetchTodaysTasks();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
+
+    const allIds = availableGoals.map(g => g.id);
+    const allSelected = allIds.length > 0 && selectedGoalIds.length === allIds.length;
+    const next = allSelected ? [] : allIds;
+
+    setSelectedGoalIds(next);
+    await persistSelection(userData.user.id, next);
+    await refetchForSelection(next);
+  };
+
+  const handleToggleTaskCompletion = async (taskId: string, currentStatus: boolean) => {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        completed: !currentStatus,
+        updated_at: new Date().toISOString(),
+        updated_by: userData.user.id,
+      })
+      .eq('id', taskId);
+
+    if (error) {
+      console.error('Error updating task completion status:', error);
+      return;
     }
+
+    setTasksForToday(prev => prev.map(task =>
+      task.id === taskId ? { ...task, completed: !currentStatus } : task
+    ));
   };
 
   const handleMarkAllCompleted = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
+    const incompleteTasks = tasksForToday.filter(task => !task.completed);
+    if (incompleteTasks.length === 0) return;
 
-      const incompleteTasks = tasksForToday.filter(task => !task.completed);
-      setPreviousTasksState([...tasksForToday]);
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
 
-      const { error } = await supabase
-        .from('tasks')
-        .update({
-          completed: true,
-          updated_at: new Date().toISOString(),
-          updated_by: user.id,
-        })
-        .in('id', incompleteTasks.map(task => task.id));
+    setPreviousTasksState([...tasksForToday]);
 
-      if (error) throw error;
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        completed: true,
+        updated_at: new Date().toISOString(),
+        updated_by: userData.user.id,
+      })
+      .in('id', incompleteTasks.map(task => task.id));
 
-      setTasksForToday(prevTasks =>
-        prevTasks.map(task => ({ ...task, completed: true }))
-      );
-
-      toast({
-        title: "Tasks Marked Completed",
-        description: `${incompleteTasks.length} tasks were marked as completed.`,
-        variant: "default",
-      });
-
-      // Send notifications for each completed task
-      try {
-        const { notifyTaskUpdated } = await import('@/services/notificationService');
-
-        // Group tasks by goal to minimize goal queries
-        const tasksByGoal = incompleteTasks.reduce((acc, task) => {
-          if (!acc[task.goal_id]) acc[task.goal_id] = [];
-          acc[task.goal_id].push(task);
-          return acc;
-        }, {} as Record<string, typeof incompleteTasks>);
-
-        // Send notifications for each goal
-        for (const [goalId, tasks] of Object.entries(tasksByGoal)) {
-          // Get goal information once per goal
-          const { data: goalData } = await supabase
-            .from('goals')
-            .select('title')
-            .eq('id', goalId)
-            .single();
-
-          const goalTitle = goalData?.title || 'your goal';
-
-          // Send notification for each task using unified service
-          for (const task of tasks as typeof incompleteTasks) {
-            await notifyTaskUpdated(
-              task.goal_id,
-              user.id,
-              task.title,
-              task.id,
-              goalTitle,
-              task.start_date,
-              'completed'
-            );
-          }
-        }
-      } catch (notifError) {
-        console.error('Error sending bulk completion notifications:', notifError);
-        // Don't throw - task updates succeeded
-      }
-
-      if (undoTimeout) clearTimeout(undoTimeout);
-      const timeout = setTimeout(() => {
-        setPreviousTasksState(incompleteTasks);
-      }, 5000);
-      setUndoTimeout(timeout);
-    } catch (error) {
-      console.error("Error marking all tasks as completed:", error);
+    if (error) {
+      console.error('Error marking all tasks as completed:', error);
+      return;
     }
+
+    setTasksForToday(prev => prev.map(task => ({ ...task, completed: true })));
+
+    toast({
+      title: 'Tasks Marked Completed',
+      description: `${incompleteTasks.length} tasks were marked as completed.`,
+      variant: 'default',
+    });
+
+    if (undoTimeout) clearTimeout(undoTimeout);
+    const timeout = setTimeout(() => {
+      setPreviousTasksState([]);
+    }, 5000);
+    setUndoTimeout(timeout);
   };
 
   const handleUndoMarkAllCompleted = async () => {
-    try {
-      if (previousTasksState.length === 0) return;
+    if (previousTasksState.length === 0) return;
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
+    const { error } = await supabase
+      .from('tasks')
+      .update({ completed: false })
+      .in('id', previousTasksState.map(task => task.id));
 
-      const { error } = await supabase
-        .from('tasks')
-        .update({ completed: false })
-        .in('id', previousTasksState.map(task => task.id));
-
-      if (error) throw error;
-
-      setTasksForToday(previousTasksState);
-      setPreviousTasksState([]);
-      if (undoTimeout) clearTimeout(undoTimeout);
-
-      toast({
-        title: "Undo Successful",
-        description: "Tasks have been reverted to their previous state.",
-        variant: "success",
-      });
-
-      // Send notifications for undone tasks
-      try {
-        const { notifyTaskUpdated } = await import('@/services/notificationService');
-
-        // Group tasks by goal
-        const tasksByGoal = previousTasksState.reduce((acc, task) => {
-          if (!acc[task.goal_id]) acc[task.goal_id] = [];
-          acc[task.goal_id].push(task);
-          return acc;
-        }, {} as Record<string, typeof previousTasksState>);
-
-        // Send notifications for each goal
-        for (const [goalId, tasks] of Object.entries(tasksByGoal)) {
-          // Get goal information once per goal
-          const { data: goalData } = await supabase
-            .from('goals')
-            .select('title')
-            .eq('id', goalId)
-            .single();
-
-          const goalTitle = goalData?.title || 'your goal';
-
-          // Send notification for each task using unified service
-          for (const task of tasks as typeof previousTasksState) {
-            await notifyTaskUpdated(
-              task.goal_id,
-              user.id,
-              task.title,
-              task.id,
-              goalTitle,
-              task.start_date,
-              'uncompleted'
-            );
-          }
-        }
-      } catch (notifError) {
-        console.error('Error sending undo completion notifications:', notifError);
-        // Don't throw - task updates succeeded
-      }
-    } catch (error) {
-      console.error("Error undoing mark all completed:", error);
+    if (error) {
+      console.error('Error undoing mark all completed:', error);
+      return;
     }
+
+    setTasksForToday(previousTasksState);
+    setPreviousTasksState([]);
+    if (undoTimeout) clearTimeout(undoTimeout);
+
+    toast({
+      title: 'Undo Successful',
+      description: 'Tasks have been reverted to their previous state.',
+      variant: 'success',
+    });
   };
 
-  const handleTaskClick = (task: any) => {
+  const handleTaskClick = (task: TodayTask) => {
     goToGoal(task.goal_id, {
       search: {
         date: task.start_date,
-        taskId: task.id
-      }
+        taskId: task.id,
+      },
     });
+  };
+
+  const renderFilter = (mobile = false) => (
+    <div className={mobile ? 'relative' : 'relative inline-block ml-auto'} ref={filterRef}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setIsFilterOpen(s => !s)}
+        className={mobile ? 'w-full h-10 rounded-xl' : 'h-8 text-xs sm:text-sm rounded-xl'}
+      >
+        Filter Goals
+      </Button>
+      {isFilterOpen && (
+        <div className={mobile
+          ? 'absolute left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 p-4'
+          : 'absolute right-0 mt-2 w-56 sm:w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 p-3 sm:p-4'}>
+          <div className="flex items-center py-1.5">
+            <input
+              id="filter-all"
+              type="checkbox"
+              checked={availableGoals.length > 0 && selectedGoalIds.length === availableGoals.length}
+              onChange={() => toggleAll()}
+              className="mr-3 h-4 w-4"
+            />
+            <label htmlFor="filter-all" className={mobile ? 'font-medium text-base' : 'font-medium text-sm'}>
+              All
+            </label>
+          </div>
+          <div className={mobile ? 'max-h-56 overflow-y-auto mt-2 space-y-2.5' : 'max-h-44 sm:max-h-48 overflow-y-auto mt-2 space-y-1.5 sm:space-y-2'}>
+            {availableGoals.map(g => (
+              <div key={g.id} className="flex items-center py-1.5">
+                <input
+                  id={`goal-${g.id}`}
+                  type="checkbox"
+                  checked={selectedGoalIds.includes(g.id)}
+                  onChange={() => toggleGoal(g.id)}
+                  className="mr-3 h-4 w-4"
+                />
+                <label htmlFor={`goal-${g.id}`} className={mobile ? 'truncate text-base' : 'truncate text-sm'}>
+                  {g.title || 'Untitled'}
+                </label>
+              </div>
+            ))}
+            {availableGoals.length === 0 && (
+              <div className={mobile ? 'text-sm text-muted-foreground' : 'text-xs sm:text-sm text-muted-foreground py-1.5'}>No goals</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderTasks = (mobile = false) => {
+    if (loading) {
+      return (
+        <div className={mobile ? 'space-y-3 p-4' : 'space-y-3 sm:space-y-4'}>
+          <Skeleton className={mobile ? 'h-16 w-full rounded-xl' : 'h-12 sm:h-10 w-full rounded-xl'} />
+          <Skeleton className={mobile ? 'h-16 w-full rounded-xl' : 'h-12 sm:h-10 w-full rounded-xl'} />
+          <Skeleton className={mobile ? 'h-16 w-full rounded-xl' : 'h-12 sm:h-10 w-full rounded-xl'} />
+        </div>
+      );
+    }
+
+    if (tasksForToday.length === 0) {
+      return (
+        <div className={mobile ? 'text-center py-10 flex flex-col items-center px-4' : 'text-center py-8 sm:py-10 flex flex-col items-center'}>
+          <PremiumClipboard size={56} className="mb-3" />
+          <p className={mobile ? 'text-base text-muted-foreground font-medium' : 'text-sm sm:text-base text-muted-foreground font-medium'}>
+            No task for today
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className={mobile ? 'p-4 space-y-3' : 'space-y-3'}
+      >
+        {tasksForToday.map(task => (
+          <motion.div
+            key={task.id}
+            initial={{ opacity: 0, y: mobile ? 10 : 0, x: mobile ? 0 : -10 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            className={mobile
+              ? 'flex items-start space-x-2 p-3 rounded-lg bg-background border border-border/40 hover:bg-accent/40 transition-colors cursor-pointer'
+              : 'flex items-start space-x-4 p-4 bg-background/90 backdrop-blur-sm border border-border/50 rounded-[1.5rem] hover:bg-background hover:shadow-lg hover:border-primary/20 transition-all duration-300 cursor-pointer group/item'}
+            onClick={() => handleTaskClick(task)}
+          >
+            <Checkbox
+              id={`task-${task.id}`}
+              checked={task.completed}
+              onCheckedChange={() => handleToggleTaskCompletion(task.id, task.completed)}
+              onClick={e => e.stopPropagation()}
+              className={mobile ? 'mt-0.5' : 'mt-1 h-5 w-5 rounded-lg border-foreground/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary'}
+            />
+            <div className="flex-1 min-w-0">
+              <label
+                htmlFor={`task-${task.id}`}
+                className={mobile
+                  ? `text-sm font-medium text-foreground cursor-pointer ${task.completed ? 'line-through text-muted-foreground' : ''}`
+                  : `text-sm cursor-pointer font-bold transition-colors block leading-snug ${task.completed ? 'line-through text-muted-foreground/50' : 'text-foreground group-hover/item:text-primary'}`}
+              >
+                {task.title || task.description}
+              </label>
+              <div className={mobile ? 'flex items-center justify-between text-xs text-foreground/70 dark:text-muted-foreground mt-1' : 'flex items-center justify-between text-[10px] mt-3'}>
+                <span>
+                  {task.is_anytime
+                    ? 'Anytime'
+                    : (task.daily_start_time && task.daily_end_time
+                      ? `${task.daily_start_time.slice(0, 5)} - ${task.daily_end_time.slice(0, 5)}`
+                      : '')}
+                </span>
+                {task.goals?.title && (
+                  mobile ? (
+                    <SmartLink
+                      to={`/goal/${task.goal_id}?date=${encodeURIComponent(String(task.start_date).slice(0, 10))}&taskId=${encodeURIComponent(task.id)}`}
+                      className="truncate text-foreground/80 dark:text-muted-foreground hover:text-primary"
+                    >
+                      {task.goals.title}
+                    </SmartLink>
+                  ) : (
+                    <span className="text-foreground/70 dark:text-muted-foreground font-black uppercase tracking-widest truncate max-w-[120px]">
+                      {task.goals.title}
+                    </span>
+                  )
+                )}
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+    );
   };
 
   return (
@@ -461,10 +429,10 @@ const TodaysTasks: React.FC = React.memo(() => {
           <AnimatePresence>
             {isTasksVisible && (
               <motion.div
-                initial={{ y: "100%" }}
+                initial={{ y: '100%' }}
                 animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 className="fixed inset-x-0 bottom-0 bg-background border-t border-border/60 shadow-lg rounded-t-2xl max-h-[85vh] overflow-hidden z-40"
               >
                 <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border/60 bg-background/95 sticky top-0 z-10">
@@ -481,8 +449,7 @@ const TodaysTasks: React.FC = React.memo(() => {
                 <div className="p-4 sm:p-5">
                   <div className="flex flex-col gap-3 mb-4">
                     <div className="flex space-x-2">
-
-                      {previousTasksState.length > 0 ?
+                      {previousTasksState.length > 0 ? (
                         <Button
                           variant="outline"
                           size="sm"
@@ -491,7 +458,8 @@ const TodaysTasks: React.FC = React.memo(() => {
                         >
                           Undo
                         </Button>
-                        : <Button
+                      ) : (
+                        <Button
                           variant="outline"
                           size="sm"
                           onClick={handleMarkAllCompleted}
@@ -499,108 +467,15 @@ const TodaysTasks: React.FC = React.memo(() => {
                         >
                           <CheckCircle className="h-4 w-4" />
                           Mark All
-                        </Button>}
-                    </div>
-                    {/* Filter button below action buttons on mobile */}
-                    <div className="relative" ref={filterRef}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsFilterOpen(s => !s)}
-                        className="w-full h-10 rounded-xl bg-background text-foreground border-border/60 hover:bg-accent"
-                      >
-                        Filter Goals
-                      </Button>
-                      {isFilterOpen && (
-                        <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 p-4">
-                          <div className="flex items-center py-2">
-                            <input
-                              id="filter-all"
-                              type="checkbox"
-                              checked={availableGoals.length > 0 && selectedGoalIds.length === availableGoals.length}
-                              onChange={() => toggleAll()}
-                              className="mr-3 h-4 w-4"
-                            />
-                            <label htmlFor="filter-all" className="font-medium text-base">
-                              All
-                            </label>
-                          </div>
-                          <div className="max-h-56 overflow-y-auto mt-2 space-y-2.5">
-                            {availableGoals.map(g => (
-                              <div key={g.id} className="flex items-center py-2">
-                                <input
-                                  id={`goal-${g.id}`}
-                                  type="checkbox"
-                                  checked={selectedGoalIds.includes(g.id)}
-                                  onChange={() => toggleGoal(g.id)}
-                                  className="mr-3 h-4 w-4"
-                                />
-                                <label htmlFor={`goal-${g.id}`} className="truncate text-base">
-                                  {g.title || 'Untitled'}
-                                </label>
-                              </div>
-                            ))}
-                            {availableGoals.length === 0 && (
-                              <div className="text-sm text-muted-foreground">No goals</div>
-                            )}
-                          </div>
-                        </div>
+                        </Button>
                       )}
                     </div>
+                    {renderFilter(true)}
                   </div>
 
                   <Card className="rounded-xl border border-border bg-card shadow-sm">
                     <CardContent className="max-h-[50vh] overflow-y-auto p-0 bg-card">
-                      {loading ? (
-                        <div className="space-y-3 p-4">
-                          <Skeleton className="h-16 w-full rounded-xl" />
-                          <Skeleton className="h-16 w-full rounded-xl" />
-                          <Skeleton className="h-16 w-full rounded-xl" />
-                        </div>
-                      ) : tasksForToday.length === 0 ? (
-                        <div className="text-center py-10 flex flex-col items-center px-4">
-                          <PremiumClipboard size={56} className="mb-3" />
-                          <p className="text-base text-muted-foreground font-medium">No task for today</p>
-                        </div>
-                      ) : (
-                        <div className="p-4 space-y-3">
-                          {tasksForToday.map((task) => (
-                            <motion.div
-                              key={task.id}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              className="flex items-start space-x-2 p-3 rounded-lg bg-background border border-border/40 hover:bg-accent/40 transition-colors cursor-pointer"
-                              onClick={() => handleTaskClick(task)}
-                            >
-                              <Checkbox
-                                id={`task-${task.id}`}
-                                checked={task.completed}
-                                onCheckedChange={() => handleToggleTaskCompletion(task.id, task.completed)}
-                                onClick={e => e.stopPropagation()}
-                                className="mt-0.5"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <label
-                                  htmlFor={`task-${task.id}`}
-                                  className={`text-sm font-medium text-foreground cursor-pointer ${task.completed ? "line-through text-muted-foreground" : ""
-                                    }`}
-                                >
-                                  {task.title || task.description}
-                                </label>
-                                <div className="flex items-center justify-between text-xs text-foreground/70 dark:text-muted-foreground mt-1">
-                                  <span>{task.is_anytime ? 'Anytime' : (task.daily_start_time && task.daily_end_time ? `${task.daily_start_time.slice(0, 5)} - ${task.daily_end_time.slice(0, 5)}` : '')}</span>
-                                  {task.goals && (
-                                    <SmartLink to={`/goal/${task.goal_id}?date=${encodeURIComponent(String(task.start_date).slice(0, 10))}&taskId=${encodeURIComponent(task.id)}`} className="truncate text-foreground/80 dark:text-muted-foreground hover:text-primary">
-                                      {task.goals.title}
-                                    </SmartLink>
-                                  )}
-                                </div>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                      )}
+                      {renderTasks(true)}
                     </CardContent>
                   </Card>
                 </div>
@@ -617,175 +492,66 @@ const TodaysTasks: React.FC = React.memo(() => {
             </Button>
           )}
         </>,
-        document.body
-      )
-      }
+        document.body,
+      )}
 
-      {
-        !isMobile && (
-          <Card className="border border-border dark:border-foreground/10 rounded-2xl xl:rounded-[2.5rem] bg-background/90 backdrop-blur-xl shadow-xl overflow-hidden">
-            <CardHeader className="pb-3 sm:pb-4 pt-5 sm:pt-6 xl:pt-8 px-4 sm:px-6 xl:px-8">
-              <div className="flex items-center space-x-3 sm:space-x-4 mb-3 sm:mb-4 flex-row">
-                <div className="p-2 sm:p-2.5 xl:p-3 bg-primary/10 rounded-xl xl:rounded-2xl ring-1 ring-primary/20">
-                  <ClipboardList className="h-5 w-5 sm:h-5 sm:w-5 xl:h-6 xl:w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg sm:text-xl xl:text-2xl font-bold xl:font-black tracking-tight">
-                    Mission Logs
-                  </CardTitle>
-                  <CardDescription className="font-semibold xl:font-bold text-muted-foreground uppercase text-[9px] sm:text-[10px] tracking-wider xl:tracking-widest">
-                    {format(new Date(), 'EEEE, MMMM d, yyyy')}
-                  </CardDescription>
-                </div>
+      {!isMobile && (
+        <Card className="border border-border dark:border-foreground/10 rounded-2xl xl:rounded-[2.5rem] bg-background/90 backdrop-blur-xl shadow-xl overflow-hidden">
+          <CardHeader className="pb-3 sm:pb-4 pt-5 sm:pt-6 xl:pt-8 px-4 sm:px-6 xl:px-8">
+            <div className="flex items-center space-x-3 sm:space-x-4 mb-3 sm:mb-4 flex-row">
+              <div className="p-2 sm:p-2.5 xl:p-3 bg-primary/10 rounded-xl xl:rounded-2xl ring-1 ring-primary/20">
+                <ClipboardList className="h-5 w-5 sm:h-5 sm:w-5 xl:h-6 xl:w-6 text-primary" />
               </div>
-
-              <div className="flex items-center gap-2">
-                <div className="text-[9px] sm:text-[10px] font-bold xl:font-black bg-primary/10 text-primary rounded-full px-2.5 sm:px-3 py-1 border border-primary/20 inline-block uppercase tracking-wide xl:tracking-widest">
-                  Active Tasks: {tasksForToday.length}
-                </div>
+              <div>
+                <CardTitle className="text-lg sm:text-xl xl:text-2xl font-bold xl:font-black tracking-tight">
+                  Mission Logs
+                </CardTitle>
+                <CardDescription className="font-semibold xl:font-bold text-muted-foreground uppercase text-[9px] sm:text-[10px] tracking-wider xl:tracking-widest">
+                  {format(new Date(), 'EEEE, MMMM d, yyyy')}
+                </CardDescription>
               </div>
-            </CardHeader>
-            <CardContent
-              className="rounded-xl xl:rounded-2xl flex flex-col pt-4 sm:pt-5 xl:pt-6 min-h-[350px] sm:min-h-[400px] max-h-[500px] sm:max-h-[600px] overflow-auto px-4 sm:px-6 xl:px-8"
-            >
-              <div className="flex justify-between items-start mb-4 sm:mb-5 xl:mb-6">
-                <div className="flex items-center">
+            </div>
 
-                  {previousTasksState.length > 0 ?
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleUndoMarkAllCompleted}
-                      className="h-8 sm:h-8 text-sm text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all duration-200 flex items-center gap-2"
-                    >
-                      Undo
-                    </Button> :
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleMarkAllCompleted}
-                      className="h-8 sm:h-8 text-xs sm:text-sm text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:text-green-700 dark:hover:text-green-300 rounded-xl transition-all duration-200 flex items-center gap-1.5 sm:gap-2"
-                    >
-                      <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      <span className="hidden sm:inline">Mark All Completed</span>
-                      <span className="sm:hidden">Complete All</span>
-                    </Button>}
-                </div>
-                {/* The ml-auto utility pushes this div to the end */}
-                <div className="relative inline-block ml-auto" ref={filterRef}>
+            <div className="flex items-center gap-2">
+              <div className="text-[9px] sm:text-[10px] font-bold xl:font-black bg-primary/10 text-primary rounded-full px-2.5 sm:px-3 py-1 border border-primary/20 inline-block uppercase tracking-wide xl:tracking-widest">
+                Active Tasks: {tasksForToday.length}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="rounded-xl xl:rounded-2xl flex flex-col pt-4 sm:pt-5 xl:pt-6 min-h-[350px] sm:min-h-[400px] max-h-[500px] sm:max-h-[600px] overflow-auto px-4 sm:px-6 xl:px-8">
+            <div className="flex justify-between items-start mb-4 sm:mb-5 xl:mb-6">
+              <div className="flex items-center">
+                {previousTasksState.length > 0 ? (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsFilterOpen(s => !s)}
-                    className="h-8 text-xs sm:text-sm rounded-xl"
+                    onClick={handleUndoMarkAllCompleted}
+                    className="h-8 sm:h-8 text-sm text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all duration-200 flex items-center gap-2"
                   >
-                    Filter Goals
+                    Undo
                   </Button>
-                  {isFilterOpen && (
-                    <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 p-3 sm:p-4">
-                      <div className="flex items-center py-1.5">
-                        <input
-                          id="filter-all"
-                          type="checkbox"
-                          checked={availableGoals.length > 0 && selectedGoalIds.length === availableGoals.length}
-                          onChange={() => toggleAll()}
-                          className="mr-3 h-4 w-4"
-                        />
-                        <label htmlFor="filter-all" className="font-medium text-sm">
-                          All
-                        </label>
-                      </div>
-                      <div className="max-h-44 sm:max-h-48 overflow-y-auto mt-2 space-y-1.5 sm:space-y-2">
-                        {availableGoals.map(g => (
-                          <div key={g.id} className="flex items-center py-1.5">
-                            <input
-                              id={`goal-${g.id}`}
-                              type="checkbox"
-                              checked={selectedGoalIds.includes(g.id)}
-                              onChange={() => toggleGoal(g.id)}
-                              className="mr-3 h-4 w-4"
-                            />
-                            <label htmlFor={`goal-${g.id}`} className="truncate text-sm">
-                              {g.title || 'Untitled'}
-                            </label>
-                          </div>
-                        ))}
-                        {availableGoals.length === 0 && (
-                          <div className="text-xs sm:text-sm text-muted-foreground py-1.5">No goals</div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMarkAllCompleted}
+                    className="h-8 sm:h-8 text-xs sm:text-sm text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:text-green-700 dark:hover:text-green-300 rounded-xl transition-all duration-200 flex items-center gap-1.5 sm:gap-2"
+                  >
+                    <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Mark All Completed</span>
+                    <span className="sm:hidden">Complete All</span>
+                  </Button>
+                )}
               </div>
 
-              {/* Add margin above the first task */}
-              {loading ? (
-                <div className="space-y-3 sm:space-y-4">
-                  <Skeleton className="h-12 sm:h-10 w-full rounded-xl" />
-                  <Skeleton className="h-12 sm:h-10 w-full rounded-xl" />
-                  <Skeleton className="h-12 sm:h-10 w-full rounded-xl" />
-                </div>
-              ) : tasksForToday.length === 0 ? (
-                <div className="text-center py-8 sm:py-10 flex flex-col items-center">
-                  <PremiumClipboard size={56} className="mb-3" />
-                  <p className="text-sm sm:text-base text-muted-foreground font-medium">No task for today</p>
-                </div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-3"
-                >
-                  {tasksForToday.map((task) => (
-                    <motion.div
-                      key={task.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 10 }}
-                      className="flex items-start space-x-4 p-4 bg-background/90 backdrop-blur-sm border border-border/50 rounded-[1.5rem] hover:bg-background hover:shadow-lg hover:border-primary/20 transition-all duration-300 cursor-pointer group/item"
-                      onClick={() => handleTaskClick(task)}
-                    >
-                      <Checkbox
-                        id={`task-${task.id}`}
-                        checked={task.completed}
-                        onCheckedChange={() => handleToggleTaskCompletion(task.id, task.completed)}
-                        onClick={e => e.stopPropagation()}
-                        className="mt-1 h-5 w-5 rounded-lg border-foreground/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <label
-                          htmlFor={`task-${task.id}`}
-                          className={`text-sm cursor-pointer font-bold transition-colors block leading-snug ${task.completed ? "line-through text-muted-foreground/50" : "text-foreground group-hover/item:text-primary"
-                            }`}
-                        >
-                          {task.title || task.description}
-                        </label>
-                        <div className="flex items-center justify-between text-[10px] mt-3">
-                          {(task.is_anytime || (task.daily_start_time && task.daily_end_time)) && (
-                            <span className="bg-primary/5 text-primary px-2.5 py-1 rounded-lg border border-primary/10 font-black uppercase tracking-tighter">
-                              {task.is_anytime ? 'Anytime' : `${task.daily_start_time.slice(0, 5)} - ${task.daily_end_time.slice(0, 5)}`}
-                            </span>
-                          )}
-                          {task.goals && (
-                            <span
-                              className="text-foreground/70 dark:text-muted-foreground font-black uppercase tracking-widest truncate max-w-[120px]"
-                            >
-                              {task.goals.title}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-            </CardContent>
-          </Card>
-        )
-      }
-    </div >
+              {renderFilter(false)}
+            </div>
+
+            {renderTasks(false)}
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 });
 

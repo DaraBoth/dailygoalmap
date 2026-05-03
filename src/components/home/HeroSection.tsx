@@ -44,6 +44,8 @@ const HeroSection: React.FC = () => {
               Turn big goals into clear daily tasks.
               Let AI help with planning while you focus on getting things done.
             </p>
+          </motion.div>
+
           {/* Full-Screen Logo Display */}
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -102,13 +104,12 @@ const HeroSection: React.FC = () => {
               </motion.div>
             </div>
           </motion.div>
-          </motion.div>
 
           {/* CTA Buttons */}
           <motion.div
             initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.7, duration: 0.6 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
             className="flex flex-col sm:flex-row gap-6"
           >
             <SmartLink to="/register">
@@ -130,8 +131,8 @@ const HeroSection: React.FC = () => {
           {/* Interactive Preview Container */}
           <motion.div
             initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.8, duration: 1, ease: "circOut" }}
-            transition={{ delay: 0.6, duration: 1, ease: "circOut" }}
             className="relative w-full max-w-5xl mt-12 group"
           >
             {/* Ambient Glow behind the card */}
