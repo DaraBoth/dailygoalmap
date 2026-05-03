@@ -1660,13 +1660,16 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
                 <div key={i} className={cn('mb-3 flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
                   {msg.role === 'assistant' && (
                     <div className="max-w-[88%]">
-                      <MarkdownRenderer content={msg.content} isStreaming={msg.isStreaming} isLoading={isLoading && i === messages.length - 1} TypingLoader={<TypingLoader />} />
-                      {!msg.isStreaming && !!msg.content?.trim() && (
-                        <div className="mt-0.5 -ml-0.5 flex">
+                      <MarkdownRenderer
+                        content={msg.content}
+                        isStreaming={msg.isStreaming}
+                        isLoading={isLoading && i === messages.length - 1}
+                        TypingLoader={<TypingLoader />}
+                        extraActions={!msg.isStreaming && !!msg.content?.trim() ? (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-6 rounded-full px-2.5 text-[11px] text-muted-foreground border-border/60 bg-background/70"
+                            className="h-7 rounded-full px-2.5 text-[11px] text-muted-foreground border-border/60 bg-background/70"
                             onClick={() => {
                               const messageKey = `${msg.timestamp}:${msg.content}`;
                               if (isSpeaking && speakingMessageKey === messageKey) stopSpeaking();
@@ -1676,8 +1679,8 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
                             {isSpeaking && speakingMessageKey === `${msg.timestamp}:${msg.content}` ? <Square className="h-3 w-3 mr-1" /> : <Volume2 className="h-3 w-3 mr-1" />}
                             {isSpeaking && speakingMessageKey === `${msg.timestamp}:${msg.content}` ? 'Stop' : 'Listen'}
                           </Button>
-                        </div>
-                      )}
+                        ) : null}
+                      />
                     </div>
                   )}
                   {msg.role === 'user' && (

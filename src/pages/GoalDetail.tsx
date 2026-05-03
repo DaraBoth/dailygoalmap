@@ -27,7 +27,7 @@ import { normalizeTaskList, normalizeTaskRecord } from '@/components/calendar/ta
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { UserMenu } from '@/components/user/UserMenu';
 import CustomSearchModal from '@/components/search/CustomSearchModal';
-import EditGoalSlidePanel from '@/components/dashboard/EditGoalSlidePanel';
+import GoalAIContextSettings from '@/components/goal/GoalAIContextSettings';
 
 const GoalChatWidgetLazy = React.lazy(() =>
   import('@/components/goal/GoalChatWidget').then((mod) => ({ default: mod.GoalChatWidget }))
@@ -86,7 +86,6 @@ const GoalDetail: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMembersSheetOpen, setIsMembersSheetOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const [isGoalSettingsOpen, setIsGoalSettingsOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
   const [inviteSearch, setInviteSearch] = useState('');
@@ -176,7 +175,7 @@ const GoalDetail: React.FC = () => {
   };
 
   const openGoalSettings = () => {
-    setIsGoalSettingsOpen(true);
+    setActiveTab('settings');
   };
 
   const goalTitle = currentGoalData?.title || '';
@@ -331,6 +330,7 @@ const GoalDetail: React.FC = () => {
   const navItems = [
     { id: 'overview', label: 'Tasks', icon: LayoutDashboard },
     { id: 'analytics', label: 'Analytics', icon: BarChart2 },
+    { id: 'settings', label: 'Goal Settings', icon: Settings2 },
   ];
 
   return (
@@ -384,17 +384,6 @@ const GoalDetail: React.FC = () => {
               </button>
             ))}
 
-            <button
-              onClick={openGoalSettings}
-              title={isSidebarCollapsed ? 'Goal settings' : undefined}
-              className={cn(
-                "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50",
-                isSidebarCollapsed ? 'justify-center px-0' : ''
-              )}
-            >
-              <Settings2 className="h-4 w-4 shrink-0" />
-              {!isSidebarCollapsed && <span>Goal Settings</span>}
-            </button>
           </nav>
 
           {/* Members Button */}
@@ -479,13 +468,6 @@ const GoalDetail: React.FC = () => {
                             <span>{item.label}</span>
                           </button>
                         ))}
-                        <button
-                          onClick={() => { setIsSidebarOpen(false); openGoalSettings(); }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                        >
-                          <Settings2 className="h-4 w-4" />
-                          <span>Goal Settings</span>
-                        </button>
                       </nav>
                       <div className="px-2 py-2 border-t border-border/50">
                         <button
@@ -602,6 +584,45 @@ const GoalDetail: React.FC = () => {
                   </div>
                 </motion.div>
               )}
+
+              {activeTab === 'settings' && (
+                <motion.div
+                  key="settings"
+                  initial={{ opacity: 0, x: 16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ duration: 0.15 }}
+                  className="h-full min-h-0 overflow-y-auto"
+                >
+                  <GoalAIContextSettings
+                    goalId={goalId}
+                    goalTitle={goalTitle}
+                    goalDescription={goalDescription}
+                    goalData={currentGoalData as any}
+                    initialContext={(currentGoalData as any)?.preferences?.context || ''}
+                    initialInstructions={(currentGoalData as any)?.preferences?.custom_instructions || ''}
+                    userId={user?.id}
+                    onSaved={({ context, custom_instructions, title, description, target_date, no_duration, metadata }) => {
+                      setCurrentGoalData((prev: any) => {
+                        if (!prev) return prev;
+                        return {
+                          ...prev,
+                          title,
+                          description,
+                          target_date,
+                          no_duration,
+                          metadata,
+                          preferences: {
+                            ...(prev.preferences || {}),
+                            context,
+                            custom_instructions,
+                          },
+                        };
+                      });
+                    }}
+                  />
+                </motion.div>
+              )}
             </AnimatePresence>
           </main>
         </div>
@@ -617,17 +638,6 @@ const GoalDetail: React.FC = () => {
       <CustomSearchModal
         open={showSearch}
         onOpenChange={setShowSearch}
-      />
-
-      <EditGoalSlidePanel
-        isOpen={isGoalSettingsOpen}
-        goal={currentGoalData as any}
-        onClose={() => setIsGoalSettingsOpen(false)}
-        onSuccess={(updatedGoal) => {
-          setCurrentGoalData(updatedGoal as any);
-          setIsGoalSettingsOpen(false);
-          toast({ title: 'Goal updated' });
-        }}
       />
 
       {/* Members Sheet */}

@@ -14,6 +14,7 @@ interface MarkdownRendererProps {
     isLoading?: boolean;
     noCopy?: boolean;
     TypingLoader?: React.ReactNode;
+    extraActions?: React.ReactNode;
 }
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
@@ -22,6 +23,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     isLoading = false,
     noCopy = false,
     TypingLoader,
+    extraActions,
 }) => {
 
     // === COPY-TO-CLIPBOARD ===
@@ -205,14 +207,21 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             {/* TYPING LOADER */}
             {isStreaming && TypingLoader}
 
-            {/* COPY MESSAGE BUTTON */}
-            {!noCopy && !isLoading && !isStreaming && (
-                <button
-                    onClick={(e) => copyMessage(e)}
-                    className="mt-1 text-xs px-2 py-1 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
-                >
-                    <Copy className="w-4 h-4" />
-                </button>
+            {/* MESSAGE ACTIONS */}
+            {(!isLoading && !isStreaming && (!noCopy || !!extraActions)) && (
+                <div className="mt-1 flex items-center gap-1.5">
+                    {!noCopy && (
+                        <button
+                            onClick={(e) => copyMessage(e)}
+                            className="text-xs px-2 py-1 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
+                            aria-label="Copy message"
+                            title="Copy"
+                        >
+                            <Copy className="w-4 h-4" />
+                        </button>
+                    )}
+                    {extraActions}
+                </div>
             )}
         </div>
     );
