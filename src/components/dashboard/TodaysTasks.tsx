@@ -34,57 +34,82 @@ const TodaysTasks: React.FC = React.memo(() => {
   }, []);
 
   // Close filter dropdown on outside click
+        !isMobile && (
+          <Card className="border border-border/50 dark:border-foreground/10 rounded-2xl xl:rounded-[2.5rem] bg-gradient-to-br from-card via-card/90 to-background backdrop-blur-xl shadow-2xl overflow-hidden">
+            <CardHeader className="pb-4 sm:pb-5 xl:pb-6 pt-6 sm:pt-7 xl:pt-9 px-5 sm:px-7 xl:px-9 border-b border-border/40">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start space-x-4">
+                  <div className="p-3 sm:p-3.5 xl:p-4 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl xl:rounded-2xl ring-1 ring-primary/30 shadow-lg">
+                    <ClipboardList className="h-5 w-5 sm:h-6 xl:h-7 text-primary" />
+                  </div>
+                  <div className="pt-0.5">
+                    <CardTitle className="text-lg sm:text-2xl xl:text-3xl font-black tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                      Today's Mission
+                    </CardTitle>
+                    <CardDescription className="font-bold text-muted-foreground text-xs sm:text-sm mt-1.5 uppercase tracking-widest opacity-80">
+                      {format(new Date(), 'cccc, LLLL d, yyyy')}
+                    </CardDescription>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl sm:text-3xl xl:text-4xl font-black text-primary">
+                    {tasksForToday.filter(t => t.completed).length}/{tasksForToday.length}
+                  </div>
+                  <div className="text-[10px] xl:text-xs text-muted-foreground font-bold uppercase tracking-wider mt-1">
+                    Completed
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
   useEffect(() => {
-    const onClick = (e: MouseEvent) => {
+              className="flex flex-col pt-5 sm:pt-6 xl:pt-7 min-h-[380px] sm:min-h-[420px] max-h-[520px] sm:max-h-[620px] overflow-auto px-5 sm:px-7 xl:px-9 pb-5 sm:pb-6 xl:pb-7"
       if (isFilterOpen && filterRef.current && !filterRef.current.contains(e.target as Node)) {
         setIsFilterOpen(false);
-      }
-    };
+                <div className="flex items-center gap-2">
     document.addEventListener('click', onClick);
-    return () => document.removeEventListener('click', onClick);
-  }, [isFilterOpen]);
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleUndoMarkAllCompleted}
+                      className="h-8 sm:h-9 px-3.5 text-xs sm:text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-300 rounded-lg transition-all duration-200"
+                    >
+                      ↶ Undo
+                    </Button> :
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleMarkAllCompleted}
+                      className="h-8 sm:h-9 px-3.5 text-xs sm:text-sm font-bold bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg transition-all duration-200 flex items-center gap-1.5"
+                    >
+                      <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span>Complete All</span>
+                    </Button>}
 
-  const fetchTodaysTasks = async () => {
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
 
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) return;
-
-      // First get user's goal IDs from goal_members table and own goals
-      const { data: memberGoals } = await supabase
-        .from('goal_members')
-        .select('goal_id')
-        .eq('user_id', userData.user.id);
-
-      const { data: ownGoals } = await supabase
         .from('goals')
-        .select('id')
-        .eq('user_id', userData.user.id);
-
-      const memberGoalIds = memberGoals?.map(g => g.goal_id) || [];
-      const ownGoalIds = ownGoals?.map(g => g.id) || [];
-      const allGoalIds = [...new Set([...memberGoalIds, ...ownGoalIds])];
-
-      // Fetch goal titles for dropdown
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsFilterOpen(s => !s)}
+                    className="h-8 sm:h-9 px-3.5 text-xs sm:text-sm font-bold rounded-lg border-border/60 hover:bg-accent transition-all duration-200"
+                  >
+                    🎯 Filter
+                  </Button>
       if (allGoalIds.length > 0) {
-        const { data: goalsInfo } = await supabase
+                    <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-card border border-border/60 rounded-xl shadow-2xl z-50 p-3 sm:p-4 backdrop-blur-sm">
           .from('goals')
           .select('id, title')
           .in('id', allGoalIds);
         setAvailableGoals((goalsInfo || []).map(g => ({ id: g.id, title: g.title })));
       } else {
         setAvailableGoals([]);
-      }
+                          className="mr-3 h-4 w-4 rounded cursor-pointer"
 
-      // Load saved selection from localStorage (per-user key)
+                        <label htmlFor="filter-all" className="font-bold text-sm cursor-pointer">
       const storageKeyBase = 'dg_todays_tasks_selected_goals_v1';
       const storageKey = `${storageKeyBase}:${userData.user.id}`;
       const saved = localStorage.getItem(storageKey);
-      let initialSelected: string[] = [];
+                      <div className="max-h-44 sm:max-h-48 overflow-y-auto mt-2 space-y-2">
       if (saved) {
         try {
           const parsed = JSON.parse(saved) as string[];
@@ -92,15 +117,15 @@ const TodaysTasks: React.FC = React.memo(() => {
           initialSelected = parsed.filter(id => allGoalIds.includes(id));
         } catch (e) {
           initialSelected = [];
-        }
+                              className="mr-3 h-4 w-4 rounded cursor-pointer"
       }
-
+                            <label htmlFor={`goal-${g.id}`} className="truncate text-sm font-medium cursor-pointer">
       // Default to all goals selected if nothing saved
       if (!saved) initialSelected = allGoalIds.slice();
       setSelectedGoalIds(initialSelected);
 
       if (allGoalIds.length === 0) {
-        setTasksForToday([]);
+                          <div className="text-xs sm:text-sm text-muted-foreground/60 py-3 text-center">No goals available</div>
         return;
       }
       // Decide which goal ids to query for tasks based on selection
@@ -108,24 +133,24 @@ const TodaysTasks: React.FC = React.memo(() => {
 
       if (goalIdsToQuery.length === 0) {
         setTasksForToday([]);
-        return;
       }
-
-      const { data: tasksData, error } = await supabase
-        .from('tasks')
-        .select('id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, is_anytime, goal_id, created_at, goals(title)')
+                <div className="space-y-3">
+                  <Skeleton className="h-14 sm:h-12 w-full rounded-lg" />
+                  <Skeleton className="h-14 sm:h-12 w-full rounded-lg" />
+                  <Skeleton className="h-14 sm:h-12 w-full rounded-lg" />
         .in('goal_id', goalIdsToQuery)
         // Include tasks that span today (start <= end of today AND end >= start of today)
-        .lt('start_date', tomorrow.toISOString())
+                <div className="text-center py-10 sm:py-12 xl:py-16 flex flex-col items-center justify-center flex-1">
         .gte('end_date', today.toISOString())
-        .order('completed', { ascending: true })
+                  <p className="text-sm sm:text-base text-muted-foreground/70 font-medium">All caught up! No tasks today.</p>
+                  <p className="text-xs text-muted-foreground/50 mt-2">You're doing great! 🎉</p>
         .order('created_at', { ascending: false })
 
       if (error) throw error;
       setTasksForToday(tasksData || []);
     } catch (error) {
       console.error("Error fetching today's tasks:", error);
-    } finally {
+                  className="space-y-2.5"
       setLoading(false);
     }
   };
@@ -133,7 +158,7 @@ const TodaysTasks: React.FC = React.memo(() => {
   const handleToggleTaskCompletion = async (taskId: string, currentStatus: boolean) => {
     const newStatus = !currentStatus;
 
-    try {
+                      className="flex items-start space-x-3 p-3.5 sm:p-4 bg-background/50 border border-border/30 rounded-xl hover:bg-background/80 hover:border-primary/40 hover:shadow-md transition-all duration-200 cursor-pointer group/item"
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
@@ -141,25 +166,25 @@ const TodaysTasks: React.FC = React.memo(() => {
       const taskToUpdate = tasksForToday.find(t => t.id === taskId);
       if (!taskToUpdate) throw new Error("Task not found");
 
-      const fallbackDate = taskToUpdate.start_date || taskToUpdate.end_date || taskToUpdate.created_at || new Date().toISOString();
+                        className="mt-1.5 h-5 w-5 rounded border-border/60 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
       const normalizedDate = new Date(fallbackDate);
       const normalizedIso = Number.isNaN(normalizedDate.getTime())
         ? new Date().toISOString()
         : normalizedDate.toISOString();
-
+                          className={`text-sm cursor-pointer font-semibold transition-colors block leading-tight mb-1.5 ${task.completed ? "line-through text-muted-foreground/40" : "text-foreground/90 group-hover/item:text-primary"
       const updatePayload: Record<string, any> = {
         completed: newStatus,
         updated_at: new Date().toISOString(),
         updated_by: user.id,
       };
 
-      if (!taskToUpdate.start_date) {
+                            <span className="bg-primary/8 text-primary/90 px-2.5 py-1 rounded-md border border-primary/15 font-bold uppercase text-[9px] tracking-tight">
         updatePayload.start_date = normalizedIso;
       }
       if (!taskToUpdate.end_date) {
         updatePayload.end_date = taskToUpdate.start_date || normalizedIso;
       }
-
+                              className="text-muted-foreground/70 font-bold uppercase tracking-wide text-[9px] truncate max-w-[140px]"
       const { data: updatedRows, error } = await supabase
         .from('tasks')
         .update(updatePayload)

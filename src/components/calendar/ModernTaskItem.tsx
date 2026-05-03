@@ -1,15 +1,9 @@
-import React, { memo, useState } from 'react';
+import React, { memo } from 'react';
 import { Task } from "./types";
 import { Button } from "@/components/ui/button";
 import { Check, Clock, Sparkles, Pencil, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { formatTaskTimeRange } from "./taskDateTime";
 
@@ -30,8 +24,6 @@ export const ModernTaskItem = memo(({
     onDelete,
     compact = false
 }: ModernTaskItemProps) => {
-    const [isHovered, setIsHovered] = useState(false);
-
     const handleToggle = (e: React.MouseEvent) => {
         e.stopPropagation();
         onToggleCompletion(task.id);
@@ -51,7 +43,6 @@ export const ModernTaskItem = memo(({
             onHoverStart={() => setIsHovered(true)}
             onHoverEnd={() => setIsHovered(false)}
             className={cn(
-                "group relative flex items-center gap-3 rounded-xl transition-all duration-300 cursor-pointer",
                 task.completed
                     ? "bg-gradient-to-r from-muted/40 to-muted/20 opacity-60"
                     : "bg-gradient-to-r from-background to-card hover:from-card hover:to-card/80 hover:shadow-md hover:shadow-primary/5",
@@ -68,8 +59,6 @@ export const ModernTaskItem = memo(({
             />
 
             {/* Custom Checkbox */}
-            <motion.button
-                whileTap={{ scale: 0.85 }}
                 onClick={handleToggle}
                 className={cn(
                     "relative shrink-0 flex items-center justify-center rounded-lg border-2 transition-all duration-300",
