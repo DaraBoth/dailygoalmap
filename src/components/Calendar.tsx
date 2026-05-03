@@ -54,6 +54,7 @@ const Calendar = ({
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false); // State for confirm dialog
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null); // State to hold task to be deleted
   const [lastDeletedTask, setLastDeletedTask] = useState<Task | null>(null); // For undo functionality
+  const [isTaskSidebarCollapsed, setIsTaskSidebarCollapsed] = useState(false);
   const { toast } = useToast();
 
   const {
@@ -529,9 +530,12 @@ const Calendar = ({
         </div>
       ) : (
         <div className={cn(
-          "grid transition-[grid-template-columns] duration-700 ease-in-out h-full bg-background/5",
-          "grid-cols-1 md:grid-cols-[clamp(260px,20vw,300px),1fr]"
-        )}>
+          "grid transition-[grid-template-columns] duration-500 ease-in-out h-full bg-background/5"
+        )}
+          style={{
+            gridTemplateColumns: isTaskSidebarCollapsed ? '56px 1fr' : 'clamp(260px,20vw,300px) 1fr',
+          }}
+        >
           <div className="h-full overflow-hidden border-r border-border/20 bg-background/20 backdrop-blur-2xl z-10 relative">
             <TaskSidebar
               tasks={tasks}
@@ -544,6 +548,8 @@ const Calendar = ({
               onEditTask={handleEditTask}
               onDeleteTask={handleDeleteTask}
               goalId={goalId}
+              isCollapsed={isTaskSidebarCollapsed}
+              onToggleCollapse={() => setIsTaskSidebarCollapsed(prev => !prev)}
               onTaskClick={(task) => {
                 handleOpenTaskDetails(task);
               }}

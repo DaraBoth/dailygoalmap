@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLoaderData, useSearch, useParams, useNavigate } from '@tanstack/react-router';
 import { supabase } from '@/integrations/supabase/client';
-import GoalDetailHeader from '@/components/goal/GoalDetailHeader';
 import Calendar from '@/components/Calendar';
 import SmartAnalytics from '@/components/goal/SmartAnalytics';
 import { GoalMember } from '@/types/goal';
@@ -18,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from '@/lib/utils';
-import { Menu, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2, PanelLeftClose, PanelLeftOpen, Search, Trash2, UserPlus } from 'lucide-react';
+import { Menu, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2, PanelLeftClose, PanelLeftOpen, Search, Trash2, UserPlus, Settings2 } from 'lucide-react';
 import { searchUsers, sendInvitation, SearchUser } from '@/services/internalNotifications';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
@@ -26,6 +25,9 @@ import { ThemeSelector } from '@/components/goal/ThemeSelector';
 import { GoalSwitcher } from '@/components/goal/GoalSwitcher';
 import { formatDistanceToNow } from 'date-fns';
 import { normalizeTaskList, normalizeTaskRecord } from '@/components/calendar/taskNormalization';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { UserMenu } from '@/components/user/UserMenu';
+import CustomSearchModal from '@/components/search/CustomSearchModal';
 
 const GoalDetail: React.FC = () => {
   const { id: goalId } = useParams({ from: '/goal/$id' });
@@ -49,6 +51,14 @@ const GoalDetail: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMembersSheetOpen, setIsMembersSheetOpen] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [isGoalSettingsOpen, setIsGoalSettingsOpen] = useState(false);
+  const [isSavingGoalSettings, setIsSavingGoalSettings] = useState(false);
+  const [goalSettingsForm, setGoalSettingsForm] = useState({
+    title: goalData?.title || '',
+    description: goalData?.description || '',
+    target_date: goalData?.target_date ? String(goalData.target_date).slice(0, 10) : '',
+  });
   const [copiedCode, setCopiedCode] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
   const [inviteSearch, setInviteSearch] = useState('');
@@ -137,6 +147,51 @@ const GoalDetail: React.FC = () => {
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
+  const openGoalSettings = () => {
+    setGoalSettingsForm({
+      title: currentGoalData?.title || '',
+      description: currentGoalData?.description || '',
+      target_date: currentGoalData?.target_date ? String(currentGoalData.target_date).slice(0, 10) : '',
+    });
+    setIsGoalSettingsOpen(true);
+  };
+
+  const handleSaveGoalSettings = async () => {
+    if (!goalId) return;
+    if (!goalSettingsForm.title.trim()) {
+      toast({ title: 'Title is required', variant: 'destructive' });
+      return;
+    }
+
+    setIsSavingGoalSettings(true);
+    try {
+      const { data, error } = await supabase
+        .from('goals')
+        .update({
+          title: goalSettingsForm.title.trim(),
+          description: goalSettingsForm.description.trim() || null,
+          target_date: goalSettingsForm.target_date || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', goalId)
+        .select('*,goal_themes(*)')
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setCurrentGoalData(data);
+        setCurrentTheme(data.goal_themes as GoalTheme);
+      }
+      toast({ title: 'Goal settings updated' });
+      setIsGoalSettingsOpen(false);
+    } catch (error) {
+      console.error('Failed to save goal settings:', error);
+      toast({ title: 'Failed to update goal settings', variant: 'destructive' });
+    } finally {
+      setIsSavingGoalSettings(false);
+    }
+  };
+
   const goalTitle = currentGoalData?.title || '';
   const goalDescription = currentGoalData?.description || '';
   const completedTasksCount = tasks.filter(t => t.completed).length;
@@ -189,6 +244,14 @@ const GoalDetail: React.FC = () => {
       setActiveTab("overview");
     }
   }, [search]);
+
+  useEffect(() => {
+    setGoalSettingsForm({
+      title: currentGoalData?.title || '',
+      description: currentGoalData?.description || '',
+      target_date: currentGoalData?.target_date ? String(currentGoalData.target_date).slice(0, 10) : '',
+    });
+  }, [currentGoalData]);
 
   // Sync state with loaderData
   useEffect(() => {
@@ -295,38 +358,17 @@ const GoalDetail: React.FC = () => {
     <>
       <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-background" style={backgroundStyle}>
 
-        {/* Sidebar - Desktop Only (Vercel-style) */}
+        {/* Sidebar - Desktop */}
         <aside className={cn(
           "hidden lg:flex flex-col border-r border-border/50 bg-background/80 backdrop-blur-xl shrink-0 transition-all duration-300",
           isSidebarCollapsed ? "w-14" : "w-56 xl:w-60"
         )}>
-          {/* Back + Goal Switcher + Collapse */}
-          <div className="flex items-center gap-1 p-2 border-b border-border/50">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
-              onClick={() => navigate({ to: '/dashboard' })}
-              title="Back to Dashboard"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-            </Button>
-            {!isSidebarCollapsed && (
-              <div className="flex-1 min-w-0">
-                <GoalSwitcher />
-              </div>
+          <div className="p-2 border-b border-border/50">
+            {!isSidebarCollapsed ? (
+              <GoalSwitcher />
+            ) : (
+              <div className="h-12 w-full rounded-md bg-accent/50" />
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0 ml-auto"
-              onClick={() => setIsSidebarCollapsed(v => !v)}
-              title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              {isSidebarCollapsed
-                ? <PanelLeftOpen className="h-3.5 w-3.5" />
-                : <PanelLeftClose className="h-3.5 w-3.5" />}
-            </Button>
           </div>
 
           {/* Progress Section */}
@@ -362,6 +404,18 @@ const GoalDetail: React.FC = () => {
                 {!isSidebarCollapsed && <span>{item.label}</span>}
               </button>
             ))}
+
+            <button
+              onClick={openGoalSettings}
+              title={isSidebarCollapsed ? 'Goal settings' : undefined}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50",
+                isSidebarCollapsed ? 'justify-center px-0' : ''
+              )}
+            >
+              <Settings2 className="h-4 w-4 shrink-0" />
+              {!isSidebarCollapsed && <span>Goal Settings</span>}
+            </button>
           </nav>
 
           {/* Members Button */}
@@ -446,6 +500,13 @@ const GoalDetail: React.FC = () => {
                             <span>{item.label}</span>
                           </button>
                         ))}
+                        <button
+                          onClick={() => { setIsSidebarOpen(false); openGoalSettings(); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                        >
+                          <Settings2 className="h-4 w-4" />
+                          <span>Goal Settings</span>
+                        </button>
                       </nav>
                       <div className="px-2 py-2 border-t border-border/50">
                         <button
@@ -468,32 +529,44 @@ const GoalDetail: React.FC = () => {
                 </Sheet>
               </div>
 
+              {/* Desktop: back + collapse controls */}
+              <div className="hidden lg:flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  onClick={() => navigate({ to: '/dashboard' })}
+                  title="Back to Dashboard"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  onClick={() => setIsSidebarCollapsed(v => !v)}
+                  title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                >
+                  {isSidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                </Button>
+              </div>
+
               {/* Goal Title */}
               <h1 className="flex-1 text-sm font-semibold truncate text-foreground">{goalTitle}</h1>
 
-              {/* Desktop tab pills */}
-              <nav className="hidden lg:flex items-center gap-1">
-                {navItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-                      activeTab === item.id
-                        ? "bg-accent text-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                    )}
-                  >
-                    <item.icon className="h-3.5 w-3.5" />
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-              </nav>
-
-              {/* Mobile active tab pill */}
-              <span className="lg:hidden text-xs font-medium text-muted-foreground px-2 py-1 bg-accent/50 rounded-md capitalize">
-                {navItems.find(n => n.id === activeTab)?.label ?? activeTab}
-              </span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setShowSearch(true)}
+                  title="Search"
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+                <NotificationBell onUnreadChange={() => { }} />
+                <UserMenu />
+              </div>
             </div>
           </header>
 
@@ -549,6 +622,62 @@ const GoalDetail: React.FC = () => {
 
       {/* Chat Widget */}
       <GoalChatWidget goalId={goalId} userInfo={user} tasks={tasks} goalTitle={goalTitle} onTasksChange={setTasks} />
+
+      <CustomSearchModal
+        open={showSearch}
+        onOpenChange={setShowSearch}
+      />
+
+      <Sheet open={isGoalSettingsOpen} onOpenChange={setIsGoalSettingsOpen}>
+        <SheetContent side={isMobile ? 'bottom' : 'right'} className={cn('p-0 flex flex-col', isMobile ? 'h-[70vh] rounded-t-2xl' : 'w-96')}>
+          <SheetHeader className="px-5 pt-5 pb-4 border-b border-border/50 shrink-0">
+            <SheetTitle className="flex items-center gap-2 text-base font-semibold">
+              <Settings2 className="h-4 w-4" />
+              Goal Settings
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="p-5 space-y-4 flex-1 overflow-y-auto">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Title</label>
+              <Input
+                value={goalSettingsForm.title}
+                onChange={(e) => setGoalSettingsForm(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Goal title"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Description</label>
+              <textarea
+                value={goalSettingsForm.description}
+                onChange={(e) => setGoalSettingsForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Describe your goal"
+                rows={5}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Target date</label>
+              <Input
+                type="date"
+                value={goalSettingsForm.target_date}
+                onChange={(e) => setGoalSettingsForm(prev => ({ ...prev, target_date: e.target.value }))}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setIsGoalSettingsOpen(false)} disabled={isSavingGoalSettings}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveGoalSettings} disabled={isSavingGoalSettings}>
+                {isSavingGoalSettings ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Members Sheet */}
       <Sheet open={isMembersSheetOpen} onOpenChange={setIsMembersSheetOpen}>

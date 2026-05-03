@@ -379,8 +379,34 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const lastMsgTimeRef = useRef(0);
+  const wasClosedDuringRunRef = useRef(false);
+  const prevLoadingRef = useRef(false);
   const isMobile = useIsMobile();
   useAutoResizeTextArea(textareaRef, inputValue, { minRows: 1, maxRows: 6 });
+
+  const handleCloseChat = useCallback(() => {
+    if (isLoading) {
+      wasClosedDuringRunRef.current = true;
+    }
+    setIsOpen(false);
+  }, [isLoading]);
+
+  useEffect(() => {
+    const wasLoading = prevLoadingRef.current;
+    if (wasLoading && !isLoading && wasClosedDuringRunRef.current) {
+      toast({
+        title: 'AI response is ready',
+        description: goalTitle ? `Goal AI finished for ${goalTitle}` : 'Goal AI finished your request.',
+      });
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification('Goal AI completed', {
+          body: goalTitle ? `Finished processing ${goalTitle}` : 'Your AI request is complete.',
+        });
+      }
+      wasClosedDuringRunRef.current = false;
+    }
+    prevLoadingRef.current = isLoading;
+  }, [isLoading, goalTitle]);
 
   // Load API keys
   useEffect(() => {
@@ -1113,12 +1139,16 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
           className={cn(
             'fixed h-11 w-11 rounded-full z-50 flex items-center justify-center overflow-hidden border border-border/50 shadow-lg',
             'bg-background/90 backdrop-blur-xl hover:bg-background transition-colors',
+            isLoading && !isOpen && 'ring-2 ring-primary/60 ring-offset-2 ring-offset-background animate-pulse',
             isMobile ? 'bottom-5 left-5' : 'bottom-20 right-5'
           )}
           whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            if (isOpen) handleCloseChat();
+            else setIsOpen(true);
+          }}
         >
-          {isOpen ? <X className="h-4 w-4" /> : <img src={chatAIGif} alt="AI" className="h-7 w-7 object-contain" />}
+          {isOpen ? <X className="h-4 w-4" /> : isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={chatAIGif} alt="AI" className="h-7 w-7 object-contain" />}
         </motion.button>
       )}
 
@@ -1148,7 +1178,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
                   <Settings2 className="h-3.5 w-3.5" />
                 </Button>
                 {messages.length > 0 && <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={clearChat}>Clear</Button>}
-                {!isPopupMode && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsOpen(false)}><X className="h-3.5 w-3.5" /></Button>}
+                {!isPopupMode && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCloseChat}><X className="h-3.5 w-3.5" /></Button>}
               </div>
             </div>
 

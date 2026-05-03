@@ -10,6 +10,8 @@ import {
   XCircle,
   Pencil,
   Trash2,
+  PanelLeftOpen,
+  PanelLeftClose,
 } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +30,8 @@ interface TaskSidebarProps {
   onDeleteTask: (taskId: string) => void;
   onTaskClick?: (task: Task) => void;
   goalId: string;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 const TaskSidebar = React.memo(({
@@ -42,6 +46,8 @@ const TaskSidebar = React.memo(({
   onDeleteTask,
   onTaskClick,
   goalId,
+  isCollapsed = false,
+  onToggleCollapse,
 }: TaskSidebarProps) => {
   const tasksForDate = useMemo(() => {
     const target = selectedDate
@@ -92,19 +98,48 @@ const TaskSidebar = React.memo(({
   }
 
   // Main render
+  if (isCollapsed) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-between py-3 border-r border-border/20 bg-background/40 backdrop-blur-md">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={onToggleCollapse}
+          title="Expand task list"
+        >
+          <PanelLeftOpen className="h-4 w-4" />
+        </Button>
+        <div className="flex flex-col items-center gap-1 text-[10px] text-muted-foreground">
+          <CalendarIcon className="h-3.5 w-3.5" />
+          <span className="font-semibold tabular-nums">{tasksForDate.length}</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">
-      <div className="px-4 py-3 border-b border-border/20 bg-background/20">
-        <h2 className="text-xs font-bold uppercase tracking-wider flex items-center text-muted-foreground">
-          <div className="p-1.5 bg-primary/10 rounded-lg mr-3 border border-primary/20">
+      <div className="px-4 py-3 border-b border-border/20 bg-background/20 flex items-center justify-between gap-2">
+        <h2 className="text-xs font-bold uppercase tracking-wider flex items-center text-muted-foreground min-w-0">
+          <div className="p-1.5 bg-primary/10 rounded-lg mr-3 border border-primary/20 shrink-0">
             <CalendarIcon className="h-3.5 w-3.5 text-primary" />
           </div>
-          <span className="text-foreground font-semibold">
+          <span className="text-foreground font-semibold truncate">
             {selectedDate
               ? format(selectedDate, "MMMM d")
               : "Active Tasks"}
           </span>
         </h2>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          onClick={onToggleCollapse}
+          title="Collapse task list"
+        >
+          <PanelLeftClose className="h-4 w-4" />
+        </Button>
       </div>
 
       {tasksForDate.length > 0 && renderNavButtons()}
