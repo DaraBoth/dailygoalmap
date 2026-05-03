@@ -24,6 +24,9 @@ export const ModernTaskItem = memo(({
     onDelete,
     compact = false,
 }: ModernTaskItemProps) => {
+    const rawTitle = task.title || task.description || '';
+    const displayTitle = rawTitle.length > 23 ? `${rawTitle.slice(0, 23)}...` : rawTitle;
+
     const handleToggle = (e: React.MouseEvent) => {
         e.stopPropagation();
         onToggleCompletion(task.id);
@@ -41,7 +44,7 @@ export const ModernTaskItem = memo(({
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className={cn(
-                'relative flex items-center gap-2.5 rounded-lg border transition-colors cursor-pointer',
+                'relative flex items-center gap-2.5 rounded-lg border transition-colors cursor-pointer overflow-hidden',
                 task.completed
                     ? 'bg-muted/35 border-border/50 opacity-75'
                     : 'bg-slate-200/55 dark:bg-slate-900/70 border-border/70 shadow-sm',
@@ -73,15 +76,15 @@ export const ModernTaskItem = memo(({
                 </AnimatePresence>
             </motion.button>
 
-            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+            <div className="flex-1 min-w-0 overflow-hidden flex flex-col gap-0.5">
                 <span
-                    title={task.title || task.description || ''}
+                    title={rawTitle}
                     className={cn(
-                        'block w-full min-w-0 truncate text-[13px] font-medium leading-tight',
+                        'block w-full min-w-0 overflow-hidden whitespace-nowrap text-ellipsis truncate text-[13px] font-medium leading-tight',
                         task.completed ? 'text-muted-foreground line-through' : 'text-foreground',
                     )}
                 >
-                    {task.title || task.description}
+                    {displayTitle}
                 </span>
 
                 {timeDisplay && (
