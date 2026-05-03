@@ -103,6 +103,36 @@ function RootComponent() {
     // Track if we've already shown a toast for this notification ID to prevent duplicates
     const shownNotifications = new Set<string>();
 
+    const showBrowserNotification = async (title: string, body: string, deepLink?: string) => {
+      if (typeof window === 'undefined' || !('Notification' in window)) return;
+      if (Notification.permission !== 'granted') return;
+
+      const icon = '/icon/maskable_icon_x192.png';
+      const badge = '/icon/maskable_icon_x96.png';
+      const data = deepLink ? { url: deepLink } : {};
+
+      try {
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.getRegistration();
+          if (registration) {
+            await registration.showNotification(title, {
+              body,
+              icon,
+              badge,
+              data,
+              tag: 'ai-completed',
+              requireInteraction: false,
+            });
+            return;
+          }
+        }
+
+        new Notification(title, { body, icon, badge, data });
+      } catch (error) {
+        console.error('🔔 Browser notification failed:', error);
+      }
+    };
+
     const channel = supabase
       .channel(`notifications:${authState.user.id}`, {
         config: {
@@ -183,7 +213,11 @@ function RootComponent() {
           let toastTitle = '';
           let toastDescription = '';
 
-          if (notification.type === 'task_created') {
+          if (notification.type === 'task_updated' && action === 'ai_completed') {
+            toastTitle = 'AI Finished';
+            toastDescription = String(notification.payload?.message || `Goal AI finished for "${goalTitle}"`);
+            void showBrowserNotification(toastTitle, toastDescription, notification.url || undefined);
+          } else if (notification.type === 'task_created') {
             toastTitle = '✓ Task Created';
             toastDescription = `${taskTitle} has been added to "${goalTitle}"`;
           } else if (notification.type === 'task_updated') {

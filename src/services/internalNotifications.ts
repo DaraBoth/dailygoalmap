@@ -446,12 +446,19 @@ export async function createAiCompletionNotification(
 ): Promise<void> {
   try {
     const computedUrl = constructNotificationUrl(`/goal/${goalId}`);
+    const finalPayload = {
+      action: 'ai_completed',
+      goal_id: goalId,
+      message: payload?.message || 'Goal AI finished your request.',
+      ...(payload || {}),
+    } as import("@/types/notification").Json;
+
     const { error } = await supabase.from('notifications').insert({
       type: 'task_updated',
       goal_id: goalId,
       sender_id: userId,
       receiver_id: userId,
-      payload: ({ action: 'ai_completed', ...(payload || {}) } as import("@/types/notification").Json),
+      payload: finalPayload,
       url: computedUrl,
     });
 

@@ -125,7 +125,7 @@ export function TemplateFormPage() {
   };
 
   const handleNext = () => {
-    if (!validateSection(template.sections[currentSection])) {
+    if (validateSection(template.sections[currentSection])) {
       if (currentSection < template.sections.length - 1) {
         setCurrentSection(currentSection + 1);
         window.scrollTo({ top: 0, behavior: 'smooth' });

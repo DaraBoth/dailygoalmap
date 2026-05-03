@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Task } from '@/components/calendar/types';
 import { GoalTheme } from '@/types/theme';
 import { useAuth } from '@/hooks/useAuth';
-import { GoalChatWidget } from '@/components/goal/GoalChatWidget';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useGoalSharing } from '@/hooks/useGoalSharing';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -29,6 +28,16 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { UserMenu } from '@/components/user/UserMenu';
 import CustomSearchModal from '@/components/search/CustomSearchModal';
 import EditGoalSlidePanel from '@/components/dashboard/EditGoalSlidePanel';
+
+const GoalChatWidgetLazy = React.lazy(async () => {
+  try {
+    const mod = await import('@/components/goal/GoalChatWidget');
+    return { default: mod.GoalChatWidget };
+  } catch (error) {
+    console.error('GoalChatWidget failed to load:', error);
+    return { default: () => null };
+  }
+});
 
 const GoalDetail: React.FC = () => {
   const { id: goalId } = useParams({ from: '/goal/$id' });
@@ -575,7 +584,9 @@ const GoalDetail: React.FC = () => {
       </div>
 
       {/* Chat Widget */}
-      <GoalChatWidget goalId={goalId} userInfo={user} tasks={tasks} goalTitle={goalTitle} onTasksChange={setTasks} />
+      <React.Suspense fallback={null}>
+        <GoalChatWidgetLazy goalId={goalId} userInfo={user} tasks={tasks} goalTitle={goalTitle} onTasksChange={setTasks} />
+      </React.Suspense>
 
       <CustomSearchModal
         open={showSearch}

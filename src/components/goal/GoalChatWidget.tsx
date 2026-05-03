@@ -1,9 +1,12 @@
 ﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   X, ArrowUp, ChevronDown, Bot, Sparkles, CheckSquare, Loader2,
-  Settings2, Globe, Search, FileText, ChevronRight, Paperclip, Clipboard,
+  Settings2, Globe, Search, FileText, ChevronRight, Paperclip, Clipboard, CloudSun, Volume2, Square, RefreshCw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -18,10 +21,13 @@ import { Task } from '@/components/calendar/types';
 import { normalizeTaskList, normalizeTaskRecord } from '@/components/calendar/taskNormalization';
 import {
   loadAllApiKeys, loadChatSession, saveChatSession, loadPreferences,
-  readAIFile, writeAIFile, listAIFiles, searchWeb, scrapeUrl,
+  readAIFile, writeAIFile, listAIFiles, searchWeb, scrapeUrl, fetchWeather, searchAIWorkspaceByEmbedding, ensureWorkspaceEmbeddingsSeeded, syncAIWorkspaceEmbeddings,
   type ApiKeys, type StoredChatMessage, type Preferences,
 } from '@/services/aiChatService';
 import { createAiCompletionNotification } from '@/services/internalNotifications';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 // ── Models ────────────────────────────────────────────────────────────────────
 
@@ -63,7 +69,7 @@ interface ToolDef {
   parameters: Record<string, unknown>;
 }
 
-function getToolDefs(enableSearch: boolean, enableFirecrawl: boolean): ToolDef[] {
+function getToolDefs(enableSearch: boolean, enableFirecrawl: boolean, enableWeather: boolean): ToolDef[] {
   const base: ToolDef[] = [
     {
       name: 'update_tasks',
@@ -204,6 +210,20 @@ function getToolDefs(enableSearch: boolean, enableFirecrawl: boolean): ToolDef[]
       parameters: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] },
     });
   }
+  if (enableWeather) {
+    base.push({
+      name: 'weather_search',
+      description: 'Get current weather for a city/location using OpenWeather API.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'City or location, e.g., "Phnom Penh" or "Seoul, South Korea"' },
+          units: { type: 'string', enum: ['metric', 'imperial'], description: 'metric (C) or imperial (F). Defaults to metric.' },
+        },
+        required: ['query'],
+      },
+    });
+  }
   return base;
 }
 
@@ -247,23 +267,41 @@ function toTimeOnly(timeLike?: string | null): string {
   return timeLike ? timeLike.slice(0, 5) : '-';
 }
 
+function formatDateInTimeZone(dateInput: Date | string, timeZone: string): string {
+  const d = dayjs(dateInput);
+  if (!d.isValid()) return '-';
+  return d.tz(timeZone).format('YYYY-MM-DD');
+}
+
+function getLocalNowLabel(timeZone: string): string {
+  try {
+    return dayjs().tz(timeZone).format('YYYY-MM-DD HH:mm:ss');
+  } catch {
+    return new Date().toISOString();
+  }
+}
+
 // ── System prompt (compact to save tokens) ────────────────────────────────────
 
 function buildSystemPrompt(
   goalId: string, goalTitle: string, tasks: Task[], taskMemory: string[],
-  prefs: Preferences = { user: {}, goal: {} }
+  prefs: Preferences = { user: {}, goal: {} },
+  userTimeZone = 'UTC'
 ): string {
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = formatDateInTimeZone(new Date(), userTimeZone);
+  const localNowLabel = getLocalNowLabel(userTimeZone);
   const done = tasks.filter(t => t.completed).length;
   const pending = tasks.filter(t => !t.completed);
-  const overdue = pending.filter(t => t.end_date && t.end_date.slice(0, 10) < todayStr);
+  const overdue = pending.filter(t => t.end_date && formatDateInTimeZone(t.end_date, userTimeZone) < todayStr);
   const soon = pending.filter(t => {
     if (!t.end_date) return false;
-    const diff = (new Date(t.end_date).getTime() - Date.now()) / 86400000;
+    const targetDate = dayjs.tz(formatDateInTimeZone(t.end_date, userTimeZone), 'YYYY-MM-DD', userTimeZone).hour(12);
+    const currentDate = dayjs.tz(formatDateInTimeZone(new Date(), userTimeZone), 'YYYY-MM-DD', userTimeZone).hour(12);
+    const diff = targetDate.diff(currentDate, 'day', true);
     return diff >= 0 && diff <= 7;
   });
   const row = (t: Task) =>
-    `  ${t.completed ? '✓' : '○'} ${t.id} | "${(t.title || t.description || 'untitled').slice(0, 50)}" | ${t.end_date?.slice(0, 10) || '-'}`;
+    `  ${t.completed ? '✓' : '○'} ${t.id} | "${(t.title || t.description || 'untitled').slice(0, 50)}" | ${t.end_date ? formatDateInTimeZone(t.end_date, userTimeZone) : '-'}`;
   const urgent = [...overdue, ...soon].slice(0, 20);
   const rest = tasks.filter(t => !urgent.includes(t)).slice(0, 20);
 
@@ -282,6 +320,8 @@ function buildSystemPrompt(
 
   return `You are a goal assistant for: "${goalTitle}" (goal_id: ${goalId})
 Date: ${todayStr} | ${tasks.length} tasks (${done} done, ${pending.length} pending)
+User timezone: ${userTimeZone}
+Local time now: ${localNowLabel}
 ${prefLines.length ? `\n## Preferences\n${prefLines.join('\n')}` : ''}
 ${urgent.length ? `\n⚠️ Urgent/Soon (${urgent.length}):\n${urgent.map(row).join('\n')}` : ''}
 \n## All Tasks (max 40 shown)\n${[...urgent, ...rest].map(row).join('\n') || '(no tasks)'}
@@ -289,6 +329,8 @@ ${tasks.length > 40 ? `\n... +${tasks.length - 40} more. Use get_tasks for full 
 ${taskMemory.length ? `\n## Remembered IDs\n${taskMemory.join(', ')}` : ''}
 
 Rules:
+- Interpret all natural-language dates relative to the user's timezone above, never UTC midnight.
+- When user says "today", "tomorrow", "next week", use the user's timezone date boundary.
 - NEVER reply with "hold on", "please wait", or similar filler when a tool action is requested.
 - If a user asks to do something with tasks, execute tools immediately in the same turn.
 - NEVER ask users for UUID/task_id.
@@ -308,6 +350,11 @@ Rules:
 - If date or time is missing in the image, ask one short clarification question before creating.
 - Never create a task with placeholder title/description such as "unknown", "n/a", or "untitled".
 - When presenting tasks to users, format task lists as a markdown table for readability.
+- For ANY schedule/trip/task summary response, NEVER use plain paragraph lines.
+- Use one of these formats only:
+  1) Markdown table with columns: Date | Time | Task | Status (or Type)
+  2) Grouped markdown bullet list by date, with nested bullets for tasks.
+- If the user asks a question like "Do I have a trip next week?", answer briefly first, then immediately provide the structured table or list.
 - task.md is private assistant scratch notes only; never treat task.md as official user task storage.
 - Use exact task UUIDs internally for tool calls only.
 - NEVER reveal raw UUIDs, database IDs, goal_id, or task_id in user-facing responses.
@@ -362,8 +409,18 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODELS.openai);
   const [enableGoogleSearch, setEnableGoogleSearch] = useState(false);
   const [enableFirecrawl, setEnableFirecrawl] = useState(false);
+  const [enableWeatherSearch, setEnableWeatherSearch] = useState(false);
+  const [enableReadAloud, setEnableReadAloud] = useState(false);
+  const [autoSyncWorkspace, setAutoSyncWorkspace] = useState(true);
+  const [isSyncingWorkspace, setIsSyncingWorkspace] = useState(false);
+  const [lastWorkspaceSyncAt, setLastWorkspaceSyncAt] = useState<string | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakingMessageKey, setSpeakingMessageKey] = useState<string | null>(null);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoiceUri, setSelectedVoiceUri] = useState('');
   const [attachedImages, setAttachedImages] = useState<Array<{ dataUrl: string; mimeType: string }>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const userTimeZone = dayjs.tz.guess() || 'UTC';
 
   const tasks = propTasks ?? internalTasks;
   const goalTitle = propGoalTitle ?? internalGoalTitle;
@@ -379,11 +436,164 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const lastSpokenKeyRef = useRef('');
   const lastMsgTimeRef = useRef(0);
   const wasClosedDuringRunRef = useRef(false);
   const prevLoadingRef = useRef(false);
   const isMobile = useIsMobile();
   useAutoResizeTextArea(textareaRef, inputValue, { minRows: 1, maxRows: 6 });
+
+  const stripMarkdownForSpeech = useCallback((content: string) => {
+    return content
+      .replace(/```[\s\S]*?```/g, ' ')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
+      .replace(/[#>|_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }, []);
+
+  const stopSpeaking = useCallback(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+    setSpeakingMessageKey(null);
+  }, []);
+
+  const speakText = useCallback((content: string, messageKey?: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window) || typeof window.SpeechSynthesisUtterance === 'undefined') {
+      toast({ title: 'Read aloud unavailable', description: 'Your browser does not support speech synthesis.' });
+      return;
+    }
+    const plain = stripMarkdownForSpeech(content);
+    if (!plain) return;
+    window.speechSynthesis.cancel();
+    const utterance = new window.SpeechSynthesisUtterance(plain);
+    const pickedVoice = availableVoices.find(v => v.voiceURI === selectedVoiceUri);
+    if (pickedVoice) utterance.voice = pickedVoice;
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setSpeakingMessageKey(messageKey ?? null);
+    };
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setSpeakingMessageKey(null);
+    };
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setSpeakingMessageKey(null);
+    };
+    window.speechSynthesis.speak(utterance);
+  }, [stripMarkdownForSpeech, availableVoices, selectedVoiceUri]);
+
+  const syncGoalWorkspaceNow = useCallback(async (showToast = true) => {
+    if (!userInfo?.id || !goalId) return;
+    if (!apiKeys.openai) {
+      if (showToast) {
+        toast({ title: 'OpenAI key required', description: 'Add an OpenAI key to sync vector memory.', variant: 'destructive' });
+      }
+      return;
+    }
+
+    setIsSyncingWorkspace(true);
+    try {
+      const files = await listAIFiles(goalId, userInfo.id);
+      if (files.length === 0) {
+        await writeAIFile(
+          goalId,
+          userInfo.id,
+          'workspace.md',
+          `# AI Workspace\n\nPrivate AI-only workspace for goal ${goalId}.\n\n- AI can store notes and summaries here\n- Users do not directly edit these files\n`
+        );
+      }
+
+      const done = tasks.filter(t => t.completed).length;
+      const pending = tasks.length - done;
+      const memory = [
+        '# AI Memory Snapshot',
+        `- Goal: ${goalTitle || goalId}`,
+        `- Total tasks: ${tasks.length}`,
+        `- Completed: ${done}`,
+        `- Pending: ${pending}`,
+        `- Last update: ${new Date().toISOString()}`,
+      ].join('\n');
+      await writeAIFile(goalId, userInfo.id, 'memory.md', memory);
+
+      const taskLines = tasks.map((task, index) => {
+        const status = task.completed ? 'done' : 'pending';
+        const title = (task.title || task.description || 'untitled').replace(/\n+/g, ' ').trim();
+        const desc = (task.description || '').replace(/\n+/g, ' ').trim();
+        const startDate = task.start_date ? String(task.start_date).slice(0, 10) : '-';
+        const endDate = task.end_date ? String(task.end_date).slice(0, 10) : '-';
+        const startTime = task.daily_start_time ? String(task.daily_start_time).slice(0, 5) : '-';
+        const endTime = task.daily_end_time ? String(task.daily_end_time).slice(0, 5) : '-';
+        const tags = Array.isArray(task.tags) ? task.tags.join(', ') : '';
+        return `${index + 1}. [${status}] ${title} | date ${startDate}..${endDate} | time ${startTime}-${endTime}${desc ? ` | desc ${desc.slice(0, 180)}` : ''}${tags ? ` | tags ${tags}` : ''}`;
+      });
+
+      const goalKnowledge = [
+        '# Goal Knowledge Cache',
+        `Goal: ${goalTitle || goalId}`,
+        `Updated: ${new Date().toISOString()}`,
+        '',
+        '## Task Inventory',
+        ...(taskLines.length ? taskLines : ['(no tasks)']),
+      ].join('\n');
+
+      await writeAIFile(goalId, userInfo.id, 'goal_data.md', goalKnowledge.slice(-120000));
+
+      await syncAIWorkspaceEmbeddings({
+        goalId,
+        userId: userInfo.id,
+        openaiKey: apiKeys.openai,
+        filenames: ['goal_data.md', 'memory.md'],
+      });
+
+      const syncedAt = new Date().toISOString();
+      setLastWorkspaceSyncAt(syncedAt);
+      if (showToast) {
+        toast({ title: 'Workspace synced', description: 'Goal data is now synced to vector memory.' });
+      }
+    } catch (err: unknown) {
+      if (showToast) {
+        const msg = err instanceof Error ? err.message : 'Sync failed.';
+        toast({ title: 'Sync failed', description: msg, variant: 'destructive' });
+      }
+    } finally {
+      setIsSyncingWorkspace(false);
+    }
+  }, [apiKeys.openai, goalId, goalTitle, tasks, userInfo?.id]);
+
+  const persistInternalWorkspace = useCallback(async (userText: string, assistantText: string) => {
+    if (!userInfo?.id || !goalId) return;
+    try {
+      const files = await listAIFiles(goalId, userInfo.id);
+      if (files.length === 0) {
+        await writeAIFile(
+          goalId,
+          userInfo.id,
+          'workspace.md',
+          `# AI Workspace\n\nPrivate AI-only workspace for goal ${goalId}.\n\n- AI can store notes and summaries here\n- Users do not directly edit these files\n`
+        );
+      }
+
+      const existingJournal = (await readAIFile(goalId, userInfo.id, 'journal.md')) || '# AI Private Journal\n';
+      const safeAssistant = redactSensitiveIds(assistantText || '').trim();
+      const entry = `\n## ${new Date().toISOString()}\n### User\n${userText || '-'}\n\n### Assistant\n${safeAssistant || '-'}\n`;
+      const nextJournal = `${existingJournal}${entry}`;
+      await writeAIFile(goalId, userInfo.id, 'journal.md', nextJournal.slice(-20000));
+
+      if (autoSyncWorkspace) {
+        void syncGoalWorkspaceNow(false);
+      }
+    } catch {
+      // silent internal workspace persistence
+    }
+  }, [goalId, userInfo?.id, autoSyncWorkspace, syncGoalWorkspaceNow]);
 
   const handleCloseChat = useCallback(() => {
     if (isLoading) {
@@ -395,12 +605,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
   useEffect(() => {
     const wasLoading = prevLoadingRef.current;
     if (wasLoading && !isLoading && wasClosedDuringRunRef.current) {
-      toast({
-        title: 'AI response is ready',
-        description: goalTitle ? `Goal AI finished for ${goalTitle}` : 'Goal AI finished your request.',
-      });
       if (userInfo?.id) {
         createAiCompletionNotification(goalId, userInfo.id, {
+          goal_title: goalTitle || undefined,
           message: goalTitle ? `Goal AI finished processing ${goalTitle}` : 'Goal AI finished your request.',
         });
       }
@@ -426,6 +633,21 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
     if (!goalId || !userInfo?.id) return;
     loadPreferences(goalId, userInfo.id).then(setPreferences);
   }, [goalId, userInfo?.id]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices.length) return;
+      setAvailableVoices(voices);
+      setSelectedVoiceUri(prev => prev || voices.find(v => v.default)?.voiceURI || voices[0].voiceURI || '');
+    };
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
 
   // Load chat session from Supabase
   useEffect(() => {
@@ -477,6 +699,55 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
   useEffect(() => {
     if (isOpen) setTimeout(() => textareaRef.current?.focus(), 100);
   }, [isOpen]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const bootstrapWorkspace = async () => {
+      if (!userInfo?.id || !goalId) return;
+      try {
+        const files = await listAIFiles(goalId, userInfo.id);
+        if (cancelled || files.length > 0) return;
+        await writeAIFile(
+          goalId,
+          userInfo.id,
+          'workspace.md',
+          `# AI Workspace\n\nPrivate AI-only workspace for goal ${goalId}.\n\n- AI can store notes and summaries here\n- Users do not directly edit these files\n`
+        );
+        const done = tasks.filter(t => t.completed).length;
+        const pending = tasks.length - done;
+        const memory = [
+          '# AI Memory Snapshot',
+          `- Goal: ${goalTitle || goalId}`,
+          `- Total tasks: ${tasks.length}`,
+          `- Completed: ${done}`,
+          `- Pending: ${pending}`,
+          `- Last update: ${new Date().toISOString()}`,
+        ].join('\n');
+        await writeAIFile(goalId, userInfo.id, 'memory.md', memory);
+      } catch {
+        // silent bootstrap failure
+      }
+    };
+    bootstrapWorkspace();
+    return () => { cancelled = true; };
+  }, [goalId, userInfo?.id, goalTitle, tasks]);
+
+  useEffect(() => {
+    if (!enableReadAloud) {
+      stopSpeaking();
+      return;
+    }
+    const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant' && !m.isStreaming && (m.content || '').trim());
+    if (!lastAssistant) return;
+    const key = `${lastAssistant.timestamp}:${lastAssistant.content}`;
+    if (key === lastSpokenKeyRef.current) return;
+    lastSpokenKeyRef.current = key;
+    speakText(lastAssistant.content, key);
+  }, [messages, enableReadAloud, speakText, stopSpeaking]);
+
+  useEffect(() => {
+    return () => stopSpeaking();
+  }, [stopSpeaking]);
 
   // Reset model when provider changes
   useEffect(() => { setSelectedModel(DEFAULT_MODELS[selectedProvider]); }, [selectedProvider]);
@@ -548,12 +819,16 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       }
       const parseIsoOrFallback = (raw: unknown, fallback: string) => {
         if (!raw) return fallback;
-        const parsed = new Date(String(raw));
-        return Number.isNaN(parsed.getTime()) ? fallback : parsed.toISOString();
+        const rawStr = String(raw).trim();
+        const parsed = /^\d{4}-\d{2}-\d{2}$/.test(rawStr)
+          ? dayjs.tz(`${rawStr} 12:00:00`, 'YYYY-MM-DD HH:mm:ss', userTimeZone)
+          : dayjs(rawStr);
+        return parsed.isValid() ? parsed.toISOString() : fallback;
       };
-      const startIso = parseIsoOrFallback(args.start_date, now);
+      const fallbackNow = dayjs().tz(userTimeZone).hour(12).minute(0).second(0).millisecond(0).toISOString();
+      const startIso = parseIsoOrFallback(args.start_date, fallbackNow);
       const endIsoCandidate = parseIsoOrFallback(args.end_date, startIso);
-      const endIso = new Date(endIsoCandidate).getTime() < new Date(startIso).getTime()
+      const endIso = dayjs(endIsoCandidate).isBefore(dayjs(startIso))
         ? startIso
         : endIsoCandidate;
       const desc = hasMeaningfulText(descText) ? descText : null;
@@ -844,6 +1119,12 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       setStatusText('Scraping URL...');
       return await scrapeUrl(String(args.url), apiKeys.firecrawl);
     }
+    if (name === 'weather_search') {
+      if (!apiKeys.openweathermap) return '[FAIL] No OpenWeather key';
+      setStatusText('Fetching weather...');
+      const units = (String(args.units || 'metric') === 'imperial' ? 'imperial' : 'metric') as 'metric' | 'imperial';
+      return await fetchWeather(String(args.query || ''), apiKeys.openweathermap, units);
+    }
     return `[FAIL] Unknown tool: ${name}`;
   }, [goalId, userInfo?.id, apiKeys]);
 
@@ -1049,8 +1330,41 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
     setMessages(prev => [...prev, { role: 'user', content: effectiveText, timestamp: now, images: imagesSnapshot.length ? imagesSnapshot : undefined }]);
     setMessages(prev => [...prev, { role: 'assistant', content: '', timestamp: Date.now(), isStreaming: true }]);
     setInputValue(''); setAttachedImages([]); setIsLoading(true); setStatusText('');
-    const sys = buildSystemPrompt(goalId, goalTitle, tasks, taskMemory, preferences);
-    const toolDefs = getToolDefs(enableGoogleSearch && !!apiKeys.serpapi, enableFirecrawl && !!apiKeys.firecrawl);
+
+    let workspaceSemanticContext = '';
+    if (userInfo?.id && apiKeys.openai) {
+      await ensureWorkspaceEmbeddingsSeeded({
+        goalId,
+        userId: userInfo.id,
+        openaiKey: apiKeys.openai,
+      });
+
+      const semanticChunks = await searchAIWorkspaceByEmbedding({
+        query: effectiveText,
+        userId: userInfo.id,
+        goalId,
+        openaiKey: apiKeys.openai,
+        limit: 6,
+      });
+      if (semanticChunks.length) {
+        workspaceSemanticContext = [
+          '## Relevant AI Workspace Memory (semantic)',
+          ...semanticChunks.map((chunk, idx) => {
+            const compact = chunk.content.replace(/\s+/g, ' ').trim().slice(0, 420);
+            return `${idx + 1}. ${chunk.filename} (chunk ${chunk.chunk_index}, score ${(chunk.similarity || 0).toFixed(3)}): ${compact}`;
+          }),
+        ].join('\n');
+      }
+    }
+
+    const sysBase = buildSystemPrompt(goalId, goalTitle, tasks, taskMemory, preferences, userTimeZone);
+    const sys = workspaceSemanticContext ? `${sysBase}\n\n${workspaceSemanticContext}` : sysBase;
+
+    const toolDefs = getToolDefs(
+      enableGoogleSearch && !!apiKeys.serpapi,
+      enableFirecrawl && !!apiKeys.firecrawl,
+      enableWeatherSearch && !!apiKeys.openweathermap
+    );
     try {
       let final = '';
       const imgs = imagesSnapshot.length ? imagesSnapshot : undefined;
@@ -1058,6 +1372,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       else if (selectedProvider === 'gemini') final = await callGemini(sys, historySnapshot, effectiveText, toGeminiTools(toolDefs), imgs);
       else final = await callClaude(sys, historySnapshot, effectiveText, toClaudeTools(toolDefs), imgs);
       pushAssistant(final || '(no response)', false);
+      await persistInternalWorkspace(effectiveText, final || '(no response)');
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') {
         setMessages(prev => { const u = [...prev]; const l = u[u.length - 1]; if (l?.isStreaming) u[u.length - 1] = { ...l, isStreaming: false }; return u; }); return;
@@ -1066,7 +1381,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       setMessages(prev => { const u = [...prev]; const l = u[u.length - 1]; if (l?.role === 'assistant') u[u.length - 1] = { ...l, content: `Error: ${msg}`, isStreaming: false }; return u; });
       toast({ title: 'Error', description: msg, variant: 'destructive' });
     } finally { setIsLoading(false); setStatusText(''); abortRef.current = null; }
-  }, [inputValue, attachedImages, isLoading, apiKeys, selectedProvider, goalId, goalTitle, tasks, taskMemory, preferences, enableGoogleSearch, enableFirecrawl, messages, callOpenAI, callGemini, callClaude, pushAssistant]);
+  }, [inputValue, attachedImages, isLoading, apiKeys, selectedProvider, goalId, goalTitle, tasks, taskMemory, preferences, enableGoogleSearch, enableFirecrawl, enableWeatherSearch, messages, callOpenAI, callGemini, callClaude, pushAssistant, persistInternalWorkspace]);
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
@@ -1237,7 +1552,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
                       </div>
                     </div>
                     {/* Integrations */}
-                    {(apiKeys.serpapi || apiKeys.firecrawl) && (
+                    {(apiKeys.serpapi || apiKeys.firecrawl || apiKeys.openweathermap) && (
                       <div className="space-y-2">
                         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Integrations</p>
                         {apiKeys.serpapi && (
@@ -1252,6 +1567,58 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
                             <Switch checked={enableFirecrawl} onCheckedChange={setEnableFirecrawl} />
                           </div>
                         )}
+                        {apiKeys.openweathermap && (
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs flex items-center gap-1.5 text-muted-foreground cursor-pointer"><CloudSun className="h-3 w-3" /> Weather Search</Label>
+                            <Switch checked={enableWeatherSearch} onCheckedChange={setEnableWeatherSearch} />
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs flex items-center gap-1.5 text-muted-foreground cursor-pointer"><Volume2 className="h-3 w-3" /> Read AI replies aloud</Label>
+                          <Switch checked={enableReadAloud} onCheckedChange={setEnableReadAloud} />
+                        </div>
+                        {enableReadAloud && (
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Voice</Label>
+                            <select
+                              className="w-full h-8 rounded-md border border-border bg-background px-2 text-xs"
+                              value={selectedVoiceUri}
+                              onChange={(e) => setSelectedVoiceUri(e.target.value)}
+                            >
+                              {availableVoices.length === 0 && <option value="">Default voice</option>}
+                              {availableVoices.map((voice) => (
+                                <option key={voice.voiceURI} value={voice.voiceURI}>
+                                  {voice.name} ({voice.lang}){voice.default ? ' • default' : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {userInfo?.id && (
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Workspace Sync</p>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs text-muted-foreground cursor-pointer">Auto sync to vector memory</Label>
+                          <Switch checked={autoSyncWorkspace} onCheckedChange={setAutoSyncWorkspace} />
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            disabled={isSyncingWorkspace}
+                            onClick={() => { void syncGoalWorkspaceNow(true); }}
+                          >
+                            <RefreshCw className={cn('h-3 w-3 mr-1', isSyncingWorkspace && 'animate-spin')} />
+                            {isSyncingWorkspace ? 'Syncing...' : 'Sync now'}
+                          </Button>
+                          <span className="text-[10px] text-muted-foreground">
+                            {lastWorkspaceSyncAt ? `Last: ${new Date(lastWorkspaceSyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Not synced yet'}
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1294,6 +1661,23 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
                   {msg.role === 'assistant' && (
                     <div className="max-w-[88%]">
                       <MarkdownRenderer content={msg.content} isStreaming={msg.isStreaming} isLoading={isLoading && i === messages.length - 1} TypingLoader={<TypingLoader />} />
+                      {!msg.isStreaming && !!msg.content?.trim() && (
+                        <div className="mt-0.5 -ml-0.5 flex">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 rounded-full px-2.5 text-[11px] text-muted-foreground border-border/60 bg-background/70"
+                            onClick={() => {
+                              const messageKey = `${msg.timestamp}:${msg.content}`;
+                              if (isSpeaking && speakingMessageKey === messageKey) stopSpeaking();
+                              else speakText(msg.content, messageKey);
+                            }}
+                          >
+                            {isSpeaking && speakingMessageKey === `${msg.timestamp}:${msg.content}` ? <Square className="h-3 w-3 mr-1" /> : <Volume2 className="h-3 w-3 mr-1" />}
+                            {isSpeaking && speakingMessageKey === `${msg.timestamp}:${msg.content}` ? 'Stop' : 'Listen'}
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                   {msg.role === 'user' && (
