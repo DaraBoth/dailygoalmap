@@ -86,7 +86,7 @@ export function GoalSwitcher({ className, useSheet = false, collapsed = false }:
                         {!collapsed && <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[92vw] max-w-[420px] p-0 overflow-y-auto">
+                <SheetContent side="left" className="w-[92vw] max-w-[420px] p-0 overflow-y-auto bg-slate-100/95 dark:bg-slate-950/95 border-border/60">
                     <SheetHeader className="px-5 py-4 border-b border-border/60">
                         <SheetTitle className="text-left">Switch Project</SheetTitle>
                     </SheetHeader>

@@ -47,16 +47,28 @@ const CalendarHeader = ({
             </Button>
           </div>
 
-          <h2 className="text-xl sm:text-2xl font-black tracking-tight min-w-[140px] text-foreground uppercase tracking-[0.1em]">
+          <h2 className="text-xl sm:text-2xl font-black min-w-[140px] text-foreground uppercase tracking-[0.1em]">
             {format(currentMonth, "MMMM yyyy")}
           </h2>
         </div>
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onGoToToday} className="hidden sm:flex h-9 rounded-xl border-border/50 bg-muted/20 hover:bg-muted/40 hover:border-border transition-all font-bold uppercase tracking-widest text-[10px]">
-            <Home className="h-3.5 w-3.5 mr-2 text-primary" />
+          <Button
+            size="sm"
+            onClick={onGoToToday}
+            className="hidden sm:flex h-9 rounded-xl border border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_6px_16px_-8px_hsl(var(--primary)/0.9)] transition-all font-bold uppercase tracking-widest text-[10px]"
+          >
+            <Home className="h-3.5 w-3.5 mr-2 text-primary-foreground" />
             Today
+          </Button>
+          <Button
+            size="icon"
+            onClick={onGoToToday}
+            className="sm:hidden h-9 w-9 rounded-xl border border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_6px_16px_-8px_hsl(var(--primary)/0.9)]"
+            aria-label="Go to today"
+          >
+            <Home className="h-4 w-4" />
           </Button>
           <Button onClick={onOpenAddTaskDialog} size="sm" className="h-9 rounded-xl bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all font-bold uppercase tracking-widest text-[10px] px-5 text-primary-foreground">
             <CalendarIcon className="h-3.5 w-3.5 mr-2" />

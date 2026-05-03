@@ -96,7 +96,7 @@ export async function saveTaskToSupabase(task: Task, goalId: string): Promise<vo
           goalId,
           userData.user.id,
           "New Task Added",
-          `A new task "${task.description}" was added to "${goalData.title}"`,
+          `A new task "${task.title || 'Untitled task'}" was added to "${goalData.title}"`,
           {
             type: 'task_created',
             task_id: task.id,
@@ -108,7 +108,7 @@ export async function saveTaskToSupabase(task: Task, goalId: string): Promise<vo
         // Create internal notification for goal members
         await createTaskNotification(goalId, userData.user.id, 'task_created', {
           task_id: task.id,
-          task_title: task.description,
+          task_title: task.title || 'Untitled task',
           goal_title: goalData.title,
           url: deepLinkNew
         });

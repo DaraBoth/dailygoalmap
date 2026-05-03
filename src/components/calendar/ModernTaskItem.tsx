@@ -41,11 +41,11 @@ export const ModernTaskItem = memo(({
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className={cn(
-                'relative flex items-center gap-3 rounded-xl border transition-colors cursor-pointer',
+                'relative flex items-center gap-2.5 rounded-lg border transition-colors cursor-pointer',
                 task.completed
                     ? 'bg-muted/40 border-border/50 opacity-75'
                     : 'bg-card/95 border-border/70 shadow-sm',
-                compact ? 'p-2.5' : 'p-3',
+                compact ? 'p-2' : 'px-2.5 py-2',
             )}
             onClick={() => onClick?.(task)}
         >
@@ -73,10 +73,10 @@ export const ModernTaskItem = memo(({
                 </AnimatePresence>
             </motion.button>
 
-            <div className="flex-1 min-w-0 flex flex-col gap-1">
+            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                 <span
                     className={cn(
-                        'text-sm font-medium leading-tight',
+                        'text-[13px] font-medium leading-tight',
                         task.completed ? 'text-muted-foreground line-through' : 'text-foreground truncate',
                     )}
                 >
@@ -88,7 +88,7 @@ export const ModernTaskItem = memo(({
                         <Badge
                             variant="outline"
                             className={cn(
-                                'h-5 px-1.5 text-[10px] font-medium',
+                                'h-4.5 px-1.5 text-[10px] font-medium',
                                 task.completed
                                     ? 'border-muted-foreground/20 text-muted-foreground/60 bg-transparent'
                                     : 'border-primary/20 text-primary bg-primary/5',
@@ -107,26 +107,26 @@ export const ModernTaskItem = memo(({
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10"
+                            className="h-6 w-6 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onEdit(task);
                             }}
                         >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <Pencil className="h-3 w-3" />
                         </Button>
                     )}
                     {onDelete && (
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            className="h-6 w-6 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onDelete(task.id);
                             }}
                         >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3 w-3" />
                         </Button>
                     )}
                 </div>
@@ -135,7 +135,7 @@ export const ModernTaskItem = memo(({
             <div
                 className={cn(
                     'absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-r-full',
-                    task.completed ? 'h-4 bg-primary/30' : 'h-8 bg-primary/40',
+                    task.completed ? 'h-3.5 bg-primary/30' : 'h-7 bg-primary/45',
                 )}
             />
         </motion.div>

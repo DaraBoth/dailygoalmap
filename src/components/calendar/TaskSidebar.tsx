@@ -77,8 +77,8 @@ const TaskSidebar = React.memo(({
   // Loading state
   if (isLoading) {
     return (
-      <div className="w-full h-full flex flex-col bg-background/40 backdrop-blur-md border-r border-border/20 overflow-hidden rounded-r-3xl shadow-lg">
-        <div className="px-4 py-3 border-b border-border/20 bg-background/20 backdrop-blur-sm">
+      <div className="w-full h-full flex flex-col bg-slate-100/70 dark:bg-slate-950/65 backdrop-blur-md border-r border-border/30 overflow-hidden shadow-lg">
+        <div className="px-4 py-3 border-b border-border/30 bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-sm">
           <Skeleton className="h-5 w-40 mb-1.5 bg-foreground/10 rounded-lg" />
           <Skeleton className="h-3 w-28 bg-foreground/5 rounded" />
         </div>
@@ -100,7 +100,7 @@ const TaskSidebar = React.memo(({
   // Main render
   if (isCollapsed) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-between py-3 border-r border-border/30 bg-card/85 backdrop-blur-md">
+      <div className="w-full h-full flex flex-col items-center justify-between py-3 border-r border-border/40 bg-slate-100/80 dark:bg-slate-950/75 backdrop-blur-md">
         <Button
           variant="ghost"
           size="icon"
@@ -119,8 +119,8 @@ const TaskSidebar = React.memo(({
   }
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden bg-card/75">
-      <div className="px-4 py-3 border-b border-border/30 bg-card/90 flex items-center justify-between gap-2">
+    <div className="w-full h-full flex flex-col overflow-hidden bg-slate-100/70 dark:bg-slate-950/65">
+      <div className="px-4 py-3 border-b border-border/40 bg-slate-100/85 dark:bg-slate-900/80 flex items-center justify-between gap-2">
         <h2 className="text-xs font-bold uppercase tracking-wider flex items-center text-muted-foreground min-w-0">
           <div className="p-1.5 bg-primary/10 rounded-lg mr-3 border border-primary/20 shrink-0">
             <CalendarIcon className="h-3.5 w-3.5 text-primary" />
@@ -145,7 +145,7 @@ const TaskSidebar = React.memo(({
       {tasksForDate.length > 0 && renderNavButtons()}
 
       <ScrollArea className="flex-1 z-0">
-        <div className="space-y-1.5 p-3">
+        <div className="space-y-1 p-2.5">
           {tasksForDate.length > 0 ? (
             tasksForDate.map((task, index) => {
               return (

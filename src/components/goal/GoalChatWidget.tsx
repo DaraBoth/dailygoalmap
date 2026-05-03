@@ -1139,10 +1139,10 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       {!isPopupMode && (
         <motion.button
           className={cn(
-            'fixed h-11 w-11 rounded-full z-50 flex items-center justify-center overflow-hidden border border-border/50 shadow-lg',
-            'bg-background/90 backdrop-blur-xl hover:bg-background transition-colors',
+            'fixed z-50 flex items-center justify-center overflow-hidden border border-primary/30 shadow-lg backdrop-blur-xl transition-colors',
+            'bg-slate-100/90 dark:bg-slate-900/90 hover:bg-slate-100 dark:hover:bg-slate-900',
             isLoading && !isOpen && 'ring-2 ring-primary/60 ring-offset-2 ring-offset-background animate-pulse',
-            isMobile ? 'bottom-5 left-5' : 'bottom-20 right-5'
+            isMobile ? 'bottom-5 left-5 h-11 w-11 rounded-2xl' : 'bottom-20 right-5 h-12 rounded-2xl px-3 gap-2'
           )}
           whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
           onClick={() => {
@@ -1150,7 +1150,18 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
             else setIsOpen(true);
           }}
         >
-          {isOpen ? <X className="h-4 w-4" /> : isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={chatAIGif} alt="AI" className="h-7 w-7 object-contain" />}
+          {isOpen ? (
+            <X className="h-4 w-4" />
+          ) : isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <>
+              <div className="relative flex items-center justify-center h-7 w-7 rounded-xl bg-primary/15 border border-primary/25 shrink-0">
+                <img src={chatAIGif} alt="AI" className="h-5 w-5 object-contain" />
+              </div>
+              {!isMobile && <span className="text-xs font-semibold tracking-wide text-foreground">AI Coach</span>}
+            </>
+          )}
         </motion.button>
       )}
 

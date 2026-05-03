@@ -302,11 +302,11 @@ const GoalDetail: React.FC = () => {
 
   return (
     <>
-      <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-slate-100/85 dark:bg-background" style={backgroundStyle}>
+      <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-slate-100/70 dark:bg-slate-950/90" style={backgroundStyle}>
 
         {/* Sidebar - Desktop */}
         <aside className={cn(
-          "hidden lg:flex flex-col border-r border-border/50 bg-background/80 backdrop-blur-xl shrink-0 transition-all duration-300",
+          "hidden lg:flex flex-col border-r border-border/50 bg-slate-100/80 dark:bg-slate-950/75 backdrop-blur-xl shrink-0 transition-all duration-300",
           isSidebarCollapsed ? "w-14" : "w-56 xl:w-60"
         )}>
           <div className="p-2 border-b border-border/50">
@@ -388,14 +388,12 @@ const GoalDetail: React.FC = () => {
           {/* Theme Selector */}
           {user?.id && (
             <div className="px-2 py-2 border-t border-border/50">
-              {!isSidebarCollapsed && (
-                <ThemeSelector
-                  userId={user.id}
-                  currentThemeId={currentTheme?.id}
-                  onThemeSelect={handleThemeChange}
-                  collapsed={isSidebarCollapsed}
-                />
-              )}
+              <ThemeSelector
+                userId={user.id}
+                currentThemeId={currentTheme?.id}
+                onThemeSelect={handleThemeChange}
+                collapsed={isSidebarCollapsed}
+              />
             </div>
           )}
         </aside>
@@ -403,7 +401,7 @@ const GoalDetail: React.FC = () => {
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Header */}
-          <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+          <header className="sticky top-0 z-40 border-b border-border/50 bg-slate-100/80 dark:bg-slate-950/80 backdrop-blur-xl">
             <div className="flex h-12 items-center gap-2 px-3 sm:px-4">
               {/* Mobile: back + hamburger */}
               <div className="flex items-center gap-1 lg:hidden">
@@ -421,7 +419,7 @@ const GoalDetail: React.FC = () => {
                       <Menu className="h-4 w-4" />
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="left" className="p-0 w-72">
+                  <SheetContent side="left" className="p-0 w-72 bg-slate-100/95 dark:bg-slate-950/95 border-border/60">
                     <div className="flex flex-col h-full">
                       <div className="p-4 border-b border-border/50">
                         <GoalSwitcher useSheet />

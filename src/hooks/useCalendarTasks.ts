@@ -273,7 +273,7 @@ export const useCalendarTasks = ({
         taskToUpdate.user_id,
         'task_updated',
         {
-          task_title: taskToUpdate.title || taskToUpdate.description,
+          task_title: taskToUpdate.title?.trim() || 'Untitled task',
           task_id: taskId,
           action: newCompletedState ? 'completed' : 'reopened',
           datetime: datetimeInfo,
@@ -545,7 +545,7 @@ export const useCalendarTasks = ({
         newTask.user_id,
         'task_updated',
         {
-          task_title: newTask.title || newTask.description,
+          task_title: newTask.title?.trim() || 'Untitled task',
           task_id: taskId,
           action: 'added',
           datetime: datetimeInfo,

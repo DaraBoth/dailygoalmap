@@ -196,12 +196,12 @@ const Dashboard = () => {
       <meta name="description" content="Manage your personal and professional goals with advanced AI-powered tracking." />
       <link rel="manifest" href="/manifest.json" />
 
-      <div className="relative min-h-screen text-foreground selection:bg-primary/30">
+      <div className="relative min-h-screen bg-slate-100/70 dark:bg-slate-950/85 text-foreground selection:bg-primary/30">
         <GlobalBackground />
 
         <div className="relative z-10">
           {/* Modern Header - Responsive */}
-          <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-xl">
+          <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-slate-100/85 dark:bg-slate-950/85 backdrop-blur-xl">
             <div className="w-full px-3 sm:px-4 lg:px-6">
               <div className="flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-4 max-w-[1600px] mx-auto">
                 {/* Logo */}

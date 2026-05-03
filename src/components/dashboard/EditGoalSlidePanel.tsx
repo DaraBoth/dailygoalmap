@@ -157,10 +157,10 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
               stiffness: 200,
               duration: 0.3 
             }}
-            className="fixed right-0 top-0 h-full w-full max-w-md bg-card/98 backdrop-blur-xl border-l border-border/60 shadow-2xl z-50 flex flex-col"
+            className="fixed right-0 top-0 h-full w-full max-w-md bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-xl border-l border-border/60 shadow-2xl z-50 flex flex-col"
           >
             {/* Header */}
-            <div className="flex-shrink-0 bg-card border-b border-border/60 p-6 text-foreground">
+            <div className="flex-shrink-0 bg-slate-100/95 dark:bg-slate-950/95 border-b border-border/60 p-6 text-foreground">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold">Edit Goal</h2>
                 <Button
@@ -190,7 +190,7 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Enter goal title..."
-                  className="bg-background border-border rounded-xl"
+                  className="bg-background/80 border-border rounded-xl"
                 />
               </div>
 
@@ -206,7 +206,7 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe your goal..."
                   rows={3}
-                  className="bg-background border-border rounded-xl resize-none"
+                  className="bg-background/80 border-border rounded-xl resize-none"
                 />
               </div>
 
@@ -217,7 +217,7 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
                   Goal Type
                 </Label>
                 <Select value={goalType} onValueChange={(value: GoalType) => setGoalType(value)}>
-                  <SelectTrigger className="bg-background border-border rounded-xl">
+                  <SelectTrigger className="bg-background/80 border-border rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -240,7 +240,7 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
                   date={startDate}
                   setDate={setStartDate}
                   placeholder="Select start date"
-                  className="bg-background border-border rounded-xl"
+                  className="bg-background/80 border-border rounded-xl"
                 />
               </div>
 

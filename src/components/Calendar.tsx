@@ -347,7 +347,7 @@ const Calendar = ({
         taskToUpdate.user_id,
         'task_updated',
         {
-          task_title: updatedTask.title || updatedTask.description,
+          task_title: updatedTask.title?.trim() || 'Untitled task',
           task_id: taskId,
           action: 'updated',
           datetime: datetimeInfo
@@ -530,13 +530,13 @@ const Calendar = ({
         </div>
       ) : (
         <div className={cn(
-          "grid transition-[grid-template-columns] duration-500 ease-in-out h-full bg-slate-100/60 dark:bg-background/10"
+          "grid transition-[grid-template-columns] duration-500 ease-in-out h-full bg-slate-100/65 dark:bg-slate-950/70"
         )}
           style={{
             gridTemplateColumns: isTaskSidebarCollapsed ? '56px 1fr' : 'clamp(260px,20vw,300px) 1fr',
           }}
         >
-          <div className="h-full overflow-hidden border-r border-border/30 bg-card/85 backdrop-blur-2xl z-10 relative">
+          <div className="h-full overflow-hidden border-r border-border/30 bg-slate-100/80 dark:bg-slate-950/75 backdrop-blur-2xl z-10 relative">
             <TaskSidebar
               tasks={tasks}
               selectedDate={selectedDate}
@@ -556,7 +556,7 @@ const Calendar = ({
             />
           </div>
 
-          <div className="h-full overflow-hidden border-r border-border/30 bg-card/55 relative">
+          <div className="h-full overflow-hidden border-r border-border/30 bg-slate-100/65 dark:bg-slate-950/60 relative">
             <AnimatePresence mode="wait">
               {!selectedTask ? (
                 <motion.div
