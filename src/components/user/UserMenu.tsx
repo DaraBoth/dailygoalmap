@@ -3,22 +3,12 @@ import { useRouterNavigation } from '@/hooks/useRouterNavigation';
 import { LogOut, User as UserIcon } from '@/components/icons/CustomIcons';
 import { PlusCircle, UserPlus, Key, Download, Bell } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Switch } from "@/components/ui/switch";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeSegmentSwitch } from '../theme/ThemeSwitcher';
 import {
@@ -293,43 +283,50 @@ export const UserMenu: React.FC<UserMenuProps> = ({ mobileDashboardActions }) =>
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <TooltipProvider>
-        <Tooltip disableHoverableContent>
-          <TooltipTrigger asChild>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                {avatarTrigger}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56x" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{getDisplayName()}</p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user.email || ''}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem className='cursor-pointer' onClick={() => goToProfile()}>
-                    <UserIcon className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className='p-0'>
-                    <ThemeSegmentSwitch />
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className='cursor-pointer hover:bg-destructive/10'>
-                  <LogOut className="text-red-400 mr-2 h-4 w-4" />
-                  <span className='text-red-400' >Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </TooltipTrigger>
-        </Tooltip>
-      </TooltipProvider>
-    </div>
+    <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+      <SheetTrigger asChild>{avatarTrigger}</SheetTrigger>
+      <SheetContent side="right" className="w-[92vw] max-w-[420px] p-0 overflow-y-auto bg-slate-100/95 dark:bg-slate-950/95 border-border/60">
+        <SheetHeader className="px-5 py-4 border-b border-border/60">
+          <SheetTitle className="text-left">Account</SheetTitle>
+        </SheetHeader>
+
+        <div className="px-5 py-4 space-y-5">
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={getAvatarUrl()} alt={getDisplayName()} />
+                <AvatarFallback>{getInitials()}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="font-semibold truncate">{getDisplayName()}</p>
+                <p className="text-xs text-muted-foreground truncate">{user.email || ''}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Button variant="ghost" className="w-full justify-start" onClick={() => { setMobileMenuOpen(false); goToProfile(); }}>
+              <UserIcon className="mr-2 h-4 w-4" /> Profile
+            </Button>
+          </div>
+
+          <div className="rounded-xl border border-border/60 p-3">
+            <p className="text-xs text-muted-foreground mb-2">Theme</p>
+            <ThemeSegmentSwitch />
+          </div>
+
+          <Button
+            variant="outline"
+            onClick={async () => {
+              setMobileMenuOpen(false);
+              await handleLogout();
+            }}
+            className="w-full justify-start border-destructive/30 text-destructive hover:bg-destructive/10"
+          >
+            <LogOut className="mr-2 h-4 w-4" /> Log out
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };

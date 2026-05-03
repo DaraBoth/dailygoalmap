@@ -12,6 +12,7 @@ interface CalendarGridProps {
   onDateChange: (date: Date | undefined) => void;
   getTasksForDate: (date: Date) => Task[];
   onTaskClick?: (task: Task) => void;
+  isLoadingTasks?: boolean;
 }
 
 const CalendarGrid = ({
@@ -19,7 +20,8 @@ const CalendarGrid = ({
   selectedDate,
   onDateChange,
   getTasksForDate,
-  onTaskClick
+  onTaskClick,
+  isLoadingTasks = false,
 }: CalendarGridProps) => {
   const isMobile = useIsMobile();
 
@@ -56,6 +58,7 @@ const CalendarGrid = ({
                 onDateChange={onDateChange}
                 dayTasks={getTasksForDate(date)}
                 onTaskClick={onTaskClick}
+                isLoadingTasks={isLoadingTasks}
               />
             ))}
           </div>

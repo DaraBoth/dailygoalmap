@@ -43,8 +43,8 @@ export const ModernTaskItem = memo(({
             className={cn(
                 'relative flex items-center gap-2.5 rounded-lg border transition-colors cursor-pointer',
                 task.completed
-                    ? 'bg-muted/40 border-border/50 opacity-75'
-                    : 'bg-card/95 border-border/70 shadow-sm',
+                    ? 'bg-muted/35 border-border/50 opacity-75'
+                    : 'bg-slate-200/55 dark:bg-slate-900/70 border-border/70 shadow-sm',
                 compact ? 'p-2' : 'px-2.5 py-2',
             )}
             onClick={() => onClick?.(task)}
@@ -56,7 +56,7 @@ export const ModernTaskItem = memo(({
                     'relative shrink-0 flex h-5 w-5 items-center justify-center rounded-lg border transition-colors',
                     task.completed
                         ? 'border-primary bg-primary shadow-sm'
-                        : 'border-border bg-background',
+                        : 'border-border bg-slate-200/45 dark:bg-slate-900/80',
                 )}
             >
                 <AnimatePresence mode="wait">

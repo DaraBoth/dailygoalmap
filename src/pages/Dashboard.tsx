@@ -201,7 +201,7 @@ const Dashboard = () => {
 
         <div className="relative z-10">
           {/* Modern Header - Responsive */}
-          <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-slate-100/85 dark:bg-slate-950/85 backdrop-blur-xl">
+          <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-slate-100/95 dark:bg-slate-950/95 shadow-sm backdrop-blur-xl">
             <div className="w-full px-3 sm:px-4 lg:px-6">
               <div className="flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-4 max-w-[1600px] mx-auto">
                 {/* Logo */}
@@ -214,11 +214,11 @@ const Dashboard = () => {
                 <div className="hidden md:flex flex-1 max-w-lg">
                   <button
                     onClick={() => setShowSearch(true)}
-                    className="w-full flex items-center gap-2 sm:gap-3 h-9 px-3 bg-secondary/50 hover:bg-secondary border border-border/40 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-all"
+                    className="w-full flex items-center gap-2 sm:gap-3 h-9 px-3 bg-slate-200/70 dark:bg-slate-900/70 hover:bg-slate-200 dark:hover:bg-slate-900 border border-border/60 rounded-lg text-sm text-foreground/90 hover:text-foreground shadow-sm transition-all"
                   >
                     <Search className="h-4 w-4 flex-shrink-0" />
                     <span className="flex-1 text-left truncate">Search goals...</span>
-                    <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-border/40 bg-background px-1.5 font-mono text-[10px] font-medium opacity-50 flex-shrink-0">
+                    <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-border/60 bg-background/80 px-1.5 font-mono text-[10px] font-semibold text-foreground/80 flex-shrink-0">
                       <span className="text-xs">⌘</span>K
                     </kbd>
                   </button>
@@ -231,7 +231,7 @@ const Dashboard = () => {
                     variant="ghost"
                     size="icon"
                     onClick={() => setShowSearch(true)}
-                    className="h-9 w-9 md:hidden"
+                    className="h-9 w-9 md:hidden bg-slate-200/70 dark:bg-slate-900/70 border border-border/60 hover:bg-slate-200 dark:hover:bg-slate-900"
                   >
                     <Search className="h-4 w-4" />
                   </Button>

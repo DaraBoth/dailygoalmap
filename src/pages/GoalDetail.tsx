@@ -511,7 +511,15 @@ const GoalDetail: React.FC = () => {
                   <Search className="h-4 w-4" />
                 </Button>
                 <NotificationBell onUnreadChange={() => { }} />
-                <UserMenu />
+                <UserMenu
+                  mobileDashboardActions={{
+                    onAddGoal: () => navigate({ to: '/goal/create' as any }),
+                    onJoinGoal: () => handleOpenMembersSheet(),
+                    onOpenApiKeyGuide: () => navigate({ to: '/profile' as any, search: { tab: 'api-keys' } as any }),
+                    onOpenInstallGuide: () => navigate({ to: '/dashboard' as any }),
+                    onOpenNotificationSettings: () => navigate({ to: '/profile' as any, search: { tab: 'notifications' } as any }),
+                  }}
+                />
               </div>
             </div>
           </header>

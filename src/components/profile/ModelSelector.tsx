@@ -26,8 +26,8 @@ const MODELS: ModelInfo[] = [
     id: 'gemini',
     name: 'Gemini 2.5 Flash',
     provider: 'Google AI',
-    description: 'Optimized for high-velocity inference and multimodal contexts.',
-    capability: 'Hyper-efficient Processing',
+    description: 'Fast and good for everyday tasks.',
+    capability: 'Fast responses',
     color: 'text-blue-400',
     glowColor: 'bg-blue-500',
     keyLink: 'https://aistudio.google.com/apikey',
@@ -37,8 +37,8 @@ const MODELS: ModelInfo[] = [
     id: 'openai',
     name: 'GPT-4 Omni',
     provider: 'OpenAI',
-    description: 'Advanced reasoning engine suited for complex logic and creativity.',
-    capability: 'Advanced Reasoning',
+    description: 'Great for detailed thinking and writing.',
+    capability: 'Strong reasoning',
     color: 'text-emerald-400',
     glowColor: 'bg-emerald-500',
     keyLink: 'https://platform.openai.com/api-keys',
@@ -48,8 +48,8 @@ const MODELS: ModelInfo[] = [
     id: 'claude',
     name: 'Claude 3.5 Sonnet',
     provider: 'Anthropic',
-    description: 'Highly nuanced output with exceptional safety and detail.',
-    capability: 'Nuanced Intelligence',
+    description: 'Clear, balanced answers with helpful detail.',
+    capability: 'Balanced quality',
     color: 'text-orange-400',
     glowColor: 'bg-orange-500',
     keyLink: 'https://console.anthropic.com/settings/keys',
@@ -105,7 +105,7 @@ const ModelSelector = () => {
     return (
       <div className="flex flex-col items-center justify-center p-12 space-y-4">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Scanning Model Matrix...</p>
+        <p className="text-xs font-medium text-muted-foreground">Loading model options...</p>
       </div>
     );
   }
@@ -123,8 +123,8 @@ const ModelSelector = () => {
               className={cn(
                 "relative text-left p-6 rounded-[2rem] border transition-all duration-500 group overflow-hidden active:scale-95",
                 isSelected
-                  ? "bg-white/[0.08] border-blue-500/30 shadow-[0_20px_40px_-15px_rgba(59,130,246,0.15)] -translate-y-1"
-                  : "bg-white/[0.02] border-white/5 hover:border-white/10 hover:-translate-y-0.5"
+                  ? "bg-background/90 border-blue-500/30 shadow-[0_20px_40px_-15px_rgba(59,130,246,0.15)] -translate-y-1"
+                  : "bg-background/60 border-border/60 hover:border-border hover:-translate-y-0.5"
               )}
             >
               {/* Refined Highlight background */}
@@ -141,14 +141,14 @@ const ModelSelector = () => {
                 <div className={cn(
                   "h-12 w-12 rounded-2xl flex items-center justify-center mb-4 transition-all duration-500",
                   isSelected
-                    ? "bg-white/10 shadow-[0_0_20px_rgba(59,130,246,0.3)] border border-blue-500/20"
-                    : "bg-white/5 grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100"
+                    ? "bg-primary/10 shadow-[0_0_20px_rgba(59,130,246,0.3)] border border-blue-500/20"
+                    : "bg-muted/50 grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100"
                 )}>
                   <Icon className={cn("h-6 w-6", isSelected ? model.color : "text-gray-400")} />
                 </div>
 
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-1">{model.provider}</p>
-                <h3 className="text-lg font-black text-white tracking-tight">{model.name}</h3>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">{model.provider}</p>
+                <h3 className="text-lg font-semibold text-foreground tracking-tight">{model.name}</h3>
               </div>
 
               {isSelected && (
@@ -174,7 +174,7 @@ const ModelSelector = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="bg-white/[0.03] border border-white/5 rounded-3xl lg:rounded-[2.5rem] p-5 lg:p-8 relative overflow-hidden group"
+          className="bg-background/60 border border-border/60 rounded-3xl lg:rounded-[2.5rem] p-5 lg:p-8 relative overflow-hidden group"
         >
           <div className="absolute top-0 right-0 p-8 text-white/5 group-hover:text-white/10 transition-colors hidden lg:block">
             <Sparkles className="h-32 w-32 translate-x-12 -translate-y-12" />
@@ -185,31 +185,31 @@ const ModelSelector = () => {
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <div className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse"></div>
-                  <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em]">Core Intelligence Parameters</h4>
+                  <h4 className="text-xs font-semibold text-primary">About this model</h4>
                 </div>
-                <h3 className="text-2xl font-black text-white tracking-tighter mb-4">Technical Specification</h3>
+                <h3 className="text-2xl font-semibold text-foreground tracking-tight mb-4">Model details</h3>
                 <div className="relative">
                   <div className="absolute -left-4 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500/20 via-transparent to-transparent hidden md:block"></div>
-                  <p className="text-gray-400 font-medium leading-relaxed max-w-xl text-base">
+                  <p className="text-muted-foreground font-medium leading-relaxed max-w-xl text-base">
                     {MODELS.find(m => m.id === selectedModel)?.description}
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-3 pt-2">
-                <div className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl flex items-center gap-2">
+                <div className="px-4 py-2 bg-background/70 border border-border/60 rounded-xl flex items-center gap-2">
                   <div className="h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
-                  <span className="text-[10px] font-black text-white uppercase tracking-widest">{MODELS.find(m => m.id === selectedModel)?.capability}</span>
+                  <span className="text-xs font-medium text-foreground">{MODELS.find(m => m.id === selectedModel)?.capability}</span>
                 </div>
-                <div className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl flex items-center gap-2">
+                <div className="px-4 py-2 bg-background/70 border border-border/60 rounded-xl flex items-center gap-2">
                   <Info className="h-3 w-3 text-gray-500" />
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active Linkage Required</span>
+                  <span className="text-xs font-medium text-muted-foreground">Make sure this API key is added</span>
                 </div>
               </div>
             </div>
 
-            <div className="w-full md:w-64 bg-white/[0.03] border border-white/10 rounded-3xl p-6">
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">Credential Check</p>
+            <div className="w-full md:w-64 bg-background/70 border border-border/60 rounded-3xl p-6">
+              <p className="text-xs font-semibold text-muted-foreground mb-4">Get API key</p>
               <div className="space-y-4">
                 <a
                   href={MODELS.find(m => m.id === selectedModel)?.keyLink}
@@ -217,12 +217,12 @@ const ModelSelector = () => {
                   rel="noopener noreferrer"
                   className="flex items-center justify-between group/link"
                 >
-                  <span className="text-xs font-bold text-blue-400 group-hover/link:underline">Acquire Provider Key</span>
+                  <span className="text-xs font-semibold text-primary group-hover/link:underline">Open provider page</span>
                   <ExternalLink className="h-3 w-3 text-blue-400 transition-transform group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
                 </a>
-                <div className="h-px bg-white/5"></div>
-                <p className="text-[10px] text-gray-600 leading-normal">
-                  Ensure the corresponding key is present in your <span className="text-gray-400 font-bold">Secure Vault</span> to maintain operational continuity.
+                <div className="h-px bg-border/40"></div>
+                <p className="text-xs text-muted-foreground leading-normal">
+                  Add the key in the API Keys tab, then come back and save your model choice.
                 </p>
               </div>
             </div>
@@ -230,15 +230,15 @@ const ModelSelector = () => {
         </motion.div>
       </AnimatePresence>
 
-      <div className="flex justify-end pt-6 lg:pt-8 border-t border-white/5">
+      <div className="flex justify-end pt-6 lg:pt-8 border-t border-border/60">
         <Button
           onClick={handleSave}
           disabled={isSaving || !hasChanges}
           className={cn(
-            "h-12 lg:h-14 px-10 lg:px-12 rounded-2xl font-black uppercase tracking-widest text-[9px] lg:text-[10px] transition-all relative overflow-hidden group shadow-2xl",
+            "h-12 lg:h-14 px-10 lg:px-12 rounded-2xl font-medium text-sm transition-all relative overflow-hidden group shadow-2xl",
             hasChanges && !isSaving
               ? "bg-blue-600 text-white shadow-blue-500/20 hover:shadow-blue-500/40"
-              : "bg-white/5 text-gray-600 cursor-not-allowed border border-white/5"
+              : "bg-muted text-muted-foreground cursor-not-allowed border border-border/40"
           )}
         >
           {/* Refraction Shine Effect */}
@@ -248,10 +248,10 @@ const ModelSelector = () => {
             {isSaving ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 lg:h-4 lg:w-4 animate-spin text-blue-200" />
-                <span>Syncing...</span>
+                <span>Saving...</span>
               </>
             ) : (
-              <span>Initiate Core Switch</span>
+              <span>Save model</span>
             )}
           </div>
         </Button>

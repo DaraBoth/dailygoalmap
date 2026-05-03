@@ -7,6 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import useSystemTheme from "@/hooks/use-system-theme";
 import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CalendarDayProps {
   date: Date;
@@ -16,6 +17,7 @@ interface CalendarDayProps {
   onDateChange: (date: Date | undefined) => void;
   dayTasks: Task[];
   onTaskClick?: (task: Task) => void;
+  isLoadingTasks?: boolean;
 }
 
 const CalendarDay = ({
@@ -25,7 +27,8 @@ const CalendarDay = ({
   selectedDate,
   onDateChange,
   dayTasks,
-  onTaskClick
+  onTaskClick,
+  isLoadingTasks = false,
 }: CalendarDayProps) => {
   const isMobile = useIsMobile();
   const { theme } = useTheme();
@@ -85,43 +88,59 @@ const CalendarDay = ({
       {/* Task Indicators */}
       {isCurrentMonth && (
         <div className="flex-1 flex flex-col justify-end gap-1">
-          {/* Mobile Dot Indicators */}
-          <div className="sm:hidden flex justify-center gap-0.5 h-1.5 flex-wrap px-1">
-            {dayTasks.slice(0, 4).map((task, i) => (
-              <div key={i} className={cn(
-                "h-1 w-1 rounded-full",
-                task.completed ? "bg-muted-foreground/40" : "bg-primary"
-              )} />
-            ))}
-            {dayTasks.length > 4 && <div className="h-1 w-1 rounded-full bg-muted-foreground" />}
-          </div>
+          {isLoadingTasks ? (
+            <>
+              <div className="sm:hidden flex justify-center gap-1 h-1.5 flex-wrap px-1">
+                <Skeleton className="h-1 w-1 rounded-full" />
+                <Skeleton className="h-1 w-1 rounded-full" />
+                <Skeleton className="h-1 w-1 rounded-full" />
+              </div>
 
-          {/* Desktop Task Bars */}
-          <div className="hidden sm:flex flex-col gap-0.5 overflow-hidden">
-            {dayTasks.slice(0, 3).map((task) => (
-              <div key={task.id}
-                className={cn(
-                  "text-[9px] font-bold truncate px-2 py-1 rounded-md mx-0.5 cursor-pointer transition-all border",
-                  task.completed
-                    ? "bg-muted/40 text-muted-foreground border-transparent line-through opacity-60"
-                    : "bg-primary/10 text-primary border-primary/10 hover:bg-primary/20 hover:border-primary/30",
-                  isSelected && !task.completed && "bg-primary/20 border-primary/40 text-primary"
+              <div className="hidden sm:flex flex-col gap-0.5 overflow-hidden px-0.5">
+                <Skeleton className="h-4 w-full rounded-md" />
+                <Skeleton className="h-4 w-4/5 rounded-md" />
+                <Skeleton className="h-4 w-3/5 rounded-md" />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="sm:hidden flex justify-center gap-0.5 h-1.5 flex-wrap px-1">
+                {dayTasks.slice(0, 4).map((task, i) => (
+                  <div key={i} className={cn(
+                    "h-1 w-1 rounded-full",
+                    task.completed ? "bg-muted-foreground/40" : "bg-primary"
+                  )} />
+                ))}
+                {dayTasks.length > 4 && <div className="h-1 w-1 rounded-full bg-muted-foreground" />}
+              </div>
+
+              <div className="hidden sm:flex flex-col gap-0.5 overflow-hidden">
+                {dayTasks.slice(0, 3).map((task) => (
+                  <div key={task.id}
+                    className={cn(
+                      "text-[9px] font-bold truncate px-2 py-1 rounded-md mx-0.5 cursor-pointer transition-all border",
+                      task.completed
+                        ? "bg-muted/40 text-muted-foreground border-transparent line-through opacity-60"
+                        : "bg-primary/10 text-primary border-primary/10 hover:bg-primary/20 hover:border-primary/30",
+                      isSelected && !task.completed && "bg-primary/20 border-primary/40 text-primary"
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTaskClick?.(task);
+                    }}
+                    title={task.title || task.description}
+                  >
+                    {task.title || task.description}
+                  </div>
+                ))}
+                {dayTasks.length > 3 && (
+                  <div className="text-[9px] text-muted-foreground text-center font-medium">
+                    +{dayTasks.length - 3} more
+                  </div>
                 )}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTaskClick?.(task);
-                }}
-                title={task.title || task.description}
-              >
-                {task.title || task.description}
               </div>
-            ))}
-            {dayTasks.length > 3 && (
-              <div className="text-[9px] text-muted-foreground text-center font-medium">
-                +{dayTasks.length - 3} more
-              </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       )}
     </motion.div>

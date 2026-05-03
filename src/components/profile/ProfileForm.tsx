@@ -248,7 +248,7 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center p-4 sm:p-8">
-        <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-purple-500" />
+        <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -266,11 +266,11 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
 
           <div className="relative">
             <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur opacity-20 group-hover:opacity-60 transition-opacity duration-500"></div>
-            <Avatar className="h-32 w-32 border-2 border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-105 bg-zinc-900 group-hover:border-blue-500/30 overflow-hidden">
+            <Avatar className="h-32 w-32 border-2 border-border/60 shadow-2xl transition-transform duration-500 group-hover:scale-105 bg-background group-hover:border-primary/40 overflow-hidden">
               {avatarUrl ? (
                 <AvatarImage src={avatarUrl} alt={displayName || "Profile"} className="object-cover" />
               ) : (
-                <AvatarFallback className="bg-gradient-to-br from-zinc-900 to-zinc-950 text-white/10">
+                <AvatarFallback className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-950 text-muted-foreground/30">
                   <div className="relative">
                     <UserCircle className="h-16 w-16 opacity-20" />
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -282,12 +282,12 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
             </Avatar>
 
             {/* Overlay for interaction */}
-            <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/60 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm">
-              <Camera className="h-8 w-8 text-white translate-y-2 group-hover:translate-y-0 transition-transform duration-300" />
+            <div className="absolute inset-0 flex items-center justify-center bg-background/70 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm">
+              <Camera className="h-8 w-8 text-foreground translate-y-2 group-hover:translate-y-0 transition-transform duration-300" />
             </div>
 
             {isUploading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/80 rounded-full backdrop-blur-md">
+              <div className="absolute inset-0 flex items-center justify-center bg-background/85 rounded-full backdrop-blur-md">
                 <Loader2 className="h-10 w-10 animate-spin text-blue-400" />
               </div>
             )}
@@ -295,8 +295,8 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
         </div>
 
         <div className="mt-4 text-center">
-          <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Visual Identifier</p>
-          <p className="text-xs text-gray-500 font-medium">Click image to update avatar</p>
+          <p className="text-xs font-semibold text-primary mb-1">Profile picture</p>
+          <p className="text-xs text-muted-foreground font-medium">Click the image to change it</p>
         </div>
 
         <input
@@ -321,14 +321,14 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
       )}
 
       {/* AI Personalization Section */}
-      <div className="space-y-6 lg:space-y-8 border border-white/5 rounded-[1.5rem] p-5 lg:p-7 bg-white/[0.01]">
+      <div className="space-y-6 lg:space-y-8 border border-border/60 rounded-[1.5rem] p-5 lg:p-7 bg-background/60">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
             <Bot className="h-4 w-4 text-blue-400" />
           </div>
           <div>
-            <p className="text-sm font-black text-white tracking-tight">AI Personalization</p>
-            <p className="text-[10px] text-gray-500 font-medium">Help the AI understand who you are</p>
+            <p className="text-sm font-semibold text-foreground tracking-tight">AI preferences</p>
+            <p className="text-xs text-muted-foreground font-medium">Tell the AI how you want it to help you</p>
           </div>
         </div>
 
@@ -336,7 +336,7 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
         <div className="group/field space-y-3">
           <div className="flex items-center gap-2 px-1">
             <User2 className="h-3.5 w-3.5 text-gray-500 group-focus-within/field:text-blue-400 transition-colors" />
-            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 group-focus-within/field:text-blue-400 transition-colors">
+            <Label className="text-xs font-semibold text-muted-foreground group-focus-within/field:text-primary transition-colors">
               About you
             </Label>
           </div>
@@ -345,16 +345,16 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
             onChange={(e) => setAboutYou(e.target.value)}
             placeholder="e.g. I'm a software engineer building a SaaS startup. I prefer direct, technical answers."
             rows={3}
-            className="bg-white/[0.02] border-white/5 focus:border-blue-500/40 focus:ring-4 focus:ring-blue-500/10 rounded-[1.5rem] text-white font-bold placeholder:text-gray-700 transition-all text-sm resize-none py-4 px-5 shadow-inner group-hover/field:border-white/10"
+            className="bg-background/80 border-border/70 focus:border-primary/40 focus:ring-4 focus:ring-primary/10 rounded-[1.5rem] text-foreground placeholder:text-muted-foreground transition-all text-sm resize-none py-4 px-5 shadow-inner group-hover/field:border-border"
           />
-          <p className="text-[10px] text-gray-600 px-1">The AI uses this to tailor responses — your role, background, preferences.</p>
+          <p className="text-xs text-muted-foreground px-1">Example: your role, goals, and communication style.</p>
         </div>
 
         {/* Custom Instructions */}
         <div className="group/field space-y-3">
           <div className="flex items-center gap-2 px-1">
             <Bot className="h-3.5 w-3.5 text-gray-500 group-focus-within/field:text-blue-400 transition-colors" />
-            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 group-focus-within/field:text-blue-400 transition-colors">
+            <Label className="text-xs font-semibold text-muted-foreground group-focus-within/field:text-primary transition-colors">
               Custom instructions
             </Label>
           </div>
@@ -363,9 +363,9 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
             onChange={(e) => setAiInstructions(e.target.value)}
             placeholder="e.g. Reply concisely. Always suggest breaking tasks into subtasks. Use bullet points."
             rows={3}
-            className="bg-white/[0.02] border-white/5 focus:border-blue-500/40 focus:ring-4 focus:ring-blue-500/10 rounded-[1.5rem] text-white font-bold placeholder:text-gray-700 transition-all text-sm resize-none py-4 px-5 shadow-inner group-hover/field:border-white/10"
+            className="bg-background/80 border-border/70 focus:border-primary/40 focus:ring-4 focus:ring-primary/10 rounded-[1.5rem] text-foreground placeholder:text-muted-foreground transition-all text-sm resize-none py-4 px-5 shadow-inner group-hover/field:border-border"
           />
-          <p className="text-[10px] text-gray-600 px-1">How you want the AI to respond — tone, format, language, behavior.</p>
+          <p className="text-xs text-muted-foreground px-1">Example: be concise, use bullet points, explain step by step.</p>
         </div>
       </div>
 
@@ -377,16 +377,16 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
               <div className="h-1.5 w-1.5 rounded-full bg-blue-400 group-focus-within/field:animate-ping opacity-70"></div>
               <div className="absolute inset-0 h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
             </div>
-            <Label htmlFor="displayName" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 group-focus-within/field:text-blue-400 transition-colors">
-              Identity Descriptor
+            <Label htmlFor="displayName" className="text-xs font-semibold text-muted-foreground group-focus-within/field:text-primary transition-colors">
+              Display name
             </Label>
           </div>
           <Input
             id="displayName"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Enter public identity"
-            className="h-12 lg:h-14 bg-white/[0.02] border-white/5 focus:border-blue-500/40 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-white font-bold placeholder:text-gray-800 transition-all text-sm lg:text-base shadow-inner group-hover/field:border-white/10"
+            placeholder="How your name appears"
+            className="h-12 lg:h-14 bg-background/80 border-border/70 focus:border-primary/40 focus:ring-4 focus:ring-primary/10 rounded-2xl text-foreground placeholder:text-muted-foreground transition-all text-sm lg:text-base shadow-inner group-hover/field:border-border"
           />
         </div>
 
@@ -396,38 +396,38 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
               <div className="h-1.5 w-1.5 rounded-full bg-blue-400 group-focus-within/field:animate-ping opacity-70"></div>
               <div className="absolute inset-0 h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
             </div>
-            <Label htmlFor="bio" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 group-focus-within/field:text-blue-400 transition-colors">
-              System Narrative
+            <Label htmlFor="bio" className="text-xs font-semibold text-muted-foreground group-focus-within/field:text-primary transition-colors">
+              Bio
             </Label>
           </div>
           <Textarea
             id="bio"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            placeholder="Professional brief / Core objective"
+            placeholder="Write a short intro about yourself"
             rows={4}
-            className="bg-white/[0.02] border-white/5 focus:border-blue-500/40 focus:ring-4 focus:ring-blue-500/10 rounded-[1.5rem] text-white font-bold placeholder:text-gray-800 transition-all text-sm lg:text-base resize-none py-4 px-5 lg:py-5 lg:px-6 shadow-inner group-hover/field:border-white/10"
+            className="bg-background/80 border-border/70 focus:border-primary/40 focus:ring-4 focus:ring-primary/10 rounded-[1.5rem] text-foreground placeholder:text-muted-foreground transition-all text-sm lg:text-base resize-none py-4 px-5 lg:py-5 lg:px-6 shadow-inner group-hover/field:border-border"
           />
         </div>
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center gap-3 lg:gap-5 pt-6 lg:pt-10 border-t border-white/5">
+      <div className="flex items-center gap-3 lg:gap-5 pt-6 lg:pt-10 border-t border-border/60">
         <Button
           type="button"
           variant="ghost"
           onClick={onCancel}
-          className="h-12 lg:h-14 flex-1 rounded-2xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] text-gray-500 hover:text-gray-300 font-black uppercase tracking-widest text-[9px] lg:text-[10px] transition-all"
+          className="h-12 lg:h-14 flex-1 rounded-2xl border border-border/60 bg-background/60 hover:bg-accent text-muted-foreground hover:text-foreground font-medium text-sm transition-all"
         >
-          Discard
+          Cancel
         </Button>
         <Button
           type="submit"
           className={cn(
-            "h-12 lg:h-14 flex-[2] rounded-2xl font-black uppercase tracking-widest text-[9px] lg:text-[10px] transition-all relative overflow-hidden group shadow-2xl",
+            "h-12 lg:h-14 flex-[2] rounded-2xl font-medium text-sm transition-all relative overflow-hidden group shadow-2xl",
             hasChanges && !isSaving
               ? "bg-blue-600 text-white shadow-blue-500/20 hover:shadow-blue-500/40"
-              : "bg-white/5 text-gray-600 cursor-not-allowed border border-white/5"
+              : "bg-muted text-muted-foreground cursor-not-allowed border border-border/40"
           )}
           disabled={isSaving || !hasChanges}
         >
@@ -438,10 +438,10 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin text-blue-200" />
-                <span>Syncing...</span>
+                <span>Saving...</span>
               </>
             ) : (
-              <span>Archive System Changes</span>
+              <span>Save changes</span>
             )}
           </div>
         </Button>

@@ -248,10 +248,10 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
       "flex h-full min-h-0 flex-col",
       isMobile
         ? "w-full h-full"
-        : "w-full sm:w-80 md:w-96 shadow-2xl bg-gradient-to-br from-card/95 to-muted/40 dark:from-gray-900/95 dark:to-gray-800/90 backdrop-blur-xl border border-border/60"
+        : "w-full sm:w-80 md:w-96 shadow-2xl bg-gradient-to-br from-slate-100/95 to-slate-200/40 dark:from-slate-900/95 dark:to-slate-800/90 backdrop-blur-xl border border-border/60"
     )}>
       <div className={cn(
-        "text-sm font-semibold sticky top-0 border-b border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md",
+        "text-sm font-semibold sticky top-0 border-b border-border/50 flex-shrink-0 bg-slate-100/85 dark:bg-slate-900/85 backdrop-blur-md",
         !isMobile && "rounded-none"
       )}>
         <div className={cn(

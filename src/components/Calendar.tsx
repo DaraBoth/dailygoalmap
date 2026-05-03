@@ -43,6 +43,9 @@ const Calendar = ({
   onAutoOpenTaskHandled
 }: CalendarProps) => {
 
+  const isValidUuid = (value?: string | null) =>
+    !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
   const calendarRef = useRef<HTMLDivElement>(null);
   const mobileScrollRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
@@ -122,7 +125,11 @@ const Calendar = ({
   const syncTaskSelectionInUrl = (task: Task, taskDate: Date) => {
     const currentUrl = new URL(window.location.toString());
     currentUrl.searchParams.set('date', formatYMD(taskDate));
-    currentUrl.searchParams.set('taskId', task.id);
+    if (isValidUuid(task?.id)) {
+      currentUrl.searchParams.set('taskId', task.id);
+    } else {
+      currentUrl.searchParams.delete('taskId');
+    }
     window.history.replaceState({}, '', currentUrl.toString());
   };
 
@@ -130,8 +137,9 @@ const Calendar = ({
     if (hasInitializedDate.current) return;
 
     const dateParam = searchParams?.date;
-    const taskParam = searchParams?.taskId;
-    const hasTaskDeepLink = Boolean(taskParam || autoOpenTaskId);
+    const taskParam = isValidUuid(searchParams?.taskId) ? searchParams?.taskId : undefined;
+    const openTaskParam = isValidUuid(autoOpenTaskId || undefined) ? autoOpenTaskId : undefined;
+    const hasTaskDeepLink = Boolean(taskParam || openTaskParam);
     let parsedDate = new Date();
 
     if (hasTaskDeepLink && dateParam) {
@@ -184,7 +192,8 @@ const Calendar = ({
   // Unified effect: auto-open task detail if autoOpenTaskId (from prop) or taskId param in URL is present
   const hasHandledAutoOpen = useRef(false);
   useEffect(() => {
-    const idToOpen = autoOpenTaskId || searchParams?.taskId;
+    const idToOpen = (isValidUuid(autoOpenTaskId || undefined) ? autoOpenTaskId : undefined)
+      || (isValidUuid(searchParams?.taskId) ? searchParams?.taskId : undefined);
     if (!idToOpen) return;
     if (hasHandledAutoOpen.current) return;
     if (!tasks || tasks.length === 0) return;

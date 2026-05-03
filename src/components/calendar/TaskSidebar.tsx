@@ -74,33 +74,12 @@ const TaskSidebar = React.memo(({
     return "";
   };
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="w-full h-full flex flex-col bg-slate-100/70 dark:bg-slate-950/65 backdrop-blur-md border-r border-border/30 overflow-hidden shadow-lg">
-        <div className="px-4 py-3 border-b border-border/30 bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-sm">
-          <Skeleton className="h-5 w-40 mb-1.5 bg-foreground/10 rounded-lg" />
-          <Skeleton className="h-3 w-28 bg-foreground/5 rounded" />
-        </div>
-
-        <ScrollArea className="flex-1 p-3">
-          <div className="space-y-2">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Skeleton
-                key={i}
-                className="h-14 w-full rounded-xl bg-foreground/10 border border-border/10"
-              />
-            ))}
-          </div>
-        </ScrollArea>
-      </div>
-    );
-  }
+  const showLoadingItems = isLoading;
 
   // Main render
   if (isCollapsed) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-between py-3 border-r border-border/40 bg-slate-100/80 dark:bg-slate-950/75 backdrop-blur-md">
+      <div className="w-full h-full flex flex-col items-center justify-between py-3 border-r border-border/40 bg-slate-200/60 dark:bg-slate-950/75 backdrop-blur-md">
         <Button
           variant="ghost"
           size="icon"
@@ -119,8 +98,8 @@ const TaskSidebar = React.memo(({
   }
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden bg-slate-100/70 dark:bg-slate-950/65">
-      <div className="px-4 py-3 border-b border-border/40 bg-slate-100/85 dark:bg-slate-900/80 flex items-center justify-between gap-2">
+    <div className="w-full h-full flex flex-col overflow-hidden bg-slate-200/50 dark:bg-slate-950/65">
+      <div className="px-4 py-3 border-b border-border/40 bg-slate-200/65 dark:bg-slate-900/80 flex items-center justify-between gap-2">
         <h2 className="text-xs font-bold uppercase tracking-wider flex items-center text-muted-foreground min-w-0">
           <div className="p-1.5 bg-primary/10 rounded-lg mr-3 border border-primary/20 shrink-0">
             <CalendarIcon className="h-3.5 w-3.5 text-primary" />
@@ -142,11 +121,23 @@ const TaskSidebar = React.memo(({
         </Button>
       </div>
 
-      {tasksForDate.length > 0 && renderNavButtons()}
+      {!showLoadingItems && tasksForDate.length > 0 && renderNavButtons()}
 
       <ScrollArea className="flex-1 z-0">
         <div className="space-y-1 p-2.5">
-          {tasksForDate.length > 0 ? (
+          {showLoadingItems ? (
+            Array.from({ length: 8 }).map((_, i) => (
+              <div key={`skeleton-task-${i}`} className="relative flex items-center gap-2.5 rounded-lg border border-border/60 bg-slate-200/45 dark:bg-slate-900/55 px-2.5 py-2">
+                <Skeleton className="h-5 w-5 rounded-lg" />
+                <div className="flex-1 min-w-0 space-y-1">
+                  <Skeleton className="h-3.5 w-4/5 rounded" />
+                  <Skeleton className="h-3 w-24 rounded-full" />
+                </div>
+                <Skeleton className="h-6 w-6 rounded-md" />
+                <Skeleton className="h-6 w-6 rounded-md" />
+              </div>
+            ))
+          ) : tasksForDate.length > 0 ? (
             tasksForDate.map((task, index) => {
               return (
                 <ModernTaskItem
@@ -163,7 +154,7 @@ const TaskSidebar = React.memo(({
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-12 px-6 text-center"
+              className="mx-2 mt-3 flex flex-col items-center justify-center py-12 px-6 text-center rounded-xl border border-border/40 bg-slate-200/40 dark:bg-slate-900/40"
             >
               <div className="relative mb-4">
                 <div className="h-12 w-12 rounded-xl bg-muted/50 border border-border/50 flex items-center justify-center">

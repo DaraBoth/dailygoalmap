@@ -35,6 +35,9 @@ export const useCalendarTasks = ({
   allTasks,
   isLoadingAllTasks = false
 }: UseCalendarTasksProps) => {
+  const isValidUuid = (value?: string | null) =>
+    !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isTaskDetailsOpen, setIsTaskDetailsOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -196,7 +199,8 @@ export const useCalendarTasks = ({
     // Update URL only when a task is pinned (deep-link mode).
     // For normal manual browsing, avoid persisting date in URL to prevent stale re-entry dates.
     const currentUrl = new URL(window.location.toString());
-    const pinnedTaskId = currentUrl.searchParams.get('taskId');
+    const pinnedTaskIdRaw = currentUrl.searchParams.get('taskId');
+    const pinnedTaskId = isValidUuid(pinnedTaskIdRaw) ? pinnedTaskIdRaw : null;
     const existing = currentUrl.searchParams.get('date');
     const newVal = date ? formatYMD(date) : null;
 
@@ -213,7 +217,8 @@ export const useCalendarTasks = ({
     }
     
     // Don't auto-select task on date change unless there's a taskId in URL
-    const selectedTaskId = new URLSearchParams(window.location.search).get('taskId');
+    const selectedTaskIdRaw = new URLSearchParams(window.location.search).get('taskId');
+    const selectedTaskId = isValidUuid(selectedTaskIdRaw) ? selectedTaskIdRaw : null;
     if (!selectedTaskId) {
       setSelectedTask(null);
       setSelectedTaskIndex(0);
@@ -315,7 +320,7 @@ export const useCalendarTasks = ({
       const existingDate = currentUrl.searchParams.get('date');
       const existingTask = currentUrl.searchParams.get('taskId');
       const newDate = formatYMD(date);
-      const newTask = task ? task.id : null;
+      const newTask = task && isValidUuid(task.id) ? task.id : null;
 
       let changed = false;
       if (existingDate !== newDate) {

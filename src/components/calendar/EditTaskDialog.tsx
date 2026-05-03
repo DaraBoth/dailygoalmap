@@ -143,13 +143,13 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
       <SheetContent
         side={isMobile ? "bottom" : "right"}
         className={cn(
-          "p-0 overflow-hidden bg-background border-border shadow-2xl flex flex-col",
+          "p-0 overflow-hidden bg-slate-100/95 dark:bg-slate-950/95 border-border/60 shadow-2xl flex flex-col",
           isMobile ? "h-[92vh] rounded-t-3xl" : "w-full sm:w-[480px] lg:w-[600px]"
         )}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <SheetHeader className="flex-shrink-0 bg-muted/30 border-b border-border px-4 sm:px-5 py-4 sm:py-5">
+          <SheetHeader className="flex-shrink-0 bg-slate-100/90 dark:bg-slate-900/85 border-b border-border/60 px-4 sm:px-5 py-4 sm:py-5">
             <SheetTitle className="flex items-center gap-3 text-base sm:text-lg font-semibold text-foreground">
               <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <CalendarClock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 dark:text-blue-400" />
@@ -172,7 +172,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Short title"
-                    className="bg-background border-border h-11 text-base"
+                    className="bg-background/80 border-border h-11 text-base"
                   />
                 </div>
 
@@ -188,7 +188,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
                     placeholder="Enter task description"
                     minRows={isMobile ? 3 : 5}
                     row={3}
-                    className="bg-background border-border text-base"
+                    className="bg-background/80 border-border text-base"
                   />
                 </div>
 
@@ -292,7 +292,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task }: E
           </div>
 
           {/* Footer */}
-          <div className="flex-shrink-0 p-4 sm:p-5 bg-background/95 border-t border-border space-y-2.5">
+          <div className="flex-shrink-0 p-4 sm:p-5 bg-slate-100/90 dark:bg-slate-900/85 border-t border-border/60 space-y-2.5">
             <Button
               type="submit"
               form="edit-task-form"

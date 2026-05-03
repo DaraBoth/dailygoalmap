@@ -173,13 +173,13 @@ const AddTaskDialog = ({
       <SheetContent 
         side={isMobile ? "bottom" : "right"}
         className={cn(
-          "p-0 overflow-hidden bg-background border-border shadow-2xl flex flex-col",
+          "p-0 overflow-hidden bg-slate-100/95 dark:bg-slate-950/95 border-border/60 shadow-2xl flex flex-col",
           isMobile ? "h-[90vh] rounded-t-3xl" : "w-full sm:w-[480px] lg:w-[600px]"
         )}
       >
         <div className="flex flex-col h-full">
           {/* Fixed header */}
-          <SheetHeader className="flex-shrink-0 z-20 bg-muted/30 border-b border-border px-4 sm:px-5 py-4 sm:py-5">
+          <SheetHeader className="flex-shrink-0 z-20 bg-slate-100/90 dark:bg-slate-900/85 border-b border-border/60 px-4 sm:px-5 py-4 sm:py-5">
             <SheetTitle className="flex items-center gap-3 text-base sm:text-lg lg:text-xl font-semibold text-foreground">
               <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <CalendarClock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 dark:text-blue-400" />
@@ -207,7 +207,7 @@ const AddTaskDialog = ({
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="What needs to be done?"
                       autoFocus={!isMobile}
-                      className="bg-background border-border h-11 text-base"
+                      className="bg-background/80 border-border h-11 text-base"
                     />
                   </div>
 
@@ -221,7 +221,7 @@ const AddTaskDialog = ({
                       value={taskDescription}
                       onChange={(v) => setTaskDescription(v)}
                       placeholder="Add details..."
-                      className="bg-background border-border min-h-[100px] text-base"
+                      className="bg-background/80 border-border min-h-[100px] text-base"
                     />
                   </div>
 
@@ -315,7 +315,7 @@ const AddTaskDialog = ({
           </div>
 
           {/* Fixed button area */}
-          <div className="flex-shrink-0 z-20 p-5 bg-background/95 border-t border-border mt-auto">
+          <div className="flex-shrink-0 z-20 p-5 bg-slate-100/90 dark:bg-slate-900/85 border-t border-border/60 mt-auto">
             <div className="flex gap-3">
               <Button
                 type="button"

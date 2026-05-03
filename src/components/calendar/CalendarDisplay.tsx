@@ -1,11 +1,8 @@
 
-import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
 import { Task } from "./types";
 import CalendarHeader from "./CalendarHeader";
 import CalendarGrid from "./CalendarGrid";
-import EnhancedLoading from "@/components/ui/enhanced-loading";
-import { Button } from '@/components/ui/button';
 
 interface CalendarDisplayProps {
   selectedDate: Date | undefined;
@@ -60,34 +57,31 @@ const CalendarDisplay = ({
 
   return (
     <div className="w-full h-full flex flex-col">
-      {isLoading ? (
-        <EnhancedLoading variant="calendar" message="Synchronizing mission timelines..." fullPage={false} />
-      ) : (
-        <>
-          <CalendarHeader
-            currentMonth={currentMonth}
-            onPreviousMonth={handlePreviousMonth}
-            onNextMonth={handleNextMonth}
-            onGoToToday={handleGoToToday}
-            dailySpendingLimit={dailySpendingLimit}
-            currency={currency}
-            onOpenAddTaskDialog={onOpenAddTaskDialog}
-          />
+      <>
+        <CalendarHeader
+          currentMonth={currentMonth}
+          onPreviousMonth={handlePreviousMonth}
+          onNextMonth={handleNextMonth}
+          onGoToToday={handleGoToToday}
+          dailySpendingLimit={dailySpendingLimit}
+          currency={currency}
+          onOpenAddTaskDialog={onOpenAddTaskDialog}
+        />
 
-          {/* Calendar Grid Container */}
-          <div className="flex-1 min-h-0">
-            <div className="w-full">
-              <CalendarGrid
-                currentMonth={currentMonth}
-                selectedDate={selectedDate}
-                onDateChange={onDateChange}
-                getTasksForDate={getTasksForDate}
-                onTaskClick={onTaskClick}
-              />
-            </div>
+        {/* Calendar Grid Container */}
+        <div className="flex-1 min-h-0">
+          <div className="w-full">
+            <CalendarGrid
+              currentMonth={currentMonth}
+              selectedDate={selectedDate}
+              onDateChange={onDateChange}
+              getTasksForDate={getTasksForDate}
+              onTaskClick={onTaskClick}
+              isLoadingTasks={isLoading}
+            />
           </div>
-        </>
-      )}
+        </div>
+      </>
     </div>
   );
 };
