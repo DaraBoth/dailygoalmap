@@ -29,15 +29,39 @@ import { UserMenu } from '@/components/user/UserMenu';
 import CustomSearchModal from '@/components/search/CustomSearchModal';
 import EditGoalSlidePanel from '@/components/dashboard/EditGoalSlidePanel';
 
-const GoalChatWidgetLazy = React.lazy(async () => {
-  try {
-    const mod = await import('@/components/goal/GoalChatWidget');
-    return { default: mod.GoalChatWidget };
-  } catch (error) {
-    console.error('GoalChatWidget failed to load:', error);
-    return { default: () => null };
+const GoalChatWidgetLazy = React.lazy(() =>
+  import('@/components/goal/GoalChatWidget').then((mod) => ({ default: mod.GoalChatWidget }))
+);
+
+class GoalChatWidgetErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
   }
-});
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error('GoalChatWidget failed to render:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="fixed bottom-5 right-5 z-50 rounded-lg border border-border/60 bg-background/95 px-3 py-2 text-xs shadow-lg backdrop-blur">
+          <p className="font-medium">Chat AI unavailable</p>
+          <p className="text-muted-foreground">Refresh the page to reload the chat widget.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const GoalDetail: React.FC = () => {
   const { id: goalId } = useParams({ from: '/goal/$id' });
@@ -584,9 +608,11 @@ const GoalDetail: React.FC = () => {
       </div>
 
       {/* Chat Widget */}
-      <React.Suspense fallback={null}>
-        <GoalChatWidgetLazy goalId={goalId} userInfo={user} tasks={tasks} goalTitle={goalTitle} onTasksChange={setTasks} />
-      </React.Suspense>
+      <GoalChatWidgetErrorBoundary>
+        <React.Suspense fallback={null}>
+          <GoalChatWidgetLazy goalId={goalId} userInfo={user} tasks={tasks} goalTitle={goalTitle} onTasksChange={setTasks} />
+        </React.Suspense>
+      </GoalChatWidgetErrorBoundary>
 
       <CustomSearchModal
         open={showSearch}

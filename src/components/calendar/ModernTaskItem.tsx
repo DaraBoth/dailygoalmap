@@ -75,9 +75,10 @@ export const ModernTaskItem = memo(({
 
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                 <span
+                    title={task.title || task.description || ''}
                     className={cn(
-                        'text-[13px] font-medium leading-tight',
-                        task.completed ? 'text-muted-foreground line-through' : 'text-foreground truncate',
+                        'block w-full min-w-0 truncate text-[13px] font-medium leading-tight',
+                        task.completed ? 'text-muted-foreground line-through' : 'text-foreground',
                     )}
                 >
                     {task.title || task.description}
