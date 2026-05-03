@@ -415,7 +415,11 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
     const id = setTimeout(() => {
       const clean: StoredChatMessage[] = messages
         .filter(m => !m.isStreaming)
-        .map(({ role, content, timestamp }) => ({ role, content, timestamp }));
+        .map(m => {
+          const msg: StoredChatMessage = { role: m.role, content: m.content, timestamp: m.timestamp };
+          if (m.images?.length) msg.images = m.images;
+          return msg;
+        });
       saveChatSession(goalId, userInfo.id!, clean, taskMemory);
     }, 1500);
     return () => clearTimeout(id);

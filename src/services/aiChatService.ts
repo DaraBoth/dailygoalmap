@@ -90,6 +90,7 @@ export interface StoredChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
+  images?: Array<{ dataUrl: string; mimeType: string }>;
 }
 
 export interface ChatSession {
