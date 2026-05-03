@@ -147,6 +147,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
     if (isMemberLeft) return 'orange';
     if (n.type === 'task_created') return 'green';
     if (n.type === 'task_deleted') return 'red';
+    if (n.type === 'task_updated' && (n.payload as any)?.action === 'ai_completed') return 'purple';
     if (n.type === 'task_updated') return 'blue';
     if (n.type === 'member_joined') return 'green';
     return 'gray';
@@ -197,6 +198,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
               colorScheme === 'blue' ? 'bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/60 dark:to-blue-800/60 text-blue-600 dark:text-blue-300' :
               colorScheme === 'green' ? 'bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/60 dark:to-green-800/60 text-green-600 dark:text-green-300' :
               colorScheme === 'red' ? 'bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900/60 dark:to-red-800/60 text-red-600 dark:text-red-300' :
+              colorScheme === 'purple' ? 'bg-gradient-to-br from-purple-100 to-fuchsia-200 dark:from-purple-900/60 dark:to-fuchsia-800/60 text-purple-700 dark:text-purple-300' :
               colorScheme === 'orange' ? 'bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/60 dark:to-orange-800/60 text-orange-600 dark:text-orange-300' :
               'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 text-gray-600 dark:text-gray-300'
             }`}>
@@ -272,6 +274,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
                 <div className={`text-sm font-bold ${isUnread ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
                   {n.type === 'task_created' ? 'New Task' :
                     n.type === 'task_deleted' ? 'Task Deleted' :
+                      payload.action === 'ai_completed' ? 'AI Assistant completed' :
                       payload.action === 'completed' ? 'Task Completed' :
                       payload.action === 'uncompleted' ? 'Task Reopened' :
                       'Task Updated'}
@@ -279,17 +282,28 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
                 {isUnread && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 animate-pulse"></div>}
               </div>
               <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                <span className="font-semibold text-gray-900 dark:text-white">{senderName}</span>{' '}
-                {n.type === 'task_created' ? 'added' :
-                  n.type === 'task_deleted' ? 'deleted' :
-                    payload.action === 'completed' ? 'completed' :
-                    payload.action === 'uncompleted' ? 'reopened' :
-                    'updated'}{' '}
-                {payload.task_title && (
-                  <span className="font-semibold text-gray-900 dark:text-white">"{payload.task_title}"</span>
+                {payload.action === 'ai_completed' ? (
+                  <>
+                    <span className="font-semibold text-gray-900 dark:text-white">Goal AI</span> finished your request in {goalText}.
+                    {typeof (n.payload as any)?.message === 'string' && (
+                      <span className="block mt-1 text-xs text-muted-foreground">{(n.payload as any).message}</span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <span className="font-semibold text-gray-900 dark:text-white">{senderName}</span>{' '}
+                    {n.type === 'task_created' ? 'added' :
+                      n.type === 'task_deleted' ? 'deleted' :
+                        payload.action === 'completed' ? 'completed' :
+                        payload.action === 'uncompleted' ? 'reopened' :
+                        'updated'}{' '}
+                    {payload.task_title && (
+                      <span className="font-semibold text-gray-900 dark:text-white">"{payload.task_title}"</span>
+                    )}
+                    {payload.task_title ? ' in ' : 'a task in '}
+                    {goalText}
+                  </>
                 )}
-                {payload.task_title ? ' in ' : 'a task in '}
-                {goalText}
               </div>
             </div>
           )}

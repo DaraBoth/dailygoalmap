@@ -21,6 +21,7 @@ import {
   readAIFile, writeAIFile, listAIFiles, searchWeb, scrapeUrl,
   type ApiKeys, type StoredChatMessage, type Preferences,
 } from '@/services/aiChatService';
+import { createAiCompletionNotification } from '@/services/internalNotifications';
 
 // ── Models ────────────────────────────────────────────────────────────────────
 
@@ -398,15 +399,15 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
         title: 'AI response is ready',
         description: goalTitle ? `Goal AI finished for ${goalTitle}` : 'Goal AI finished your request.',
       });
-      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-        new Notification('Goal AI completed', {
-          body: goalTitle ? `Finished processing ${goalTitle}` : 'Your AI request is complete.',
+      if (userInfo?.id) {
+        createAiCompletionNotification(goalId, userInfo.id, {
+          message: goalTitle ? `Goal AI finished processing ${goalTitle}` : 'Goal AI finished your request.',
         });
       }
       wasClosedDuringRunRef.current = false;
     }
     prevLoadingRef.current = isLoading;
-  }, [isLoading, goalTitle]);
+  }, [isLoading, goalTitle, goalId, userInfo?.id]);
 
   // Load API keys
   useEffect(() => {
@@ -607,14 +608,15 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
           return '[FAIL] Missing delete hints. Provide task name and/or date/time so I can find the closest match.';
         }
 
-        const { data: taskPool, error: poolError } = await supabase
+        const { data: taskPoolRaw, error: poolError } = await supabase
           .from('tasks')
-          .select('id,title,description,duration_minutes,start_date,end_date,daily_start_time,daily_end_time,is_anytime,completed,user_id,updated_by,created_at,updated_at')
+          .select('*')
           .eq('goal_id', goalId)
           .order('updated_at', { ascending: false })
           .limit(200);
 
         if (poolError) return `[FAIL] Delete task: ${poolError.message}`;
+        const taskPool = (taskPoolRaw || []) as Array<Record<string, any>>;
         if (!taskPool || taskPool.length === 0) return '[FAIL] No tasks found in this goal.';
 
         const queryNorm = normalizeText(titleQuery);
@@ -663,7 +665,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
             const t = x.task;
             const title = escapeCell(t.title || '-');
             const desc = escapeCell((t.description || '-').slice(0, 90));
-            const duration = t.duration_minutes ? `${t.duration_minutes} min` : '-';
+            const duration = '-';
             const dateRange = `${toDateOnly(t.start_date)} -> ${toDateOnly(t.end_date)}`;
             const timeRange = t.is_anytime ? 'Anytime' : `${toTimeOnly(t.daily_start_time)} - ${toTimeOnly(t.daily_end_time)}`;
             const status = t.completed ? 'Completed' : 'Pending';
@@ -740,7 +742,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       for (const m of (members || [])) {
         const uid = m.user_id || m.id;
         memberMap[uid] = {
-          name: m.user_profiles?.display_name || m.display_name || m.email || uid.slice(0, 8),
+          name: m.display_name || uid.slice(0, 8),
           completed: 0, pending: 0, total: 0,
         };
       }

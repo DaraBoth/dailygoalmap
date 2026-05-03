@@ -43,8 +43,8 @@ export const ModernTaskItem = memo(({
             className={cn(
                 'relative flex items-center gap-3 rounded-xl border transition-colors cursor-pointer',
                 task.completed
-                    ? 'bg-muted/30 border-muted/50 opacity-70'
-                    : 'bg-card border-border/40',
+                    ? 'bg-muted/40 border-border/50 opacity-75'
+                    : 'bg-card/95 border-border/70 shadow-sm',
                 compact ? 'p-2.5' : 'p-3',
             )}
             onClick={() => onClick?.(task)}

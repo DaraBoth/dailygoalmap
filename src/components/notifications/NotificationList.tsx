@@ -225,7 +225,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
       onClick={onClick}
       aria-pressed={ariaPressed}
       className={`text-xs sm:text-sm font-medium transition-all duration-200 ease-out ${active
-        ? 'text-blue-600 dark:text-blue-400 font-semibold'
+        ? 'text-primary font-semibold'
         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
         } ${className}`}
     >
@@ -233,7 +233,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
         <span>{label}</span>
         {count !== undefined && count > 0 && (
           <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${active 
-            ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' 
+            ? 'bg-primary/15 text-primary' 
             : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
           }`}>
             {count}
@@ -248,7 +248,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
       "flex h-full min-h-0 flex-col",
       isMobile
         ? "w-full h-full"
-        : "w-full sm:w-80 md:w-96 shadow-2xl bg-gradient-to-br from-white/80 to-gray-50/70 dark:from-gray-900/95 dark:to-gray-800/90 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/30"
+        : "w-full sm:w-80 md:w-96 shadow-2xl bg-gradient-to-br from-card/95 to-muted/40 dark:from-gray-900/95 dark:to-gray-800/90 backdrop-blur-xl border border-border/60"
     )}>
       <div className={cn(
         "text-sm font-semibold sticky top-0 border-b border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md",
@@ -258,7 +258,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onAnyAction,
           "px-4 sm:px-5 flex sm:flex-row sm:items-center justify-between pt-4 pb-3 gap-3",
           isMobile && "pr-12"
         )}>
-          <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+          <div className="text-xl font-bold bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">
             Notifications
           </div>
           <div className="flex items-center ml-0 sm:ml-4">

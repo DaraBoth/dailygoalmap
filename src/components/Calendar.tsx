@@ -530,13 +530,13 @@ const Calendar = ({
         </div>
       ) : (
         <div className={cn(
-          "grid transition-[grid-template-columns] duration-500 ease-in-out h-full bg-background/5"
+          "grid transition-[grid-template-columns] duration-500 ease-in-out h-full bg-slate-100/60 dark:bg-background/10"
         )}
           style={{
             gridTemplateColumns: isTaskSidebarCollapsed ? '56px 1fr' : 'clamp(260px,20vw,300px) 1fr',
           }}
         >
-          <div className="h-full overflow-hidden border-r border-border/20 bg-background/20 backdrop-blur-2xl z-10 relative">
+          <div className="h-full overflow-hidden border-r border-border/30 bg-card/85 backdrop-blur-2xl z-10 relative">
             <TaskSidebar
               tasks={tasks}
               selectedDate={selectedDate}
@@ -556,7 +556,7 @@ const Calendar = ({
             />
           </div>
 
-          <div className="h-full overflow-hidden border-r border-border/20 bg-foreground/[0.02] relative">
+          <div className="h-full overflow-hidden border-r border-border/30 bg-card/55 relative">
             <AnimatePresence mode="wait">
               {!selectedTask ? (
                 <motion.div

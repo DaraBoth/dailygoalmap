@@ -51,12 +51,12 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onUnreadChan
         <Button 
           variant="ghost" 
           size="icon" 
-          className="relative hover:bg-accent h-8 w-8 md:h-10 md:w-10" 
+          className="relative hover:bg-accent/70 h-8 w-8 md:h-10 md:w-10 text-foreground" 
           aria-label="Notifications"
         >
           <Bell className="h-5 w-5" />
           {unread > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center shadow-lg animate-in zoom-in-50">
+            <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center shadow-lg animate-in zoom-in-50 ring-2 ring-background">
               {unread > 99 ? '99+' : unread}
             </span>
           )}
@@ -68,8 +68,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onUnreadChan
           "p-0 overflow-hidden border-l shadow-2xl flex flex-col !rounded-none",
           "[&>button]:md:hidden",
           isMobile 
-            ? "w-full bg-background/98 backdrop-blur-3xl" 
-            : "w-full sm:w-[420px] lg:w-[460px] bg-background/95 backdrop-blur-2xl"
+            ? "w-full bg-card/98 backdrop-blur-3xl" 
+            : "w-full sm:w-[420px] lg:w-[460px] bg-card/96 backdrop-blur-2xl"
         )}
       >
         <SheetHeader className="sr-only">

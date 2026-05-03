@@ -157,22 +157,22 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
               stiffness: 200,
               duration: 0.3 
             }}
-            className="fixed right-0 top-0 h-full w-full max-w-md bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-l border-white/20 dark:border-white/10 shadow-2xl z-50 flex flex-col"
+            className="fixed right-0 top-0 h-full w-full max-w-md bg-card/98 backdrop-blur-xl border-l border-border/60 shadow-2xl z-50 flex flex-col"
           >
             {/* Header */}
-            <div className="flex-shrink-0 bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
+            <div className="flex-shrink-0 bg-card border-b border-border/60 p-6 text-foreground">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold">Edit Goal</h2>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleClose}
-                  className="text-white hover:bg-white/20 rounded-full p-2"
+                  className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-full p-2"
                 >
                   <X className="h-5 w-5" />
                 </Button>
               </div>
-              <p className="text-white/80 text-sm mt-1">
+              <p className="text-muted-foreground text-sm mt-1">
                 Update your goal details
               </p>
             </div>
@@ -190,7 +190,7 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Enter goal title..."
-                  className="bg-white/80 dark:bg-white/10 backdrop-blur-sm border-white/20 dark:border-white/10 rounded-xl"
+                  className="bg-background border-border rounded-xl"
                 />
               </div>
 
@@ -206,7 +206,7 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe your goal..."
                   rows={3}
-                  className="bg-white/80 dark:bg-white/10 backdrop-blur-sm border-white/20 dark:border-white/10 rounded-xl resize-none"
+                  className="bg-background border-border rounded-xl resize-none"
                 />
               </div>
 
@@ -217,7 +217,7 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
                   Goal Type
                 </Label>
                 <Select value={goalType} onValueChange={(value: GoalType) => setGoalType(value)}>
-                  <SelectTrigger className="bg-white/80 dark:bg-white/10 backdrop-blur-sm border-white/20 dark:border-white/10 rounded-xl">
+                  <SelectTrigger className="bg-background border-border rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -240,13 +240,13 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
                   date={startDate}
                   setDate={setStartDate}
                   placeholder="Select start date"
-                  className="bg-white/80 dark:bg-white/10 backdrop-blur-sm border-white/20 dark:border-white/10 rounded-xl"
+                  className="bg-background border-border rounded-xl"
                 />
               </div>
 
               {/* Target Date */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between rounded-xl border border-white/20 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 py-2">
+                <div className="flex items-center justify-between rounded-xl border border-border bg-muted/25 px-3 py-2">
                   <Label className="flex items-center gap-2 text-sm font-medium">
                     <Calendar className="h-4 w-4" />
                     Forever (No Due Date)
@@ -264,60 +264,60 @@ const EditGoalSlidePanel: React.FC<EditGoalSlidePanelProps> = ({
                       date={targetDate}
                       setDate={setTargetDate}
                       placeholder="Select due date"
-                      className="bg-white/80 dark:bg-white/10 backdrop-blur-sm border-white/20 dark:border-white/10 rounded-xl"
+                      className="bg-background border-border rounded-xl"
                     />
                   </>
                 )}
               </div>
 
               {/* AI Context Section */}
-              <div className="space-y-4 pt-2 border-t border-white/10 dark:border-white/5">
+              <div className="space-y-4 pt-2 border-t border-border/60">
                 <div className="flex items-center gap-2">
-                  <Bot className="h-4 w-4 text-blue-400" />
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">AI Context</span>
-                  <span className="text-[10px] text-gray-400 bg-blue-500/10 px-2 py-0.5 rounded-full">optional</span>
+                  <Bot className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">AI Context</span>
+                  <span className="text-[10px] text-muted-foreground bg-primary/10 px-2 py-0.5 rounded-full">optional</span>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs text-gray-500">What is this goal about?</Label>
+                  <Label className="text-xs text-muted-foreground">What is this goal about?</Label>
                   <Textarea
                     value={goalContext}
                     onChange={(e) => setGoalContext(e.target.value)}
                     placeholder="e.g. This is a team project to launch our mobile app by Q3. We have 3 developers and a designer."
                     rows={3}
-                    className="bg-white/80 dark:bg-white/10 backdrop-blur-sm border-white/20 dark:border-white/10 rounded-xl resize-none text-sm"
+                    className="bg-background border-border rounded-xl resize-none text-sm"
                   />
-                  <p className="text-[10px] text-gray-400">AI reads this to give better advice about your goal.</p>
+                  <p className="text-[10px] text-muted-foreground">AI reads this to give better advice about your goal.</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs text-gray-500">Goal-specific AI instructions</Label>
+                  <Label className="text-xs text-muted-foreground">Goal-specific AI instructions</Label>
                   <Textarea
                     value={goalAiInstructions}
                     onChange={(e) => setGoalAiInstructions(e.target.value)}
                     placeholder="e.g. Always prioritize tasks by deadline. Remind me to update the team weekly."
                     rows={2}
-                    className="bg-white/80 dark:bg-white/10 backdrop-blur-sm border-white/20 dark:border-white/10 rounded-xl resize-none text-sm"
+                    className="bg-background border-border rounded-xl resize-none text-sm"
                   />
                 </div>
               </div>
             </div>
 
             {/* Footer Actions */}
-            <div className="flex-shrink-0 p-6 border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-sm">
+            <div className="flex-shrink-0 p-6 border-t border-border/60 bg-card/90 backdrop-blur-sm">
               <div className="flex gap-3">
                 <Button
                   variant="outline"
                   onClick={handleCancel}
                   disabled={isLoading}
-                  className="flex-1 bg-white/80 dark:bg-white/10 backdrop-blur-sm border-white/20 dark:border-white/10 rounded-xl"
+                  className="flex-1 bg-background border-border rounded-xl"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSave}
                   disabled={isLoading || !title.trim()}
-                  className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl"
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
                 >
                   {isLoading ? (
                     <>

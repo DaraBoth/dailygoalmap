@@ -90,10 +90,10 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
 
   // ?? Main view ??????????????????????????????????????????????????????????????
   return (
-    <div className="w-full h-full flex flex-col bg-background/30 overflow-hidden">
+    <div className="w-full h-full flex flex-col bg-card/80 overflow-hidden">
 
       {/* ?? Header bar ?? */}
-      <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-border/50 bg-background/60 backdrop-blur-sm">
+      <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-border/60 bg-card/95 backdrop-blur-sm">
         {onClose && (
           <Button
             variant="ghost"
@@ -160,8 +160,8 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                 className={cn(
                   "mt-1.5 shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-200",
                   selectedTask.completed
-                    ? "border-green-500 bg-green-500/10 text-green-600 dark:text-green-400"
-                    : "border-border hover:border-primary"
+                    ? "border-green-500 bg-green-500/15 text-green-700 dark:text-green-400"
+                    : "border-border/80 bg-background/90 hover:border-primary"
                 )}
                 title={selectedTask.completed ? "Mark incomplete" : "Mark complete"}
               >
