@@ -419,6 +419,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceUri, setSelectedVoiceUri] = useState('');
   const [attachedImages, setAttachedImages] = useState<Array<{ dataUrl: string; mimeType: string }>>([]);
+  const [widthPx, setWidthPx] = useState(420);
+  const [heightPx, setHeightPx] = useState(600);
+  const resizingRef = useRef<{ type: 'w' | 'h' | 'both'; startX: number; startY: number; startW: number; startH: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const userTimeZone = dayjs.tz.guess() || 'UTC';
 
@@ -1442,6 +1445,32 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
     toast({ title: 'Chat cleared' });
   }, [goalId, userInfo?.id]);
 
+  const startResize = useCallback((e: React.MouseEvent, type: 'w' | 'h' | 'both') => {
+    e.preventDefault();
+    resizingRef.current = { type, startX: e.clientX, startY: e.clientY, startW: widthPx, startH: heightPx };
+    const onMove = (ev: MouseEvent) => {
+      const r = resizingRef.current;
+      if (!r) return;
+      const maxW = window.innerWidth * 0.8;
+      const maxH = window.innerHeight * 0.8;
+      if (r.type === 'w' || r.type === 'both') {
+        const dx = r.startX - ev.clientX; // panel anchored right → grows left
+        setWidthPx(Math.round(Math.min(maxW, Math.max(420, r.startW + dx))));
+      }
+      if (r.type === 'h' || r.type === 'both') {
+        const dy = r.startY - ev.clientY; // panel anchored bottom → grows up
+        setHeightPx(Math.round(Math.min(maxH, Math.max(600, r.startH + dy))));
+      }
+    };
+    const onUp = () => {
+      resizingRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [widthPx, heightPx]);
+
   const hasAnyKey = keysLoaded && !!(apiKeys.openai || apiKeys.gemini || apiKeys.anthropic);
   const currentKey = apiKeys[selectedProvider];
   const modelList = selectedProvider === 'openai' ? OPENAI_MODELS : selectedProvider === 'gemini' ? GEMINI_MODELS : CLAUDE_MODELS;
@@ -1486,12 +1515,39 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
           <motion.div
             initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
+            style={(!isMobile && !isPopupMode) ? { width: widthPx, height: heightPx } : undefined}
             className={cn(
               'fixed z-50 flex flex-col bg-background border border-border/50 shadow-xl',
-              isMobile ? 'inset-0 rounded-none' : 'bottom-[4.5rem] right-5 w-[420px] h-[600px] rounded-xl',
+              isMobile ? 'inset-0 rounded-none' : 'bottom-[4.5rem] right-5 rounded-xl',
               isPopupMode && 'inset-0 rounded-none h-full w-full'
             )}
           >
+            {/* Resize handles — desktop only */}
+            {!isMobile && !isPopupMode && (
+              <>
+                {/* Top-left corner: resize both */}
+                <div
+                  className="absolute top-0 left-0 h-5 w-5 cursor-nw-resize z-20 rounded-tl-xl group"
+                  onMouseDown={e => startResize(e, 'both')}
+                >
+                  <div className="absolute top-1 left-1 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg viewBox="0 0 12 12" fill="none" className="w-full h-full text-muted-foreground">
+                      <path d="M2 10 L10 2M2 6 L6 2M6 10 L10 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                </div>
+                {/* Top edge: resize height */}
+                <div
+                  className="absolute top-0 left-5 right-0 h-1.5 cursor-n-resize z-20 hover:bg-primary/20 rounded-tr-xl transition-colors"
+                  onMouseDown={e => startResize(e, 'h')}
+                />
+                {/* Left edge: resize width */}
+                <div
+                  className="absolute left-0 top-5 bottom-0 w-1.5 cursor-w-resize z-20 hover:bg-primary/20 rounded-bl-xl transition-colors"
+                  onMouseDown={e => startResize(e, 'w')}
+                />
+              </>
+            )}
             {/* Header */}
             <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border/50 shrink-0">
               <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
