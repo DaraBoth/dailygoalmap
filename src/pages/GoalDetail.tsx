@@ -313,7 +313,11 @@ const GoalDetail: React.FC = () => {
           if (!error && data) setTasks(normalizeTaskList(data as any[]));
         }
       })
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) console.error('[Realtime] GoalDetail tasks subscription error:', err);
+        else if (status === 'SUBSCRIBED') console.log('[Realtime] GoalDetail tasks subscribed for goal:', goalId);
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.warn('[Realtime] GoalDetail tasks subscription problem:', status);
+      });
 
     return () => { supabase.removeChannel(channel); };
   }, [goalId]);

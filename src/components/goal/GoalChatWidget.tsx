@@ -25,6 +25,7 @@ import {
   type ApiKeys, type StoredChatMessage, type Preferences,
 } from '@/services/aiChatService';
 import { createAiCompletionNotification } from '@/services/internalNotifications';
+import { notifyTaskCreated, notifyTaskUpdated, notifyTaskDeleted } from '@/services/notificationService';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -805,6 +806,13 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
         else {
           applyTaskMutation(prev => prev.map(t => t.id === u.task_id ? normalizeTaskRecord({ ...(t as any), ...(patch as any) }) : t));
           results.push(`[OK] ${u.task_id}${typeof u.completed === 'boolean' ? ` → ${u.completed ? 'done' : 'pending'}` : ' updated'}`);
+          if (userInfo?.id) {
+            const existingTask = tasks.find(t => t.id === u.task_id);
+            const taskTitle = u.title || existingTask?.title || 'Task';
+            const taskDate = (u.end_date ?? existingTask?.end_date?.toString())?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
+            const action = typeof u.completed === 'boolean' ? (u.completed ? 'completed' : 'uncompleted') : 'edited';
+            void notifyTaskUpdated(goalId, userInfo.id, taskTitle, u.task_id, goalTitle, taskDate, action);
+          }
         }
       }
       setTaskMemory(memIds?.length ? memIds : []);
@@ -853,7 +861,13 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
         updated_at: now,
       }).select().single();
       if (error) return `[FAIL] Create task: ${error.message}`;
-      if (data) applyTaskMutation(prev => [...prev, normalizeTaskRecord(data as any)]);
+      if (data) {
+        applyTaskMutation(prev => [...prev, normalizeTaskRecord(data as any)]);
+        if (userInfo?.id) {
+          const taskDate = data.end_date?.toString().slice(0, 10) ?? new Date().toISOString().slice(0, 10);
+          void notifyTaskCreated(goalId, userInfo.id, titleStr, data.id, goalTitle, taskDate);
+        }
+      }
       return `[OK] Created "${titleStr}" (id: ${data?.id})`;
     }
     if (name === 'delete_task') {
@@ -875,10 +889,14 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
         }
 
         if (taskId) {
+          const memTask = tasks.find(t => t.id === taskId);
+          const memTitle = memTask?.title || 'Task';
+          const memDate = memTask?.end_date?.toString().slice(0, 10) ?? new Date().toISOString().slice(0, 10);
           const { error } = await supabase.from('tasks').delete().eq('id', taskId);
           if (error) return `[FAIL] Delete task: ${error.message}`;
           applyTaskMutation(prev => prev.filter(t => t.id !== taskId));
           setTaskMemory([]);
+          if (userInfo?.id) void notifyTaskDeleted(goalId, userInfo.id, memTitle, taskId, goalTitle, memDate);
           return '[OK] Task deleted successfully.';
         }
 
@@ -965,10 +983,14 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
           taskId = top[0].task.id;
         }
       }
+      const finalTask = tasks.find(t => t.id === taskId);
+      const finalTitle = finalTask?.title || 'Task';
+      const finalDate = finalTask?.end_date?.toString().slice(0, 10) ?? new Date().toISOString().slice(0, 10);
       const { error } = await supabase.from('tasks').delete().eq('id', taskId);
       if (error) return `[FAIL] Delete task: ${error.message}`;
       applyTaskMutation(prev => prev.filter(t => t.id !== taskId));
       setTaskMemory([]);
+      if (userInfo?.id) void notifyTaskDeleted(goalId, userInfo.id, finalTitle, taskId, goalTitle, finalDate);
       return '[OK] Task deleted successfully.';
     }
     if (name === 'get_tasks') {

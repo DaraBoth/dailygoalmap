@@ -181,7 +181,11 @@ export const useCalendarTasks = ({
           return [...prev, normalized].sort((a, b) => String(a.start_date || '').localeCompare(String(b.start_date || '')));
         });
       })
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) console.error('[Realtime] Calendar tasks subscription error:', err);
+        else if (status === 'SUBSCRIBED') console.log('[Realtime] Calendar tasks subscribed for goal:', goalId);
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.warn('[Realtime] Calendar tasks subscription problem:', status);
+      });
 
     realtimeChannelRef.current = channel;
 
@@ -266,10 +270,9 @@ export const useCalendarTasks = ({
         : '';
       const datetimeInfo = timeStr ? `${dateStr} at ${timeStr}` : dateStr;
       
-      // Send internal notification only (push notifications handled by database trigger)
       const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
       const taskDateYmd = formatYMD(startDate);
-      
+
       // Build a deep link URL so notification opens the goal page with date and task selected
       const deepLinkUrl = `/goal/${goalId}?date=${encodeURIComponent(taskDateYmd)}&taskId=${encodeURIComponent(taskId)}`;
 
@@ -283,9 +286,28 @@ export const useCalendarTasks = ({
           action: newCompletedState ? 'completed' : 'reopened',
           datetime: datetimeInfo,
           url: deepLinkUrl,
-          task_date: taskDateYmd // Add task date for notification
+          task_date: taskDateYmd
         }
       );
+
+      // Send push notification to goal members
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          const { notifyTaskUpdated } = await import('@/services/notificationService');
+          void notifyTaskUpdated(
+            goalId,
+            currentUser.id,
+            taskToUpdate.title || taskToUpdate.description || 'Task',
+            taskId,
+            goalTitle,
+            taskDateYmd,
+            newCompletedState ? 'completed' : 'uncompleted'
+          );
+        }
+      } catch (pushErr) {
+        console.error('[Notification] Push notification failed for task toggle:', pushErr);
+      }
     } catch (error) {
       console.error("Failed to toggle task completion:", error);
       // Revert local state on error
@@ -542,9 +564,7 @@ export const useCalendarTasks = ({
       const datetimeInfo = timeStr ? `${dateStr} at ${timeStr}` : dateStr;
       const taskDateYmd = formatYMD(startDate);
 
-      // Send internal notification only (push notifications handled by database trigger)
       const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
-      
       await createTaskUpdateNotification(
         goalId,
         newTask.user_id,
@@ -554,9 +574,24 @@ export const useCalendarTasks = ({
           task_id: taskId,
           action: 'added',
           datetime: datetimeInfo,
-          task_date: taskDateYmd // Add task date for notification
+          task_date: taskDateYmd
         }
       );
+
+      // Send push notification to goal members
+      try {
+        const { notifyTaskCreated } = await import('@/services/notificationService');
+        void notifyTaskCreated(
+          goalId,
+          userData.user.id,
+          newTask.title || newTask.description || 'Task',
+          newTask.id,
+          goalTitle,
+          taskDateYmd
+        );
+      } catch (pushErr) {
+        console.error('[Notification] Push notification failed for task creation:', pushErr);
+      }
 
       toast({
         title: "Task added",
