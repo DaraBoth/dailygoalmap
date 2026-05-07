@@ -146,7 +146,10 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
 
   const sortTasks = (tasks: TodayTask[]): TodayTask[] =>
     [...tasks].sort((a, b) => {
-      // is_anytime always on top
+      // completed tasks always at the bottom
+      if (a.completed && !b.completed) return 1;
+      if (!a.completed && b.completed) return -1;
+      // is_anytime always on top (within same completion group)
       if (a.is_anytime && !b.is_anytime) return -1;
       if (!a.is_anytime && b.is_anytime) return 1;
       // both anytime — stable
@@ -239,9 +242,9 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
       return;
     }
 
-    setTasksForToday(prev => prev.map(task =>
+    setTasksForToday(prev => sortTasks(prev.map(task =>
       task.id === taskId ? { ...task, completed: !currentStatus } : task
-    ));
+    )));
   };
 
   const handleMarkAllCompleted = async () => {
@@ -267,7 +270,7 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
       return;
     }
 
-    setTasksForToday(prev => prev.map(task => ({ ...task, completed: true })));
+    setTasksForToday(prev => sortTasks(prev.map(task => ({ ...task, completed: true }))));
 
     toast({
       title: 'Tasks Marked Completed',
