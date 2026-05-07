@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Search } from "lucide-react";
 import { Goal } from "@/types/goal";
@@ -20,7 +20,7 @@ import { JoinGoalDialog } from "@/components/dashboard/JoinGoalDialog";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { UserMenu } from "@/components/user/UserMenu";
 import LogoAvatar from "@/components/ui/LogoAvatar";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile, useIsLargeScreen } from "@/hooks/use-mobile";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -68,7 +68,12 @@ const Dashboard = () => {
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [offline, setOffline] = useState(!navigator.onLine);
   const [offlineGoals, setOfflineGoals] = useState<Goal[]>([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 1536 : false
+  );
   const isMobile = useIsMobile();
+  const isLargeScreen = useIsLargeScreen();
+  const prevIsLargeRef = useRef(isLargeScreen);
   const { goToGoal, goToProfileTab } = useRouterNavigation();
   const { markGoalAsComplete, archiveGoal } = useGoalStatus();
   const {
@@ -89,6 +94,14 @@ const Dashboard = () => {
     fetchGoals
   } = useGoals();
   const { toast } = useToast();
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (prevIsLargeRef.current !== isLargeScreen) {
+      prevIsLargeRef.current = isLargeScreen;
+      if (!isMobile) setIsSidebarOpen(isLargeScreen);
+    }
+  }, [isLargeScreen, isMobile]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -254,7 +267,12 @@ const Dashboard = () => {
           </header>
 
           {/* Main Content */}
-          <main className="w-full">
+          <main
+            className={cn(
+              \"w-full transition-[padding-right] duration-300 ease-in-out\",
+              isSidebarOpen && isLargeScreen ? "pr-[380px]" : "pr-0"
+            )}
+          >
             
             {/* Deadline Notifications */}
             <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
@@ -357,7 +375,7 @@ const Dashboard = () => {
               </div>
 
             {/* Today's Tasks — fixed right-side panel (self-managed via portal) */}
-            <TodaysTasks />
+            <TodaysTasks isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(s => !s)} />
           </main>
         </div>
         <EditGoalSlidePanel

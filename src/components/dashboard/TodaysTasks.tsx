@@ -29,18 +29,19 @@ type TodayTask = {
   goals?: { title?: string | null } | null;
 };
 
-const TodaysTasks: React.FC = React.memo(() => {
+interface TodaysTasksProps {
+  isOpen?: boolean;
+  onToggle?: () => void;
+}
+
+const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }) => {
   const [tasksForToday, setTasksForToday] = useState<TodayTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [availableGoals, setAvailableGoals] = useState<Array<{ id: string; title: string }>>([]);
   const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isTasksVisible, setIsTasksVisible] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 1536;
-    }
-    return false;
-  });
+  // Mobile-only bottom-sheet visibility
+  const [mobileVisible, setMobileVisible] = useState(false);
   const [undoTimeout, setUndoTimeout] = useState<NodeJS.Timeout | null>(null);
   const [previousTasksState, setPreviousTasksState] = useState<TodayTask[]>([]);
 
@@ -49,7 +50,9 @@ const TodaysTasks: React.FC = React.memo(() => {
   const { toast } = useToast();
   const { goToGoal } = useRouterNavigation();
   const filterRef = useRef<HTMLDivElement | null>(null);
-  const prevIsLargeScreenRef = useRef(isLargeScreen);
+
+  // Desktop panel state derived from props
+  const desktopVisible = isOpen ?? false;
 
   const fetchTodaysTasks = async () => {
     setLoading(true);
@@ -139,15 +142,7 @@ const TodaysTasks: React.FC = React.memo(() => {
     return () => document.removeEventListener('click', onClick);
   }, [isFilterOpen]);
 
-  // Auto-toggle panel visibility when crossing the large-screen boundary (1536px)
-  useEffect(() => {
-    if (prevIsLargeScreenRef.current !== isLargeScreen) {
-      prevIsLargeScreenRef.current = isLargeScreen;
-      if (!isMobile) {
-        setIsTasksVisible(isLargeScreen);
-      }
-    }
-  }, [isLargeScreen, isMobile]);
+
 
   const persistSelection = async (userId: string, ids: string[]) => {
     try {
@@ -446,7 +441,7 @@ const TodaysTasks: React.FC = React.memo(() => {
       {isMobile && createPortal(
         <>
           <AnimatePresence>
-            {isTasksVisible && (
+            {mobileVisible && (
               <motion.div
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
@@ -459,7 +454,7 @@ const TodaysTasks: React.FC = React.memo(() => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsTasksVisible(false)}
+                    onClick={() => setMobileVisible(false)}
                     className="rounded-xl h-9 bg-background text-foreground border-border/60 hover:bg-accent"
                   >
                     Close
@@ -501,10 +496,10 @@ const TodaysTasks: React.FC = React.memo(() => {
             )}
           </AnimatePresence>
 
-          {!isTasksVisible && (
+          {!mobileVisible && (
             <Button
               className="fixed inset-x-0 bottom-0 rounded-t-2xl h-12 z-40 border-t border-border/60 bg-background text-foreground shadow-md text-base font-medium"
-              onClick={() => setIsTasksVisible(true)}
+              onClick={() => setMobileVisible(true)}
             >
               View Today's Tasks
             </Button>
@@ -516,32 +511,32 @@ const TodaysTasks: React.FC = React.memo(() => {
       {/* ─── DESKTOP: fixed right-side panel ─── */}
       {!isMobile && createPortal(
         <>
-          {/* Backdrop — medium screens only (1024–1535 px) */}
+          {/* Backdrop — medium screens only (1024–1535 px), starts below header */}
           <AnimatePresence>
-            {isTasksVisible && !isLargeScreen && (
+            {desktopVisible && !isLargeScreen && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30"
-                onClick={() => setIsTasksVisible(false)}
+                transition={{ duration: 0.25 }}
+                className="fixed inset-x-0 bottom-0 top-14 sm:top-16 bg-black/20 backdrop-blur-sm z-30"
+                onClick={() => onToggle?.()}
               />
             )}
           </AnimatePresence>
 
-          {/* Toggle tab — visible when panel is closed */}
+          {/* Toggle tab — visible when panel is closed, anchored below header */}
           <AnimatePresence>
-            {!isTasksVisible && (
+            {!desktopVisible && (
               <motion.div
                 initial={{ x: '100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                transition={{ type: 'tween', duration: 0.25, ease: 'easeInOut' }}
                 className="fixed right-0 top-1/2 -translate-y-1/2 z-40"
               >
                 <button
-                  onClick={() => setIsTasksVisible(true)}
+                  onClick={() => onToggle?.()}
                   title="Show Today's Tasks"
                   className="flex flex-col items-center justify-center gap-1.5 py-4 px-2.5
                              bg-slate-100/98 dark:bg-slate-950/98 backdrop-blur-xl
@@ -562,15 +557,17 @@ const TodaysTasks: React.FC = React.memo(() => {
             )}
           </AnimatePresence>
 
-          {/* Right-side slide panel */}
+          {/* Right-side slide panel — starts below sticky header */}
           <AnimatePresence>
-            {isTasksVisible && (
+            {desktopVisible && (
               <motion.div
                 initial={{ x: '100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className="fixed top-0 right-0 h-screen w-[380px]
+                transition={{ type: 'tween', duration: 0.25, ease: 'easeInOut' }}
+                className="fixed top-14 sm:top-16 right-0
+                           h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)]
+                           w-[380px]
                            bg-slate-100/98 dark:bg-slate-950/98 backdrop-blur-xl
                            border-l border-border/60 shadow-2xl z-40 flex flex-col"
               >
@@ -591,7 +588,7 @@ const TodaysTasks: React.FC = React.memo(() => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setIsTasksVisible(false)}
+                      onClick={() => onToggle?.()}
                       className="h-8 w-8 mt-1 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent flex-shrink-0"
                       title="Hide panel"
                     >
