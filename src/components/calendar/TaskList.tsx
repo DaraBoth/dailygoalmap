@@ -70,6 +70,7 @@ const TaskList = ({
         onClose={() => setShareOpen(false)}
         tasks={tasks as unknown as ShareableTask[]}
         goalTitle={goalTitle}
+        shareDate={selectedDate}
       />
     </div>
   );

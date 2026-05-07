@@ -48,17 +48,20 @@ interface ShareTasksModalProps {
   tasks: TodayTask[];
   /** Fallback goal label shown on each task card when task.goals?.title is absent */
   goalTitle?: string;
+  /** The date these tasks belong to — used for the card title and date display */
+  shareDate?: Date;
   /** Pre-select a share mode when the modal opens */
   defaultMode?: ShareMode;
   /** Pre-select specific task IDs (used with defaultMode='selected') */
   defaultSelectedIds?: Set<string>;
 }
 
-const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: string; goalTitle?: string }>(
-  ({ tasks, title, goalTitle }, ref) => {
+const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: string; goalTitle?: string; shareDate?: Date }>(
+  ({ tasks, title, goalTitle, shareDate }, ref) => {
     const completed = tasks.filter(t => t.completed).length;
     const total = tasks.length;
     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const displayDate = shareDate ?? new Date();
 
     return (
       <div
@@ -93,7 +96,7 @@ const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: 
               {title}
             </div>
             <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3, fontWeight: 500 }}>
-              {format(new Date(), 'EEEE, MMMM d, yyyy')}
+              {format(displayDate, 'EEEE, MMMM d, yyyy')}
             </div>
           </div>
           <div style={{
@@ -193,7 +196,7 @@ const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: 
 );
 ShareCard.displayName = 'ShareCard';
 
-const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks, goalTitle, defaultMode, defaultSelectedIds }) => {
+const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks, goalTitle, shareDate, defaultMode, defaultSelectedIds }) => {
   const [mode, setMode] = useState<ShareMode>(defaultMode ?? 'all');
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('morning');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(defaultSelectedIds ?? new Set());
@@ -217,10 +220,19 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
     return tasks.filter(t => selectedIds.has(t.id));
   })();
 
+  const isDateToday = (d: Date) => {
+    const t = new Date();
+    return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
+  };
+
   const cardTitle = (() => {
-    if (mode === 'all') return "Today's Tasks";
+    if (mode === 'all') {
+      if (shareDate && !isDateToday(shareDate)) return `Tasks · ${format(shareDate, 'MMM d')}`;
+      if (!shareDate && goalTitle) return `Tasks · ${goalTitle}`;
+      return "Today's Tasks";
+    }
     if (mode === 'period') return `${PERIOD_CONFIG[selectedPeriod].label} Tasks`;
-    return 'Selected Tasks';
+    return goalTitle ?? 'Selected Tasks';
   })();
 
   const toggleSelected = useCallback((id: string) => {
@@ -235,40 +247,57 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
   const handleCopyToClipboard = async () => {
     if (!cardRef.current || displayTasks.length === 0) return;
     setCopying(true);
-    try {
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
-        backgroundColor: null,
-        useCORS: true,
-        logging: false,
-      });
-      canvas.toBlob(async (blob) => {
-        if (!blob) {
-          toast({ title: 'Failed to capture screenshot', variant: 'destructive' });
-          setCopying(false);
-          return;
-        }
-        try {
-          await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob }),
-          ]);
-          toast({ title: 'Screenshot copied!', description: 'Paste it anywhere to share.', variant: 'success' });
-        } catch {
-          // Fallback: download
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `tasks-${format(new Date(), 'yyyy-MM-dd')}.png`;
-          a.click();
-          URL.revokeObjectURL(url);
-          toast({ title: 'Image downloaded', description: 'Clipboard not supported; image was downloaded instead.' });
-        }
+
+    // Capture promise created immediately — before any await — so it can be passed
+    // to ClipboardItem as a Promise, keeping the clipboard write within the user
+    // gesture context (required by Safari).
+    const capturePromise: Promise<Blob> = html2canvas(cardRef.current, {
+      scale: 2,
+      backgroundColor: null,
+      useCORS: true,
+      logging: false,
+    }).then(canvas => new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/png')
+    ));
+
+    const filename = `tasks-${format(shareDate ?? new Date(), 'yyyy-MM-dd')}.png`;
+
+    // Try clipboard (Promise-in-ClipboardItem works in Safari 13.1+)
+    if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': capturePromise }),
+        ]);
+        toast({ title: 'Screenshot copied!', description: 'Paste it anywhere to share.', variant: 'success' });
         setCopying(false);
-      }, 'image/png');
+        return;
+      } catch {
+        // fall through to share / download fallback
+      }
+    }
+
+    // Fallback: Web Share API (mobile Safari without clipboard permission)
+    try {
+      const blob = await capturePromise;
+      const file = new File([blob], filename, { type: 'image/png' });
+      if (navigator.share && (navigator as any).canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: cardTitle });
+        toast({ title: 'Shared!', variant: 'success' });
+        setCopying(false);
+        return;
+      }
+      // Last resort: download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Image downloaded', description: 'Clipboard not supported — image was saved instead.' });
     } catch {
       toast({ title: 'Screenshot failed', variant: 'destructive' });
-      setCopying(false);
     }
+    setCopying(false);
   };
 
   const availablePeriods = (Object.keys(PERIOD_CONFIG) as Period[]).filter(p =>
@@ -393,7 +422,7 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
                   }
                 }}
               >
-                <ShareCard ref={cardRef} tasks={displayTasks} title={cardTitle} goalTitle={goalTitle} />
+                <ShareCard ref={cardRef} tasks={displayTasks} title={cardTitle} goalTitle={goalTitle} shareDate={shareDate} />
               </div>
             </div>
           )}
@@ -415,8 +444,8 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
               </>
             ) : (
               <>
-                <Copy className="h-3.5 w-3.5" />
-                Copy Screenshot
+                {isMobile ? <Share2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {isMobile ? 'Share' : 'Copy Screenshot'}
               </>
             )}
           </Button>

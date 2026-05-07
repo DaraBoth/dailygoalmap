@@ -270,6 +270,7 @@ const TaskSidebar = React.memo(({
         onClose={() => { setShareOpen(false); if (selectMode) exitSelectMode(); }}
         tasks={tasksForDate as unknown as ShareableTask[]}
         goalTitle={goalTitle}
+        shareDate={selectedDate}
         defaultMode={selectMode && selectedTaskIds.size > 0 ? 'selected' : undefined}
         defaultSelectedIds={selectMode && selectedTaskIds.size > 0 ? selectedTaskIds : undefined}
       />
