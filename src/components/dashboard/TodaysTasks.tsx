@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,9 +10,10 @@ import { useRouterNavigation } from '@/hooks/useRouterNavigation';
 import { ClipboardList, CheckCircle } from '@/components/icons/CustomIcons';
 import { PremiumClipboard } from '@/components/icons/PremiumIcons';
 import { supabase } from '@/integrations/supabase/client';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile, useIsLargeScreen } from '@/hooks/use-mobile';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 type TodayTask = {
   id: string;
@@ -34,14 +35,21 @@ const TodaysTasks: React.FC = React.memo(() => {
   const [availableGoals, setAvailableGoals] = useState<Array<{ id: string; title: string }>>([]);
   const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isTasksVisible, setIsTasksVisible] = useState(false);
+  const [isTasksVisible, setIsTasksVisible] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1536;
+    }
+    return false;
+  });
   const [undoTimeout, setUndoTimeout] = useState<NodeJS.Timeout | null>(null);
   const [previousTasksState, setPreviousTasksState] = useState<TodayTask[]>([]);
 
   const isMobile = useIsMobile();
+  const isLargeScreen = useIsLargeScreen();
   const { toast } = useToast();
   const { goToGoal } = useRouterNavigation();
   const filterRef = useRef<HTMLDivElement | null>(null);
+  const prevIsLargeScreenRef = useRef(isLargeScreen);
 
   const fetchTodaysTasks = async () => {
     setLoading(true);
@@ -130,6 +138,16 @@ const TodaysTasks: React.FC = React.memo(() => {
     document.addEventListener('click', onClick);
     return () => document.removeEventListener('click', onClick);
   }, [isFilterOpen]);
+
+  // Auto-toggle panel visibility when crossing the large-screen boundary (1536px)
+  useEffect(() => {
+    if (prevIsLargeScreenRef.current !== isLargeScreen) {
+      prevIsLargeScreenRef.current = isLargeScreen;
+      if (!isMobile) {
+        setIsTasksVisible(isLargeScreen);
+      }
+    }
+  }, [isLargeScreen, isMobile]);
 
   const persistSelection = async (userId: string, ids: string[]) => {
     try {
@@ -423,7 +441,8 @@ const TodaysTasks: React.FC = React.memo(() => {
   };
 
   return (
-    <div className="relative space-y-4 sm:space-y-6">
+    <>
+      {/* ─── MOBILE: slide-up bottom sheet ─── */}
       {isMobile && createPortal(
         <>
           <AnimatePresence>
@@ -472,7 +491,6 @@ const TodaysTasks: React.FC = React.memo(() => {
                     </div>
                     {renderFilter(true)}
                   </div>
-
                   <Card className="rounded-xl border border-border bg-card shadow-sm">
                     <CardContent className="max-h-[50vh] overflow-y-auto p-0 bg-card">
                       {renderTasks(true)}
@@ -495,63 +513,134 @@ const TodaysTasks: React.FC = React.memo(() => {
         document.body,
       )}
 
-      {!isMobile && (
-        <Card className="border border-border dark:border-foreground/10 rounded-2xl xl:rounded-[2.5rem] bg-background/90 backdrop-blur-xl shadow-xl overflow-hidden">
-          <CardHeader className="pb-3 sm:pb-4 pt-5 sm:pt-6 xl:pt-8 px-4 sm:px-6 xl:px-8">
-            <div className="flex items-center space-x-3 sm:space-x-4 mb-3 sm:mb-4 flex-row">
-              <div className="p-2 sm:p-2.5 xl:p-3 bg-primary/10 rounded-xl xl:rounded-2xl ring-1 ring-primary/20">
-                <ClipboardList className="h-5 w-5 sm:h-5 sm:w-5 xl:h-6 xl:w-6 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg sm:text-xl xl:text-2xl font-bold xl:font-black tracking-tight">
-                  Mission Logs
-                </CardTitle>
-                <CardDescription className="font-semibold xl:font-bold text-muted-foreground uppercase text-[9px] sm:text-[10px] tracking-wider xl:tracking-widest">
-                  {format(new Date(), 'EEEE, MMMM d, yyyy')}
-                </CardDescription>
-              </div>
-            </div>
+      {/* ─── DESKTOP: fixed right-side panel ─── */}
+      {!isMobile && createPortal(
+        <>
+          {/* Backdrop — medium screens only (1024–1535 px) */}
+          <AnimatePresence>
+            {isTasksVisible && !isLargeScreen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30"
+                onClick={() => setIsTasksVisible(false)}
+              />
+            )}
+          </AnimatePresence>
 
-            <div className="flex items-center gap-2">
-              <div className="text-[9px] sm:text-[10px] font-bold xl:font-black bg-primary/10 text-primary rounded-full px-2.5 sm:px-3 py-1 border border-primary/20 inline-block uppercase tracking-wide xl:tracking-widest">
-                Active Tasks: {tasksForToday.length}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="rounded-xl xl:rounded-2xl flex flex-col pt-4 sm:pt-5 xl:pt-6 min-h-[350px] sm:min-h-[400px] max-h-[500px] sm:max-h-[600px] overflow-auto px-4 sm:px-6 xl:px-8">
-            <div className="flex justify-between items-start mb-4 sm:mb-5 xl:mb-6">
-              <div className="flex items-center">
-                {previousTasksState.length > 0 ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleUndoMarkAllCompleted}
-                    className="h-8 sm:h-8 text-sm text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all duration-200 flex items-center gap-2"
-                  >
-                    Undo
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleMarkAllCompleted}
-                    className="h-8 sm:h-8 text-xs sm:text-sm text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:text-green-700 dark:hover:text-green-300 rounded-xl transition-all duration-200 flex items-center gap-1.5 sm:gap-2"
-                  >
-                    <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">Mark All Completed</span>
-                    <span className="sm:hidden">Complete All</span>
-                  </Button>
-                )}
-              </div>
+          {/* Toggle tab — visible when panel is closed */}
+          <AnimatePresence>
+            {!isTasksVisible && (
+              <motion.div
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="fixed right-0 top-1/2 -translate-y-1/2 z-40"
+              >
+                <button
+                  onClick={() => setIsTasksVisible(true)}
+                  title="Show Today's Tasks"
+                  className="flex flex-col items-center justify-center gap-1.5 py-4 px-2.5
+                             bg-slate-100/98 dark:bg-slate-950/98 backdrop-blur-xl
+                             border border-r-0 border-border/60
+                             rounded-l-2xl shadow-xl
+                             hover:bg-slate-200/90 dark:hover:bg-slate-900/90
+                             transition-all duration-200 group"
+                >
+                  <ClipboardList className="h-4 w-4 text-primary" />
+                  {!loading && tasksForToday.length > 0 && (
+                    <span className="text-[10px] font-black text-primary leading-none">
+                      {tasksForToday.length}
+                    </span>
+                  )}
+                  <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-              {renderFilter(false)}
-            </div>
+          {/* Right-side slide panel */}
+          <AnimatePresence>
+            {isTasksVisible && (
+              <motion.div
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="fixed top-0 right-0 h-screen w-[380px]
+                           bg-slate-100/98 dark:bg-slate-950/98 backdrop-blur-xl
+                           border-l border-border/60 shadow-2xl z-40 flex flex-col"
+              >
+                {/* Panel Header */}
+                <div className="flex-shrink-0 pt-6 pb-4 px-6 border-b border-border/60">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-primary/10 rounded-xl ring-1 ring-primary/20">
+                        <ClipboardList className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-black tracking-tight">Mission Logs</h2>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                          {format(new Date(), 'EEEE, MMMM d, yyyy')}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsTasksVisible(false)}
+                      className="h-8 w-8 mt-1 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent flex-shrink-0"
+                      title="Hide panel"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="text-[10px] font-black bg-primary/10 text-primary rounded-full px-3 py-1 border border-primary/20 inline-block uppercase tracking-widest">
+                    Active Tasks: {tasksForToday.length}
+                  </div>
+                </div>
 
-            {renderTasks(false)}
-          </CardContent>
-        </Card>
+                {/* Panel Actions */}
+                <div className="flex-shrink-0 px-5 py-3 border-b border-border/40 flex items-center gap-2">
+                  {previousTasksState.length > 0 ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleUndoMarkAllCompleted}
+                      className="h-8 text-sm text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl flex items-center gap-2"
+                    >
+                      Undo
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleMarkAllCompleted}
+                      className="h-8 text-xs text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:text-green-700 dark:hover:text-green-300 rounded-xl flex items-center gap-2"
+                    >
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      Mark All Completed
+                    </Button>
+                  )}
+                  <div className="ml-auto">
+                    {renderFilter(false)}
+                  </div>
+                </div>
+
+                {/* Scrollable task list */}
+                <div className="flex-1 overflow-y-auto px-4 py-3">
+                  {renderTasks(false)}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>,
+        document.body,
       )}
-    </div>
+    </>
   );
 });
 

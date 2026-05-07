@@ -264,14 +264,12 @@ const Dashboard = () => {
               />
             </div>
 
-            {/* Two Column Layout - Responsive */}
+            {/* Main Content */}
             <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8 lg:pb-12">
-              <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
+              <div className="space-y-4 sm:space-y-6">
                 
-                {/* Main Content - Goals */}
-                <div className="lg:col-span-2 xl:col-span-3 space-y-4 sm:space-y-6">
-                  {/* Section Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                {/* Section Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                       <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight">Your Goals</h1>
                       <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">
@@ -356,19 +354,12 @@ const Dashboard = () => {
                     </div>
                   )}
                 </div>
-
-                {/* Sidebar - Today's Tasks */}
-                <aside className="lg:col-span-1 xl:col-span-1">
-                  <div className="lg:sticky lg:top-20 space-y-6">
-                    <TodaysTasks />
-                  </div>
-                </aside>
               </div>
-            </div>
+
+            {/* Today's Tasks — fixed right-side panel (self-managed via portal) */}
+            <TodaysTasks />
           </main>
         </div>
-
-        {/* Modals & Dialogs */}
         <EditGoalSlidePanel
           isOpen={showEditSlidePanel}
           goal={editingGoal}
