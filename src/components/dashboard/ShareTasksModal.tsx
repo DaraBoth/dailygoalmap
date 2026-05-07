@@ -89,13 +89,13 @@ const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', color: '#818cf8', textTransform: 'uppercase', marginBottom: 4 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', color: '#818cf8', textTransform: 'uppercase', marginBottom: 4, lineHeight: 1.5 }}>
               DailyGoalMap
             </div>
-            <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.02em', color: '#f8fafc' }}>
+            <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.02em', color: '#f8fafc', lineHeight: 1.3 }}>
               {title}
             </div>
-            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3, fontWeight: 500 }}>
+            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3, fontWeight: 500, lineHeight: 1.5 }}>
               {format(displayDate, 'EEEE, MMMM d, yyyy')}
             </div>
           </div>
@@ -148,6 +148,7 @@ const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: 
                     fontSize: 13, fontWeight: 600, color: task.completed ? '#64748b' : '#f1f5f9',
                     textDecoration: task.completed ? 'line-through' : 'none',
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    lineHeight: 1.5, paddingBottom: 1,
                   }}>
                     {task.title || task.description || 'Untitled'}
                   </div>
