@@ -31,8 +31,10 @@ declare const Deno: {
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
   'get_tasks_by_start_date': 'Checking your schedule',
   'insert_new_task': 'Adding new task',
+  'insert_tasks_batch': 'Creating multiple tasks',
   'update_task_info': 'Updating task',
   'move_task': 'Moving task',
+  'reschedule_task': 'Rescheduling task',
   'delete_task': 'Removing task',
   'move_tasks_batch': 'Moving multiple tasks',
   'delete_tasks_batch': 'Removing multiple tasks',
@@ -127,12 +129,8 @@ Examples:
 4. **Keep track of progress** mentally: "I need to add 5 tasks. I've added 1, 2, 3... continuing until all 5 are done"
 
 ### CORRECT behavior example for "Add 5 tasks":
-- Call insert_new_task for task 1 → wait for result
-- Call insert_new_task for task 2 → wait for result  
-- Call insert_new_task for task 3 → wait for result
-- Call insert_new_task for task 4 → wait for result
-- Call insert_new_task for task 5 → wait for result
-- THEN provide final response with summary
+- **PREFERRED**: Call insert_tasks_batch with all 5 tasks in one call → provide final response
+- **FALLBACK** (if insert_tasks_batch fails): Call insert_new_task for task 1 → wait → task 2 → wait → ... → task 5 → THEN final response
 
 ### WRONG behavior (DO NOT DO THIS):
 - Adding only 1-3 tasks and then stopping
@@ -161,14 +159,25 @@ Available tools:
   * Params: start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), limit (optional)
   * Returns tasks with their ACTUAL UUIDs in the "id" field - save these for updates/deletes
 - insert_new_task: Create ONE new task
-  * Params: title, description, start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), daily_start_time (HH:MM:SS), daily_end_time (HH:MM:SS)
-  * **For multiple tasks: call this tool repeatedly for EACH task - DO NOT STOP until all tasks are created**
+  * Params: title, description, start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), daily_start_time (HH:MM:SS), daily_end_time (HH:MM:SS), is_anytime (optional: true/false — set true for tasks with no specific time)
+  * **For multiple tasks: prefer insert_tasks_batch — or call this tool repeatedly for EACH task**
+- insert_tasks_batch: Create MULTIPLE tasks at once in a single operation
+  * Params: tasks (array of task objects)
+  * Each task object: { title, description, start_date (YYYY-MM-DD), end_date (optional), daily_start_time (HH:MM:SS), daily_end_time (HH:MM:SS), is_anytime (true/false), tags (optional array) }
+  * Example: tasks=[{"title":"Morning run","start_date":"2026-05-08","daily_start_time":"07:00:00","daily_end_time":"08:00:00","is_anytime":false},{"title":"Read book","start_date":"2026-05-08","is_anytime":true}]
+  * **Use this whenever the user wants to create 2 or more tasks at once**
 - update_task_info: Update task title, description, or completion status
   * Params: task_id (REQUIRED - use the ACTUAL UUID from the task's "id" field), title (optional), description (optional), completed (optional: 'true' or 'false')
   * Use this to rename tasks, update descriptions, or mark as complete/incomplete
   * ⚠️ task_id MUST be the real UUID, not "task_1" or similar placeholders
-- move_task: Reschedule ONE task to a different date/time
-  * Params: task_id (REQUIRED - use the ACTUAL UUID), start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), daily_start_time (HH:MM:SS), daily_end_time (HH:MM:SS)
+- move_task: Reschedule ONE task to a different date/time (requires all 4 date+time fields)
+  * Params: task_id (REQUIRED - use the ACTUAL UUID), start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), daily_start_time (HH:MM:SS), daily_end_time (HH:MM:SS), is_anytime (optional: true/false)
+  * ⚠️ task_id MUST be the real UUID from the database
+- reschedule_task: Flexibly update a task's schedule — change only what you need (date, time, or is_anytime flag)
+  * Params: task_id (REQUIRED), start_date (optional, YYYY-MM-DD), end_date (optional), daily_start_time (optional, HH:MM:SS), daily_end_time (optional), is_anytime (optional: true/false)
+  * Use this when the user wants to: change just the time, just the date, or toggle is_anytime on/off
+  * When is_anytime=true, time fields are automatically cleared
+  * At least one of the optional fields must be provided
   * ⚠️ task_id MUST be the real UUID from the database
 - move_tasks_batch: Move MULTIPLE tasks at once
   * Params: task_ids (array of ACTUAL UUIDs), new_start_date (YYYY-MM-DD), new_end_date (optional)

@@ -182,12 +182,14 @@ export async function executeTool(
   // Validate goalId for goal-specific operations
   const requiresGoalId = [
     'get_tasks_by_start_date', 
-    'insert_new_task', 
+    'insert_new_task',
+    'insert_tasks_batch',
     'move_task', 
     'move_tasks_batch', 
     'delete_task', 
     'delete_tasks_batch', 
-    'find_by_title'
+    'find_by_title',
+    'reschedule_task'
   ];
   
   if (requiresGoalId.includes(toolName) && !context.goalId) {
@@ -203,10 +205,14 @@ export async function executeTool(
       return await getTasksByStartDate(params, context, supabase);
     case 'insert_new_task':
       return await insertNewTask(params, context, supabase);
+    case 'insert_tasks_batch':
+      return await insertTasksBatch(params, context, supabase);
     case 'update_task_info':
       return await updateTaskInfo(params, context, supabase);
     case 'move_task':
       return await moveTask(params, context, supabase);
+    case 'reschedule_task':
+      return await rescheduleTask(params, context, supabase);
     case 'delete_task':
       return await deleteTask(params, context, supabase);
     case 'move_tasks_batch':
@@ -323,7 +329,8 @@ async function insertNewTask(params: ToolParams, context: AgentContext, supabase
       daily_start_time: startTime,
       daily_end_time: endTime,
       tags: params.tags || [],
-      completed: params.completed === 'true' || false
+      completed: params.completed === 'true' || false,
+      is_anytime: params.is_anytime === 'true' || params.is_anytime === true || false
     })
     .select()
     .single();
@@ -331,6 +338,54 @@ async function insertNewTask(params: ToolParams, context: AgentContext, supabase
   console.log('✅ [insertNewTask] Result:', { success: !error, task_id: data?.id, error: error?.message });
   if (error) throw error;
   return { success: true, task: data };
+}
+
+async function insertTasksBatch(params: ToolParams, context: AgentContext, supabase: any) {
+  if (!params.tasks || !Array.isArray(params.tasks) || params.tasks.length === 0) {
+    throw new Error('tasks array is required for batch insert');
+  }
+
+  console.log('🔍 [insertTasksBatch] Inserting', params.tasks.length, 'tasks for goal:', context.goalId);
+
+  const rows = params.tasks.map((t: any) => {
+    const startTime = t.daily_start_time ? normalizeTime(t.daily_start_time) : null;
+    const endTime = t.daily_end_time ? normalizeTime(t.daily_end_time) : null;
+    const isAnytime = t.is_anytime === 'true' || t.is_anytime === true || (!startTime && !endTime);
+    const startTimestamp = t.start_date ? normalizeToTimestamp(t.start_date, startTime || undefined) : null;
+    const endTimestamp = (t.end_date || t.start_date) ? normalizeToTimestamp(t.end_date || t.start_date, endTime || undefined) : null;
+    return {
+      goal_id: context.goalId,
+      user_id: context.userId,
+      title: t.title,
+      description: t.description || '',
+      start_date: startTimestamp,
+      end_date: endTimestamp,
+      daily_start_time: startTime,
+      daily_end_time: endTime,
+      tags: t.tags || [],
+      completed: false,
+      is_anytime: isAnytime
+    };
+  });
+
+  const { data, error } = await supabase
+    .from('tasks')
+    .insert(rows)
+    .select();
+
+  console.log('✅ [insertTasksBatch] Result:', { success: !error, count: data?.length, error: error?.message });
+  if (error) throw error;
+
+  if (data && data.length > 0 && context.sessionId) {
+    await storeTaskMappings(data, context.sessionId, context, supabase);
+  }
+
+  return {
+    success: true,
+    created_count: data?.length || 0,
+    tasks: data,
+    message: `Successfully created ${data?.length || 0} tasks`
+  };
 }
 
 async function updateTaskInfo(params: ToolParams, context: AgentContext, supabase: any) {
@@ -460,7 +515,10 @@ async function moveTask(params: ToolParams, context: AgentContext, supabase: any
       start_date: startTimestamp,
       end_date: endTimestamp,
       daily_start_time: startTime,
-      daily_end_time: endTime
+      daily_end_time: endTime,
+      ...(params.is_anytime !== undefined && {
+        is_anytime: params.is_anytime === 'true' || params.is_anytime === true
+      })
     })
     .eq('id', taskId)
     .eq('goal_id', context.goalId)
@@ -481,6 +539,96 @@ async function moveTask(params: ToolParams, context: AgentContext, supabase: any
     success: true, 
     task: data,
     message: `Moved "${data.title}" to ${startTimestamp.split(' ')[0]}`
+  };
+}
+
+async function rescheduleTask(params: ToolParams, context: AgentContext, supabase: any) {
+  const resolvedTaskId = await getTaskIdFromMemory(params.task_id, context.sessionId || '', context, supabase);
+  const taskId = resolvedTaskId || params.task_id;
+
+  console.log('🔍 [rescheduleTask] Starting reschedule:', {
+    original_id: params.task_id,
+    resolved_id: taskId,
+    goal_id: context.goalId
+  });
+
+  const { data: existingTask, error: fetchError } = await supabase
+    .from('tasks')
+    .select('id, title, goal_id, start_date, end_date, daily_start_time, daily_end_time, is_anytime')
+    .eq('id', taskId)
+    .maybeSingle();
+
+  if (fetchError) throw new Error(`Failed to fetch task: ${fetchError.message}`);
+  if (!existingTask) throw new Error(`Task not found with ID: ${taskId}. Fetch tasks first to get valid IDs.`);
+  if (context.goalId && existingTask.goal_id !== context.goalId) {
+    throw new Error('Task belongs to a different goal. Cannot update.');
+  }
+
+  console.log('✅ [rescheduleTask] Task found:', existingTask.title);
+
+  const updates: any = {};
+
+  // Update dates if provided
+  if (params.start_date) {
+    const st = params.daily_start_time ? normalizeTime(params.daily_start_time) : (existingTask.daily_start_time || '00:00:00');
+    updates.start_date = normalizeToTimestamp(params.start_date, st);
+  }
+  if (params.end_date) {
+    const et = params.daily_end_time ? normalizeTime(params.daily_end_time) : (existingTask.daily_end_time || '00:00:00');
+    updates.end_date = normalizeToTimestamp(params.end_date, et);
+  }
+
+  // Update times if provided (keep existing date if no new date given)
+  if (params.daily_start_time) {
+    const nt = normalizeTime(params.daily_start_time);
+    updates.daily_start_time = nt;
+    if (!params.start_date && existingTask.start_date) {
+      const dateOnly = existingTask.start_date.split(' ')[0].split('T')[0];
+      updates.start_date = normalizeToTimestamp(dateOnly, nt);
+    }
+  }
+  if (params.daily_end_time) {
+    const nt = normalizeTime(params.daily_end_time);
+    updates.daily_end_time = nt;
+    if (!params.end_date && existingTask.end_date) {
+      const dateOnly = existingTask.end_date.split(' ')[0].split('T')[0];
+      updates.end_date = normalizeToTimestamp(dateOnly, nt);
+    }
+  }
+
+  // Update is_anytime if provided
+  if (params.is_anytime !== undefined) {
+    const isAnytime = params.is_anytime === 'true' || params.is_anytime === true;
+    updates.is_anytime = isAnytime;
+    if (isAnytime) {
+      // Clear time fields when marking as anytime
+      updates.daily_start_time = null;
+      updates.daily_end_time = null;
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw new Error('At least one field must be provided: start_date, end_date, daily_start_time, daily_end_time, or is_anytime');
+  }
+
+  console.log('🔍 [rescheduleTask] Applying updates:', updates);
+
+  const { data, error } = await supabase
+    .from('tasks')
+    .update(updates)
+    .eq('id', taskId)
+    .eq('goal_id', context.goalId)
+    .select()
+    .single();
+
+  console.log('✅ [rescheduleTask] Result:', { success: !error, task_id: data?.id, error: error?.message });
+  if (error) throw new Error(`Failed to reschedule task: ${error.message}`);
+  if (!data) throw new Error('Task not found or access denied');
+
+  return {
+    success: true,
+    task: data,
+    message: `Rescheduled "${data.title}" — ${data.is_anytime ? 'anytime' : `${data.daily_start_time} – ${data.daily_end_time}`} on ${String(data.start_date).split(' ')[0]}`
   };
 }
 
