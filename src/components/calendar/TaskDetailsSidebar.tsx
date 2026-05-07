@@ -75,6 +75,7 @@ const TaskDetailsSidebar = ({
 
 
   return (
+    <>
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
         side={isMobile ? "bottom" : "right"}
@@ -299,6 +300,7 @@ const TaskDetailsSidebar = ({
           defaultSelectedIds={new Set([selectedTask.id])}
         />
       )}
+    </>
   );
 };
 
