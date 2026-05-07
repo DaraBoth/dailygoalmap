@@ -7,17 +7,20 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Copy, Check, Share2, Sun, Sunset, Moon, Clock, AlignJustify } from 'lucide-react';
 
-type TodayTask = {
+// Exported so other components (TaskList, TaskDetailsPanel) can adapt their types
+export type ShareableTask = {
   id: string;
-  goal_id: string;
-  title: string | null;
-  description: string | null;
+  title?: string | null;
+  description?: string | null;
   completed: boolean;
-  daily_start_time: string | null;
-  daily_end_time: string | null;
+  daily_start_time?: string | null;
+  daily_end_time?: string | null;
   is_anytime?: boolean | null;
   goals?: { title?: string | null } | null;
 };
+
+// Keep local alias for the rest of the file
+type TodayTask = ShareableTask;
 
 type ShareMode = 'all' | 'period' | 'selected';
 type Period = 'morning' | 'afternoon' | 'evening' | 'anytime';
@@ -41,10 +44,12 @@ interface ShareTasksModalProps {
   open: boolean;
   onClose: () => void;
   tasks: TodayTask[];
+  /** Fallback goal label shown on each task card when task.goals?.title is absent */
+  goalTitle?: string;
 }
 
-const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: string }>(
-  ({ tasks, title }, ref) => {
+const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: string; goalTitle?: string }>(
+  ({ tasks, title, goalTitle }, ref) => {
     const completed = tasks.filter(t => t.completed).length;
     const total = tasks.length;
     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -145,7 +150,7 @@ const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: 
                           ? `${task.daily_start_time.slice(0, 5)} – ${task.daily_end_time.slice(0, 5)}`
                           : ''}
                     </span>
-                    {task.goals?.title && (
+                    {(task.goals?.title || goalTitle) && (
                       <span style={{
                         fontSize: 9, fontWeight: 800, color: '#818cf8',
                         background: 'rgba(99,102,241,0.15)', padding: '1px 7px',
@@ -153,7 +158,7 @@ const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: 
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 120,
                         display: 'inline-block',
                       }}>
-                        {task.goals.title}
+                        {task.goals?.title || goalTitle}
                       </span>
                     )}
                   </div>
@@ -182,7 +187,7 @@ const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: 
 );
 ShareCard.displayName = 'ShareCard';
 
-const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks }) => {
+const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks, goalTitle }) => {
   const [mode, setMode] = useState<ShareMode>('all');
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('morning');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -354,7 +359,7 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks 
                 </div>
               ) : (
                 <div className="overflow-auto">
-                  <ShareCard ref={cardRef} tasks={displayTasks} title={cardTitle} />
+                  <ShareCard ref={cardRef} tasks={displayTasks} title={cardTitle} goalTitle={goalTitle} />
                 </div>
               )}
             </div>

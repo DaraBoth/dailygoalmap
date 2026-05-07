@@ -14,6 +14,7 @@ import {
   CalendarCheck,
   Loader2,
   AlignLeft,
+  Share2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { openCalendarOptionsDialog } from "@/utils/calendarIntegration";
@@ -21,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MarkdownRenderer } from "../ui/MarkdownRenderer";
 import { cn } from "@/lib/utils";
 import { formatTaskDateRange, formatTaskTimeRange } from "./taskDateTime";
+import ShareTasksModal, { ShareableTask } from "@/components/dashboard/ShareTasksModal";
 
 interface TaskDetailsPanelProps {
   selectedTask: Task | null;
@@ -45,6 +47,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
 }) => {
   const { toast } = useToast();
   const [isAddingReminder, setIsAddingReminder] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const handleAddToCalendar = async () => {
     if (!selectedTask) return;
@@ -128,6 +131,15 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
           >
             <Pencil className="h-3.5 w-3.5" />
             <span className="hidden md:inline">Edit</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
+            onClick={() => setShareOpen(true)}
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            <span className="hidden md:inline">Share</span>
           </Button>
           <Button
             variant="ghost"
@@ -297,6 +309,13 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
           Edit task
         </Button>
       </div>
+
+      <ShareTasksModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        tasks={[selectedTask] as unknown as ShareableTask[]}
+        goalTitle={goalTitle}
+      />
     </div>
   );
 };

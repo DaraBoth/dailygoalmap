@@ -534,6 +534,7 @@ const Calendar = ({
               onToggleTaskCompletion={handleToggleTaskCompletion}
               onEdit={handleEditTask}
               onDelete={handleDeleteTask}
+              goalTitle={goalTitle}
             />
           </div>
         </div>
