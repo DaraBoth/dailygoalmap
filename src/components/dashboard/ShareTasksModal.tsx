@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import html2canvas from 'html2canvas';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -46,6 +46,10 @@ interface ShareTasksModalProps {
   tasks: TodayTask[];
   /** Fallback goal label shown on each task card when task.goals?.title is absent */
   goalTitle?: string;
+  /** Pre-select a share mode when the modal opens */
+  defaultMode?: ShareMode;
+  /** Pre-select specific task IDs (used with defaultMode='selected') */
+  defaultSelectedIds?: Set<string>;
 }
 
 const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: string; goalTitle?: string }>(
@@ -187,13 +191,21 @@ const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: 
 );
 ShareCard.displayName = 'ShareCard';
 
-const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks, goalTitle }) => {
-  const [mode, setMode] = useState<ShareMode>('all');
+const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks, goalTitle, defaultMode, defaultSelectedIds }) => {
+  const [mode, setMode] = useState<ShareMode>(defaultMode ?? 'all');
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('morning');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(defaultSelectedIds ?? new Set());
   const [copying, setCopying] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Reset state whenever the modal opens so defaultMode/defaultSelectedIds are applied
+  useEffect(() => {
+    if (open) {
+      setMode(defaultMode ?? 'all');
+      setSelectedIds(defaultSelectedIds ?? new Set());
+    }
+  }, [open, defaultMode, defaultSelectedIds]);
 
   // Derive the tasks to display in the card
   const displayTasks: TodayTask[] = (() => {
@@ -262,8 +274,8 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-2xl w-full p-0 overflow-hidden rounded-2xl">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/60">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl w-full p-0 overflow-hidden rounded-2xl flex flex-col max-h-[90dvh]">
+        <DialogHeader className="px-5 pt-5 pb-4 border-b border-border/60 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-xl">
               <Share2 className="h-4 w-4 text-primary" />
@@ -272,100 +284,103 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
           </div>
         </DialogHeader>
 
-        <div className="flex flex-col md:flex-row gap-0 max-h-[80vh]">
-          {/* Left: options */}
-          <div className="md:w-56 flex-shrink-0 border-b md:border-b-0 md:border-r border-border/60 p-4 space-y-4 overflow-y-auto">
-            {/* Mode */}
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Share Mode</p>
-              <div className="space-y-1">
-                {([['all', 'All Today', <AlignJustify className="h-3.5 w-3.5" />]] as [ShareMode, string, React.ReactNode][])
-                  .concat([['period', 'By Period', <Clock className="h-3.5 w-3.5" />], ['selected', 'Selected', <Check className="h-3.5 w-3.5" />]])
-                  .map(([val, label, icon]) => (
-                  <button
-                    key={val}
-                    onClick={() => setMode(val)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                      mode === val
-                        ? 'bg-primary/15 text-primary border border-primary/30'
-                        : 'text-foreground/70 hover:bg-accent hover:text-foreground'
-                    }`}
-                  >
-                    {icon} {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Period picker */}
-            {mode === 'period' && (
+        <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
+          {/* Left: options — horizontal scroll on mobile, vertical sidebar on desktop */}
+          <div className="md:w-56 flex-shrink-0 border-b md:border-b-0 md:border-r border-border/60 overflow-y-auto">
+            <div className="p-3 md:p-4 space-y-3 md:space-y-4">
+              {/* Mode */}
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Period</p>
-                <div className="space-y-1">
-                  {availablePeriods.map(p => {
-                    const cfg = PERIOD_CONFIG[p];
-                    return (
-                      <button
-                        key={p}
-                        onClick={() => setSelectedPeriod(p)}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-colors ${
-                          selectedPeriod === p
-                            ? 'bg-accent text-foreground font-semibold'
-                            : 'text-foreground/70 hover:bg-accent/60'
-                        }`}
-                      >
-                        <span className={cfg.color}>{cfg.icon}</span>
-                        <span>{cfg.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Task selector */}
-            {mode === 'selected' && (
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
-                  Tasks ({selectedIds.size} selected)
-                </p>
-                <div className="space-y-1 max-h-52 overflow-y-auto">
-                  {tasks.map(t => (
-                    <label
-                      key={t.id}
-                      className="flex items-start gap-2.5 px-2 py-2 rounded-lg hover:bg-accent/60 cursor-pointer"
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2 hidden md:block">Share Mode</p>
+                <div className="flex md:flex-col gap-1.5 overflow-x-auto pb-1 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {([['all', 'All Today', <AlignJustify className="h-3.5 w-3.5" />]] as [ShareMode, string, React.ReactNode][])
+                    .concat([['period', 'By Period', <Clock className="h-3.5 w-3.5" />], ['selected', 'Selected', <Check className="h-3.5 w-3.5" />]])
+                    .map(([val, label, icon]) => (
+                    <button
+                      key={val}
+                      onClick={() => setMode(val)}
+                      className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap ${
+                        mode === val
+                          ? 'bg-primary/15 text-primary border border-primary/30'
+                          : 'text-foreground/70 hover:bg-accent hover:text-foreground'
+                      }`}
                     >
-                      <Checkbox
-                        checked={selectedIds.has(t.id)}
-                        onCheckedChange={() => toggleSelected(t.id)}
-                        className="mt-0.5 h-4 w-4"
-                      />
-                      <span className={`text-xs leading-snug ${t.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                        {t.title || t.description || 'Untitled'}
-                      </span>
-                    </label>
+                      {icon} {label}
+                    </button>
                   ))}
                 </div>
               </div>
-            )}
+
+              {/* Period picker */}
+              {mode === 'period' && (
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Period</p>
+                  <div className="flex md:flex-col gap-1.5 overflow-x-auto pb-1 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {availablePeriods.map(p => {
+                      const cfg = PERIOD_CONFIG[p];
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => setSelectedPeriod(p)}
+                          className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors whitespace-nowrap ${
+                            selectedPeriod === p
+                              ? 'bg-accent text-foreground font-semibold'
+                              : 'text-foreground/70 hover:bg-accent/60'
+                          }`}
+                        >
+                          <span className={cfg.color}>{cfg.icon}</span>
+                          <span>{cfg.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Task selector */}
+              {mode === 'selected' && (
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+                    Tasks ({selectedIds.size} selected)
+                  </p>
+                  <div className="space-y-1 max-h-40 md:max-h-52 overflow-y-auto">
+                    {tasks.map(t => (
+                      <label
+                        key={t.id}
+                        className="flex items-start gap-2.5 px-2 py-2 rounded-lg hover:bg-accent/60 cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={selectedIds.has(t.id)}
+                          onCheckedChange={() => toggleSelected(t.id)}
+                          className="mt-0.5 h-4 w-4"
+                        />
+                        <span className={`text-xs leading-snug ${t.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                          {t.title || t.description || 'Untitled'}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right: preview + action */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-auto p-5 bg-slate-900/30 dark:bg-black/20 flex items-start justify-center">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-auto p-4 bg-slate-900/30 dark:bg-black/20">
               {displayTasks.length === 0 ? (
                 <div className="text-muted-foreground text-sm flex items-center justify-center h-32">
                   No tasks to preview
                 </div>
               ) : (
-                <div className="overflow-auto">
+                <div className="w-fit mx-auto">
                   <ShareCard ref={cardRef} tasks={displayTasks} title={cardTitle} goalTitle={goalTitle} />
                 </div>
               )}
             </div>
-            <div className="flex-shrink-0 p-4 border-t border-border/60 bg-background flex items-center justify-between gap-3">
+            <div className="flex-shrink-0 p-3 md:p-4 border-t border-border/60 bg-background flex items-center justify-between gap-3">
               <p className="text-xs text-muted-foreground">
-                {displayTasks.length} task{displayTasks.length !== 1 ? 's' : ''} · auto-copies image to clipboard
+                {displayTasks.length} task{displayTasks.length !== 1 ? 's' : ''}
+                <span className="hidden sm:inline"> · copies to clipboard</span>
               </p>
               <Button
                 onClick={handleCopyToClipboard}

@@ -46,6 +46,8 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
   const [undoTimeout, setUndoTimeout] = useState<NodeJS.Timeout | null>(null);
   const [previousTasksState, setPreviousTasksState] = useState<TodayTask[]>([]);
   const [shareOpen, setShareOpen] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
 
   const isMobile = useIsMobile();
   const isLargeScreen = useIsLargeScreen();
@@ -311,6 +313,20 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
     });
   };
 
+  const toggleTaskSelection = (id: string) => {
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedTaskIds(new Set());
+  };
+
   const handleTaskClick = (task: TodayTask) => {
     goToGoal(task.goal_id, {
       search: {
@@ -405,23 +421,45 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
             initial={{ opacity: 0, y: mobile ? 10 : 0, x: mobile ? 0 : -10 }}
             animate={{ opacity: 1, y: 0, x: 0 }}
             className={mobile
-              ? 'flex items-start space-x-2 p-3 rounded-lg bg-background border border-border/40 hover:bg-accent/40 transition-colors cursor-pointer'
-              : 'flex items-start space-x-4 p-4 bg-background/90 backdrop-blur-sm border border-border/50 rounded-[1.5rem] hover:bg-background hover:shadow-lg hover:border-primary/20 transition-all duration-300 cursor-pointer group/item'}
-            onClick={() => handleTaskClick(task)}
+              ? `flex items-start space-x-2 p-3 rounded-lg bg-background border transition-colors cursor-pointer ${
+                  selectMode && selectedTaskIds.has(task.id)
+                    ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/30'
+                    : 'border-border/40 hover:bg-accent/40'
+                }`
+              : `flex items-start space-x-4 p-4 bg-background/90 backdrop-blur-sm border rounded-[1.5rem] hover:bg-background hover:shadow-lg transition-all duration-300 cursor-pointer group/item ${
+                  selectMode && selectedTaskIds.has(task.id)
+                    ? 'border-primary/50 bg-primary/5 ring-2 ring-primary/20'
+                    : 'border-border/50 hover:border-primary/20'
+                }`}
+            onClick={() => selectMode ? toggleTaskSelection(task.id) : handleTaskClick(task)}
           >
-            <Checkbox
-              id={`task-${task.id}`}
-              checked={task.completed}
-              onCheckedChange={() => handleToggleTaskCompletion(task.id, task.completed)}
-              onClick={e => e.stopPropagation()}
-              className={mobile ? 'mt-0.5' : 'mt-1 h-5 w-5 rounded-lg border-foreground/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary'}
-            />
+            {selectMode ? (
+              <div
+                className={`flex-shrink-0 mt-1 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                  selectedTaskIds.has(task.id) ? 'bg-primary border-primary' : 'border-foreground/30'
+                }`}
+              >
+                {selectedTaskIds.has(task.id) && (
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M2 5l2.5 2.5L8 3" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </div>
+            ) : (
+              <Checkbox
+                id={`task-${task.id}`}
+                checked={task.completed}
+                onCheckedChange={() => handleToggleTaskCompletion(task.id, task.completed)}
+                onClick={e => e.stopPropagation()}
+                className={mobile ? 'mt-0.5' : 'mt-1 h-5 w-5 rounded-lg border-foreground/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary'}
+              />
+            )}
             <div className="flex-1 min-w-0">
               <label
-                htmlFor={`task-${task.id}`}
+                htmlFor={selectMode ? undefined : `task-${task.id}`}
                 className={mobile
-                  ? `text-sm font-medium text-foreground cursor-pointer ${task.completed ? 'line-through text-muted-foreground' : ''}`
-                  : `text-sm cursor-pointer font-bold transition-colors block leading-snug ${task.completed ? 'line-through text-muted-foreground/50' : 'text-foreground group-hover/item:text-primary'}`}
+                  ? `text-sm font-medium text-foreground ${selectMode ? '' : 'cursor-pointer'} ${task.completed ? 'line-through text-muted-foreground' : ''}`
+                  : `text-sm ${selectMode ? '' : 'cursor-pointer'} font-bold transition-colors block leading-snug ${task.completed ? 'line-through text-muted-foreground/50' : 'text-foreground group-hover/item:text-primary'}`}
               >
                 {task.title || task.description}
               </label>
@@ -481,41 +519,72 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
                   </Button>
                 </div>
                 <div className="p-4 sm:p-5">
-                  <div className="flex flex-col gap-3 mb-4">
-                    <div className="flex space-x-2">
-                      {previousTasksState.length > 0 ? (
+                  {selectMode ? (
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="text-sm text-muted-foreground shrink-0">{selectedTaskIds.size} selected</span>
+                      <Button variant="outline" size="sm" onClick={exitSelectMode} className="h-10 rounded-xl px-4">
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => setShareOpen(true)}
+                        disabled={selectedTaskIds.size === 0}
+                        className="flex-1 h-10 rounded-xl flex items-center justify-center gap-2"
+                      >
+                        <Share2 className="h-4 w-4" />
+                        Share {selectedTaskIds.size > 0 ? `(${selectedTaskIds.size})` : ''}
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-col gap-3 mb-4">
+                        <div className="flex space-x-2">
+                          {previousTasksState.length > 0 ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleUndoMarkAllCompleted}
+                              className="flex-1 h-10 flex items-center justify-center gap-2 text-red-500 rounded-xl"
+                            >
+                              Undo
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleMarkAllCompleted}
+                              className="flex-1 h-10 flex items-center justify-center gap-2 rounded-xl"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                              Mark All
+                            </Button>
+                          )}
+                        </div>
+                        {renderFilter(true)}
+                      </div>
+                      <div className="flex gap-2 mb-3">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={handleUndoMarkAllCompleted}
-                          className="flex-1 h-10 flex items-center justify-center gap-2 text-red-500 rounded-xl"
-                        >
-                          Undo
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleMarkAllCompleted}
+                          onClick={() => setShareOpen(true)}
+                          disabled={tasksForToday.length === 0}
                           className="flex-1 h-10 flex items-center justify-center gap-2 rounded-xl"
                         >
-                          <CheckCircle className="h-4 w-4" />
-                          Mark All
+                          <Share2 className="h-4 w-4" />
+                          Share Screenshot
                         </Button>
-                      )}
-                    </div>
-                    {renderFilter(true)}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShareOpen(true)}
-                    disabled={tasksForToday.length === 0}
-                    className="w-full h-10 flex items-center justify-center gap-2 rounded-xl mb-3"
-                  >
-                    <Share2 className="h-4 w-4" />
-                    Share as Screenshot
-                  </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectMode(true)}
+                          disabled={tasksForToday.length === 0}
+                          className="h-10 px-4 rounded-xl text-muted-foreground hover:text-foreground"
+                        >
+                          Select
+                        </Button>
+                      </div>
+                    </>
+                  )}
                   <Card className="rounded-xl border border-border bg-card shadow-sm">
                     <CardContent className="max-h-[50vh] overflow-y-auto p-0 bg-card">
                       {renderTasks(true)}
@@ -632,40 +701,75 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
 
                 {/* Panel Actions */}
                 <div className="flex-shrink-0 px-5 py-3 border-b border-border/40 flex items-center gap-2">
-                  {previousTasksState.length > 0 ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleUndoMarkAllCompleted}
-                      className="h-8 text-sm text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl flex items-center gap-2"
-                    >
-                      Undo
-                    </Button>
+                  {selectMode ? (
+                    <>
+                      <span className="text-xs text-muted-foreground shrink-0">{selectedTaskIds.size} selected</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={exitSelectMode}
+                        className="h-8 text-xs rounded-xl"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => setShareOpen(true)}
+                        disabled={selectedTaskIds.size === 0}
+                        className="h-8 text-xs rounded-xl flex items-center gap-1.5"
+                      >
+                        <Share2 className="h-3.5 w-3.5" />
+                        Share {selectedTaskIds.size > 0 ? `(${selectedTaskIds.size})` : ''}
+                      </Button>
+                    </>
                   ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleMarkAllCompleted}
-                      className="h-8 text-xs text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:text-green-700 dark:hover:text-green-300 rounded-xl flex items-center gap-2"
-                    >
-                      <CheckCircle className="h-3.5 w-3.5" />
-                      Mark All Completed
-                    </Button>
+                    <>
+                      {previousTasksState.length > 0 ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleUndoMarkAllCompleted}
+                          className="h-8 text-sm text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl flex items-center gap-2"
+                        >
+                          Undo
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleMarkAllCompleted}
+                          className="h-8 text-xs text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:text-green-700 dark:hover:text-green-300 rounded-xl flex items-center gap-2"
+                        >
+                          <CheckCircle className="h-3.5 w-3.5" />
+                          Mark All Completed
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShareOpen(true)}
+                        disabled={tasksForToday.length === 0}
+                        className="h-8 text-xs rounded-xl flex items-center gap-1.5"
+                        title="Share as Screenshot"
+                      >
+                        <Share2 className="h-3.5 w-3.5" />
+                        Share
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectMode(true)}
+                        disabled={tasksForToday.length === 0}
+                        className="h-8 text-xs rounded-xl text-muted-foreground hover:text-foreground"
+                        title="Select tasks to share"
+                      >
+                        Select
+                      </Button>
+                      <div className="ml-auto">
+                        {renderFilter(false)}
+                      </div>
+                    </>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShareOpen(true)}
-                    disabled={tasksForToday.length === 0}
-                    className="h-8 text-xs rounded-xl flex items-center gap-1.5"
-                    title="Share as Screenshot"
-                  >
-                    <Share2 className="h-3.5 w-3.5" />
-                    Share
-                  </Button>
-                  <div className="ml-auto">
-                    {renderFilter(false)}
-                  </div>
                 </div>
 
                 {/* Scrollable task list */}
@@ -680,8 +784,10 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
       )}
       <ShareTasksModal
         open={shareOpen}
-        onClose={() => setShareOpen(false)}
+        onClose={() => { setShareOpen(false); if (selectMode) exitSelectMode(); }}
         tasks={tasksForToday}
+        defaultMode={selectMode && selectedTaskIds.size > 0 ? 'selected' : undefined}
+        defaultSelectedIds={selectMode && selectedTaskIds.size > 0 ? selectedTaskIds : undefined}
       />
     </>
   );
