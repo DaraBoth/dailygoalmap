@@ -120,7 +120,7 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTasksForToday((data || []) as TodayTask[]);
+      setTasksForToday(sortTasks((data || []) as TodayTask[]));
     } catch (error) {
       console.error("Error fetching today's tasks:", error);
     } finally {
@@ -143,6 +143,21 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
   }, [isFilterOpen]);
 
 
+
+  const sortTasks = (tasks: TodayTask[]): TodayTask[] =>
+    [...tasks].sort((a, b) => {
+      // is_anytime always on top
+      if (a.is_anytime && !b.is_anytime) return -1;
+      if (!a.is_anytime && b.is_anytime) return 1;
+      // both anytime — stable
+      if (a.is_anytime && b.is_anytime) return 0;
+      // sort by daily_start_time ascending (HH:MM:SS strings compare lexicographically)
+      const ta = a.daily_start_time ?? '';
+      const tb = b.daily_start_time ?? '';
+      if (ta < tb) return -1;
+      if (ta > tb) return 1;
+      return 0;
+    });
 
   const persistSelection = async (userId: string, ids: string[]) => {
     try {
@@ -172,7 +187,7 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTasksForToday((data || []) as TodayTask[]);
+      setTasksForToday(sortTasks((data || []) as TodayTask[]));
     } catch (error) {
       console.error(error);
     } finally {
