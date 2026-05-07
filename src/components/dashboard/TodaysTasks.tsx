@@ -13,7 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile, useIsLargeScreen } from '@/hooks/use-mobile';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Share2 } from 'lucide-react';
+import ShareTasksModal from './ShareTasksModal';
 
 type TodayTask = {
   id: string;
@@ -44,6 +45,7 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
   const [mobileVisible, setMobileVisible] = useState(false);
   const [undoTimeout, setUndoTimeout] = useState<NodeJS.Timeout | null>(null);
   const [previousTasksState, setPreviousTasksState] = useState<TodayTask[]>([]);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const isMobile = useIsMobile();
   const isLargeScreen = useIsLargeScreen();
@@ -504,6 +506,16 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
                     </div>
                     {renderFilter(true)}
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShareOpen(true)}
+                    disabled={tasksForToday.length === 0}
+                    className="w-full h-10 flex items-center justify-center gap-2 rounded-xl mb-3"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Share as Screenshot
+                  </Button>
                   <Card className="rounded-xl border border-border bg-card shadow-sm">
                     <CardContent className="max-h-[50vh] overflow-y-auto p-0 bg-card">
                       {renderTasks(true)}
@@ -640,6 +652,17 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
                       Mark All Completed
                     </Button>
                   )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShareOpen(true)}
+                    disabled={tasksForToday.length === 0}
+                    className="h-8 text-xs rounded-xl flex items-center gap-1.5"
+                    title="Share as Screenshot"
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                    Share
+                  </Button>
                   <div className="ml-auto">
                     {renderFilter(false)}
                   </div>
@@ -655,6 +678,11 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
         </>,
         document.body,
       )}
+      <ShareTasksModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        tasks={tasksForToday}
+      />
     </>
   );
 });
