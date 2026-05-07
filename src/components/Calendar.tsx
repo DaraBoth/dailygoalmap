@@ -558,6 +558,7 @@ const Calendar = ({
               onEditTask={handleEditTask}
               onDeleteTask={handleDeleteTask}
               goalId={goalId}
+              goalTitle={goalTitle}
               isCollapsed={isTaskSidebarCollapsed}
               onToggleCollapse={() => setIsTaskSidebarCollapsed(prev => !prev)}
               onTaskClick={(task) => {

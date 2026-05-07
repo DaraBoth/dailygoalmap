@@ -12,11 +12,13 @@ import {
   Trash2,
   PanelLeftOpen,
   PanelLeftClose,
+  Share2,
 } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ModernTaskItem } from "./ModernTaskItem";
 import { filterTasksByDate } from "./utils/dateUtils";
+import ShareTasksModal, { ShareableTask } from "@/components/dashboard/ShareTasksModal";
 
 interface TaskSidebarProps {
   tasks: Task[];
@@ -30,6 +32,7 @@ interface TaskSidebarProps {
   onDeleteTask: (taskId: string) => void;
   onTaskClick?: (task: Task) => void;
   goalId: string;
+  goalTitle?: string;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
 }
@@ -46,9 +49,27 @@ const TaskSidebar = React.memo(({
   onDeleteTask,
   onTaskClick,
   goalId,
+  goalTitle,
   isCollapsed = false,
   onToggleCollapse,
 }: TaskSidebarProps) => {
+  const [shareOpen, setShareOpen] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+
+  const toggleTaskSelection = (id: string) => {
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedTaskIds(new Set());
+  };
   const tasksForDate = useMemo(() => {
     const target = selectedDate
       ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate())
@@ -99,6 +120,7 @@ const TaskSidebar = React.memo(({
 
   return (
     <div className="w-full h-full flex flex-col overflow-hidden bg-slate-200/50 dark:bg-slate-950/65">
+      {/* Header */}
       <div className="px-4 py-3 border-b border-border/40 bg-slate-200/65 dark:bg-slate-900/80 flex items-center justify-between gap-2">
         <h2 className="text-xs font-bold uppercase tracking-wider flex items-center text-muted-foreground min-w-0">
           <div className="p-1.5 bg-primary/10 rounded-lg mr-3 border border-primary/20 shrink-0">
@@ -110,15 +132,62 @@ const TaskSidebar = React.memo(({
               : "Active Tasks"}
           </span>
         </h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 shrink-0 text-foreground hover:bg-accent/70"
-          onClick={onToggleCollapse}
-          title="Collapse task list"
-        >
-          <PanelLeftClose className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1 shrink-0">
+          {selectMode ? (
+            <>
+              <span className="text-[10px] text-muted-foreground">{selectedTaskIds.size} sel.</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={exitSelectMode}
+                className="h-7 px-2 text-xs rounded-lg"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setShareOpen(true)}
+                disabled={selectedTaskIds.size === 0}
+                className="h-7 px-2 text-xs rounded-lg flex items-center gap-1"
+              >
+                <Share2 className="h-3 w-3" />
+                Share{selectedTaskIds.size > 0 ? ` (${selectedTaskIds.size})` : ''}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShareOpen(true)}
+                disabled={tasksForDate.length === 0}
+                className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground"
+                title="Share as screenshot"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectMode(true)}
+                disabled={tasksForDate.length === 0}
+                className="h-7 px-2 text-xs rounded-lg text-muted-foreground hover:text-foreground"
+                title="Select tasks to share"
+              >
+                Select
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0 text-foreground hover:bg-accent/70"
+                onClick={onToggleCollapse}
+                title="Collapse task list"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {!showLoadingItems && tasksForDate.length > 0 && renderNavButtons()}
@@ -139,7 +208,30 @@ const TaskSidebar = React.memo(({
             ))
           ) : tasksForDate.length > 0 ? (
             tasksForDate.map((task, index) => {
-              return (
+              return selectMode ? (
+                <div
+                  key={task.id}
+                  onClick={() => toggleTaskSelection(task.id)}
+                  className={`relative flex items-center gap-2.5 rounded-lg border px-2.5 py-2 cursor-pointer transition-all ${
+                    selectedTaskIds.has(task.id)
+                      ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20'
+                      : 'border-border/60 bg-slate-200/45 dark:bg-slate-900/55 hover:border-primary/30'
+                  }`}
+                >
+                  <div className={`h-4 w-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                    selectedTaskIds.has(task.id) ? 'bg-primary border-primary' : 'border-foreground/30'
+                  }`}>
+                    {selectedTaskIds.has(task.id) && (
+                      <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
+                        <path d="M2 5l2.5 2.5L8 3" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className={`text-xs font-medium truncate ${task.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                    {task.title || task.description || 'Untitled'}
+                  </span>
+                </div>
+              ) : (
                 <ModernTaskItem
                   key={task.id}
                   task={task}
@@ -148,7 +240,7 @@ const TaskSidebar = React.memo(({
                   onEdit={onEditTask}
                   onDelete={onDeleteTask}
                 />
-              )
+              );
             })
           ) : (
             <motion.div
@@ -172,6 +264,15 @@ const TaskSidebar = React.memo(({
           )}
         </div>
       </ScrollArea>
+
+      <ShareTasksModal
+        open={shareOpen}
+        onClose={() => { setShareOpen(false); if (selectMode) exitSelectMode(); }}
+        tasks={tasksForDate as unknown as ShareableTask[]}
+        goalTitle={goalTitle}
+        defaultMode={selectMode && selectedTaskIds.size > 0 ? 'selected' : undefined}
+        defaultSelectedIds={selectMode && selectedTaskIds.size > 0 ? selectedTaskIds : undefined}
+      />
     </div>
   );
 });
