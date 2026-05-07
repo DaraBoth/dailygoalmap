@@ -187,7 +187,7 @@ const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: 
             {completed}/{total} tasks completed
           </div>
           <div style={{ fontSize: 10, color: '#334155', fontWeight: 700, letterSpacing: '0.1em' }}>
-            dailygoalmap.app
+            dailygoalmap.vercel.app
           </div>
         </div>
       </div>
