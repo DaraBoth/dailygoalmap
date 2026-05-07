@@ -269,7 +269,7 @@ const Dashboard = () => {
           {/* Main Content */}
           <main
             className={cn(
-              \"w-full transition-[padding-right] duration-300 ease-in-out\",
+              "w-full transition-[padding-right] duration-300 ease-in-out",
               isSidebarOpen && isLargeScreen ? "pr-[380px]" : "pr-0"
             )}
           >
