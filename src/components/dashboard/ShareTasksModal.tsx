@@ -201,7 +201,8 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('morning');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(defaultSelectedIds ?? new Set());
   const [copying, setCopying] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);     // visible preview (scaled)
+  const captureRef = useRef<HTMLDivElement>(null);  // hidden full-size for html2canvas
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -249,13 +250,13 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
   }, []);
 
   const handleCopyToClipboard = async () => {
-    if (!cardRef.current || displayTasks.length === 0) return;
+    if (!captureRef.current || displayTasks.length === 0) return;
     setCopying(true);
 
     // Capture promise created immediately — before any await — so it can be passed
     // to ClipboardItem as a Promise, keeping the clipboard write within the user
     // gesture context (required by Safari).
-    const capturePromise: Promise<Blob> = html2canvas(cardRef.current, {
+    const capturePromise: Promise<Blob> = html2canvas(captureRef.current!, {
       scale: 2,
       backgroundColor: null,
       useCORS: true,
@@ -431,6 +432,22 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
             </div>
           )}
         </div>
+
+        {/* Hidden full-size card used exclusively by html2canvas — never visible */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: '-9999px',
+            pointerEvents: 'none',
+            zIndex: -1,
+            width: 480,
+          }}
+        >
+          <ShareCard ref={captureRef} tasks={displayTasks} title={cardTitle} goalTitle={goalTitle} shareDate={shareDate} />
+        </div>
+
         <div className="flex-shrink-0 p-3 md:p-4 border-t border-border/60 bg-background flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             {displayTasks.length} task{displayTasks.length !== 1 ? 's' : ''}
