@@ -226,13 +226,17 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
   };
 
   const cardTitle = (() => {
-    if (mode === 'all') {
-      if (shareDate && !isDateToday(shareDate)) return `Tasks · ${format(shareDate, 'MMM d')}`;
-      if (!shareDate && goalTitle) return `Tasks · ${goalTitle}`;
-      return "Today's Tasks";
-    }
+    // Period mode always shows the period label
     if (mode === 'period') return `${PERIOD_CONFIG[selectedPeriod].label} Tasks`;
-    return goalTitle ?? 'Selected Tasks';
+    // When the goal is known, use it as the primary title
+    if (goalTitle) {
+      if (shareDate && !isDateToday(shareDate)) return `${goalTitle} · ${format(shareDate, 'MMM d')}`;
+      return goalTitle;
+    }
+    // No specific goal — date/generic fallback (e.g. TodaysTasks across all goals)
+    if (shareDate && !isDateToday(shareDate)) return `Tasks · ${format(shareDate, 'MMM d')}`;
+    if (mode === 'selected') return 'Selected Tasks';
+    return "Today's Tasks";
   })();
 
   const toggleSelected = useCallback((id: string) => {
