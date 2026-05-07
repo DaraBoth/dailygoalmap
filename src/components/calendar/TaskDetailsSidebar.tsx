@@ -1,6 +1,6 @@
 import { Task } from "./types";
 import { AnimatePresence } from "framer-motion";
-import { X, CalendarIcon, CheckCircle2, Circle, Edit2, Trash2, Clock, AlertCircle, Tag, Loader2, Sparkles, ExternalLink } from "lucide-react";
+import { X, CalendarIcon, CheckCircle2, Circle, Edit2, Trash2, Clock, AlertCircle, Tag, Loader2, Sparkles, ExternalLink, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
@@ -12,6 +12,7 @@ import { MarkdownRenderer } from "../ui/MarkdownRenderer";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatTaskDate, formatTaskTimeRange } from "./taskDateTime";
+import ShareTasksModal, { ShareableTask } from "@/components/dashboard/ShareTasksModal";
 
 interface TaskDetailsSidebarProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ const TaskDetailsSidebar = ({
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [isAddingReminder, setIsAddingReminder] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const handleAddToReminders = async () => {
     if (!selectedTask) return;
@@ -89,6 +91,15 @@ const TaskDetailsSidebar = ({
                   <SheetTitle className="text-xs sm:text-sm text-muted-foreground font-medium truncate">{goalTitle}</SheetTitle>
                   
                   <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShareOpen(true)}
+                      className="h-8 sm:h-9 px-2 sm:px-3 rounded-xl text-xs sm:text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1.5" />
+                      <span className="hidden sm:inline">Share</span>
+                    </Button>
                     {onEditTask && (
                       <Button
                         variant="ghost"
@@ -277,6 +288,17 @@ const TaskDetailsSidebar = ({
           )}
         </SheetContent>
       </Sheet>
+
+      {selectedTask && (
+        <ShareTasksModal
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          tasks={[selectedTask] as unknown as ShareableTask[]}
+          goalTitle={goalTitle}
+          defaultMode="selected"
+          defaultSelectedIds={new Set([selectedTask.id])}
+        />
+      )}
   );
 };
 
