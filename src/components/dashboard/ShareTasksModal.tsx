@@ -135,12 +135,22 @@ const ShareListCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; tit
                 <div style={{ flex: 1, padding: '10px 12px', minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{
-                      flex: 1, fontSize: 13, fontWeight: 600, lineHeight: 1.6,
+                      flex: 1, position: 'relative' as const,
+                      fontSize: 13, fontWeight: 600, lineHeight: 1.6,
                       color: task.completed ? '#64748b' : '#f1f5f9',
-                      textDecoration: task.completed ? 'line-through' : 'none',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
                     }}>
                       {task.title || task.description || 'Untitled'}
+                      {task.completed && (
+                        <div style={{
+                          position: 'absolute' as const,
+                          top: '50%', left: 0, right: 0,
+                          height: 1.5,
+                          background: '#64748b',
+                          transform: 'translateY(-50%)',
+                          pointerEvents: 'none' as const,
+                        }} />
+                      )}
                     </div>
                     <span style={{
                       flexShrink: 0, fontSize: 8, fontWeight: 800,
