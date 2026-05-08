@@ -700,7 +700,7 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
                 </div>
 
                 {/* Panel Actions */}
-                <div className="flex-shrink-0 px-5 py-3 border-b border-border/40 flex items-center gap-2">
+                <div className="flex-shrink-0 px-5 py-3 border-b border-border/40 flex items-center gap-2 flex-wrap">
                   {selectMode ? (
                     <>
                       <span className="text-xs text-muted-foreground shrink-0">{selectedTaskIds.size} selected</span>
@@ -729,7 +729,7 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
                           variant="outline"
                           size="sm"
                           onClick={handleUndoMarkAllCompleted}
-                          className="h-8 text-sm text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl flex items-center gap-2"
+                          className="h-8 text-xs text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl flex items-center gap-2"
                         >
                           Undo
                         </Button>
@@ -741,7 +741,8 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
                           className="h-8 text-xs text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:text-green-700 dark:hover:text-green-300 rounded-xl flex items-center gap-2"
                         >
                           <CheckCircle className="h-3.5 w-3.5" />
-                          Mark All Completed
+                          <span className="hidden sm:inline">Mark All Completed</span>
+                          <span className="sm:hidden">Complete All</span>
                         </Button>
                       )}
                       <Button
@@ -754,16 +755,6 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
                       >
                         <Share2 className="h-3.5 w-3.5" />
                         Share
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectMode(true)}
-                        disabled={tasksForToday.length === 0}
-                        className="h-8 text-xs rounded-xl text-muted-foreground hover:text-foreground"
-                        title="Select tasks to share"
-                      >
-                        Select
                       </Button>
                       <div className="ml-auto">
                         {renderFilter(false)}
@@ -786,8 +777,7 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
         open={shareOpen}
         onClose={() => { setShareOpen(false); if (selectMode) exitSelectMode(); }}
         tasks={tasksForToday}
-        defaultMode={selectMode && selectedTaskIds.size > 0 ? 'selected' : undefined}
-        defaultSelectedIds={selectMode && selectedTaskIds.size > 0 ? selectedTaskIds : undefined}
+        defaultMode="all"
       />
     </>
   );
