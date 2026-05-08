@@ -132,10 +132,10 @@ const ShareListCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; tit
                 border: `1px solid ${task.completed ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.10)'}`,
               }}>
                 <div style={{ width: 3, flexShrink: 0, background: task.completed ? '#6366f1' : '#f59e0b' }} />
-                <div style={{ flex: 1, padding: '9px 12px', minWidth: 0 }}>
+                <div style={{ flex: 1, padding: '10px 12px', minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{
-                      flex: 1, fontSize: 12, fontWeight: 600, lineHeight: 1.5,
+                      flex: 1, fontSize: 13, fontWeight: 600, lineHeight: 1.6,
                       color: task.completed ? '#64748b' : '#f1f5f9',
                       textDecoration: task.completed ? 'line-through' : 'none',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
@@ -154,7 +154,7 @@ const ShareListCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; tit
                   </div>
                   {(timeStr || goalName) && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                      {timeStr && <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500, lineHeight: 1.5 }}>\u23f0 {timeStr}</span>}
+                      {timeStr && <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500, lineHeight: 1.5 }}>{'⏰'} {timeStr}</span>}
                       {goalName && (
                         <span style={{
                           fontSize: 8, fontWeight: 800, color: '#818cf8',
@@ -421,7 +421,7 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
           </div>
         )}
       </div>
-      <div aria-hidden="true" style={{ position: 'fixed', top: 0, left: '-9999px', pointerEvents: 'none', zIndex: -1, width: 480 }}>
+      <div aria-hidden="true" style={{ position: 'fixed', top: 0, left: '-9999px', pointerEvents: 'none', zIndex: 9999, width: 480 }}>
         {tasks[0] && <ShareDetailCard ref={captureRef} task={tasks[0]} goalTitle={goalTitle} shareDate={shareDate} />}
       </div>
       <div className="flex-shrink-0 p-3 md:p-4 border-t border-border/60 bg-background flex items-center justify-between gap-3">
@@ -509,7 +509,7 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
             </div>
           )}
         </div>
-        <div aria-hidden="true" style={{ position: 'fixed', top: 0, left: '-9999px', pointerEvents: 'none', zIndex: -1, width: 480 }}>
+        <div aria-hidden="true" style={{ position: 'fixed', top: 0, left: '-9999px', pointerEvents: 'none', zIndex: 9999, width: 480 }}>
           <ShareListCard ref={captureRef} tasks={displayTasks} title={cardTitle} goalTitle={goalTitle} shareDate={shareDate} />
         </div>
         <div className="flex-shrink-0 p-3 md:p-4 border-t border-border/60 bg-background flex items-center justify-between gap-3">
