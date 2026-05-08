@@ -315,6 +315,8 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
         onClose={() => setShareOpen(false)}
         tasks={[selectedTask] as unknown as ShareableTask[]}
         goalTitle={goalTitle}
+        shareType="detail"
+        shareDate={selectedTask?.start_date ? new Date(selectedTask.start_date) : undefined}
       />
     </div>
   );

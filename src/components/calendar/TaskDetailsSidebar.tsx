@@ -296,8 +296,8 @@ const TaskDetailsSidebar = ({
           onClose={() => setShareOpen(false)}
           tasks={[selectedTask] as unknown as ShareableTask[]}
           goalTitle={goalTitle}
-          defaultMode="selected"
-          defaultSelectedIds={new Set([selectedTask.id])}
+          shareType="detail"
+          shareDate={selectedTask?.start_date ? new Date(selectedTask.start_date) : undefined}
         />
       )}
     </>

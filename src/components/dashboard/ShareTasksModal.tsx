@@ -18,6 +18,8 @@ export type ShareableTask = {
   daily_start_time?: string | null;
   daily_end_time?: string | null;
   is_anytime?: boolean | null;
+  start_date?: string | null;
+  tags?: string[] | null;
   goals?: { title?: string | null } | null;
 };
 
@@ -50,13 +52,38 @@ interface ShareTasksModalProps {
   goalTitle?: string;
   /** The date these tasks belong to — used for the card title and date display */
   shareDate?: Date;
+  /** 'list' = multi-task list (default) | 'detail' = single task full-detail view */
+  shareType?: 'list' | 'detail';
   /** Pre-select a share mode when the modal opens */
   defaultMode?: ShareMode;
   /** Pre-select specific task IDs (used with defaultMode='selected') */
   defaultSelectedIds?: Set<string>;
 }
 
-const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: string; goalTitle?: string; shareDate?: Date }>(
+// ── Helpers ────────────────────────────────────────────────────────────────
+function stripMarkdown(md: string): string {
+  return md
+    .replace(/#{1,6}\s+/g, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/`(.*?)`/g, '$1')
+    .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function getTimeStr(task: TodayTask): string | null {
+  if (task.is_anytime) return 'Anytime';
+  if (task.daily_start_time) {
+    const start = task.daily_start_time.slice(0, 5);
+    const end = task.daily_end_time ? ` \u2013 ${task.daily_end_time.slice(0, 5)}` : '';
+    return `${start}${end}`;
+  }
+  return null;
+}
+
+// ── List card (multiple tasks) ─────────────────────────────────────────────
+const ShareListCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: string; goalTitle?: string; shareDate?: Date }>(
   ({ tasks, title, goalTitle, shareDate }, ref) => {
     const completed = tasks.filter(t => t.completed).length;
     const total = tasks.length;
@@ -64,114 +91,83 @@ const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: 
     const displayDate = shareDate ?? new Date();
 
     return (
-      <div
-        ref={ref}
-        style={{
-          width: 480,
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
-          borderRadius: 24,
-          padding: '32px 32px 28px',
-          fontFamily: "'Inter', 'Segoe UI', sans-serif",
-          color: '#f8fafc',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Background glow */}
-        <div style={{
-          position: 'absolute', top: -60, right: -60,
-          width: 200, height: 200,
-          background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }} />
+      <div ref={ref} style={{
+        width: 480,
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+        borderRadius: 24, padding: '28px 28px 24px',
+        fontFamily: "'Inter', 'Segoe UI', sans-serif",
+        color: '#f8fafc', boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        <div style={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', color: '#818cf8', textTransform: 'uppercase', marginBottom: 4, lineHeight: 1.5 }}>
-              DailyGoalMap
-            </div>
-            <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.02em', color: '#f8fafc', lineHeight: 1.3 }}>
-              {title}
-            </div>
-            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3, fontWeight: 500, lineHeight: 1.5 }}>
-              {format(displayDate, 'EEEE, MMMM d, yyyy')}
-            </div>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.15em', color: '#818cf8', textTransform: 'uppercase', marginBottom: 4, lineHeight: 1.5 }}>DailyGoalMap</div>
+            <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: '-0.02em', color: '#f8fafc', lineHeight: 1.3 }}>{title}</div>
+            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2, fontWeight: 500, lineHeight: 1.5 }}>{format(displayDate, 'EEEE, MMMM d, yyyy')}</div>
           </div>
-          <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            background: 'rgba(99,102,241,0.15)', borderRadius: 16,
-            padding: '10px 16px', border: '1px solid rgba(99,102,241,0.3)',
-          }}>
-            <div style={{ fontSize: 24, fontWeight: 900, color: '#a5b4fc', lineHeight: 1 }}>{pct}%</div>
-            <div style={{ fontSize: 10, color: '#818cf8', fontWeight: 700, marginTop: 3 }}>DONE</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(99,102,241,0.15)', borderRadius: 14, padding: '8px 14px', border: '1px solid rgba(99,102,241,0.3)', flexShrink: 0, marginLeft: 12 }}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: '#a5b4fc', lineHeight: 1 }}>{pct}%</div>
+            <div style={{ fontSize: 9, color: '#818cf8', fontWeight: 700, marginTop: 2, lineHeight: 1.5 }}>DONE</div>
           </div>
         </div>
 
         {/* Progress bar */}
-        <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 99, height: 4, marginBottom: 20, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#818cf8,#6366f1)', borderRadius: 99, transition: 'width 0.4s' }} />
+        <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 99, height: 3, marginBottom: 14, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#818cf8,#6366f1)', borderRadius: 99 }} />
         </div>
 
         {/* Task list */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {tasks.map((task) => {
-            const period = getPeriod(task);
-            const cfg = PERIOD_CONFIG[period];
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {tasks.map(task => {
+            const timeStr = getTimeStr(task);
+            const goalName = task.goals?.title || goalTitle;
             return (
-              <div
-                key={task.id}
-                style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 12,
-                  background: task.completed ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)',
-                  borderRadius: 14, padding: '10px 14px',
-                  border: `1px solid ${task.completed ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.12)'}`,
-                  opacity: task.completed ? 0.6 : 1,
-                }}
-              >
-                {/* Checkbox circle */}
-                <div style={{
-                  width: 18, height: 18, borderRadius: '50%', flexShrink: 0, marginTop: 2,
-                  background: task.completed ? '#6366f1' : 'transparent',
-                  border: `2px solid ${task.completed ? '#6366f1' : 'rgba(255,255,255,0.25)'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {task.completed && (
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                      <path d="M2 5l2.5 2.5L8 3" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontSize: 13, fontWeight: 600, color: task.completed ? '#64748b' : '#f1f5f9',
-                    textDecoration: task.completed ? 'line-through' : 'none',
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                    lineHeight: 1.5, paddingBottom: 1,
-                  }}>
-                    {task.title || task.description || 'Untitled'}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                    <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500 }}>
-                      {task.is_anytime
-                        ? 'Anytime'
-                        : task.daily_start_time && task.daily_end_time
-                          ? `${task.daily_start_time.slice(0, 5)} – ${task.daily_end_time.slice(0, 5)}`
-                          : ''}
+              <div key={task.id} style={{
+                display: 'flex', alignItems: 'stretch',
+                background: task.completed ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)',
+                borderRadius: 10, overflow: 'hidden',
+                border: `1px solid ${task.completed ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.10)'}`,
+              }}>
+                <div style={{ width: 3, flexShrink: 0, background: task.completed ? '#6366f1' : '#f59e0b' }} />
+                <div style={{ flex: 1, padding: '9px 12px', minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      flex: 1, fontSize: 12, fontWeight: 600, lineHeight: 1.5,
+                      color: task.completed ? '#64748b' : '#f1f5f9',
+                      textDecoration: task.completed ? 'line-through' : 'none',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+                    }}>
+                      {task.title || task.description || 'Untitled'}
+                    </div>
+                    <span style={{
+                      flexShrink: 0, fontSize: 8, fontWeight: 800,
+                      padding: '2px 7px', borderRadius: 99, lineHeight: 1.6,
+                      background: task.completed ? 'rgba(99,102,241,0.2)' : 'rgba(245,158,11,0.15)',
+                      color: task.completed ? '#a5b4fc' : '#fbbf24',
+                      textTransform: 'uppercase' as const, letterSpacing: '0.08em',
+                    }}>
+                      {task.completed ? 'Done' : 'Active'}
                     </span>
-                    {(task.goals?.title || goalTitle) && (
-                      <span style={{
-                        fontSize: 9, fontWeight: 800, color: '#818cf8',
-                        background: 'rgba(99,102,241,0.15)', padding: '1px 7px',
-                        borderRadius: 99, textTransform: 'uppercase', letterSpacing: '0.08em',
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 120,
-                        display: 'inline-block',
-                      }}>
-                        {task.goals?.title || goalTitle}
-                      </span>
-                    )}
                   </div>
+                  {(timeStr || goalName) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                      {timeStr && <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500, lineHeight: 1.5 }}>\u23f0 {timeStr}</span>}
+                      {goalName && (
+                        <span style={{
+                          fontSize: 8, fontWeight: 800, color: '#818cf8',
+                          background: 'rgba(99,102,241,0.12)', padding: '1px 6px',
+                          borderRadius: 99, textTransform: 'uppercase' as const, letterSpacing: '0.08em',
+                          whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 110,
+                          display: 'inline-block', lineHeight: 1.8,
+                        }}>
+                          {goalName}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -179,25 +175,112 @@ const ShareCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; title: 
         </div>
 
         {/* Footer */}
-        <div style={{
-          marginTop: 20, paddingTop: 16,
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div style={{ fontSize: 10, color: '#475569', fontWeight: 600 }}>
-            {completed}/{total} tasks completed
-          </div>
-          <div style={{ fontSize: 10, color: '#334155', fontWeight: 700, letterSpacing: '0.1em' }}>
-            dailygoalmap.vercel.app
-          </div>
+        <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 10, color: '#475569', fontWeight: 600, lineHeight: 1.5 }}>{completed}/{total} tasks completed</div>
+          <div style={{ fontSize: 10, color: '#334155', fontWeight: 700, letterSpacing: '0.1em' }}>dailygoalmap.vercel.app</div>
         </div>
       </div>
     );
   }
 );
-ShareCard.displayName = 'ShareCard';
+ShareListCard.displayName = 'ShareListCard';
 
-const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks, goalTitle, shareDate, defaultMode, defaultSelectedIds }) => {
+// ── Detail card (single task) ──────────────────────────────────────────────
+const ShareDetailCard = React.forwardRef<HTMLDivElement, { task: TodayTask; goalTitle?: string; shareDate?: Date }>(
+  ({ task, goalTitle, shareDate }, ref) => {
+    const displayDate = shareDate ?? (task.start_date ? new Date(task.start_date) : new Date());
+    const timeStr = getTimeStr(task);
+    const goalName = task.goals?.title || goalTitle;
+    const rawDesc = task.description ?? '';
+    const descPlain = rawDesc ? stripMarkdown(rawDesc) : '';
+    const descTruncated = descPlain.length > 240 ? descPlain.slice(0, 240) + '\u2026' : descPlain;
+
+    return (
+      <div ref={ref} style={{
+        width: 480,
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+        borderRadius: 24, padding: '28px 32px 24px',
+        fontFamily: "'Inter', 'Segoe UI', sans-serif",
+        color: '#f8fafc', boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        <div style={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+        {/* Branding */}
+        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.15em', color: '#818cf8', textTransform: 'uppercase', marginBottom: 12, lineHeight: 1.5 }}>DailyGoalMap \u00b7 Task</div>
+
+        {/* Status badge */}
+        <div style={{ marginBottom: 14 }}>
+          <span style={{
+            display: 'inline-block', fontSize: 10, fontWeight: 800,
+            padding: '4px 12px', borderRadius: 99, lineHeight: 1.5,
+            background: task.completed ? 'rgba(34,197,94,0.15)' : 'rgba(245,158,11,0.15)',
+            color: task.completed ? '#4ade80' : '#fbbf24',
+            textTransform: 'uppercase' as const, letterSpacing: '0.1em',
+            border: `1px solid ${task.completed ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`,
+          }}>
+            {task.completed ? '\u2713  Completed' : '\u25cf  In Progress'}
+          </span>
+        </div>
+
+        {/* Title */}
+        <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-0.02em', color: '#f8fafc', lineHeight: 1.35, marginBottom: 18, wordBreak: 'break-word' as const }}>
+          {task.title || 'Untitled Task'}
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', marginBottom: 14 }} />
+
+        {/* Properties */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {goalName && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', width: 48, flexShrink: 0, textTransform: 'uppercase' as const, letterSpacing: '0.08em', lineHeight: 1.5 }}>Goal</span>
+              <span style={{ fontSize: 12, color: '#a5b4fc', fontWeight: 600, lineHeight: 1.5 }}>{goalName}</span>
+            </div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', width: 48, flexShrink: 0, textTransform: 'uppercase' as const, letterSpacing: '0.08em', lineHeight: 1.5 }}>Date</span>
+            <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500, lineHeight: 1.5 }}>{format(displayDate, 'EEE, MMM d, yyyy')}</span>
+          </div>
+          {timeStr && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', width: 48, flexShrink: 0, textTransform: 'uppercase' as const, letterSpacing: '0.08em', lineHeight: 1.5 }}>Time</span>
+              <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500, lineHeight: 1.5 }}>{timeStr}</span>
+            </div>
+          )}
+          {task.tags && task.tags.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', width: 48, flexShrink: 0, textTransform: 'uppercase' as const, letterSpacing: '0.08em', lineHeight: 1.8 }}>Tags</span>
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
+                {task.tags.map((tag, i) => (
+                  <span key={i} style={{ fontSize: 9, fontWeight: 700, color: '#a5b4fc', background: 'rgba(99,102,241,0.15)', padding: '2px 8px', borderRadius: 99, lineHeight: 1.8 }}>{tag}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Description */}
+        {descTruncated && (
+          <>
+            <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '14px 0' }} />
+            <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.75, wordBreak: 'break-word' as const }}>{descTruncated}</div>
+          </>
+        )}
+
+        {/* Footer */}
+        <div style={{ marginTop: 18, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 10, color: '#334155', fontWeight: 600, lineHeight: 1.5 }}>Task Detail</div>
+          <div style={{ fontSize: 10, color: '#334155', fontWeight: 700, letterSpacing: '0.1em' }}>dailygoalmap.vercel.app</div>
+        </div>
+      </div>
+    );
+  }
+);
+ShareDetailCard.displayName = 'ShareDetailCard';
+
+const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks, goalTitle, shareDate, shareType = 'list', defaultMode, defaultSelectedIds }) => {
   const [mode, setMode] = useState<ShareMode>(defaultMode ?? 'all');
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('morning');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(defaultSelectedIds ?? new Set());
@@ -251,55 +334,41 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
   }, []);
 
   const handleCopyToClipboard = async () => {
-    if (!captureRef.current || displayTasks.length === 0) return;
+    const isEmpty = shareType === 'detail' ? tasks.length === 0 : displayTasks.length === 0;
+    if (!captureRef.current || isEmpty) return;
     setCopying(true);
 
-    // Capture promise created immediately — before any await — so it can be passed
-    // to ClipboardItem as a Promise, keeping the clipboard write within the user
-    // gesture context (required by Safari).
     const capturePromise: Promise<Blob> = html2canvas(captureRef.current!, {
-      scale: 2,
-      backgroundColor: null,
-      useCORS: true,
-      logging: false,
+      scale: 2, backgroundColor: null, useCORS: true, logging: false,
     }).then(canvas => new Promise<Blob>((resolve, reject) =>
       canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/png')
     ));
 
     const filename = `tasks-${format(shareDate ?? new Date(), 'yyyy-MM-dd')}.png`;
+    const shareTitle = shareType === 'detail' ? (tasks[0]?.title ?? 'Task') : cardTitle;
 
-    // Try clipboard (Promise-in-ClipboardItem works in Safari 13.1+)
     if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
       try {
-        await navigator.clipboard.write([
-          new ClipboardItem({ 'image/png': capturePromise }),
-        ]);
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': capturePromise })]);
         toast({ title: 'Screenshot copied!', description: 'Paste it anywhere to share.', variant: 'success' });
         setCopying(false);
         return;
-      } catch {
-        // fall through to share / download fallback
-      }
+      } catch { /* fall through */ }
     }
-
-    // Fallback: Web Share API (mobile Safari without clipboard permission)
     try {
       const blob = await capturePromise;
       const file = new File([blob], filename, { type: 'image/png' });
       if (navigator.share && (navigator as any).canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: cardTitle });
+        await navigator.share({ files: [file], title: shareTitle });
         toast({ title: 'Shared!', variant: 'success' });
         setCopying(false);
         return;
       }
-      // Last resort: download
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
+      a.href = url; a.download = filename; a.click();
       URL.revokeObjectURL(url);
-      toast({ title: 'Image downloaded', description: 'Clipboard not supported — image was saved instead.' });
+      toast({ title: 'Image downloaded', description: 'Clipboard not supported \u2014 image was saved instead.' });
     } catch {
       toast({ title: 'Screenshot failed', variant: 'destructive' });
     }
@@ -310,26 +379,75 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
     tasks.some(t => getPeriod(t) === p)
   );
 
-  // Shared inner content used by both Dialog (desktop) and Sheet (mobile)
-  const innerContent = (
+  // ── Shared action button ──────────────────────────────────────────────────
+  const copyButton = (
+    <Button
+      onClick={handleCopyToClipboard}
+      disabled={copying || (shareType === 'detail' ? tasks.length === 0 : displayTasks.length === 0)}
+      className="h-9 gap-2 rounded-xl font-semibold"
+    >
+      {copying ? (
+        <><div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />Capturing\u2026</>
+      ) : (
+        <>{isMobile ? <Share2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}{isMobile ? 'Share' : 'Copy Screenshot'}</>
+      )}
+    </Button>
+  );
+
+  // ── Scale-wrapper ref callback ────────────────────────────────────────────
+  const makeScaleRef = (defaultH: number) => (el: HTMLDivElement | null) => {
+    if (!el || !el.parentElement) return;
+    const cardH = cardRef.current?.offsetHeight || defaultH;
+    const containerW = el.parentElement.clientWidth - 32;
+    const containerH = el.parentElement.clientHeight - 16;
+    const scale = Math.min(containerW / 480, containerH / cardH, 1);
+    el.style.setProperty('--preview-scale', String(scale));
+    el.style.height = `${cardH}px`;
+    el.style.width = '480px';
+    el.parentElement.style.height = `${cardH * scale + 16}px`;
+  };
+
+  // ── Detail mode content ───────────────────────────────────────────────────
+  const detailContent = (
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div className="flex-1 overflow-hidden bg-slate-900/30 dark:bg-black/20 flex items-center justify-center p-4">
+        {tasks.length === 0 ? (
+          <div className="text-muted-foreground text-sm">No task selected</div>
+        ) : (
+          <div className="w-full flex items-center justify-center" style={{ height: isMobile ? '300px' : '420px' }}>
+            <div style={{ transformOrigin: 'center center', transform: 'scale(var(--preview-scale, 1))' }} ref={makeScaleRef(480)}>
+              <ShareDetailCard ref={cardRef} task={tasks[0]} goalTitle={goalTitle} shareDate={shareDate} />
+            </div>
+          </div>
+        )}
+      </div>
+      <div aria-hidden="true" style={{ position: 'fixed', top: 0, left: '-9999px', pointerEvents: 'none', zIndex: -1, width: 480 }}>
+        {tasks[0] && <ShareDetailCard ref={captureRef} task={tasks[0]} goalTitle={goalTitle} shareDate={shareDate} />}
+      </div>
+      <div className="flex-shrink-0 p-3 md:p-4 border-t border-border/60 bg-background flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">Single task \u00b7 detail view</p>
+        {copyButton}
+      </div>
+    </div>
+  );
+
+  // ── List mode content ─────────────────────────────────────────────────────
+  const listContent = (
     <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
       {/* Options panel */}
       <div className="md:w-56 flex-shrink-0 border-b md:border-b-0 md:border-r border-border/60 overflow-y-auto">
         <div className="p-3 md:p-4 space-y-3 md:space-y-4">
-          {/* Mode */}
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2 hidden md:block">Share Mode</p>
             <div className="flex md:flex-col gap-1.5 overflow-x-auto pb-1 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {([['all', 'All Today', <AlignJustify className="h-3.5 w-3.5" />]] as [ShareMode, string, React.ReactNode][])
+              {([['all', 'All Tasks', <AlignJustify className="h-3.5 w-3.5" />]] as [ShareMode, string, React.ReactNode][])
                 .concat([['period', 'By Period', <Clock className="h-3.5 w-3.5" />], ['selected', 'Selected', <Check className="h-3.5 w-3.5" />]])
                 .map(([val, label, icon]) => (
                 <button
                   key={val}
                   onClick={() => setMode(val)}
                   className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap ${
-                    mode === val
-                      ? 'bg-primary/15 text-primary border border-primary/30'
-                      : 'text-foreground/70 hover:bg-accent hover:text-foreground'
+                    mode === val ? 'bg-primary/15 text-primary border border-primary/30' : 'text-foreground/70 hover:bg-accent hover:text-foreground'
                   }`}
                 >
                   {icon} {label}
@@ -338,7 +456,6 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
             </div>
           </div>
 
-          {/* Period picker */}
           {mode === 'period' && (
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Period</p>
@@ -346,17 +463,12 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
                 {availablePeriods.map(p => {
                   const cfg = PERIOD_CONFIG[p];
                   return (
-                    <button
-                      key={p}
-                      onClick={() => setSelectedPeriod(p)}
+                    <button key={p} onClick={() => setSelectedPeriod(p)}
                       className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors whitespace-nowrap ${
-                        selectedPeriod === p
-                          ? 'bg-accent text-foreground font-semibold'
-                          : 'text-foreground/70 hover:bg-accent/60'
+                        selectedPeriod === p ? 'bg-accent text-foreground font-semibold' : 'text-foreground/70 hover:bg-accent/60'
                       }`}
                     >
-                      <span className={cfg.color}>{cfg.icon}</span>
-                      <span>{cfg.label}</span>
+                      <span className={cfg.color}>{cfg.icon}</span><span>{cfg.label}</span>
                     </button>
                   );
                 })}
@@ -364,7 +476,6 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
             </div>
           )}
 
-          {/* Task selector */}
           {mode === 'selected' && (
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
@@ -372,15 +483,8 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
               </p>
               <div className="space-y-1 max-h-40 md:max-h-52 overflow-y-auto">
                 {tasks.map(t => (
-                  <label
-                    key={t.id}
-                    className="flex items-start gap-2.5 px-2 py-2 rounded-lg hover:bg-accent/60 cursor-pointer"
-                  >
-                    <Checkbox
-                      checked={selectedIds.has(t.id)}
-                      onCheckedChange={() => toggleSelected(t.id)}
-                      className="mt-0.5 h-4 w-4"
-                    />
+                  <label key={t.id} className="flex items-start gap-2.5 px-2 py-2 rounded-lg hover:bg-accent/60 cursor-pointer">
+                    <Checkbox checked={selectedIds.has(t.id)} onCheckedChange={() => toggleSelected(t.id)} className="mt-0.5 h-4 w-4" />
                     <span className={`text-xs leading-snug ${t.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                       {t.title || t.description || 'Untitled'}
                     </span>
@@ -394,107 +498,46 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
 
       {/* Preview + action */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        {/* Preview area: fixed-height container, card scaled to fit */}
         <div className="flex-1 overflow-hidden bg-slate-900/30 dark:bg-black/20 flex items-center justify-center p-4">
           {displayTasks.length === 0 ? (
-            <div className="text-muted-foreground text-sm">
-              No tasks to preview
-            </div>
+            <div className="text-muted-foreground text-sm">No tasks to preview</div>
           ) : (
-            <div
-              className="w-full flex items-center justify-center"
-              style={{ height: isMobile ? '220px' : '300px' }}
-            >
-              {/* Scale wrapper: renders at 480px then scales down to fill container */}
-              <div
-                style={{
-                  transformOrigin: 'center center',
-                  transform: `scale(var(--preview-scale, 1))`,
-                  // CSS custom prop set via inline style below
-                }}
-                ref={(el) => {
-                  if (el && el.parentElement) {
-                    const containerW = el.parentElement.clientWidth - 32;
-                    const containerH = el.parentElement.clientHeight - 16;
-                    const scaleW = containerW / 480;
-                    const scaleH = containerH / (cardRef.current?.offsetHeight || 400);
-                    const scale = Math.min(scaleW, scaleH, 1);
-                    el.style.setProperty('--preview-scale', String(scale));
-                    // Compensate whitespace collapse from scale
-                    const scaledH = (cardRef.current?.offsetHeight || 400) * scale;
-                    el.style.height = `${cardRef.current?.offsetHeight || 400}px`;
-                    el.style.width = '480px';
-                    el.parentElement.style.height = `${scaledH + 16}px`;
-                  }
-                }}
-              >
-                <ShareCard ref={cardRef} tasks={displayTasks} title={cardTitle} goalTitle={goalTitle} shareDate={shareDate} />
+            <div className="w-full flex items-center justify-center" style={{ height: isMobile ? '220px' : '300px' }}>
+              <div style={{ transformOrigin: 'center center', transform: 'scale(var(--preview-scale, 1))' }} ref={makeScaleRef(400)}>
+                <ShareListCard ref={cardRef} tasks={displayTasks} title={cardTitle} goalTitle={goalTitle} shareDate={shareDate} />
               </div>
             </div>
           )}
         </div>
-
-        {/* Hidden full-size card used exclusively by html2canvas — never visible */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: '-9999px',
-            pointerEvents: 'none',
-            zIndex: -1,
-            width: 480,
-          }}
-        >
-          <ShareCard ref={captureRef} tasks={displayTasks} title={cardTitle} goalTitle={goalTitle} shareDate={shareDate} />
+        <div aria-hidden="true" style={{ position: 'fixed', top: 0, left: '-9999px', pointerEvents: 'none', zIndex: -1, width: 480 }}>
+          <ShareListCard ref={captureRef} tasks={displayTasks} title={cardTitle} goalTitle={goalTitle} shareDate={shareDate} />
         </div>
-
         <div className="flex-shrink-0 p-3 md:p-4 border-t border-border/60 bg-background flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             {displayTasks.length} task{displayTasks.length !== 1 ? 's' : ''}
-            <span className="hidden sm:inline"> · copies to clipboard</span>
+            <span className="hidden sm:inline"> \u00b7 copies to clipboard</span>
           </p>
-          <Button
-            onClick={handleCopyToClipboard}
-            disabled={copying || displayTasks.length === 0}
-            className="h-9 gap-2 rounded-xl font-semibold"
-          >
-            {copying ? (
-              <>
-                <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                Capturing…
-              </>
-            ) : (
-              <>
-                {isMobile ? <Share2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                {isMobile ? 'Share' : 'Copy Screenshot'}
-              </>
-            )}
-          </Button>
+          {copyButton}
         </div>
       </div>
     </div>
   );
 
+  const innerContent = shareType === 'detail' ? detailContent : listContent;
+
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={v => !v && onClose()}>
-        <SheetContent
-          side="bottom"
-          className="p-0 rounded-t-2xl flex flex-col overflow-hidden"
-          style={{ maxHeight: '88dvh' }}
-        >
+        <SheetContent side="bottom" className="p-0 rounded-t-2xl flex flex-col overflow-hidden" style={{ maxHeight: '88dvh' }}>
           <SheetHeader className="px-5 pt-5 pb-4 border-b border-border/60 flex-shrink-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-xl">
-                <Share2 className="h-4 w-4 text-primary" />
-              </div>
-              <SheetTitle className="text-lg font-bold">Share as Screenshot</SheetTitle>
+              <div className="p-2 bg-primary/10 rounded-xl"><Share2 className="h-4 w-4 text-primary" /></div>
+              <SheetTitle className="text-lg font-bold">
+                {shareType === 'detail' ? 'Share Task Detail' : 'Share as Screenshot'}
+              </SheetTitle>
             </div>
           </SheetHeader>
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-            {innerContent}
-          </div>
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">{innerContent}</div>
         </SheetContent>
       </Sheet>
     );
@@ -505,15 +548,13 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
       <DialogContent className="max-w-[95vw] sm:max-w-2xl w-full p-0 overflow-hidden rounded-2xl flex flex-col max-h-[90dvh]">
         <DialogHeader className="px-5 pt-5 pb-4 border-b border-border/60 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-xl">
-              <Share2 className="h-4 w-4 text-primary" />
-            </div>
-            <DialogTitle className="text-lg font-bold">Share as Screenshot</DialogTitle>
+            <div className="p-2 bg-primary/10 rounded-xl"><Share2 className="h-4 w-4 text-primary" /></div>
+            <DialogTitle className="text-lg font-bold">
+              {shareType === 'detail' ? 'Share Task Detail' : 'Share as Screenshot'}
+            </DialogTitle>
           </div>
         </DialogHeader>
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          {innerContent}
-        </div>
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">{innerContent}</div>
       </DialogContent>
     </Dialog>
   );
