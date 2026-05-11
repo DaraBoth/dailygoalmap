@@ -99,7 +99,8 @@ export const UserMenu: React.FC<UserMenuProps> = ({ mobileDashboardActions }) =>
     };
 
     setupNotificationState();
-  }, [mobileDashboardActions]);
+  // Re-check every time the sheet opens so we read the real state after auth is restored
+  }, [mobileDashboardActions, mobileMenuOpen]);
 
   // Handle logout
   const handleLogout = async () => {

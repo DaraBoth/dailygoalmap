@@ -104,7 +104,7 @@ const ShareListCard = React.forwardRef<HTMLDivElement, { tasks: TodayTask[]; tit
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.15em', color: '#818cf8', textTransform: 'uppercase', marginBottom: 4, lineHeight: 1.5 }}>DailyGoalMap</div>
+            <img src="/logo/newlogo.png" alt="DailyGoalMap" style={{ height: 16, width: 'auto', marginBottom: 4, objectFit: 'contain' }} />
             <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: '-0.02em', color: '#f8fafc', lineHeight: 1.3 }}>{title}</div>
             <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2, fontWeight: 500, lineHeight: 1.5 }}>{format(displayDate, 'EEEE, MMMM d, yyyy')}</div>
           </div>
@@ -217,7 +217,10 @@ const ShareDetailCard = React.forwardRef<HTMLDivElement, { task: TodayTask; goal
         <div style={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
         {/* Branding */}
-        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.15em', color: '#818cf8', textTransform: 'uppercase', marginBottom: 12, lineHeight: 1.5 }}>DailyGoalMap \u00b7 Task</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+          <img src="/logo/newlogo.png" alt="DailyGoalMap" style={{ height: 16, width: 'auto', objectFit: 'contain' }} />
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#818cf8', letterSpacing: '0.1em' }}>\u00b7 Task</span>
+        </div>
 
         {/* Status badge */}
         <div style={{ marginBottom: 14 }}>
