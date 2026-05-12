@@ -4,7 +4,7 @@
     "version": "1.10.50",
     "type": "module",
     "scripts": {
-        "dev": "vite",
+        "dev": "vite --port 2000",
         "build": "vite build",
         "obfuscate": "javascript-obfuscator ./dist --output ./dist --exclude '*.css'",
         "build:dev": "vite build --mode development",

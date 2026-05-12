@@ -62,7 +62,8 @@ const HeroSection: React.FC = () => {
             <div className="relative z-10">
               <motion.div
                 animate={{ 
-                  rotate: 360,
+                  scale: [1, 0.2, 2],
+                  opacity: [1, 0.8, 1]
                 }}
                 transition={{ 
                   duration: 20, 
