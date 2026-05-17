@@ -33,6 +33,30 @@ const GoalChatWidgetLazy = React.lazy(() =>
   import('@/components/goal/GoalChatWidget').then((mod) => ({ default: mod.GoalChatWidget }))
 );
 
+const TASKS_PAGE_SIZE = 1000;
+
+async function fetchAllGoalTasks(goalId: string) {
+  const allTasks: any[] = [];
+
+  for (let from = 0; ; from += TASKS_PAGE_SIZE) {
+    const to = from + TASKS_PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('goal_id', goalId)
+      .range(from, to);
+
+    if (error) throw error;
+
+    const page = data ?? [];
+    allTasks.push(...page);
+
+    if (page.length < TASKS_PAGE_SIZE) break;
+  }
+
+  return normalizeTaskList(allTasks as any[]);
+}
+
 class GoalChatWidgetErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { hasError: boolean }
@@ -295,28 +319,55 @@ const GoalDetail: React.FC = () => {
     if (!goalId) return;
     enableRealtimeForTable('tasks').catch(() => { });
 
+    const refetchTasks = async () => {
+      try {
+        const nextTasks = await fetchAllGoalTasks(goalId);
+        setTasks(nextTasks);
+      } catch (error) {
+        console.error('Failed to refetch goal tasks:', error);
+      }
+    };
+
     const channel = supabase
       .channel(`task-changes-${goalId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `goal_id=eq.${goalId}` }, async (payload) => {
         // Handle realtime updates more efficiently - update only the affected task
         if (payload.eventType === 'INSERT' && payload.new) {
           const normalizedNew = normalizeTaskRecord(payload.new as any);
-          setTasks(prev => [...prev, normalizedNew]);
+          setTasks(prev => {
+            const existingIndex = prev.findIndex(t => t.id === normalizedNew.id);
+            if (existingIndex >= 0) {
+              const next = [...prev];
+              next[existingIndex] = normalizeTaskRecord({ ...prev[existingIndex], ...(payload.new as any) });
+              return next;
+            }
+            return [...prev, normalizedNew];
+          });
         } else if (payload.eventType === 'UPDATE' && payload.new) {
-          // Merge payload.new with the existing task to preserve any fields not included in the realtime payload
-          setTasks(prev => prev.map(t => t.id === payload.new.id ? normalizeTaskRecord({ ...t, ...(payload.new as any) }) : t));
+          // Merge payload.new with the existing task and add it if it is missing locally.
+          setTasks(prev => {
+            const existingIndex = prev.findIndex(t => t.id === payload.new.id);
+            if (existingIndex >= 0) {
+              const next = [...prev];
+              next[existingIndex] = normalizeTaskRecord({ ...prev[existingIndex], ...(payload.new as any) });
+              return next;
+            }
+            return [...prev, normalizeTaskRecord(payload.new as any)];
+          });
         } else if (payload.eventType === 'DELETE' && payload.old) {
           setTasks(prev => prev.filter(t => t.id !== payload.old.id));
         } else {
           // Fallback: refetch all tasks only if we can't handle the specific change
-          const { data, error } = await supabase.from('tasks').select('*').eq('goal_id', goalId);
-          if (!error && data) setTasks(normalizeTaskList(data as any[]));
+          await refetchTasks();
         }
       })
       .subscribe((status, err) => {
         if (err) console.error('[Realtime] GoalDetail tasks subscription error:', err);
         else if (status === 'SUBSCRIBED') console.log('[Realtime] GoalDetail tasks subscribed for goal:', goalId);
-        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.warn('[Realtime] GoalDetail tasks subscription problem:', status);
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[Realtime] GoalDetail tasks subscription problem:', status);
+          void refetchTasks();
+        }
       });
 
     return () => { supabase.removeChannel(channel); };

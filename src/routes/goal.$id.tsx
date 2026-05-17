@@ -20,6 +20,31 @@ const GoalDetailLoading = () => (
   </div>
 )
 
+const TASKS_PAGE_SIZE = 1000
+
+async function fetchAllGoalTasks(goalId: string) {
+  const allTasks: any[] = []
+
+  for (let from = 0; ; from += TASKS_PAGE_SIZE) {
+    const to = from + TASKS_PAGE_SIZE - 1
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, is_anytime, duration_minutes, tags, goal_id, user_id, created_at, updated_at, updated_by')
+      .eq('goal_id', goalId)
+      .order('start_date', { ascending: true })
+      .range(from, to)
+
+    if (error) throw error
+
+    const page = data ?? []
+    allTasks.push(...page)
+
+    if (page.length < TASKS_PAGE_SIZE) break
+  }
+
+  return normalizeTaskList(allTasks as any[])
+}
+
 export const Route = createFileRoute('/goal/$id')({
   // Pre-load goal access and data
   beforeLoad: async ({ params, location }) => {
@@ -116,13 +141,7 @@ export const Route = createFileRoute('/goal/$id')({
       }
 
       // Always fetch tasks fresh — same logic as TodaysTasks (no cache, no stale data).
-      const { data: rawTasks, error: tasksError } = await supabase
-        .from('tasks')
-        .select('id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, is_anytime, duration_minutes, tags, goal_id, user_id, created_at, updated_at, updated_by')
-        .eq('goal_id', goalId)
-        .order('start_date', { ascending: true })
-      if (tasksError) console.warn('Tasks fetch error:', tasksError.message)
-      tasksData = normalizeTaskList((rawTasks ?? []) as any[])
+      tasksData = await fetchAllGoalTasks(goalId)
 
       const loadTime = performance.now() - startTime
       console.log(`Goal ${goalId} data loaded in ${loadTime.toFixed(2)}ms ${fromCache ? '(cached)' : '(fresh)'}`)
