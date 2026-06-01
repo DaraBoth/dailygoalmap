@@ -727,12 +727,14 @@ const GoalAIContextSettings: React.FC<GoalAIContextSettingsProps> = ({
               </div>
 
               {!canManageProjectKeys ? (
-                <p className="text-xs text-muted-foreground mt-3">
-                  Sign in to generate and manage project API keys if you are a goal member.
-                </p>
+                <>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Sign in to generate and manage project API keys if you are a goal member.
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     Integration guide for AI tools: <span className="font-medium text-foreground">/ai-api</span>
                   </p>
+                </>
               ) : (
                 <>
                   <div className="mt-4 flex flex-col sm:flex-row gap-2">
