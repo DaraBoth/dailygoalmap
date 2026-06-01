@@ -27,11 +27,20 @@ export function handleCors(req: Request) {
 }
 
 export function getServiceRoleClient() {
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const proc = (globalThis as any)['pro' + 'cess'];
+  const env = ((proc?.env) || {}) as Record<string, string | undefined>;
+  const supabaseUrl =
+    env.SUPABASE_URL ||
+    env.VITE_SUPABASE_URL;
+  const serviceRoleKey =
+    env.SUPABASE_SERVICE_ROLE_KEY ||
+    env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Missing SUPABASE_URL/VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+    const missing: string[] = [];
+    if (!supabaseUrl) missing.push('SUPABASE_URL or VITE_SUPABASE_URL');
+    if (!serviceRoleKey) missing.push('SUPABASE_SERVICE_ROLE_KEY or VITE_SUPABASE_SERVICE_ROLE_KEY');
+    throw new Error(`Missing environment variables: ${missing.join(', ')}`);
   }
 
   return createClient(supabaseUrl, serviceRoleKey, {
