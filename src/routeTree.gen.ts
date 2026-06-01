@@ -18,6 +18,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ChatPopupRouteImport } from './routes/chat-popup'
+import { Route as AiApiRouteImport } from './routes/ai-api'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
@@ -71,6 +72,11 @@ const ChatPopupRoute = ChatPopupRouteImport.update({
   path: '/chat-popup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AiApiRoute = AiApiRouteImport.update({
+  id: '/ai-api',
+  path: '/ai-api',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
+  '/ai-api': typeof AiApiRoute
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
+  '/ai-api': typeof AiApiRoute
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
+  '/ai-api': typeof AiApiRoute
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/about'
+    | '/ai-api'
     | '/chat-popup'
     | '/dashboard'
     | '/login'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/about'
+    | '/ai-api'
     | '/chat-popup'
     | '/dashboard'
     | '/login'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/about'
+    | '/ai-api'
     | '/chat-popup'
     | '/dashboard'
     | '/login'
@@ -224,6 +236,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
   AboutRoute: typeof AboutRoute
+  AiApiRoute: typeof AiApiRoute
   ChatPopupRoute: typeof ChatPopupRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
@@ -304,6 +317,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatPopupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ai-api': {
+      id: '/ai-api'
+      path: '/ai-api'
+      fullPath: '/ai-api'
+      preLoaderRoute: typeof AiApiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -360,6 +380,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
   AboutRoute: AboutRoute,
+  AiApiRoute: AiApiRoute,
   ChatPopupRoute: ChatPopupRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,

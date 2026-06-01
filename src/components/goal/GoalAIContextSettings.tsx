@@ -65,6 +65,7 @@ interface GoalAIContextSettingsProps {
 interface ProjectApiKeyMeta {
   id: string;
   goal_id: string;
+  user_id: string;
   name: string;
   key_prefix: string;
   is_active: boolean;
@@ -309,7 +310,7 @@ const GoalAIContextSettings: React.FC<GoalAIContextSettingsProps> = ({
   const [isGeneratingContext, setIsGeneratingContext] = useState(false);
   const [isGeneratingInstructions, setIsGeneratingInstructions] = useState(false);
   const { toast } = useToast();
-  const canManageProjectKeys = !!userId && !!goalData?.user_id && goalData.user_id === userId;
+  const canManageProjectKeys = !!userId;
 
   useEffect(() => {
     setContextValue(initialContext || '');
@@ -727,8 +728,11 @@ const GoalAIContextSettings: React.FC<GoalAIContextSettingsProps> = ({
 
               {!canManageProjectKeys ? (
                 <p className="text-xs text-muted-foreground mt-3">
-                  Only the goal owner can generate or revoke project API keys.
+                  Sign in to generate and manage project API keys if you are a goal member.
                 </p>
+                  <p className="text-xs text-muted-foreground">
+                    Integration guide for AI tools: <span className="font-medium text-foreground">/ai-api</span>
+                  </p>
               ) : (
                 <>
                   <div className="mt-4 flex flex-col sm:flex-row gap-2">
@@ -772,8 +776,12 @@ const GoalAIContextSettings: React.FC<GoalAIContextSettingsProps> = ({
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{key.name}</p>
                             <p className="text-[11px] text-muted-foreground">
-                              {key.key_prefix}... • Created {new Date(key.created_at).toLocaleDateString()}
+                              By {key.user_id} • {key.key_prefix}... • Created {new Date(key.created_at).toLocaleDateString()}
                               {key.last_used_at ? ` • Last used ${new Date(key.last_used_at).toLocaleString()}` : ''}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground/80">
+                              {key.key_prefix}... • Created {new Date(key.created_at).toLocaleDateString()}
+                              This key writes tasks with this member identity.
                             </p>
                           </div>
                           <Button

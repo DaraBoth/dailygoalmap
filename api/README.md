@@ -43,6 +43,35 @@ Open API endpoint for external services to read/write/delete/move tasks by proje
 - `DELETE /api/project-tasks?task_id=<task-id>` - Delete task
 - `PATCH /api/project-tasks` - Move task (date/time fields)
 
+### 0.2 `/api/mcp`
+Public MCP-style HTTP bridge for AI clients (Claude/ChatGPT/Gemini wrappers).
+
+**Methods:**
+- `GET /api/mcp` - Manifest + tool catalog
+- `POST /api/mcp` - Execute tool call
+
+**Auth:**
+- Requires `X-Project-Api-Key: dgm_...`
+
+**Tool names:**
+- `tasks.list`
+- `tasks.create`
+- `tasks.update`
+- `tasks.move`
+- `tasks.delete`
+- `tasks.complete`
+
+**POST body example:**
+```json
+{
+  "tool": "tasks.list",
+  "input": {
+    "limit": 50,
+    "offset": 0
+  }
+}
+```
+
 ### 1. `/api/chat-proxy`
 Proxies chat requests to n8n webhook with added security and rate limiting.
 
@@ -171,6 +200,12 @@ Add these to your Vercel project settings if needed:
 - `VITE_SUPABASE_ANON_KEY` - For analytics integration
 - `N8N_WEBHOOK_SECRET` - Optional webhook secret validation
 - `SUPABASE_SERVICE_ROLE_KEY` - Required for `project-keys` and `project-tasks` endpoints
+
+### Secret key storage for external AI agents
+
+- Store project keys in server-side secrets or `.env` files only (backend/agent runtime).
+- Never place project keys in frontend code or public repositories.
+- Suggested variable name: `DGM_PROJECT_API_KEY`
 
 ## Monitoring
 

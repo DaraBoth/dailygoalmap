@@ -66,9 +66,19 @@ function formatRangeLabel(range: DateRangeValue) {
 const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalTitle, onTaskCompletionChange }) => {
   const { toast } = useToast();
   const controlClass = 'h-11';
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+  const detectDarkTheme = () => {
     if (typeof document === 'undefined') return false;
-    return document.documentElement.classList.contains('dark');
+    const html = document.documentElement;
+    const body = document.body;
+    return (
+      html.classList.contains('dark') ||
+      body?.classList.contains('dark') ||
+      html.getAttribute('data-theme') === 'dark' ||
+      body?.getAttribute('data-theme') === 'dark'
+    );
+  };
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    return detectDarkTheme();
   });
   const [isPhoneScreen, setIsPhoneScreen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -106,10 +116,14 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalTitle, onTas
   useEffect(() => {
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
+    const body = document.body;
     const observer = new MutationObserver(() => {
-      setIsDarkMode(root.classList.contains('dark'));
+      setIsDarkMode(detectDarkTheme());
     });
     observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    if (body) {
+      observer.observe(body, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+    }
     return () => observer.disconnect();
   }, []);
 
@@ -147,11 +161,20 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalTitle, onTas
         borderRadius: '10px',
         border: '1px solid transparent',
       },
+      '& .MuiPickersDay-root .MuiTypography-root': {
+        color: `${fg} !important`,
+      },
+      '& .MuiDayCalendar-weekContainer .MuiButtonBase-root': {
+        color: `${fg} !important`,
+      },
       '& .MuiPickersDay-root:hover': {
         backgroundColor: `${hover} !important`,
       },
       '& .MuiPickersDay-root.Mui-selected': {
         backgroundColor: `${selectedBg} !important`,
+        color: `${selectedFg} !important`,
+      },
+      '& .MuiPickersDay-root.Mui-selected .MuiTypography-root': {
         color: `${selectedFg} !important`,
       },
       '& .MuiPickersDay-root.Mui-selected:hover': {

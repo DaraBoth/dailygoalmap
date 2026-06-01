@@ -11,6 +11,26 @@ export const config = {
   runtime: 'edge',
 };
 
+async function canUserManageGoalKeys(supabase: ReturnType<typeof getServiceRoleClient>, goalId: string, userId: string) {
+  const { data: goal } = await supabase
+    .from('goals')
+    .select('id, user_id')
+    .eq('id', goalId)
+    .maybeSingle();
+
+  if (!goal) return false;
+  if (goal.user_id === userId) return true;
+
+  const { data: membership } = await supabase
+    .from('goal_members')
+    .select('id')
+    .eq('goal_id', goalId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  return !!membership;
+}
+
 export default async function handler(req: Request) {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
@@ -28,19 +48,14 @@ export default async function handler(req: Request) {
       const goalId = url.searchParams.get('goalId');
       if (!goalId) return buildJsonResponse({ error: 'goalId is required.' }, 400);
 
-      const { data: goal } = await supabase
-        .from('goals')
-        .select('id, user_id')
-        .eq('id', goalId)
-        .maybeSingle();
-
-      if (!goal || goal.user_id !== user.id) {
-        return buildJsonResponse({ error: 'Only goal owner can view API keys.' }, 403);
+      const allowed = await canUserManageGoalKeys(supabase, goalId, user.id);
+      if (!allowed) {
+        return buildJsonResponse({ error: 'Only goal members can view API keys.' }, 403);
       }
 
       const { data, error } = await supabase
         .from('project_api_keys')
-        .select('id, goal_id, name, key_prefix, is_active, created_at, last_used_at')
+        .select('id, goal_id, user_id, name, key_prefix, is_active, created_at, last_used_at')
         .eq('goal_id', goalId)
         .order('created_at', { ascending: false });
 
@@ -55,14 +70,9 @@ export default async function handler(req: Request) {
 
       if (!goalId) return buildJsonResponse({ error: 'goalId is required.' }, 400);
 
-      const { data: goal } = await supabase
-        .from('goals')
-        .select('id, user_id')
-        .eq('id', goalId)
-        .maybeSingle();
-
-      if (!goal || goal.user_id !== user.id) {
-        return buildJsonResponse({ error: 'Only goal owner can generate API keys.' }, 403);
+      const allowed = await canUserManageGoalKeys(supabase, goalId, user.id);
+      if (!allowed) {
+        return buildJsonResponse({ error: 'Only goal members can generate API keys.' }, 403);
       }
 
       const plainKey = createSecretKey();
@@ -79,7 +89,7 @@ export default async function handler(req: Request) {
           key_prefix: keyPrefix,
           is_active: true,
         })
-        .select('id, goal_id, name, key_prefix, created_at, is_active')
+        .select('id, goal_id, user_id, name, key_prefix, created_at, is_active')
         .single();
 
       if (error) return buildJsonResponse({ error: error.message }, 500);
@@ -97,12 +107,17 @@ export default async function handler(req: Request) {
 
       const { data: keyRecord } = await supabase
         .from('project_api_keys')
-        .select('id, user_id')
+        .select('id, goal_id')
         .eq('id', body.id)
         .maybeSingle();
 
-      if (!keyRecord || keyRecord.user_id !== user.id) {
-        return buildJsonResponse({ error: 'Key not found or access denied.' }, 404);
+      if (!keyRecord) {
+        return buildJsonResponse({ error: 'Key not found.' }, 404);
+      }
+
+      const allowed = await canUserManageGoalKeys(supabase, keyRecord.goal_id, user.id);
+      if (!allowed) {
+        return buildJsonResponse({ error: 'Access denied.' }, 403);
       }
 
       const { error } = await supabase
