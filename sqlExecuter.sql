@@ -222,6 +222,85 @@ WHERE table_name = 'conversation_memory'
 ORDER BY ordinal_position;
 
 -- ============================================
+-- PROJECT API KEYS (EXTERNAL OPEN API ACCESS)
+-- Per-goal secret keys used by /api/project-tasks endpoints
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS project_api_keys (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  goal_id UUID NOT NULL REFERENCES goals(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL DEFAULT 'External integration',
+  key_hash TEXT NOT NULL UNIQUE,
+  key_prefix TEXT NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_used_at TIMESTAMPTZ,
+  revoked_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_project_api_keys_goal_id ON project_api_keys(goal_id);
+CREATE INDEX IF NOT EXISTS idx_project_api_keys_user_id ON project_api_keys(user_id);
+CREATE INDEX IF NOT EXISTS idx_project_api_keys_is_active ON project_api_keys(is_active);
+
+ALTER TABLE project_api_keys ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Goal owners can view project api keys" ON project_api_keys;
+CREATE POLICY "Goal owners can view project api keys"
+ON project_api_keys FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM goals
+    WHERE goals.id = project_api_keys.goal_id
+      AND goals.user_id = auth.uid()
+  )
+);
+
+DROP POLICY IF EXISTS "Goal owners can insert project api keys" ON project_api_keys;
+CREATE POLICY "Goal owners can insert project api keys"
+ON project_api_keys FOR INSERT
+WITH CHECK (
+  auth.uid() = user_id
+  AND EXISTS (
+    SELECT 1 FROM goals
+    WHERE goals.id = project_api_keys.goal_id
+      AND goals.user_id = auth.uid()
+  )
+);
+
+DROP POLICY IF EXISTS "Goal owners can update project api keys" ON project_api_keys;
+CREATE POLICY "Goal owners can update project api keys"
+ON project_api_keys FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM goals
+    WHERE goals.id = project_api_keys.goal_id
+      AND goals.user_id = auth.uid()
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM goals
+    WHERE goals.id = project_api_keys.goal_id
+      AND goals.user_id = auth.uid()
+  )
+);
+
+DROP POLICY IF EXISTS "Goal owners can delete project api keys" ON project_api_keys;
+CREATE POLICY "Goal owners can delete project api keys"
+ON project_api_keys FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM goals
+    WHERE goals.id = project_api_keys.goal_id
+      AND goals.user_id = auth.uid()
+  )
+);
+
+GRANT ALL ON project_api_keys TO service_role;
+
+
+-- ============================================
 -- TASK TIME MIGRATION: ANYTIME + DURATION
 -- Adds support for all-day/anytime tasks and explicit duration in minutes
 -- ============================================

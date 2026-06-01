@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from '@/lib/utils';
-import { Menu, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2, PanelLeftClose, PanelLeftOpen, Search, Trash2, UserPlus, Settings2 } from 'lucide-react';
+import { Menu, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2, PanelLeftClose, PanelLeftOpen, Search, Trash2, UserPlus, Settings2, Table2 } from 'lucide-react';
 import { searchUsers, sendInvitation, SearchUser } from '@/services/internalNotifications';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
@@ -28,6 +28,7 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { UserMenu } from '@/components/user/UserMenu';
 import CustomSearchModal from '@/components/search/CustomSearchModal';
 import GoalAIContextSettings from '@/components/goal/GoalAIContextSettings';
+import GoalTasksTable from '@/components/goal/GoalTasksTable';
 
 const GoalChatWidgetLazy = React.lazy(() =>
   import('@/components/goal/GoalChatWidget').then((mod) => ({ default: mod.GoalChatWidget }))
@@ -383,7 +384,8 @@ const GoalDetail: React.FC = () => {
     : {};
 
   const navItems = [
-    { id: 'overview', label: 'Tasks', icon: LayoutDashboard },
+    { id: 'overview', label: 'Calendar', icon: LayoutDashboard },
+    { id: 'tasksTable', label: 'Tasks', icon: Table2 },
     { id: 'analytics', label: 'Analytics', icon: BarChart2 },
     { id: 'settings', label: 'Goal Settings', icon: Settings2 },
   ];
@@ -637,6 +639,25 @@ const GoalDetail: React.FC = () => {
                       targetDate={currentGoalData?.target_date}
                     />
                   </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'tasksTable' && (
+                <motion.div
+                  key="tasks-table"
+                  initial={{ opacity: 0, x: 16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ duration: 0.15 }}
+                  className="h-full overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-6"
+                >
+                  <GoalTasksTable
+                    tasks={tasks}
+                    goalTitle={goalTitle}
+                    onTaskCompletionChange={(taskId, completed) => {
+                      setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, completed } : task)));
+                    }}
+                  />
                 </motion.div>
               )}
 

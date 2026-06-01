@@ -1,0 +1,804 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  SortingState,
+  useReactTable,
+} from '@tanstack/react-table';
+import { Task } from '@/components/calendar/types';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ArrowUpDown, CalendarRange, ChevronDown, FilterX, Loader2, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import TaskDetailsSidebar from '@/components/calendar/TaskDetailsSidebar';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
+import dayjs, { Dayjs } from 'dayjs';
+
+interface GoalTasksTableProps {
+  tasks: Task[];
+  goalTitle?: string;
+  onTaskCompletionChange?: (taskId: string, completed: boolean) => void;
+}
+
+const LAZY_BATCH_SIZE = 120;
+type DateRangeValue = [Dayjs | null, Dayjs | null];
+
+function asDateLabel(value?: string | null) {
+  if (!value) return '-';
+  return String(value).slice(0, 10);
+}
+
+function asTimeLabel(task: Task) {
+  if (task.is_anytime) return 'Anytime';
+  if (task.daily_start_time && task.daily_end_time) {
+    return `${String(task.daily_start_time).slice(0, 5)} - ${String(task.daily_end_time).slice(0, 5)}`;
+  }
+  return '-';
+}
+
+function toSafeNumber(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function toInputDate(value?: string | null) {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+
+function formatRangeLabel(range: DateRangeValue) {
+  const [start, end] = range;
+  if (!start && !end) return 'Date range';
+  if (start && !end) return `${start.format('MMM D, YYYY')} - ...`;
+  if (!start && end) return `... - ${end.format('MMM D, YYYY')}`;
+  return `${start?.format('MMM D, YYYY')} - ${end?.format('MMM D, YYYY')}`;
+}
+
+const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalTitle, onTaskCompletionChange }) => {
+  const { toast } = useToast();
+  const controlClass = 'h-11';
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    if (typeof document === 'undefined') return false;
+    return document.documentElement.classList.contains('dark');
+  });
+  const [isPhoneScreen, setIsPhoneScreen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768;
+  });
+
+  const [tableTasks, setTableTasks] = useState<Task[]>(tasks);
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'end_date', desc: true }]);
+  const [globalQuery, setGlobalQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'done'>('all');
+  const [anytimeFilter, setAnytimeFilter] = useState<'all' | 'anytime' | 'scheduled'>('all');
+  const [tagFilter, setTagFilter] = useState<string>('all');
+  const [dateRange, setDateRange] = useState<DateRangeValue>([null, null]);
+  const [rangeTarget, setRangeTarget] = useState<'start' | 'end'>('start');
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const [visibleCount, setVisibleCount] = useState(LAZY_BATCH_SIZE);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setTableTasks(tasks);
+  }, [tasks]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const onChange = () => setIsPhoneScreen(mediaQuery.matches);
+    onChange();
+    mediaQuery.addEventListener('change', onChange);
+    return () => mediaQuery.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(root.classList.contains('dark'));
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  const calendarSx = useMemo(() => {
+    const fg = isDarkMode ? '#f8fafc' : '#0f172a';
+    const muted = isDarkMode ? '#94a3b8' : '#64748b';
+    const hover = isDarkMode ? 'rgba(148,163,184,0.25)' : 'rgba(15,23,42,0.08)';
+    const selectedBg = isDarkMode ? '#38bdf8' : '#2563eb';
+    const selectedFg = '#ffffff';
+    const disabled = isDarkMode ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.45)';
+
+    return {
+      width: '100%',
+      maxWidth: 380,
+      bgcolor: 'transparent',
+      color: `${fg} !important`,
+      '& .MuiPickersCalendarHeader-root': {
+        color: `${fg} !important`,
+        pl: 0.5,
+        pr: 0.5,
+      },
+      '& .MuiPickersCalendarHeader-label': {
+        fontWeight: 700,
+        color: `${fg} !important`,
+      },
+      '& .MuiIconButton-root': {
+        color: `${fg} !important`,
+      },
+      '& .MuiDayCalendar-weekDayLabel': {
+        color: `${muted} !important`,
+        fontWeight: 600,
+      },
+      '& .MuiPickersDay-root': {
+        color: `${fg} !important`,
+        borderRadius: '10px',
+        border: '1px solid transparent',
+      },
+      '& .MuiPickersDay-root:hover': {
+        backgroundColor: `${hover} !important`,
+      },
+      '& .MuiPickersDay-root.Mui-selected': {
+        backgroundColor: `${selectedBg} !important`,
+        color: `${selectedFg} !important`,
+      },
+      '& .MuiPickersDay-root.Mui-selected:hover': {
+        backgroundColor: `${selectedBg} !important`,
+      },
+      '& .MuiPickersDay-root.Mui-disabled': {
+        color: `${disabled} !important`,
+      },
+      '& .MuiPickersDay-today': {
+        borderColor: `${isDarkMode ? '#7dd3fc' : '#2563eb'} !important`,
+      },
+    };
+  }, [isDarkMode]);
+
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    tableTasks.forEach((task) => {
+      (task.tags || []).forEach((tag) => {
+        const normalized = String(tag || '').trim();
+        if (normalized) tagSet.add(normalized);
+      });
+    });
+    return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
+  }, [tableTasks]);
+
+  const filteredTasks = useMemo(() => {
+    const lowerQuery = globalQuery.trim().toLowerCase();
+
+    return tableTasks.filter((task) => {
+      if (statusFilter === 'done' && !task.completed) return false;
+      if (statusFilter === 'pending' && task.completed) return false;
+
+      if (anytimeFilter === 'anytime' && !task.is_anytime) return false;
+      if (anytimeFilter === 'scheduled' && task.is_anytime) return false;
+
+      if (tagFilter !== 'all') {
+        const tags = task.tags || [];
+        if (!tags.some((tag) => String(tag).toLowerCase() === tagFilter.toLowerCase())) {
+          return false;
+        }
+      }
+
+      const taskStartDate = dayjs(toInputDate(task.start_date));
+      const [fromDateFilter, toDateFilter] = dateRange;
+      if (fromDateFilter && taskStartDate.isValid() && taskStartDate.isBefore(fromDateFilter, 'day')) return false;
+      if (toDateFilter && taskStartDate.isValid() && taskStartDate.isAfter(toDateFilter, 'day')) return false;
+
+      if (!lowerQuery) return true;
+
+      const haystack = [
+        task.id,
+        task.title || '',
+        task.description || '',
+        task.completed ? 'done completed' : 'pending',
+        asDateLabel(task.start_date),
+        asDateLabel(task.end_date),
+        asTimeLabel(task),
+        ...(task.tags || []),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(lowerQuery);
+    });
+  }, [tableTasks, globalQuery, statusFilter, anytimeFilter, tagFilter, dateRange]);
+
+  const selectedTask = useMemo(
+    () => (selectedTaskId ? tableTasks.find((task) => task.id === selectedTaskId) || null : null),
+    [selectedTaskId, tableTasks]
+  );
+
+  const openTaskDetails = (task: Task) => {
+    setSelectedTaskId(task.id);
+    setIsDetailOpen(true);
+  };
+
+  const onTableRowKeyDown = (event: React.KeyboardEvent<HTMLTableRowElement>, task: Task) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openTaskDetails(task);
+    }
+  };
+
+  const handleToggleTaskCompletion = async (taskId: string) => {
+    const previousTask = tableTasks.find((task) => task.id === taskId);
+    if (!previousTask) return;
+
+    const nextCompleted = !previousTask.completed;
+    setTableTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, completed: nextCompleted } : task)));
+    onTaskCompletionChange?.(taskId, nextCompleted);
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ completed: nextCompleted })
+        .eq('id', taskId);
+      if (error) throw error;
+    } catch (error: any) {
+      setTableTasks((prev) => prev.map((task) => (task.id === taskId ? previousTask : task)));
+      onTaskCompletionChange?.(taskId, !!previousTask.completed);
+      toast({
+        title: 'Update failed',
+        description: error?.message || 'Could not update task status.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const loadNextPage = () => {
+    if (!hasMoreRows) return;
+    setIsLoadingMore(true);
+    setVisibleCount((prev) => Math.min(prev + LAZY_BATCH_SIZE, sortedRows.length));
+    window.setTimeout(() => setIsLoadingMore(false), 120);
+  };
+
+  const columns = useMemo<ColumnDef<Task>[]>(() => [
+    {
+      accessorKey: 'title',
+      header: ({ column }) => (
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-auto p-0 font-semibold"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Task
+          <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const task = row.original;
+        const title = task.title || task.description || 'Untitled task';
+        return (
+          <div className="max-w-[340px] min-w-0">
+            <p className="truncate font-medium" title={title}>{title}</p>
+          </div>
+        );
+      },
+      sortingFn: (a, b) => {
+        const aa = (a.original.title || a.original.description || '').toLowerCase();
+        const bb = (b.original.title || b.original.description || '').toLowerCase();
+        return aa.localeCompare(bb);
+      },
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      cell: ({ row }) => row.original.completed ? 'Done' : 'Pending',
+      sortingFn: (a, b) => Number(a.original.completed) - Number(b.original.completed),
+    },
+    {
+      id: 'actions',
+      header: 'Action',
+      cell: ({ row }) => {
+        const completed = !!row.original.completed;
+        return (
+          <Button
+            type="button"
+            size="sm"
+            variant={completed ? 'outline' : 'default'}
+            className="h-8"
+            onClick={(event) => {
+              event.stopPropagation();
+              handleToggleTaskCompletion(row.original.id);
+            }}
+          >
+            {completed ? 'Mark Pending' : 'Mark Completed'}
+          </Button>
+        );
+      },
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'created_at',
+      header: ({ column }) => (
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-auto p-0 font-semibold"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Created
+          <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
+        </Button>
+      ),
+      cell: ({ row }) => asDateLabel(row.original.created_at),
+      sortingFn: (a, b) => asDateLabel(a.original.created_at).localeCompare(asDateLabel(b.original.created_at)),
+    },
+    {
+      accessorKey: 'start_date',
+      header: ({ column }) => (
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-auto p-0 font-semibold"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Start Date
+          <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
+        </Button>
+      ),
+      cell: ({ row }) => asDateLabel(row.original.start_date),
+      sortingFn: (a, b) => asDateLabel(a.original.start_date).localeCompare(asDateLabel(b.original.start_date)),
+    },
+    {
+      accessorKey: 'end_date',
+      header: 'End Date',
+      cell: ({ row }) => asDateLabel(row.original.end_date),
+      sortingFn: (a, b) => asDateLabel(a.original.end_date).localeCompare(asDateLabel(b.original.end_date)),
+    },
+    {
+      id: 'time',
+      header: 'Time',
+      cell: ({ row }) => asTimeLabel(row.original),
+      sortingFn: (a, b) => asTimeLabel(a.original).localeCompare(asTimeLabel(b.original)),
+    },
+    {
+      accessorKey: 'duration_minutes',
+      header: 'Duration',
+      cell: ({ row }) => row.original.duration_minutes ? `${row.original.duration_minutes}m` : '-',
+      sortingFn: (a, b) => toSafeNumber(a.original.duration_minutes) - toSafeNumber(b.original.duration_minutes),
+    },
+    {
+      id: 'tags',
+      header: 'Tags',
+      cell: ({ row }) => {
+        const tags = row.original.tags || [];
+        if (tags.length === 0) return <span className="text-muted-foreground">-</span>;
+        return (
+          <div className="flex flex-wrap gap-1 max-w-[220px]">
+            {tags.slice(0, 3).map((tag) => (
+              <Badge key={tag} variant="secondary" className="text-[10px] h-5 px-2">
+                {tag}
+              </Badge>
+            ))}
+            {tags.length > 3 ? <Badge variant="outline" className="text-[10px] h-5 px-2">+{tags.length - 3}</Badge> : null}
+          </div>
+        );
+      },
+      sortingFn: (a, b) => (a.original.tags || []).join(',').localeCompare((b.original.tags || []).join(',')),
+    },
+  ], [handleToggleTaskCompletion]);
+
+  const table = useReactTable({
+    data: filteredTasks,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
+  const sortedRows = table.getRowModel().rows;
+  const visibleRows = sortedRows.slice(0, visibleCount);
+  const hasMoreRows = visibleCount < sortedRows.length;
+
+  useEffect(() => {
+    setVisibleCount(LAZY_BATCH_SIZE);
+  }, [globalQuery, statusFilter, anytimeFilter, tagFilter, dateRange, tableTasks.length]);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node || !hasMoreRows) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting) {
+          loadNextPage();
+        }
+      },
+      { rootMargin: '220px 0px' }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMoreRows, sortedRows.length, visibleCount]);
+
+  const resetFilters = () => {
+    setGlobalQuery('');
+    setStatusFilter('all');
+    setAnytimeFilter('all');
+    setTagFilter('all');
+    setDateRange([null, null]);
+    setRangeTarget('start');
+  };
+
+  const handleDatePick = (value: Dayjs | null) => {
+    if (!value) return;
+    const [start, end] = dateRange;
+
+    if (rangeTarget === 'start') {
+      const normalizedEnd = end && end.isBefore(value, 'day') ? null : end;
+      setDateRange([value, normalizedEnd]);
+      setRangeTarget('end');
+      return;
+    }
+
+    const normalizedStart = start && start.isAfter(value, 'day') ? null : start;
+    setDateRange([normalizedStart, value]);
+  };
+
+  const activeFilterCount =
+    (globalQuery.trim() ? 1 : 0) +
+    (statusFilter !== 'all' ? 1 : 0) +
+    (anytimeFilter !== 'all' ? 1 : 0) +
+    (tagFilter !== 'all' ? 1 : 0) +
+    (dateRange[0] || dateRange[1] ? 1 : 0);
+
+  const mobileChipClass = 'h-10 rounded-xl border';
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-4">
+      <div className="relative rounded-2xl border border-border/70 bg-gradient-to-br from-emerald-500/10 via-sky-500/10 to-background dark:from-emerald-400/15 dark:via-sky-400/12 dark:to-background/95 backdrop-blur-xl p-3 sm:p-4 space-y-3 overflow-hidden shadow-[0_10px_30px_-18px_rgba(16,185,129,0.45)] dark:shadow-[0_12px_36px_-20px_rgba(56,189,248,0.45)]">
+        <div className="pointer-events-none absolute -top-10 -left-8 h-32 w-32 rounded-full bg-amber-300/20 dark:bg-amber-400/20 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-10 right-10 h-36 w-36 rounded-full bg-cyan-300/20 dark:bg-cyan-400/20 blur-3xl" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_0%,rgba(255,255,255,0.1),transparent_40%),radial-gradient(circle_at_100%_100%,rgba(255,255,255,0.08),transparent_42%)] dark:bg-[radial-gradient(circle_at_10%_0%,rgba(255,255,255,0.06),transparent_40%),radial-gradient(circle_at_100%_100%,rgba(255,255,255,0.04),transparent_42%)]" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h2 className="text-base sm:text-lg font-semibold inline-flex items-center gap-1.5">
+              <Sparkles className="h-4 w-4 text-amber-400" />
+              Tasks Table
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {filteredTasks.length} filtered of {tableTasks.length} total tasks
+            </p>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={resetFilters} className="self-start sm:self-auto">
+            <FilterX className="h-3.5 w-3.5 mr-1.5" />
+            Reset Filters
+          </Button>
+        </div>
+
+        {isPhoneScreen ? (
+          <div className="relative z-[1]">
+            <Button
+              type="button"
+              variant="outline"
+              className={`w-full justify-between border-border/70 bg-background/70 ${controlClass}`}
+              onClick={() => setIsMobileFilterOpen(true)}
+            >
+              <span className="inline-flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4" />
+                Filter Tasks
+              </span>
+              {activeFilterCount > 0 ? (
+                <Badge variant="secondary" className="h-6 px-2 text-xs">{activeFilterCount}</Badge>
+              ) : null}
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-2.5 relative z-[1]">
+            <Input
+              placeholder="Search task, status, id, date, tags..."
+              value={globalQuery}
+              onChange={(e) => setGlobalQuery(e.target.value)}
+              className={`xl:col-span-2 border-border/70 bg-background/70 ${controlClass}`}
+            />
+
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'all' | 'pending' | 'done')}>
+              <SelectTrigger className={`border-border/70 bg-background/70 ${controlClass}`}><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="done">Done</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={anytimeFilter} onValueChange={(v) => setAnytimeFilter(v as 'all' | 'anytime' | 'scheduled')}>
+              <SelectTrigger className={`border-border/70 bg-background/70 ${controlClass}`}><SelectValue placeholder="Anytime" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time Types</SelectItem>
+                <SelectItem value="anytime">Anytime</SelectItem>
+                <SelectItem value="scheduled">Scheduled</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={tagFilter} onValueChange={setTagFilter}>
+              <SelectTrigger className={`border-border/70 bg-background/70 ${controlClass}`}><SelectValue placeholder="Tag" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Tags</SelectItem>
+                {allTags.map((tag) => (
+                  <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={`xl:col-span-1 justify-between border-border/70 bg-background/70 ${controlClass}`}
+                >
+                  <span className="inline-flex items-center gap-2 truncate">
+                    <CalendarRange className="h-4 w-4 text-muted-foreground" />
+                    <span className="truncate">{formatRangeLabel(dateRange)}</span>
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-auto p-0 overflow-hidden border-border/70 bg-background/95 dark:bg-background/95">
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <div className="p-3 sm:p-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={rangeTarget === 'start' ? 'default' : 'outline'}
+                        onClick={() => setRangeTarget('start')}
+                      >
+                        Start: {dateRange[0] ? dateRange[0].format('MMM D') : 'Not set'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={rangeTarget === 'end' ? 'default' : 'outline'}
+                        onClick={() => setRangeTarget('end')}
+                      >
+                        End: {dateRange[1] ? dateRange[1].format('MMM D') : 'Not set'}
+                      </Button>
+                    </div>
+                    <DateCalendar
+                      value={rangeTarget === 'start' ? dateRange[0] : dateRange[1]}
+                      onChange={handleDatePick}
+                      sx={calendarSx}
+                    />
+                  </div>
+                </LocalizationProvider>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-border/60 bg-background/70 dark:bg-background/85 backdrop-blur-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[980px] text-sm">
+            <thead className="bg-muted/70 dark:bg-muted/40 border-b border-border/60 sticky top-0 z-10">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th key={header.id} className="text-left px-3 py-2.5 font-semibold">
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {visibleRows.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} className="px-3 py-10 text-center text-muted-foreground">
+                    No tasks match your filters.
+                  </td>
+                </tr>
+              ) : (
+                visibleRows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="border-b border-border/40 last:border-b-0 hover:bg-muted/35 dark:hover:bg-muted/30 cursor-pointer"
+                    onClick={() => openTaskDetails(row.original)}
+                    onKeyDown={(event) => onTableRowKeyDown(event, row.original)}
+                    tabIndex={0}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-3 py-2.5 align-top">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="px-3 py-2.5 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
+          <span>
+            Showing {visibleRows.length} of {sortedRows.length} filtered rows
+          </span>
+          {hasMoreRows ? (
+            <div className="inline-flex items-center gap-1.5">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Lazy loading more rows...
+            </div>
+          ) : (
+            <span>All loaded</span>
+          )}
+        </div>
+        {hasMoreRows ? (
+          <div className="px-3 pb-3">
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full h-10"
+              onClick={loadNextPage}
+              disabled={isLoadingMore}
+            >
+              {isLoadingMore ? 'Loading...' : 'Show more'}
+            </Button>
+          </div>
+        ) : null}
+        <div ref={sentinelRef} className="h-2" />
+      </div>
+
+      <TaskDetailsSidebar
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        selectedTask={selectedTask}
+        selectedDate={selectedTask?.start_date ? new Date(selectedTask.start_date) : undefined}
+        onToggleTaskCompletion={handleToggleTaskCompletion}
+        goalTitle={goalTitle || 'Task Details'}
+      />
+
+      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
+        <SheetContent side="bottom" className="h-[88vh] p-0 overflow-hidden bg-background/95 dark:bg-background/95">
+          <div className="h-full flex flex-col">
+            <SheetHeader className="px-4 pt-5 pb-3 border-b border-border/60">
+              <SheetTitle>Filter Tasks</SheetTitle>
+              <SheetDescription>Tap once to apply each filter. No dropdowns.</SheetDescription>
+            </SheetHeader>
+
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground">Search</p>
+                <Input
+                  placeholder="Search task, description, date, tags..."
+                  value={globalQuery}
+                  onChange={(e) => setGlobalQuery(e.target.value)}
+                  className={controlClass}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground">Status</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: 'All', value: 'all' },
+                    { label: 'Pending', value: 'pending' },
+                    { label: 'Done', value: 'done' },
+                  ].map((item) => (
+                    <Button
+                      key={item.value}
+                      type="button"
+                      variant={statusFilter === item.value ? 'default' : 'outline'}
+                      className={mobileChipClass}
+                      onClick={() => setStatusFilter(item.value as 'all' | 'pending' | 'done')}
+                    >
+                      {item.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground">Time Type</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: 'All', value: 'all' },
+                    { label: 'Anytime', value: 'anytime' },
+                    { label: 'Scheduled', value: 'scheduled' },
+                  ].map((item) => (
+                    <Button
+                      key={item.value}
+                      type="button"
+                      variant={anytimeFilter === item.value ? 'default' : 'outline'}
+                      className={mobileChipClass}
+                      onClick={() => setAnytimeFilter(item.value as 'all' | 'anytime' | 'scheduled')}
+                    >
+                      {item.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground">Tag</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant={tagFilter === 'all' ? 'default' : 'outline'}
+                    className={mobileChipClass}
+                    onClick={() => setTagFilter('all')}
+                  >
+                    All Tags
+                  </Button>
+                  {allTags.map((tag) => (
+                    <Button
+                      key={tag}
+                      type="button"
+                      variant={tagFilter === tag ? 'default' : 'outline'}
+                      className={mobileChipClass}
+                      onClick={() => setTagFilter(tag)}
+                    >
+                      {tag}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground">Date Range</p>
+                <div className="rounded-xl border border-border/60 overflow-hidden">
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <div className="p-3 space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          type="button"
+                          variant={rangeTarget === 'start' ? 'default' : 'outline'}
+                          className="h-10"
+                          onClick={() => setRangeTarget('start')}
+                        >
+                          Start: {dateRange[0] ? dateRange[0].format('MMM D') : 'Not set'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={rangeTarget === 'end' ? 'default' : 'outline'}
+                          className="h-10"
+                          onClick={() => setRangeTarget('end')}
+                        >
+                          End: {dateRange[1] ? dateRange[1].format('MMM D') : 'Not set'}
+                        </Button>
+                      </div>
+                      <DateCalendar
+                        value={rangeTarget === 'start' ? dateRange[0] : dateRange[1]}
+                        onChange={handleDatePick}
+                        sx={calendarSx}
+                      />
+                    </div>
+                  </LocalizationProvider>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border/60 grid grid-cols-2 gap-2">
+              <Button type="button" variant="outline" className={controlClass} onClick={resetFilters}>
+                Reset
+              </Button>
+              <Button type="button" className={controlClass} onClick={() => setIsMobileFilterOpen(false)}>
+                Done
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+};
+
+export default GoalTasksTable;

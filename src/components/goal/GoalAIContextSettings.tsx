@@ -16,6 +16,10 @@ import {
   Sparkles,
   Pencil,
   Save,
+  KeyRound,
+  ExternalLink,
+  ShieldCheck,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -36,6 +40,7 @@ interface GoalAIContextSettingsProps {
   goalTitle: string;
   goalDescription: string;
   goalData?: {
+    user_id?: string;
     title?: string;
     description?: string;
     target_date?: string | null;
@@ -55,6 +60,16 @@ interface GoalAIContextSettingsProps {
     no_duration: boolean;
     metadata: Record<string, any>;
   }) => void;
+}
+
+interface ProjectApiKeyMeta {
+  id: string;
+  goal_id: string;
+  name: string;
+  key_prefix: string;
+  is_active: boolean;
+  created_at: string;
+  last_used_at?: string | null;
 }
 
 const goalTypes: { value: GoalType; label: string }[] = [
@@ -270,7 +285,7 @@ const GoalAIContextSettings: React.FC<GoalAIContextSettingsProps> = ({
   userId,
   onSaved,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'details' | 'context' | 'instructions'>('details');
+  const [activeSubTab, setActiveSubTab] = useState<'details' | 'context' | 'instructions' | 'api'>('details');
 
   const [titleValue, setTitleValue] = useState(goalData?.title || goalTitle || '');
   const [descriptionValue, setDescriptionValue] = useState(goalData?.description || goalDescription || '');
@@ -285,9 +300,16 @@ const GoalAIContextSettings: React.FC<GoalAIContextSettingsProps> = ({
   const [instructionsValue, setInstructionsValue] = useState(initialInstructions || '');
   const [keys, setKeys] = useState<ApiKeys>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [projectApiKeyName, setProjectApiKeyName] = useState('External integration');
+  const [projectApiKeys, setProjectApiKeys] = useState<ProjectApiKeyMeta[]>([]);
+  const [generatedProjectApiKey, setGeneratedProjectApiKey] = useState<string | null>(null);
+  const [isLoadingProjectKeys, setIsLoadingProjectKeys] = useState(false);
+  const [isGeneratingProjectKey, setIsGeneratingProjectKey] = useState(false);
+  const [revokingKeyId, setRevokingKeyId] = useState<string | null>(null);
   const [isGeneratingContext, setIsGeneratingContext] = useState(false);
   const [isGeneratingInstructions, setIsGeneratingInstructions] = useState(false);
   const { toast } = useToast();
+  const canManageProjectKeys = !!userId && !!goalData?.user_id && goalData.user_id === userId;
 
   useEffect(() => {
     setContextValue(initialContext || '');
@@ -317,6 +339,108 @@ const GoalAIContextSettings: React.FC<GoalAIContextSettingsProps> = ({
     };
     void loadKeys();
   }, [userId]);
+
+  const getAuthHeaders = async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session?.access_token) {
+      throw new Error('Please sign in again. Missing session token.');
+    }
+
+    return {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${data.session.access_token}`,
+    };
+  };
+
+  const loadProjectApiKeys = async () => {
+    if (!canManageProjectKeys) {
+      setProjectApiKeys([]);
+      return;
+    }
+
+    setIsLoadingProjectKeys(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/project-keys?goalId=${encodeURIComponent(goalId)}`, {
+        method: 'GET',
+        headers,
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || 'Failed to load project API keys.');
+
+      setProjectApiKeys(Array.isArray(payload?.keys) ? payload.keys : []);
+    } catch (error) {
+      toast({
+        title: 'Failed to load project keys',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingProjectKeys(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadProjectApiKeys();
+  }, [goalId, canManageProjectKeys]);
+
+  const handleGenerateProjectKey = async () => {
+    if (!canManageProjectKeys) return;
+    setIsGeneratingProjectKey(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/project-keys', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ goalId, name: projectApiKeyName.trim() || 'External integration' }),
+      });
+
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || 'Failed to generate project key.');
+
+      setGeneratedProjectApiKey(payload?.secret || null);
+      await loadProjectApiKeys();
+      toast({
+        title: 'Project key generated',
+        description: 'Copy this key now. It will not be shown again.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Key generation failed',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingProjectKey(false);
+    }
+  };
+
+  const handleRevokeProjectKey = async (keyId: string) => {
+    if (!canManageProjectKeys) return;
+    setRevokingKeyId(keyId);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/project-keys', {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({ id: keyId }),
+      });
+
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || 'Failed to revoke project key.');
+
+      await loadProjectApiKeys();
+      toast({ title: 'Project key revoked' });
+    } catch (error) {
+      toast({
+        title: 'Revoke failed',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setRevokingKeyId(null);
+    }
+  };
 
   const hasAnyAiProvider = Boolean(keys.openai || keys.gemini || keys.anthropic);
 
@@ -462,13 +586,14 @@ const GoalAIContextSettings: React.FC<GoalAIContextSettingsProps> = ({
 
       <Tabs
         value={activeSubTab}
-        onValueChange={(value) => setActiveSubTab(value as 'details' | 'context' | 'instructions')}
+        onValueChange={(value) => setActiveSubTab(value as 'details' | 'context' | 'instructions' | 'api')}
         className="flex-1 min-h-0 flex flex-col"
       >
-        <TabsList className="w-full h-10 grid grid-cols-3 rounded-xl">
+        <TabsList className="w-full h-10 grid grid-cols-4 rounded-xl">
           <TabsTrigger value="details" className="rounded-lg text-xs sm:text-sm">Goal Details</TabsTrigger>
           <TabsTrigger value="context" className="rounded-lg text-xs sm:text-sm">About This Goal</TabsTrigger>
           <TabsTrigger value="instructions" className="rounded-lg text-xs sm:text-sm">AI Instructions</TabsTrigger>
+          <TabsTrigger value="api" className="rounded-lg text-xs sm:text-sm">API Access</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="mt-3 flex-1 min-h-0 overflow-y-auto">
@@ -585,6 +710,106 @@ const GoalAIContextSettings: React.FC<GoalAIContextSettingsProps> = ({
             canGenerate={hasAnyAiProvider}
             isGenerating={isGeneratingInstructions}
           />
+        </TabsContent>
+
+        <TabsContent value="api" className="mt-3 flex-1 min-h-0 overflow-y-auto">
+          <div className="space-y-4 pb-4">
+            <div className="rounded-xl border border-border/70 bg-background/60 p-4">
+              <div className="flex items-start gap-3">
+                <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-foreground">Project API Keys</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Generate per-project secret keys so external services can read, create, update, delete, and move tasks.
+                  </p>
+                </div>
+              </div>
+
+              {!canManageProjectKeys ? (
+                <p className="text-xs text-muted-foreground mt-3">
+                  Only the goal owner can generate or revoke project API keys.
+                </p>
+              ) : (
+                <>
+                  <div className="mt-4 flex flex-col sm:flex-row gap-2">
+                    <Input
+                      value={projectApiKeyName}
+                      onChange={(e) => setProjectApiKeyName(e.target.value)}
+                      placeholder="Key name (e.g. Zapier, n8n, Make)"
+                      className="bg-background/80 border-border rounded-xl"
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => { void handleGenerateProjectKey(); }}
+                      disabled={isGeneratingProjectKey}
+                      className="sm:w-auto"
+                    >
+                      {isGeneratingProjectKey ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <KeyRound className="h-4 w-4 mr-2" />}
+                      Generate Key
+                    </Button>
+                  </div>
+
+                  {generatedProjectApiKey && (
+                    <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                      <p className="text-[11px] text-amber-700 dark:text-amber-300 mb-2">
+                        Copy and store this secret now. It will not be visible again.
+                      </p>
+                      <code className="block w-full text-xs break-all rounded-md bg-background/80 px-2 py-1.5 border border-border/60">
+                        {generatedProjectApiKey}
+                      </code>
+                    </div>
+                  )}
+
+                  <div className="mt-4 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Active keys</p>
+                    {isLoadingProjectKeys ? (
+                      <p className="text-xs text-muted-foreground">Loading keys...</p>
+                    ) : projectApiKeys.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No keys yet.</p>
+                    ) : (
+                      projectApiKeys.map((key) => (
+                        <div key={key.id} className="rounded-lg border border-border/60 bg-background/70 p-3 flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{key.name}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {key.key_prefix}... • Created {new Date(key.created_at).toLocaleDateString()}
+                              {key.last_used_at ? ` • Last used ${new Date(key.last_used_at).toLocaleString()}` : ''}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            disabled={revokingKeyId === key.id}
+                            onClick={() => { void handleRevokeProjectKey(key.id); }}
+                            title="Revoke key"
+                          >
+                            {revokingKeyId === key.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-border/70 bg-background/60 p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <ExternalLink className="h-4 w-4 text-primary" />
+                <p className="text-sm font-semibold text-foreground">Open API Usage</p>
+              </div>
+              <p className="text-xs text-muted-foreground">Use your generated key in <code>X-Project-Api-Key</code> header.</p>
+              <div className="rounded-md border border-border/60 bg-background/80 p-3 text-xs font-mono overflow-x-auto whitespace-pre">
+{`GET    /api/project-tasks              -> read tasks
+POST   /api/project-tasks              -> create task
+PUT    /api/project-tasks              -> update/write task
+DELETE /api/project-tasks?task_id=...  -> delete task
+PATCH  /api/project-tasks              -> move task (date/time fields)`}
+              </div>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -11,6 +11,38 @@ This directory contains serverless Edge Functions that run on Vercel's Edge Netw
 
 ## Available Edge Functions
 
+### 0. `/api/project-keys`
+Manage per-project secret keys for external integrations.
+
+**Methods:**
+- `GET /api/project-keys?goalId=<goal-id>` - List project keys (goal owner only)
+- `POST /api/project-keys` - Generate key (goal owner only)
+- `DELETE /api/project-keys` - Revoke key
+
+**Auth:**
+- Requires `Authorization: Bearer <supabase-access-token>`
+
+**POST body example:**
+```json
+{
+  "goalId": "<goal-id>",
+  "name": "n8n integration"
+}
+```
+
+### 0.1 `/api/project-tasks`
+Open API endpoint for external services to read/write/delete/move tasks by project key.
+
+**Auth:**
+- Requires `X-Project-Api-Key: dgm_...`
+
+**Methods:**
+- `GET /api/project-tasks` - Read tasks
+- `POST /api/project-tasks` - Create task
+- `PUT /api/project-tasks` - Update/write task
+- `DELETE /api/project-tasks?task_id=<task-id>` - Delete task
+- `PATCH /api/project-tasks` - Move task (date/time fields)
+
 ### 1. `/api/chat-proxy`
 Proxies chat requests to n8n webhook with added security and rate limiting.
 
@@ -138,6 +170,7 @@ Add these to your Vercel project settings if needed:
 - `VITE_SUPABASE_URL` - For analytics integration
 - `VITE_SUPABASE_ANON_KEY` - For analytics integration
 - `N8N_WEBHOOK_SECRET` - Optional webhook secret validation
+- `SUPABASE_SERVICE_ROLE_KEY` - Required for `project-keys` and `project-tasks` endpoints
 
 ## Monitoring
 
