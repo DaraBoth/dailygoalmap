@@ -31,15 +31,42 @@ export default async function handler(req: Request) {
       const limit = Math.max(1, Math.min(500, Number(url.searchParams.get('limit') || '200')));
       const offset = Math.max(0, Number(url.searchParams.get('offset') || '0'));
 
-      const { data, error } = await supabase
+      // Tag filter: ?tag=foo  OR  ?tags=foo,bar  (combined with ?match=any|all, default any)
+      const rawTag = url.searchParams.get('tag');
+      const rawTags = url.searchParams.get('tags');
+      const tagList = [
+        ...(rawTag ? [rawTag] : []),
+        ...(rawTags ? rawTags.split(',') : []),
+      ]
+        .map((t) => t.trim())
+        .filter(Boolean);
+      const tagMatch = (url.searchParams.get('match') || 'any').toLowerCase() === 'all' ? 'all' : 'any';
+
+      let query = supabase
         .from('tasks')
         .select('id, goal_id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, is_anytime, duration_minutes, tags, created_at, updated_at, updated_by')
-        .eq('goal_id', key.goal_id)
+        .eq('goal_id', key.goal_id);
+
+      if (tagList.length > 0) {
+        // Postgres array operators via PostgREST: ov (overlap) for any, cs (contains) for all.
+        if (tagMatch === 'all') {
+          query = query.contains('tags', tagList);
+        } else {
+          query = query.overlaps('tags', tagList);
+        }
+      }
+
+      const { data, error } = await query
         .order('start_date', { ascending: true })
         .range(offset, offset + limit - 1);
 
       if (error) return buildJsonResponse({ error: error.message }, 500);
-      return buildJsonResponse({ tasks: data || [], limit, offset });
+      return buildJsonResponse({
+        tasks: data || [],
+        limit,
+        offset,
+        filters: tagList.length > 0 ? { tags: tagList, match: tagMatch } : undefined,
+      });
     }
 
     if (req.method === 'POST') {

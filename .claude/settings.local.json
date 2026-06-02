@@ -5,7 +5,9 @@
       "Bash(pnpm add *)",
       "Bash(timeout 180 npx vite build --mode development)",
       "Bash(timeout 60 npx vite build --mode development)",
-      "PowerShell(.\\\\deploy.ps1 \"Notion-style task editor with tags, rich markdown description, and Add Task in Tasks tab\")"
+      "PowerShell(.\\\\deploy.ps1 \"Notion-style task editor with tags, rich markdown description, and Add Task in Tasks tab\")",
+      "Bash(timeout 90 npx vite build --mode development)",
+      "PowerShell(.\\\\deploy.ps1 \"Description-first task editor and detail sidebar, Created-by avatar, multi-goal add, public API tag filter, duplicate/move actions\")"
     ]
   }
 }

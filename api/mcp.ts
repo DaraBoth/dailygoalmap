@@ -20,12 +20,23 @@ interface ToolCallBody {
 const TOOL_CATALOG = [
   {
     name: 'tasks.list',
-    description: 'List tasks for the project key scope (supports limit, offset).',
+    description:
+      'List tasks for the project key scope. Optional filters: tags (array of strings) and match=any|all (default any).',
     inputSchema: {
       type: 'object',
       properties: {
         limit: { type: 'number', minimum: 1, maximum: 500 },
         offset: { type: 'number', minimum: 0 },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Filter tasks whose tags include these values. Use match=all to require every tag.',
+        },
+        match: {
+          type: 'string',
+          enum: ['any', 'all'],
+          description: 'How to combine the tags filter. "any" returns tasks with at least one match (overlap), "all" requires the row to contain every tag.',
+        },
       },
     },
   },
@@ -91,6 +102,19 @@ async function callProjectTasks(
     const offset = Number(input.offset || 0);
     upstream.searchParams.set('limit', String(limit));
     upstream.searchParams.set('offset', String(offset));
+
+    // Forward tag filters when present.
+    const tagsInput = (input as any).tags;
+    if (typeof tagsInput === 'string' && tagsInput.trim()) {
+      upstream.searchParams.set('tags', tagsInput.trim());
+    } else if (Array.isArray(tagsInput) && tagsInput.length > 0) {
+      const joined = tagsInput.map((t) => String(t).trim()).filter(Boolean).join(',');
+      if (joined) upstream.searchParams.set('tags', joined);
+    }
+    const matchInput = (input as any).match;
+    if (matchInput === 'all' || matchInput === 'any') {
+      upstream.searchParams.set('match', matchInput);
+    }
   } else if (method === 'DELETE') {
     const taskId = String(input.task_id || '');
     if (!taskId) return normalizeError('task_id is required for tasks.delete');

@@ -626,6 +626,7 @@ const Calendar = ({
                     onEditTask={handleEditTask}
                     onDeleteTask={handleDeleteTask}
                     goalTitle={allTasks ? "All Goals" : goalTitle}
+                    goalId={goalId}
                     isImmersive={true}
                     onClose={handleCloseTaskDetails}
                   />
@@ -643,6 +644,7 @@ const Calendar = ({
         onAddTask={handleAddTask}
         defaultDate={selectedDate || new Date()}
         existingTags={existingTags}
+        primaryGoalId={goalId}
       />
 
       <EditTaskDialog
@@ -662,6 +664,7 @@ const Calendar = ({
           selectedDate={selectedDate}
           onToggleTaskCompletion={handleToggleTaskCompletion}
           goalTitle={goalTitle}
+          goalId={goalId}
           onEditTask={handleEditTask}
           onDeleteTask={handleDeleteTask}
         />

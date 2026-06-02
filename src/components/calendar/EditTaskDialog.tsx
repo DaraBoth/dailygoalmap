@@ -5,7 +5,7 @@ import { MobileDatePicker } from "@/components/ui/mobile-date-picker";
 import { MobileTimePicker } from "@/components/ui/mobile-time-picker";
 import { Label } from "@/components/ui/label";
 import { Clock, Trash2, AlertTriangle } from "lucide-react";
-import { differenceInCalendarDays } from "date-fns";
+import { differenceInCalendarDays, format } from "date-fns";
 import { Task } from "./types";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import TaskTagInput from "./TaskTagInput";
 import MarkdownEditor from "@/components/editor/MarkdownEditor";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, Settings2, Tag as TagIcon, CalendarRange } from "lucide-react";
 
 
 interface EditTaskDialogProps {
@@ -40,6 +42,19 @@ interface EditTaskDialogProps {
   existingTags?: string[];
 }
 
+const SummaryChip: React.FC<{ icon: React.ReactNode; label: string }> = ({ icon, label }) => (
+  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md border border-border bg-background/80 text-foreground/80">
+    <span className="text-muted-foreground">{icon}</span>
+    {label}
+  </span>
+);
+
+function summarizeDate(start: Date, end: Date): string {
+  const sameDay = start.toDateString() === end.toDateString();
+  if (sameDay) return format(start, "MMM d, yyyy");
+  return `${format(start, "MMM d")} – ${format(end, "MMM d, yyyy")}`;
+}
+
 const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task, existingTags = [] }: EditTaskDialogProps) => {
   const [title, setTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
@@ -53,6 +68,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task, exi
   const [completed, setCompleted] = useState<boolean>(false);
   const [tags, setTags] = useState<string[]>([]);
   const [timeError, setTimeError] = useState<string | null>(null);
+  const [propertiesOpen, setPropertiesOpen] = useState(false);
   const isMobile = useIsMobile();
   const titleRef = useRef<HTMLTextAreaElement>(null);
 
@@ -182,7 +198,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task, exi
                     e.preventDefault();
                   }
                 }}
-                className="space-y-6"
+                className="space-y-5"
               >
                 {/* Notion-style title */}
                 <textarea
@@ -198,117 +214,133 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task, exi
                   )}
                 />
 
-                {/* Meta */}
-                <div className="space-y-2 border-t border-border/40 pt-4" onClick={(e) => e.stopPropagation()}>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Start Date</Label>
-                      <MobileDatePicker
-                        date={startDate}
-                        minDate={undefined}
-                        maxDate={endDate}
-                        setDate={(d) => {
-                          if (!d) return;
-                          setStartDate(d);
-                          if (d > endDate) setEndDate(d);
-                          else if (d.toDateString() !== endDate.toDateString() && toMins(dailyEnd) < toMins(dailyStart)) setDailyEnd("23:59");
-                          setSelectedDate(d);
-                          setTimeError(null);
-                        }}
-                        className="w-full"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">End Date</Label>
-                      <MobileDatePicker
-                        date={endDate}
-                        minDate={startDate}
-                        maxDate={undefined}
-                        setDate={(d) => {
-                          if (!d) return;
-                          const next = d < startDate ? startDate : d;
-                          setEndDate(next);
-                          if (next.toDateString() !== startDate.toDateString() && toMins(dailyEnd) < toMins(dailyStart)) setDailyEnd("23:59");
-                          setTimeError(null);
-                        }}
-                        className="w-full"
-                      />
-                    </div>
-                  </div>
+                {/* Description — main content */}
+                <MarkdownEditor
+                  value={taskDescription}
+                  onChange={setTaskDescription}
+                  placeholder="Add a description, paste images, write a checklist, drop in code…"
+                  minHeight={isMobile ? "260px" : "440px"}
+                />
 
-                  {!isAnytime && (
-                    <div className="space-y-1">
-                      <div className="grid grid-cols-2 gap-3 pt-2">
+                {/* Properties (collapsible) */}
+                <Collapsible open={propertiesOpen} onOpenChange={setPropertiesOpen} className="border-t border-border/40 pt-4">
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between gap-3 text-left rounded-md px-2 py-2 hover:bg-muted/40 transition-colors"
+                    >
+                      <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
+                          <Settings2 className="h-3.5 w-3.5" />
+                          Properties
+                        </span>
+                        <SummaryChip icon={<CalendarRange className="h-3 w-3" />} label={summarizeDate(startDate, endDate)} />
+                        <SummaryChip icon={<Clock className="h-3 w-3" />} label={isAnytime ? "Anytime" : `${dailyStart}–${dailyEnd}`} />
+                        {tags.length > 0 && (
+                          <SummaryChip icon={<TagIcon className="h-3 w-3" />} label={`${tags.length} tag${tags.length === 1 ? "" : "s"}`} />
+                        )}
+                        {completed && (
+                          <SummaryChip icon={<span className="h-2 w-2 rounded-full bg-green-500 inline-block" />} label="Done" />
+                        )}
+                      </div>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 text-muted-foreground transition-transform shrink-0",
+                          propertiesOpen && "rotate-180"
+                        )}
+                      />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="overflow-hidden">
+                    <div className="pt-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                          <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                            <Clock className="h-3 w-3" />
-                            Start Time
-                          </Label>
-                          <MobileTimePicker
-                            value={dailyStart}
-                            onChange={handleStartTimeChange}
+                          <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Start Date</Label>
+                          <MobileDatePicker
+                            date={startDate}
+                            minDate={undefined}
+                            maxDate={endDate}
+                            setDate={(d) => {
+                              if (!d) return;
+                              setStartDate(d);
+                              if (d > endDate) setEndDate(d);
+                              else if (d.toDateString() !== endDate.toDateString() && toMins(dailyEnd) < toMins(dailyStart)) setDailyEnd("23:59");
+                              setSelectedDate(d);
+                              setTimeError(null);
+                            }}
+                            className="w-full"
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                            <Clock className="h-3 w-3" />
-                            End Time
-                          </Label>
-                          <MobileTimePicker
-                            value={dailyEnd}
-                            onChange={handleEndTimeChange}
+                          <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">End Date</Label>
+                          <MobileDatePicker
+                            date={endDate}
+                            minDate={startDate}
+                            maxDate={undefined}
+                            setDate={(d) => {
+                              if (!d) return;
+                              const next = d < startDate ? startDate : d;
+                              setEndDate(next);
+                              if (next.toDateString() !== startDate.toDateString() && toMins(dailyEnd) < toMins(dailyStart)) setDailyEnd("23:59");
+                              setTimeError(null);
+                            }}
+                            className="w-full"
                           />
                         </div>
                       </div>
-                      {timeError && (
-                        <p className="flex items-center gap-1.5 text-xs text-destructive mt-1">
-                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                          {timeError}
+
+                      {!isAnytime && (
+                        <div className="space-y-1">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                                <Clock className="h-3 w-3" />
+                                Start Time
+                              </Label>
+                              <MobileTimePicker value={dailyStart} onChange={handleStartTimeChange} />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                                <Clock className="h-3 w-3" />
+                                End Time
+                              </Label>
+                              <MobileTimePicker value={dailyEnd} onChange={handleEndTimeChange} />
+                            </div>
+                          </div>
+                          {timeError && (
+                            <p className="flex items-center gap-1.5 text-xs text-destructive mt-1">
+                              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                              {timeError}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {startDate.toDateString() !== endDate.toDateString() && (
+                        <p className="text-xs text-muted-foreground">
+                          Spans {Math.max(0, differenceInCalendarDays(endDate, startDate)) + 1} days
                         </p>
                       )}
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex items-center justify-between bg-muted/40 border border-border px-3 py-2.5 rounded-lg">
+                          <Label className="text-sm font-medium text-muted-foreground">Anytime</Label>
+                          <Switch checked={isAnytime} onCheckedChange={(v) => { setIsAnytime(v); setTimeError(null); }} />
+                        </div>
+
+                        <div className="flex items-center justify-between bg-muted/40 border border-border px-3 py-2.5 rounded-lg">
+                          <Label className="text-sm font-medium text-muted-foreground">Completed</Label>
+                          <Switch checked={completed} onCheckedChange={setCompleted} />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Tags</Label>
+                        <TaskTagInput value={tags} onChange={setTags} suggestions={existingTags} />
+                      </div>
                     </div>
-                  )}
-
-                  {startDate.toDateString() !== endDate.toDateString() && (
-                    <p className="text-xs text-muted-foreground">
-                      Spans {Math.max(0, differenceInCalendarDays(endDate, startDate)) + 1} days
-                    </p>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-3 pt-2">
-                    <div className="flex items-center justify-between bg-muted/40 border border-border px-3 py-2.5 rounded-lg">
-                      <Label className="text-sm font-medium text-muted-foreground">Anytime</Label>
-                      <Switch checked={isAnytime} onCheckedChange={(v) => { setIsAnytime(v); setTimeError(null); }} />
-                    </div>
-
-                    <div className="flex items-center justify-between bg-muted/40 border border-border px-3 py-2.5 rounded-lg">
-                      <Label className="text-sm font-medium text-muted-foreground">Completed</Label>
-                      <Switch checked={completed} onCheckedChange={setCompleted} />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 pt-2">
-                    <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Tags</Label>
-                    <TaskTagInput
-                      value={tags}
-                      onChange={setTags}
-                      suggestions={existingTags}
-                    />
-                  </div>
-                </div>
-
-                {/* Description editor */}
-                <div className="space-y-1.5 pt-2">
-                  <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                    Description
-                  </Label>
-                  <MarkdownEditor
-                    value={taskDescription}
-                    onChange={setTaskDescription}
-                    placeholder="Write something, paste images, or add a code block…"
-                    minHeight={isMobile ? "200px" : "360px"}
-                  />
-                </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </form>
             </div>
           </div>

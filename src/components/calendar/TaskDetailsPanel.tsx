@@ -23,6 +23,7 @@ import { MarkdownRenderer } from "../ui/MarkdownRenderer";
 import { cn } from "@/lib/utils";
 import { formatTaskDateRange, formatTaskTimeRange } from "./taskDateTime";
 import ShareTasksModal, { ShareableTask } from "@/components/dashboard/ShareTasksModal";
+import { TaskGoalActionsMenu } from "./TaskGoalActionsMenu";
 
 interface TaskDetailsPanelProps {
   selectedTask: Task | null;
@@ -31,6 +32,7 @@ interface TaskDetailsPanelProps {
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
   goalTitle: string;
+  goalId?: string;
   isImmersive?: boolean;
   onClose?: () => void;
 }
@@ -42,6 +44,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   onEditTask,
   onDeleteTask,
   goalTitle,
+  goalId,
   isImmersive,
   onClose,
 }) => {
@@ -141,6 +144,13 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
             <Share2 className="h-3.5 w-3.5" />
             <span className="hidden md:inline">Share</span>
           </Button>
+          {goalId ? (
+            <TaskGoalActionsMenu
+              task={selectedTask}
+              sourceGoalId={goalId}
+              label="More"
+            />
+          ) : null}
           <Button
             variant="ghost"
             size="sm"

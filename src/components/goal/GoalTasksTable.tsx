@@ -24,6 +24,12 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 import dayjs, { Dayjs } from 'dayjs';
 import { Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getInitials, useUserProfiles } from '@/hooks/useUserProfiles';
+import EditTaskDialog from '@/components/calendar/EditTaskDialog';
+import { updateTask } from '@/utils/supabaseOperations';
 
 interface GoalTasksTableProps {
   tasks: Task[];
@@ -104,6 +110,19 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
   const [visibleCount, setVisibleCount] = useState(LAZY_BATCH_SIZE);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  const involvedUserIds = useMemo(() => {
+    const set = new Set<string>();
+    tableTasks.forEach((task) => {
+      if (task.updated_by) set.add(task.updated_by);
+      if (task.user_id) set.add(task.user_id);
+    });
+    return Array.from(set);
+  }, [tableTasks]);
+  const { profiles: creatorProfiles } = useUserProfiles(involvedUserIds);
+
+  const resolveTaskUserId = (task: Task) => task.updated_by || task.user_id || '';
 
   useEffect(() => {
     setTableTasks(tasks);
@@ -409,46 +428,98 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
     {
       id: 'status',
       header: 'Status',
-      cell: ({ row }) => row.original.completed ? 'Done' : 'Pending',
+      cell: ({ row }) => {
+        const task = row.original;
+        const completed = !!task.completed;
+        const value = completed ? 'done' : 'pending';
+        return (
+          <div
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <Select
+              value={value}
+              onValueChange={(next) => {
+                const wantCompleted = next === 'done';
+                if (wantCompleted !== completed) {
+                  handleToggleTaskCompletion(task.id);
+                }
+              }}
+            >
+              <SelectTrigger
+                className={cn(
+                  'h-8 w-[130px] gap-2 rounded-md border text-xs font-medium',
+                  completed
+                    ? 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300 hover:bg-green-500/15'
+                    : 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/15'
+                )}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <span
+                    className={cn(
+                      'h-1.5 w-1.5 rounded-full',
+                      completed ? 'bg-green-500' : 'bg-amber-500'
+                    )}
+                  />
+                  <SelectValue />
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                    Pending
+                  </span>
+                </SelectItem>
+                <SelectItem value="done">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                    Done
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      },
       sortingFn: (a, b) => Number(a.original.completed) - Number(b.original.completed),
     },
     {
-      id: 'actions',
-      header: 'Action',
+      id: 'last_user',
+      header: 'By',
       cell: ({ row }) => {
-        const completed = !!row.original.completed;
+        const userId = resolveTaskUserId(row.original);
+        if (!userId) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+        const profile = creatorProfiles[userId];
+        const name = profile?.display_name || 'Unknown';
+        const tooltipLabel = row.original.updated_by
+          ? `Last edited by ${name}`
+          : `Created by ${name}`;
         return (
-          <Button
-            type="button"
-            size="sm"
-            variant={completed ? 'outline' : 'default'}
-            className="h-8"
-            onClick={(event) => {
-              event.stopPropagation();
-              handleToggleTaskCompletion(row.original.id);
-            }}
-          >
-            {completed ? 'Mark Pending' : 'Mark Completed'}
-          </Button>
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Avatar className="h-7 w-7 ring-1 ring-border/60">
+                  <AvatarImage src={profile?.avatar_url || undefined} alt={name} />
+                  <AvatarFallback className="text-[10px] font-semibold">
+                    {getInitials(name)}
+                  </AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={6}>
+                <span className="text-xs">{tooltipLabel}</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         );
       },
-      enableSorting: false,
-    },
-    {
-      accessorKey: 'created_at',
-      header: ({ column }) => (
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-auto p-0 font-semibold"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Created
-          <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
-        </Button>
-      ),
-      cell: ({ row }) => asDateLabel(row.original.created_at),
-      sortingFn: (a, b) => asDateLabel(a.original.created_at).localeCompare(asDateLabel(b.original.created_at)),
+      sortingFn: (a, b) => {
+        const aName = (creatorProfiles[resolveTaskUserId(a.original)]?.display_name || '').toLowerCase();
+        const bName = (creatorProfiles[resolveTaskUserId(b.original)]?.display_name || '').toLowerCase();
+        return aName.localeCompare(bName);
+      },
     },
     {
       accessorKey: 'start_date',
@@ -503,7 +574,7 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
       },
       sortingFn: (a, b) => (a.original.tags || []).join(',').localeCompare((b.original.tags || []).join(',')),
     },
-  ], [handleToggleTaskCompletion]);
+  ], [handleToggleTaskCompletion, creatorProfiles]);
 
   const table = useReactTable({
     data: filteredTasks,
@@ -706,8 +777,8 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
       </div>
 
       <div className="rounded-2xl border border-border/60 bg-background/70 dark:bg-background/85 backdrop-blur-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-sm">
+        <div className="w-full overflow-x-auto overscroll-x-contain">
+          <table className="w-full min-w-[860px] text-sm">
             <thead className="bg-muted/70 dark:bg-muted/40 border-b border-border/60 sticky top-0 z-10">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -783,6 +854,87 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
         selectedDate={selectedTask?.start_date ? new Date(selectedTask.start_date) : undefined}
         onToggleTaskCompletion={handleToggleTaskCompletion}
         goalTitle={goalTitle || 'Task Details'}
+        goalId={goalId}
+        onEditTask={(task) => {
+          setEditingTask(task);
+          setIsDetailOpen(false);
+        }}
+      />
+
+      <EditTaskDialog
+        isOpen={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        task={editingTask}
+        existingTags={allTags}
+        onUpdateTask={async (taskId, description, date, time, range) => {
+          try {
+            const taskToUpdate = tableTasks.find((t) => t.id === taskId);
+            if (!taskToUpdate) return;
+
+            const startISO = (range?.start_date || date).toISOString();
+            const endISO = (range?.end_date || date).toISOString();
+            const isAnytime = !!range?.is_anytime;
+            const startTimeStr = isAnytime ? null : (range?.daily_start_time ?? (time ? `${time}` : null));
+            const endTimeStr = isAnytime ? null : (range?.daily_end_time ?? (time ? `${time}` : null));
+            const cleanedTags = Array.isArray(range?.tags)
+              ? range!.tags!.map((t) => String(t || '').trim()).filter(Boolean)
+              : undefined;
+
+            const updates: Record<string, unknown> = {
+              description,
+              title: range?.title ?? null,
+              start_date: startISO,
+              end_date: endISO,
+              is_anytime: isAnytime,
+              daily_start_time: startTimeStr ? `${startTimeStr}:00` : null,
+              daily_end_time: endTimeStr ? `${endTimeStr}:00` : null,
+              duration_minutes: typeof range?.duration_minutes === 'number' ? range.duration_minutes : null,
+              updated_at: new Date().toISOString(),
+            };
+            if (typeof range?.completed !== 'undefined') updates.completed = range.completed;
+            if (cleanedTags) updates.tags = cleanedTags;
+
+            await updateTask(taskId, updates);
+
+            setTableTasks((prev) =>
+              prev.map((t) =>
+                t.id === taskId
+                  ? {
+                      ...t,
+                      ...(updates as Partial<Task>),
+                    }
+                  : t
+              )
+            );
+
+            toast({
+              title: 'Task updated',
+              description: 'Task has been updated successfully.',
+            });
+            setEditingTask(null);
+          } catch (err: any) {
+            toast({
+              title: 'Update failed',
+              description: err?.message || 'Could not update task.',
+              variant: 'destructive',
+            });
+          }
+        }}
+        onDeleteTask={async (taskId) => {
+          try {
+            const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+            if (error) throw error;
+            setTableTasks((prev) => prev.filter((t) => t.id !== taskId));
+            toast({ title: 'Task deleted' });
+            setEditingTask(null);
+          } catch (err: any) {
+            toast({
+              title: 'Delete failed',
+              description: err?.message || 'Could not delete task.',
+              variant: 'destructive',
+            });
+          }
+        }}
       />
 
       <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
@@ -925,6 +1077,7 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
           defaultDate={new Date()}
           existingTags={allTags}
           formId="goal-tasks-table-add-form"
+          primaryGoalId={goalId}
         />
       ) : null}
     </div>
