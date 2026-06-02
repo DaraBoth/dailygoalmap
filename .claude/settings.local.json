@@ -10,7 +10,8 @@
       "PowerShell(.\\\\deploy.ps1 \"Description-first task editor and detail sidebar, Created-by avatar, multi-goal add, public API tag filter, duplicate/move actions\")",
       "Bash(rm -rf src/data/goalTemplates)",
       "Bash(rm src/types/goalTemplate.ts)",
-      "PowerShell(.\\\\deploy.ps1 \"Survey-style goal intake wizard, iPhone Shortcut generator, Notion-style calendar dialog, mobile safe-area + tab/z-index fixes\")"
+      "PowerShell(.\\\\deploy.ps1 \"Survey-style goal intake wizard, iPhone Shortcut generator, Notion-style calendar dialog, mobile safe-area + tab/z-index fixes\")",
+      "PowerShell(.\\\\deploy.ps1 \"Notification switch state fix, iPhone Shortcut prod URL + clearer iOS setup steps\")"
     ]
   }
 }

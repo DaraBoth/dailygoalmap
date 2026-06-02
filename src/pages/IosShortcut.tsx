@@ -7,6 +7,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
+  AlertTriangle,
   ArrowLeft,
   Check,
   CheckCircle2,
@@ -52,10 +53,15 @@ const IosShortcutPage = () => {
 
   const finalName = name.trim() || defaultName;
 
-  const endpoint = useMemo(() => {
-    if (typeof window === "undefined") return "/api/project-tasks";
-    return `${window.location.origin}/api/project-tasks`;
-  }, []);
+  // The endpoint baked into the .shortcut file must always be the live
+  // production domain — iPhones on cellular can't reach a `localhost` URL,
+  // so generating the file on the dev server would produce a useless shortcut.
+  const PRODUCTION_ENDPOINT = "https://dailygoalmap.vercel.app/api/project-tasks";
+  const endpoint = PRODUCTION_ENDPOINT;
+  const isDevOrigin =
+    typeof window !== "undefined" &&
+    (window.location.origin.startsWith("http://localhost") ||
+      window.location.origin.startsWith("http://127.0.0.1"));
 
   const handleGenerate = async () => {
     if (!selectedGoal) {
@@ -257,6 +263,53 @@ const IosShortcutPage = () => {
             />
           </div>
         </section>
+
+        {/* iOS gotcha — show this BEFORE the download button so users know what they're signing up for. */}
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 sm:p-4 space-y-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <div className="space-y-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                Can't see "Allow Untrusted Shortcuts" in Settings?
+              </p>
+              <p className="text-xs text-amber-900/80 dark:text-amber-200/80 leading-relaxed">
+                Apple hides this setting until you've run at least one signed Shortcut. To unlock
+                it, run any Shortcut from the built-in Gallery once — no external link needed.
+              </p>
+            </div>
+          </div>
+
+          <ol className="text-xs text-amber-900/90 dark:text-amber-100/90 space-y-1.5 pl-5 list-decimal">
+            <li>Open the <span className="font-medium">Shortcuts</span> app on your iPhone.</li>
+            <li>Tap <span className="font-medium">Gallery</span> at the bottom.</li>
+            <li>Pick any shortcut (e.g. <em>"Compress and Email Photos"</em>) → tap <span className="font-medium">Add Shortcut</span>.</li>
+            <li>Go to <span className="font-medium">My Shortcuts</span> and run it once. It doesn't matter what it does.</li>
+            <li>
+              Open <span className="font-medium">Settings → Shortcuts</span>. The{" "}
+              <span className="font-medium">Allow Untrusted Shortcuts</span> toggle now appears —
+              flip it on.
+            </li>
+            <li>Come back here, download your shortcut, AirDrop or email it to your iPhone, tap it.</li>
+          </ol>
+
+          <p className="text-[11px] text-amber-900/70 dark:text-amber-200/70 italic">
+            On iOS 17+, Apple may use an in-app security review instead of the toggle — in that
+            case, just tap "Allow" when iOS asks.
+          </p>
+        </div>
+
+        {isDevOrigin ? (
+          <div className="flex items-start gap-2 rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-900 dark:text-rose-200">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <p>
+              You're on <code>{typeof window !== "undefined" ? window.location.origin : ""}</code>.
+              The downloaded shortcut will still call the production API at{" "}
+              <code>{endpoint}</code>, but the API key it creates lives in your local dev DB if
+              you're pointed there. For real iPhone use, generate from{" "}
+              <code>https://dailygoalmap.vercel.app</code>.
+            </p>
+          </div>
+        ) : null}
 
         {/* Security note */}
         <div className="flex items-start gap-2 rounded-xl border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
