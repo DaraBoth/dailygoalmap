@@ -1,10 +1,16 @@
-// iOS Shortcut downloader — generates a per-shortcut project API key on the
-// server, bakes it (plus goal id + endpoint) into an unsigned `.shortcut` XML
-// plist file, and triggers a browser download. The secret key is never shown
-// in the UI — it lives only in the downloaded file, so the user can hand it
-// to their phone without ever copy-pasting a credential.
+// iOS Shortcut setup page — mints a fresh per-shortcut project API key on the
+// server and reveals the setup credentials (endpoint URL, header, JSON body)
+// once for the user to paste into the iOS Shortcuts app. We used to ship a
+// downloadable `.shortcut` file but iOS 16.4+ no longer accepts unsigned
+// XML plists, so the only reliable cross-version path is "build it once on
+// your iPhone with these values."
+//
+// The secret key is shown exactly one time, with a clear "copy now" warning.
+// Same trust model as the regular API Keys page — the key is revocable from
+// the goal's About → API tab, so a stolen value can be killed without
+// affecting any other shortcut or device.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -12,11 +18,14 @@ import {
   Check,
   CheckCircle2,
   Circle,
-  Download,
+  Copy,
+  Eye,
+  EyeOff,
   Info,
   Loader2,
   ShieldCheck,
   Smartphone,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,10 +34,21 @@ import { useToast } from "@/hooks/use-toast";
 import { useUserGoalsLite, UserGoalLite } from "@/components/goal/useUserGoalsLite";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import {
-  downloadShortcut,
-  ShortcutMode,
-} from "@/utils/iosShortcutGenerator";
+
+type ShortcutMode = "completed" | "pending";
+
+interface SetupCreds {
+  endpoint: string;
+  headerName: string;
+  headerValue: string;
+  jsonBody: string;
+  goalTitle: string;
+  shortcutName: string;
+  mode: ShortcutMode;
+}
+
+const PRODUCTION_ENDPOINT = "https://dailygoalmap.vercel.app/api/project-tasks";
+const HEADER_NAME = "X-Project-Api-Key";
 
 const IosShortcutPage = () => {
   const navigate = useNavigate();
@@ -39,6 +59,8 @@ const IosShortcutPage = () => {
   const [name, setName] = useState<string>("");
   const [mode, setMode] = useState<ShortcutMode>("pending");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [creds, setCreds] = useState<SetupCreds | null>(null);
+  const [keyRevealed, setKeyRevealed] = useState(false);
 
   const selectedGoal: UserGoalLite | undefined = useMemo(
     () => goals.find((g) => g.id === selectedGoalId),
@@ -53,15 +75,30 @@ const IosShortcutPage = () => {
 
   const finalName = name.trim() || defaultName;
 
-  // The endpoint baked into the .shortcut file must always be the live
-  // production domain — iPhones on cellular can't reach a `localhost` URL,
-  // so generating the file on the dev server would produce a useless shortcut.
-  const PRODUCTION_ENDPOINT = "https://dailygoalmap.vercel.app/api/project-tasks";
-  const endpoint = PRODUCTION_ENDPOINT;
   const isDevOrigin =
     typeof window !== "undefined" &&
     (window.location.origin.startsWith("http://localhost") ||
       window.location.origin.startsWith("http://127.0.0.1"));
+
+  // Reset the revealed credentials any time the user changes goal / mode /
+  // name — otherwise they could paste a key into the wrong shortcut.
+  useEffect(() => {
+    setCreds(null);
+    setKeyRevealed(false);
+  }, [selectedGoalId, mode]);
+
+  const copy = async (label: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast({ title: `${label} copied` });
+    } catch {
+      toast({
+        title: "Couldn't copy",
+        description: "Select the text manually and copy it.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleGenerate = async () => {
     if (!selectedGoal) {
@@ -75,14 +112,11 @@ const IosShortcutPage = () => {
 
     setIsGenerating(true);
     try {
-      // 1. Get an auth token so we can hit the project-keys endpoint.
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       if (!token) throw new Error("Sign in again — your session expired.");
 
-      // 2. Generate a brand-new project API key dedicated to this shortcut.
-      //    This way every downloaded .shortcut has its own revocable identity
-      //    and we never need to display a secret in the UI.
+      // Brand-new, revocable key dedicated to this single shortcut.
       const keyName =
         `iPhone Shortcut · ${finalName} · ${new Date().toLocaleDateString()}`.slice(0, 120);
 
@@ -108,25 +142,39 @@ const IosShortcutPage = () => {
       const secret = (payload as { secret?: string })?.secret;
       if (!secret) throw new Error("Server didn't return a project key secret.");
 
-      // 3. Bake it into the .shortcut file and trigger the download.
-      //    The secret never touches the DOM or appears in any UI state.
-      downloadShortcut({
-        name: finalName,
-        endpoint,
-        apiKey: secret,
-        goalId: selectedGoal.id,
+      // Build the JSON body the iOS "Get Contents of URL" action should send.
+      // `title` and `description` use Apple's magic-variable syntax — the user
+      // pastes these into the Shortcuts dictionary editor as text fields and
+      // then long-presses to insert the Ask-for-Input variables.
+      const jsonBody = JSON.stringify(
+        {
+          title: "<Title from Ask for Input>",
+          description: "<Description from Ask for Input>",
+          is_anytime: true,
+          completed: mode === "completed",
+        },
+        null,
+        2
+      );
+
+      setCreds({
+        endpoint: PRODUCTION_ENDPOINT,
+        headerName: HEADER_NAME,
+        headerValue: secret,
+        jsonBody,
         goalTitle: selectedGoal.title,
+        shortcutName: finalName,
         mode,
       });
+      setKeyRevealed(false);
 
       toast({
-        title: "Shortcut downloaded",
-        description:
-          "Open the .shortcut file on your iPhone to install it. The key is stored only inside the file.",
+        title: "Setup credentials ready",
+        description: "Copy them now — the key is shown only this once.",
       });
     } catch (err: any) {
       toast({
-        title: "Couldn't generate shortcut",
+        title: "Couldn't generate credentials",
         description: err?.message || "Please try again.",
         variant: "destructive",
       });
@@ -163,13 +211,21 @@ const IosShortcutPage = () => {
       {/* Body */}
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6">
         <header>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Create iPhone Shortcut</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Set up iPhone Shortcut</h1>
           <p className="text-sm text-muted-foreground mt-1.5">
-            Download a Shortcut for your iPhone, iPad, or Mac that adds tasks straight into one of
-            your goals — no app required. Each download gets its own key, so you can revoke a lost
-            device anytime.
+            Build a Shortcut on your iPhone, iPad, or Mac that adds tasks straight into one of your
+            goals — straight from the Lock Screen, Share Sheet, or "Hey Siri." Takes about 3 minutes
+            the first time.
           </p>
         </header>
+
+        {/* Why no file download */}
+        <div className="rounded-xl border border-border/60 bg-muted/30 p-3 sm:p-4 text-xs text-muted-foreground leading-relaxed">
+          <span className="text-foreground font-medium">Why no one-tap install?</span> Apple
+          requires Shortcut files to be cryptographically signed through iCloud. We'd rather not
+          send a copy of your key through Apple's servers, so we hand you the few values you need
+          and you wire it up locally in 8 taps.
+        </div>
 
         {/* Step 1 — Goal */}
         <section className="space-y-3 rounded-2xl border border-border/60 bg-background p-4 sm:p-5">
@@ -225,7 +281,8 @@ const IosShortcutPage = () => {
             <h2 className="text-sm font-semibold">What kind of tasks?</h2>
           </div>
           <p className="text-xs text-muted-foreground -mt-1">
-            Pick once at download time. You can generate multiple shortcuts (one for each style).
+            Pick once. You can repeat this whole flow to create a second shortcut for the other
+            style.
           </p>
           <div className="grid grid-cols-2 gap-2">
             <ModeCard
@@ -253,7 +310,7 @@ const IosShortcutPage = () => {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="shortcut-name" className="text-xs text-muted-foreground">
-              Shows up in the iOS Shortcuts app and the Share Sheet.
+              Shows up in the iOS Shortcuts app, the Share Sheet, and as the Siri phrase.
             </Label>
             <Input
               id="shortcut-name"
@@ -264,48 +321,14 @@ const IosShortcutPage = () => {
           </div>
         </section>
 
-        {/* iOS gotcha — show this BEFORE the download button so users know what they're signing up for. */}
-        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 sm:p-4 space-y-3">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
-            <div className="space-y-1 min-w-0">
-              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-                Can't see "Allow Untrusted Shortcuts" in Settings?
-              </p>
-              <p className="text-xs text-amber-900/80 dark:text-amber-200/80 leading-relaxed">
-                Apple hides this setting until you've run at least one signed Shortcut. To unlock
-                it, run any Shortcut from the built-in Gallery once — no external link needed.
-              </p>
-            </div>
-          </div>
-
-          <ol className="text-xs text-amber-900/90 dark:text-amber-100/90 space-y-1.5 pl-5 list-decimal">
-            <li>Open the <span className="font-medium">Shortcuts</span> app on your iPhone.</li>
-            <li>Tap <span className="font-medium">Gallery</span> at the bottom.</li>
-            <li>Pick any shortcut (e.g. <em>"Compress and Email Photos"</em>) → tap <span className="font-medium">Add Shortcut</span>.</li>
-            <li>Go to <span className="font-medium">My Shortcuts</span> and run it once. It doesn't matter what it does.</li>
-            <li>
-              Open <span className="font-medium">Settings → Shortcuts</span>. The{" "}
-              <span className="font-medium">Allow Untrusted Shortcuts</span> toggle now appears —
-              flip it on.
-            </li>
-            <li>Come back here, download your shortcut, AirDrop or email it to your iPhone, tap it.</li>
-          </ol>
-
-          <p className="text-[11px] text-amber-900/70 dark:text-amber-200/70 italic">
-            On iOS 17+, Apple may use an in-app security review instead of the toggle — in that
-            case, just tap "Allow" when iOS asks.
-          </p>
-        </div>
-
         {isDevOrigin ? (
           <div className="flex items-start gap-2 rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-900 dark:text-rose-200">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
             <p>
               You're on <code>{typeof window !== "undefined" ? window.location.origin : ""}</code>.
-              The downloaded shortcut will still call the production API at{" "}
-              <code>{endpoint}</code>, but the API key it creates lives in your local dev DB if
-              you're pointed there. For real iPhone use, generate from{" "}
+              The credentials below will still point to the production API at{" "}
+              <code>{PRODUCTION_ENDPOINT}</code>, but the API key it creates lives in whatever
+              database your dev server is pointed at. For a real iPhone, generate from{" "}
               <code>https://dailygoalmap.vercel.app</code>.
             </p>
           </div>
@@ -315,10 +338,10 @@ const IosShortcutPage = () => {
         <div className="flex items-start gap-2 rounded-xl border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
           <ShieldCheck className="h-4 w-4 mt-0.5 text-emerald-500 shrink-0" />
           <p>
-            A fresh, dedicated project key is generated and baked into the file —{" "}
-            <span className="text-foreground font-medium">never shown on screen</span>.
-            The key can only create tasks in this single goal, and you can revoke it any time from
-            the goal's <em>About this goal → API</em> tab.
+            A fresh, dedicated project key is minted for this shortcut. It can only create tasks in
+            this single goal, you can revoke it any time from the goal's{" "}
+            <em>About this goal → API</em> tab, and we only show it to you{" "}
+            <span className="text-foreground font-medium">once</span> — same as a password manager.
           </p>
         </div>
 
@@ -332,34 +355,166 @@ const IosShortcutPage = () => {
           {isGenerating ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin shrink-0" />
           ) : (
-            <Download className="w-4 h-4 mr-2 shrink-0" />
+            <Sparkles className="w-4 h-4 mr-2 shrink-0" />
           )}
-          {isGenerating ? "Generating…" : "Generate & download shortcut"}
+          {isGenerating ? "Generating…" : creds ? "Generate a new key" : "Generate setup credentials"}
         </Button>
 
-        {/* How to install */}
+        {/* Credentials reveal */}
+        {creds ? (
+          <section className="rounded-2xl border border-primary/40 bg-primary/[0.04] p-4 sm:p-5 space-y-4">
+            <div className="flex items-start gap-2">
+              <ShieldCheck className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+              <div className="min-w-0 space-y-1">
+                <h2 className="text-sm font-semibold">Your shortcut credentials</h2>
+                <p className="text-xs text-muted-foreground">
+                  Copy these into the Shortcut you build on your iPhone. The API key vanishes when
+                  you leave this page.
+                </p>
+              </div>
+            </div>
+
+            <CredentialField
+              label="URL (POST)"
+              value={creds.endpoint}
+              onCopy={() => copy("URL", creds.endpoint)}
+            />
+
+            <CredentialField
+              label="Header name"
+              value={creds.headerName}
+              onCopy={() => copy("Header name", creds.headerName)}
+            />
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Header value (API key)
+                </Label>
+                <button
+                  type="button"
+                  onClick={() => setKeyRevealed((v) => !v)}
+                  className="text-[11px] inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                >
+                  {keyRevealed ? (
+                    <>
+                      <EyeOff className="h-3 w-3" /> Hide
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-3 w-3" /> Reveal
+                    </>
+                  )}
+                </button>
+              </div>
+              <div className="flex items-stretch gap-2">
+                <code className="flex-1 min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono break-all">
+                  {keyRevealed ? creds.headerValue : "•".repeat(Math.min(creds.headerValue.length, 40))}
+                </code>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copy("API key", creds.headerValue)}
+                  className="shrink-0"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <p className="text-[11px] text-amber-700 dark:text-amber-400 inline-flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Save this somewhere safe — it won't be shown again.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Request body (JSON)
+                </Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copy("JSON body", creds.jsonBody)}
+                  className="h-7 text-[11px] gap-1"
+                >
+                  <Copy className="h-3 w-3" /> Copy
+                </Button>
+              </div>
+              <pre className="rounded-lg border border-border bg-background p-3 text-xs font-mono overflow-x-auto whitespace-pre">
+                {creds.jsonBody}
+              </pre>
+              <p className="text-[11px] text-muted-foreground">
+                Inside Shortcuts, swap the two <code>&lt;…&gt;</code> placeholders for the{" "}
+                <span className="text-foreground font-medium">Provided Input</span> magic variables
+                from your two "Ask for Input" actions.
+              </p>
+            </div>
+          </section>
+        ) : null}
+
+        {/* Build instructions */}
         <section className="rounded-2xl border border-border/60 bg-background p-4 sm:p-5 space-y-3">
           <div className="flex items-center gap-2">
             <Info className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">How to install on iPhone</h2>
+            <h2 className="text-sm font-semibold">Build it on your iPhone (3 min)</h2>
           </div>
-          <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+          <ol className="text-sm text-muted-foreground space-y-2.5 list-decimal pl-5">
             <li>
-              On your iPhone, open Settings → Shortcuts and enable{" "}
-              <span className="text-foreground font-medium">Allow Untrusted Shortcuts</span>.
-              <span className="block text-xs mt-0.5 italic">
-                Apple hides this option until you've run at least one shortcut from iCloud — run any
-                pre-made shortcut once to make it appear.
-              </span>
-            </li>
-            <li>AirDrop or email the downloaded <code>.shortcut</code> file to your iPhone.</li>
-            <li>
-              Tap the file → the Shortcuts app opens → choose{" "}
-              <span className="text-foreground font-medium">Add Shortcut</span>.
+              Open the <span className="text-foreground font-medium">Shortcuts</span> app on your
+              iPhone → tap <span className="text-foreground font-medium">+</span> (top right) to
+              create a new shortcut.
             </li>
             <li>
-              Run it from the Shortcuts app, the Share Sheet, the Lock Screen, your home screen, or
-              ask Siri: "Hey Siri, {finalName || "add task"}".
+              Tap <span className="text-foreground font-medium">Add Action</span> → search{" "}
+              <em>"Ask for Input"</em> → set <em>Prompt</em> to{" "}
+              <span className="text-foreground font-medium">"Task title"</span>. Tap{" "}
+              <em>Show More</em> and rename the output to <code>Title</code>.
+            </li>
+            <li>
+              Add another <em>"Ask for Input"</em> → prompt:{" "}
+              <span className="text-foreground font-medium">"Description (optional)"</span>. Tap{" "}
+              <em>Show More</em>, allow multiple lines, default answer empty, rename output to{" "}
+              <code>Description</code>.
+            </li>
+            <li>
+              Add action <em>"Get Contents of URL"</em>. Paste the{" "}
+              <span className="text-foreground font-medium">URL</span> from above. Tap{" "}
+              <em>Show More</em>:
+              <ul className="list-disc pl-5 mt-1.5 space-y-1 text-[13px]">
+                <li>
+                  <em>Method</em> → <span className="text-foreground font-medium">POST</span>.
+                </li>
+                <li>
+                  <em>Headers</em> → add one: key{" "}
+                  <span className="text-foreground font-medium">{HEADER_NAME}</span>, value = the
+                  API key from above.
+                </li>
+                <li>
+                  <em>Request Body</em> → <span className="text-foreground font-medium">JSON</span>{" "}
+                  → add 4 keys exactly as shown in the JSON above:
+                  <div className="mt-1 pl-3 border-l-2 border-border space-y-0.5">
+                    <div><code>title</code> → Text → insert <em>Provided Input</em> from the Title ask</div>
+                    <div><code>description</code> → Text → insert <em>Provided Input</em> from the Description ask</div>
+                    <div><code>is_anytime</code> → Boolean → On</div>
+                    <div><code>completed</code> → Boolean → {creds?.mode === "completed" || mode === "completed" ? <span className="text-foreground font-medium">On</span> : <span className="text-foreground font-medium">Off</span>}</div>
+                  </div>
+                </li>
+              </ul>
+            </li>
+            <li>
+              (Optional) Add <em>"Show Notification"</em> with text{" "}
+              <span className="text-foreground font-medium">"Task added to {creds?.goalTitle || selectedGoal?.title || "your goal"}"</span>.
+            </li>
+            <li>
+              Tap the shortcut name at the top → rename it to{" "}
+              <span className="text-foreground font-medium">{finalName || defaultName || "Add task"}</span> →{" "}
+              tap <em>Done</em>.
+            </li>
+            <li>
+              Run it from the Shortcuts app, Share Sheet, Lock Screen widget, or say{" "}
+              <span className="text-foreground font-medium">"Hey Siri, {finalName || defaultName || "add task"}"</span>.
             </li>
           </ol>
         </section>
@@ -397,6 +552,26 @@ const ModeCard: React.FC<{
     </div>
     <p className="text-xs text-muted-foreground">{hint}</p>
   </button>
+);
+
+const CredentialField: React.FC<{
+  label: string;
+  value: string;
+  onCopy: () => void;
+}> = ({ label, value, onCopy }) => (
+  <div className="space-y-1.5">
+    <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      {label}
+    </Label>
+    <div className="flex items-stretch gap-2">
+      <code className="flex-1 min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono break-all">
+        {value}
+      </code>
+      <Button type="button" variant="outline" size="sm" onClick={onCopy} className="shrink-0">
+        <Copy className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  </div>
 );
 
 export default IosShortcutPage;
