@@ -61,7 +61,7 @@ export const MultiGoalPicker: React.FC<MultiGoalPickerProps> = ({
         </PopoverTrigger>
         <PopoverContent
           align="start"
-          className="w-[--radix-popover-trigger-width] min-w-[260px] p-0 z-[60]"
+          className="w-[--radix-popover-trigger-width] min-w-[260px] p-0 z-[200]"
           onWheel={(e) => e.stopPropagation()}
         >
           <Command>

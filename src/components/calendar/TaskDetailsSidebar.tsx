@@ -20,7 +20,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { openCalendarOptionsDialog } from "@/utils/calendarIntegration";
+import CalendarOptionsDialog from "./CalendarOptionsDialog";
 import { MarkdownRenderer } from "../ui/MarkdownRenderer";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -62,6 +62,7 @@ const TaskDetailsSidebar = ({
   const isMobile = useIsMobile();
   const [isAddingReminder, setIsAddingReminder] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const creatorId = selectedTask?.user_id || "";
   const updaterId = selectedTask?.updated_by || creatorId;
@@ -78,7 +79,7 @@ const TaskDetailsSidebar = ({
 
     setIsAddingReminder(true);
     try {
-      openCalendarOptionsDialog(selectedTask);
+      setCalendarOpen(true);
 
       const taskDate = new Date(selectedTask.start_date);
       if (selectedTask.daily_start_time) {
@@ -331,19 +332,19 @@ const TaskDetailsSidebar = ({
                 </div>
               </div>
 
-              {/* Bottom action bar */}
-              <div className="flex-shrink-0 border-t border-border/50 bg-slate-100/80 dark:bg-slate-950/80 backdrop-blur-md px-4 sm:px-6 py-2.5 sm:py-3 flex items-center gap-2 flex-wrap">
+              {/* Bottom action bar — pb-safe-or-4 keeps the buttons above the
+                  iOS/Android home-indicator on mobile while staying compact on desktop. */}
+              <div className="flex-shrink-0 border-t border-border/50 bg-slate-100/80 dark:bg-slate-950/80 backdrop-blur-md px-4 sm:px-6 pt-3 pb-safe-or-4 sm:pb-3 flex items-center gap-2 flex-wrap">
                 <Button
                   variant="outline"
-                  size="sm"
                   onClick={handleAddToReminders}
                   disabled={isAddingReminder}
-                  className="h-9 text-xs sm:text-sm px-3 sm:px-4 gap-1.5"
+                  className="min-h-11 text-sm px-4 gap-2"
                 >
                   {isAddingReminder ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Sparkles className="h-3.5 w-3.5" />
+                    <Sparkles className="h-4 w-4" />
                   )}
                   {isAddingReminder ? "Adding..." : "Add to Calendar"}
                 </Button>
@@ -352,7 +353,7 @@ const TaskDetailsSidebar = ({
                     task={selectedTask}
                     sourceGoalId={goalId}
                     label="More"
-                    triggerClassName="h-9 px-3 sm:px-4 rounded-md text-xs sm:text-sm border border-border bg-background hover:bg-accent text-foreground gap-1.5"
+                    triggerClassName="min-h-11 px-4 rounded-md text-sm border border-border bg-background hover:bg-accent text-foreground gap-2"
                   />
                 ) : null}
               </div>
@@ -379,6 +380,12 @@ const TaskDetailsSidebar = ({
           shareDate={selectedTask?.start_date ? new Date(selectedTask.start_date) : undefined}
         />
       )}
+
+      <CalendarOptionsDialog
+        open={calendarOpen}
+        onOpenChange={setCalendarOpen}
+        task={selectedTask}
+      />
     </>
   );
 };

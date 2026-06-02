@@ -1793,8 +1793,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
               ><ChevronDown className="h-3.5 w-3.5" /></button>
             )}
 
-            {/* Input area */}
-            <div className="shrink-0 border-t border-border/50 px-3 pt-2 pb-3 space-y-2">
+            {/* Input area — pb-safe-or-3 keeps the textarea clear of the iOS/Android
+                home-indicator on mobile while staying compact on desktop. */}
+            <div className="shrink-0 border-t border-border/50 px-3 pt-2 pb-safe-or-3 space-y-2">
               {/* Toolbar */}
               <div className="flex items-center gap-1.5 flex-wrap">
                 <button onClick={() => setShowSettings(v => !v)}

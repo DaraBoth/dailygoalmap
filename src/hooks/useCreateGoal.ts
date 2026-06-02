@@ -173,20 +173,28 @@ export function useCreateGoal() {
         ...payload.metadata,
       };
 
-      // Insert goal into database
+      // Insert goal into database. We persist the composed AI prompt both as
+      // goals.ai_prompt (the durable "soul" of the goal that every future AI
+      // call reads) and inside goals.preferences.context (so the chat widget
+      // and AI context settings page pick it up automatically).
+      const aiPromptText = options.aiPrompt?.trim() || "";
+      const insertPayload: Record<string, unknown> = {
+        title: payload.title,
+        description: payload.description || "",
+        target_date: payload.target_date ? payload.target_date.toISOString().split("T")[0] : null,
+        no_duration: payload.no_duration ?? !payload.target_date,
+        user_id: userData.user.id,
+        status: "active",
+        metadata,
+      };
+      if (aiPromptText) {
+        insertPayload.ai_prompt = aiPromptText;
+        insertPayload.preferences = { context: aiPromptText };
+      }
+
       const { data: goalData, error: goalError } = await supabase
         .from("goals")
-        .insert([
-          ({
-            title: payload.title,
-            description: payload.description || "",
-            target_date: payload.target_date ? payload.target_date.toISOString().split("T")[0] : null,
-            no_duration: payload.no_duration ?? !payload.target_date,
-            user_id: userData.user.id,
-            status: "active",
-            metadata,
-          } as any),
-        ])
+        .insert([insertPayload as any])
         .select()
         .single();
 
@@ -215,13 +223,19 @@ export function useCreateGoal() {
           
           console.log(`Generating tasks for goal: ${goalData.title}`);
           
+          // Prefer the composed AI prompt over the bare description so the
+          // task generator gets the full context the user (and starter card)
+          // provided. Falls back to the short description when no prompt was
+          // composed (e.g. quick-create path with title only).
+          const aiContext = aiPromptText || goalData.description;
+
           // Generate tasks using existing AI service
           const generatedTasks = await generateMultipleTasks(
             startDate,
             targetDate,
             goalData.id,
             goalData.title,
-            goalData.description,
+            aiContext,
             {
               goalType: metadata.goal_type,
               travelDetails: metadata.goal_type === 'travel' ? {

@@ -16,6 +16,7 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as IosShortcutRouteImport } from './routes/ios-shortcut'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ChatPopupRouteImport } from './routes/chat-popup'
 import { Route as AiApiRouteImport } from './routes/ai-api'
@@ -25,7 +26,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as GoalCreateCustomRouteImport } from './routes/goal.create-custom'
 import { Route as GoalCreateRouteImport } from './routes/goal.create'
 import { Route as GoalIdRouteImport } from './routes/goal.$id'
-import { Route as GoalCreateFromTemplateTemplateIdRouteImport } from './routes/goal.create-from-template.$templateId'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -60,6 +60,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IosShortcutRoute = IosShortcutRouteImport.update({
+  id: '/ios-shortcut',
+  path: '/ios-shortcut',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -107,12 +112,6 @@ const GoalIdRoute = GoalIdRouteImport.update({
   path: '/goal/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GoalCreateFromTemplateTemplateIdRoute =
-  GoalCreateFromTemplateTemplateIdRouteImport.update({
-    id: '/goal/create-from-template/$templateId',
-    path: '/goal/create-from-template/$templateId',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -121,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/ai-api': typeof AiApiRoute
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
+  '/ios-shortcut': typeof IosShortcutRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -131,7 +131,6 @@ export interface FileRoutesByFullPath {
   '/goal/$id': typeof GoalIdRoute
   '/goal/create': typeof GoalCreateRoute
   '/goal/create-custom': typeof GoalCreateCustomRoute
-  '/goal/create-from-template/$templateId': typeof GoalCreateFromTemplateTemplateIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -140,6 +139,7 @@ export interface FileRoutesByTo {
   '/ai-api': typeof AiApiRoute
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
+  '/ios-shortcut': typeof IosShortcutRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -150,7 +150,6 @@ export interface FileRoutesByTo {
   '/goal/$id': typeof GoalIdRoute
   '/goal/create': typeof GoalCreateRoute
   '/goal/create-custom': typeof GoalCreateCustomRoute
-  '/goal/create-from-template/$templateId': typeof GoalCreateFromTemplateTemplateIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -160,6 +159,7 @@ export interface FileRoutesById {
   '/ai-api': typeof AiApiRoute
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
+  '/ios-shortcut': typeof IosShortcutRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -170,7 +170,6 @@ export interface FileRoutesById {
   '/goal/$id': typeof GoalIdRoute
   '/goal/create': typeof GoalCreateRoute
   '/goal/create-custom': typeof GoalCreateCustomRoute
-  '/goal/create-from-template/$templateId': typeof GoalCreateFromTemplateTemplateIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -181,6 +180,7 @@ export interface FileRouteTypes {
     | '/ai-api'
     | '/chat-popup'
     | '/dashboard'
+    | '/ios-shortcut'
     | '/login'
     | '/privacy'
     | '/profile'
@@ -191,7 +191,6 @@ export interface FileRouteTypes {
     | '/goal/$id'
     | '/goal/create'
     | '/goal/create-custom'
-    | '/goal/create-from-template/$templateId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -200,6 +199,7 @@ export interface FileRouteTypes {
     | '/ai-api'
     | '/chat-popup'
     | '/dashboard'
+    | '/ios-shortcut'
     | '/login'
     | '/privacy'
     | '/profile'
@@ -210,7 +210,6 @@ export interface FileRouteTypes {
     | '/goal/$id'
     | '/goal/create'
     | '/goal/create-custom'
-    | '/goal/create-from-template/$templateId'
   id:
     | '__root__'
     | '/'
@@ -219,6 +218,7 @@ export interface FileRouteTypes {
     | '/ai-api'
     | '/chat-popup'
     | '/dashboard'
+    | '/ios-shortcut'
     | '/login'
     | '/privacy'
     | '/profile'
@@ -229,7 +229,6 @@ export interface FileRouteTypes {
     | '/goal/$id'
     | '/goal/create'
     | '/goal/create-custom'
-    | '/goal/create-from-template/$templateId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -239,6 +238,7 @@ export interface RootRouteChildren {
   AiApiRoute: typeof AiApiRoute
   ChatPopupRoute: typeof ChatPopupRoute
   DashboardRoute: typeof DashboardRoute
+  IosShortcutRoute: typeof IosShortcutRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
@@ -249,7 +249,6 @@ export interface RootRouteChildren {
   GoalIdRoute: typeof GoalIdRoute
   GoalCreateRoute: typeof GoalCreateRoute
   GoalCreateCustomRoute: typeof GoalCreateCustomRoute
-  GoalCreateFromTemplateTemplateIdRoute: typeof GoalCreateFromTemplateTemplateIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -301,6 +300,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ios-shortcut': {
+      id: '/ios-shortcut'
+      path: '/ios-shortcut'
+      fullPath: '/ios-shortcut'
+      preLoaderRoute: typeof IosShortcutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -366,13 +372,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GoalIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/goal/create-from-template/$templateId': {
-      id: '/goal/create-from-template/$templateId'
-      path: '/goal/create-from-template/$templateId'
-      fullPath: '/goal/create-from-template/$templateId'
-      preLoaderRoute: typeof GoalCreateFromTemplateTemplateIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -383,6 +382,7 @@ const rootRouteChildren: RootRouteChildren = {
   AiApiRoute: AiApiRoute,
   ChatPopupRoute: ChatPopupRoute,
   DashboardRoute: DashboardRoute,
+  IosShortcutRoute: IosShortcutRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
@@ -393,7 +393,6 @@ const rootRouteChildren: RootRouteChildren = {
   GoalIdRoute: GoalIdRoute,
   GoalCreateRoute: GoalCreateRoute,
   GoalCreateCustomRoute: GoalCreateCustomRoute,
-  GoalCreateFromTemplateTemplateIdRoute: GoalCreateFromTemplateTemplateIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

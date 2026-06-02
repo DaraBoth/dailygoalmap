@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { useRouterNavigation } from '@/hooks/useRouterNavigation';
 import { LogOut, User as UserIcon } from '@/components/icons/CustomIcons';
-import { PlusCircle, UserPlus, Key, Download, Bell } from 'lucide-react';
+import { PlusCircle, UserPlus, Key, Download, Bell, Smartphone } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,10 @@ interface UserMenuProps {
 
 export const UserMenu: React.FC<UserMenuProps> = ({ mobileDashboardActions }) => {
   const { goToLogin, goToProfile, goToProfileTab } = useRouterNavigation();
+  const navigate = useNavigate();
+  const openIosShortcut = () => {
+    navigate({ to: '/ios-shortcut' as any });
+  };
   const [user, setUser] = useState<User | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsSupported, setNotificationsSupported] = useState(false);
@@ -244,6 +249,9 @@ export const UserMenu: React.FC<UserMenuProps> = ({ mobileDashboardActions }) =>
               <Button variant="ghost" className="w-full justify-start" onClick={() => { setMobileMenuOpen(false); mobileDashboardActions.onOpenApiKeyGuide(); }}>
                 <Key className="mr-2 h-4 w-4" /> API Keys
               </Button>
+              <Button variant="ghost" className="w-full justify-start" onClick={() => { setMobileMenuOpen(false); openIosShortcut(); }}>
+                <Smartphone className="mr-2 h-4 w-4" /> iPhone Shortcut
+              </Button>
             </div>
 
             <div className="rounded-xl border border-border/60 p-3 space-y-3">
@@ -308,6 +316,9 @@ export const UserMenu: React.FC<UserMenuProps> = ({ mobileDashboardActions }) =>
           <div className="space-y-2">
             <Button variant="ghost" className="w-full justify-start" onClick={() => { setMobileMenuOpen(false); goToProfile(); }}>
               <UserIcon className="mr-2 h-4 w-4" /> Profile
+            </Button>
+            <Button variant="ghost" className="w-full justify-start" onClick={() => { setMobileMenuOpen(false); openIosShortcut(); }}>
+              <Smartphone className="mr-2 h-4 w-4" /> iPhone Shortcut
             </Button>
           </div>
 

@@ -7,7 +7,10 @@
       "Bash(timeout 60 npx vite build --mode development)",
       "PowerShell(.\\\\deploy.ps1 \"Notion-style task editor with tags, rich markdown description, and Add Task in Tasks tab\")",
       "Bash(timeout 90 npx vite build --mode development)",
-      "PowerShell(.\\\\deploy.ps1 \"Description-first task editor and detail sidebar, Created-by avatar, multi-goal add, public API tag filter, duplicate/move actions\")"
+      "PowerShell(.\\\\deploy.ps1 \"Description-first task editor and detail sidebar, Created-by avatar, multi-goal add, public API tag filter, duplicate/move actions\")",
+      "Bash(rm -rf src/data/goalTemplates)",
+      "Bash(rm src/types/goalTemplate.ts)",
+      "PowerShell(.\\\\deploy.ps1 \"Survey-style goal intake wizard, iPhone Shortcut generator, Notion-style calendar dialog, mobile safe-area + tab/z-index fixes\")"
     ]
   }
 }

@@ -17,7 +17,7 @@ import {
   Share2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { openCalendarOptionsDialog } from "@/utils/calendarIntegration";
+import CalendarOptionsDialog from "./CalendarOptionsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { MarkdownRenderer } from "../ui/MarkdownRenderer";
 import { cn } from "@/lib/utils";
@@ -51,12 +51,13 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   const { toast } = useToast();
   const [isAddingReminder, setIsAddingReminder] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const handleAddToCalendar = async () => {
     if (!selectedTask) return;
     setIsAddingReminder(true);
     try {
-      openCalendarOptionsDialog(selectedTask);
+      setCalendarOpen(true);
       const taskDate = new Date(selectedTask.start_date);
       if (selectedTask.daily_start_time) {
         const [hours, minutes] = selectedTask.daily_start_time.split(":").map(Number);
@@ -327,6 +328,12 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
         goalTitle={goalTitle}
         shareType="detail"
         shareDate={selectedTask?.start_date ? new Date(selectedTask.start_date) : undefined}
+      />
+
+      <CalendarOptionsDialog
+        open={calendarOpen}
+        onOpenChange={setCalendarOpen}
+        task={selectedTask}
       />
     </div>
   );

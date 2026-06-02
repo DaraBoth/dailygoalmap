@@ -1,234 +1,561 @@
-import { useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { goalTemplates } from '@/data/goalTemplates/index';
-import type { GoalTemplate } from '@/types/goalTemplate';
-import { Search, ArrowRight, ArrowLeft } from 'lucide-react';
-import { useCreateGoal } from '@/hooks/useCreateGoal';
-import { useToast } from '@/hooks/use-toast';
+// Goal Intake Wizard — one question at a time, adaptive branching.
+// Replaces the old template-grid + multi-section form. The route is still
+// /goal/create; we keep the export name TemplateSelectionPage to avoid
+// touching the route file.
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Loader2,
+  Sparkles,
+  Wand2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { MobileDatePicker } from "@/components/ui/mobile-date-picker";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useCreateGoal } from "@/hooks/useCreateGoal";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import {
+  AnswerMap,
+  AnswerValue,
+  composeFromAnswers,
+  getDeadline,
+  getStringAnswer,
+  QUESTIONS,
+  QuestionDef,
+} from "@/data/goalIntakeQuestions";
+
+// ── Wizard component ────────────────────────────────────────────────────────
+
+type Phase = "question" | "review";
 
 export function TemplateSelectionPage() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [quickTitle, setQuickTitle] = useState('');
-  const [noDuration, setNoDuration] = useState(true);
-  const { createGoal, isLoading: isQuickCreating } = useCreateGoal();
   const { toast } = useToast();
+  const { createGoal, isLoading } = useCreateGoal();
 
-  const filteredTemplates = goalTemplates.filter(template => 
-    template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    template.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    template.category.toLowerCase().includes(searchQuery.toLowerCase())
+  const [answers, setAnswers] = useState<AnswerMap>({});
+  const [stepIndex, setStepIndex] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  const [phase, setPhase] = useState<Phase>("question");
+  const [showPromptPreview, setShowPromptPreview] = useState(false);
+
+  const visibleQuestions = useMemo(
+    () => QUESTIONS.filter((q) => !q.showIf || q.showIf(answers)),
+    [answers]
   );
 
-  const handleSelectTemplate = (template: GoalTemplate) => {
-    const route = '/goal/create-from-template/$templateId' as const;
-    navigate({ 
-      to: route,
-      params: { templateId: template.id } as never
-    });
+  // If branching removed the current question (e.g. user changed purpose),
+  // clamp stepIndex so we don't render past the end.
+  useEffect(() => {
+    if (stepIndex >= visibleQuestions.length) {
+      setStepIndex(Math.max(0, visibleQuestions.length - 1));
+    }
+  }, [visibleQuestions.length, stepIndex]);
+
+  const currentQuestion = visibleQuestions[stepIndex];
+  const totalSteps = visibleQuestions.length;
+  const progressPct = phase === "review"
+    ? 100
+    : Math.round(((stepIndex + 1) / Math.max(totalSteps, 1)) * 100);
+
+  const updateAnswer = (id: string, value: AnswerValue) => {
+    setAnswers((prev) => ({ ...prev, [id]: value }));
   };
 
-  const categories = Array.from(new Set(goalTemplates.map(t => t.category)));
+  const isAnswered = (q: QuestionDef, answers: AnswerMap): boolean => {
+    const v = answers[q.id];
+    if (q.inputType === "deadline") {
+      return !!v && typeof v === "object" && "kind" in v;
+    }
+    if (q.inputType === "chips" || q.inputType === "commitment") {
+      return typeof v === "string" && v.length > 0;
+    }
+    return typeof v === "string" && v.trim().length > 0;
+  };
 
-  const handleQuickCreate = async () => {
-    if (!quickTitle.trim()) {
+  const handleNext = () => {
+    if (!currentQuestion) return;
+    if (currentQuestion.required && !isAnswered(currentQuestion, answers)) {
       toast({
-        title: 'Title is required',
-        description: 'Please enter a goal title.',
-        variant: 'destructive',
+        title: "Need an answer here",
+        description: "This one helps the AI a lot — give it a quick try.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setDirection(1);
+    if (stepIndex < totalSteps - 1) {
+      setStepIndex((i) => i + 1);
+    } else {
+      setPhase("review");
+    }
+  };
+
+  const handleSkip = () => {
+    setDirection(1);
+    if (stepIndex < totalSteps - 1) {
+      setStepIndex((i) => i + 1);
+    } else {
+      setPhase("review");
+    }
+  };
+
+  const handleBack = () => {
+    setDirection(-1);
+    if (phase === "review") {
+      setPhase("question");
+      setStepIndex(totalSteps - 1);
+      return;
+    }
+    if (stepIndex > 0) setStepIndex((i) => i - 1);
+    else navigate({ to: "/dashboard" });
+  };
+
+  const composed = useMemo(() => composeFromAnswers(answers), [answers]);
+
+  const handleSubmit = async (generateAITasks: boolean) => {
+    const cleanTitle = composed.title;
+    if (!cleanTitle.trim()) {
+      toast({
+        title: "Missing title",
+        description: "Go back and give the goal a short name.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!getStringAnswer(answers, "success").trim()) {
+      toast({
+        title: "Missing the success answer",
+        description: "We need to know what 'done' looks like.",
+        variant: "destructive",
       });
       return;
     }
 
-    const defaultTargetDate = new Date();
-    defaultTargetDate.setMonth(defaultTargetDate.getMonth() + 1);
+    const { ongoing, date } = composed.deadline;
 
-    const result = await createGoal({
-      title: quickTitle.trim(),
-      description: '',
-      target_date: noDuration ? null : defaultTargetDate,
-      no_duration: noDuration,
-      start_date: new Date(),
-      metadata: {
-        version: 1,
-        goal_type: 'general',
-        start_date: new Date().toISOString(),
-        no_duration: noDuration,
+    const result = await createGoal(
+      {
+        title: cleanTitle,
+        description: composed.shortDescription,
+        target_date: ongoing ? null : date,
+        no_duration: ongoing,
+        start_date: new Date(),
+        metadata: {
+          version: 1,
+          goal_type: "general",
+          start_date: new Date().toISOString().split("T")[0],
+          no_duration: ongoing,
+          template_data: {
+            purpose: composed.purpose,
+            commitment: composed.commitment,
+            answers,
+            target_date: date ? date.toISOString().split("T")[0] : null,
+          },
+        },
       },
-    });
+      {
+        generateTasksWithAI: generateAITasks,
+        aiPrompt: composed.aiPrompt,
+      }
+    );
 
     if (result.success && result.goal?.id) {
-      navigate({ to: '/goal/$id', params: { id: result.goal.id } as never });
+      navigate({ to: "/goal/$id", params: { id: result.goal.id } as never });
     }
   };
 
+  // Slide animation variants — forward = right→left, back = left→right.
+  const variants = {
+    enter: (dir: number) => ({ x: dir > 0 ? 60 : -60, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (dir: number) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
-      {/* Back Button */}
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => navigate({ to: '/dashboard' })}
-          className="gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
-        </Button>
-      </div>
-
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          Create Goal from Template
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          Choose a template to get started with pre-configured AI prompts and structured data
-        </p>
-      </div>
-
-      {/* Quick Create */}
-      <Card className="mb-8 border-primary/30 bg-primary/5">
-        <CardHeader>
-          <CardTitle>Quick Create (1-2 clicks)</CardTitle>
-          <CardDescription>
-            Enter a title and create your goal right away.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="quick-goal-title">Goal title</Label>
-            <Input
-              id="quick-goal-title"
-              placeholder="Example: Learn Korean"
-              value={quickTitle}
-              onChange={(e) => setQuickTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleQuickCreate();
-                }
-              }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2">
-            <div>
-              <p className="text-sm font-medium">No duration</p>
-              <p className="text-xs text-muted-foreground">Goal continues until you change it.</p>
-            </div>
-            <Switch checked={noDuration} onCheckedChange={setNoDuration} />
-          </div>
-
-          <Button onClick={handleQuickCreate} disabled={isQuickCreating} className="w-full sm:w-auto">
-            {isQuickCreating ? 'Creating...' : 'Create Goal Now'}
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+      {/* Top bar with back + progress */}
+      <div className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleBack}
+            className="h-9 gap-2 shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Back</span>
           </Button>
-        </CardContent>
-      </Card>
-
-      {/* Search */}
-      <div className="mb-8">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <Input
-            type="text"
-            placeholder="Search templates..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+          <div className="flex-1 flex items-center gap-2">
+            <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
+                initial={false}
+                animate={{ width: `${progressPct}%` }}
+                transition={{ duration: 0.3 }}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+              {phase === "review"
+                ? "Review"
+                : `${Math.min(stepIndex + 1, totalSteps)} / ${totalSteps}`}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Categories */}
-      <div className="mb-6 flex gap-2 flex-wrap">
-        {categories.map(category => {
-          const count = goalTemplates.filter(t => t.category === category).length;
-          return (
-            <Button
-              key={category}
-              variant="outline"
-              size="sm"
-              className="capitalize"
+      {/* Body */}
+      <div className="flex-1 w-full max-w-2xl mx-auto px-4 sm:px-8 lg:px-10 py-8 sm:py-12">
+        <AnimatePresence mode="wait" custom={direction} initial={false}>
+          {phase === "question" && currentQuestion ? (
+            <motion.div
+              key={`q-${currentQuestion.id}`}
+              custom={direction}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+              className="space-y-6"
             >
-              {category} ({count})
-            </Button>
-          );
-        })}
-      </div>
+              <QuestionView
+                question={currentQuestion}
+                value={answers[currentQuestion.id] ?? null}
+                onChange={(v) => updateAnswer(currentQuestion.id, v)}
+                onSubmit={handleNext}
+              />
 
-      {/* Templates Grid */}
-      {filteredTemplates.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground text-lg">No templates found matching your search.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTemplates.map(template => (
-            <Card 
-              key={template.id}
-              className="group hover:shadow-xl transition-all duration-300 cursor-pointer border-2 hover:border-primary/50"
-              onClick={() => handleSelectTemplate(template)}
-            >
-              <CardHeader>
-                <div 
-                  className="w-16 h-16 rounded-2xl mb-4 flex items-center justify-center text-4xl shadow-lg"
-                  style={{ background: template.color }}
-                >
-                  {template.icon}
-                </div>
-                <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                  {template.name}
-                </CardTitle>
-                <CardDescription className="line-clamp-3">
-                  {template.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase font-semibold text-muted-foreground px-3 py-1 bg-secondary rounded-full">
-                    {template.category}
-                  </span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="group-hover:translate-x-1 transition-transform"
+              <div className="flex items-center justify-between pt-2">
+                {!currentQuestion.required ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleSkip}
+                    className="text-muted-foreground"
                   >
-                    <ArrowRight className="w-4 h-4" />
+                    Skip
                   </Button>
-                </div>
-                <div className="mt-4 text-sm text-muted-foreground">
-                  {template.sections.length} sections • {template.sections.reduce((acc, s) => acc + s.fields.length, 0)} fields
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Create Custom Goal Option */}
-      <div className="mt-12 border-t pt-8">
-        <Card className="bg-muted/50">
-          <CardHeader>
-            <CardTitle>Don't see what you need?</CardTitle>
-            <CardDescription>
-              Create a custom goal without using a template
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              variant="outline"
-              onClick={() => navigate({ to: '/goal/create-custom' })}
+                ) : <span />}
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  size="lg"
+                  className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-md"
+                >
+                  {stepIndex < totalSteps - 1 ? "Next" : "Review"}
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </motion.div>
+          ) : phase === "review" ? (
+            <motion.div
+              key="review"
+              custom={direction}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+              className="space-y-6"
             >
-              Create Custom Goal
-            </Button>
-          </CardContent>
-        </Card>
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5 mb-2">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  Ready to create
+                </p>
+                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
+                  {composed.title}
+                </h1>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {composed.shortDescription}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border/60 bg-background p-4 sm:p-5 space-y-3">
+                <ReviewRow label="Purpose" value={composed.purpose} icon="🎯" />
+                <ReviewRow label="Commitment" value={composed.commitment} icon="⚡" />
+                <ReviewRow
+                  label="Timeline"
+                  value={
+                    composed.deadline.ongoing
+                      ? "Ongoing"
+                      : composed.deadline.date
+                        ? composed.deadline.date.toLocaleDateString("en-US", {
+                            month: "long",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : "Ongoing"
+                  }
+                  icon="📅"
+                />
+              </div>
+
+              <Collapsible open={showPromptPreview} onOpenChange={setShowPromptPreview}>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between gap-3 text-left rounded-md px-2 py-2 hover:bg-muted/40 transition-colors"
+                  >
+                    <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
+                      <Wand2 className="h-3.5 w-3.5" />
+                      Preview the AI prompt
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 text-muted-foreground transition-transform shrink-0",
+                        showPromptPreview && "rotate-180"
+                      )}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <pre className="mt-3 rounded-lg border border-border/60 bg-muted/30 p-4 text-xs leading-relaxed whitespace-pre-wrap overflow-x-auto font-mono text-foreground/80">
+                    {composed.aiPrompt}
+                  </pre>
+                  <p className="mt-2 text-[11px] text-muted-foreground italic">
+                    Saved to <code>goals.ai_prompt</code>. Every future AI call reads it as the goal's context.
+                  </p>
+                </CollapsibleContent>
+              </Collapsible>
+
+              <div className="flex flex-col md:flex-row gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleSubmit(false)}
+                  disabled={isLoading}
+                  className="flex-1 min-h-12 px-4 whitespace-normal text-center leading-tight"
+                >
+                  {isLoading
+                    ? <Loader2 className="w-4 h-4 mr-2 animate-spin shrink-0" />
+                    : <Check className="w-4 h-4 mr-2 shrink-0" />}
+                  Create goal
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => handleSubmit(true)}
+                  disabled={isLoading}
+                  className="flex-1 min-h-12 px-4 whitespace-normal text-center leading-tight bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-md"
+                >
+                  {isLoading
+                    ? <Loader2 className="w-4 h-4 mr-2 animate-spin shrink-0" />
+                    : <Wand2 className="w-4 h-4 mr-2 shrink-0" />}
+                  Create + Generate tasks with AI
+                </Button>
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
     </div>
   );
 }
+
+// ── Question renderer ───────────────────────────────────────────────────────
+
+const QuestionView: React.FC<{
+  question: QuestionDef;
+  value: AnswerValue;
+  onChange: (v: AnswerValue) => void;
+  onSubmit: () => void;
+}> = ({ question, value, onChange, onSubmit }) => {
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+
+  // Auto-focus the text/textarea field when a question appears.
+  useEffect(() => {
+    if (question.inputType === "text" || question.inputType === "multiline") {
+      const t = window.setTimeout(() => inputRef.current?.focus(), 80);
+      return () => window.clearTimeout(t);
+    }
+  }, [question.id, question.inputType]);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground leading-snug">
+          {question.prompt}
+        </h1>
+        {question.helper && (
+          <p className="text-sm text-muted-foreground mt-2">{question.helper}</p>
+        )}
+      </div>
+
+      <div className="pt-2">
+        {question.inputType === "text" && (
+          <Input
+            ref={inputRef as React.RefObject<HTMLInputElement>}
+            value={typeof value === "string" ? value : ""}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onSubmit();
+              }
+            }}
+            placeholder={question.placeholder}
+            className="h-12 text-base"
+          />
+        )}
+
+        {question.inputType === "multiline" && (
+          <Textarea
+            ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+            value={typeof value === "string" ? value : ""}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={question.placeholder}
+            rows={5}
+            className="text-base resize-y min-h-[140px]"
+          />
+        )}
+
+        {question.inputType === "chips" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {(question.options || []).map((opt) => {
+              const active = value === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.id);
+                    // Auto-advance on single-select chips for snappy feel.
+                    window.setTimeout(() => onSubmit(), 160);
+                  }}
+                  className={cn(
+                    "text-left rounded-xl border p-4 transition-all",
+                    active
+                      ? "border-primary bg-primary/10 shadow-sm"
+                      : "border-border bg-background hover:border-primary/50"
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    {opt.icon && <span className="text-2xl shrink-0 leading-none">{opt.icon}</span>}
+                    <div className="min-w-0">
+                      <p className="font-semibold text-base">{opt.label}</p>
+                      {opt.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{opt.description}</p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {question.inputType === "commitment" && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {(question.options || []).map((opt) => {
+              const active = value === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.id);
+                    window.setTimeout(() => onSubmit(), 160);
+                  }}
+                  className={cn(
+                    "text-center rounded-xl border p-4 transition-all",
+                    active
+                      ? "border-primary bg-primary/10 shadow-sm"
+                      : "border-border bg-background hover:border-primary/50"
+                  )}
+                >
+                  <p className="font-semibold text-base">{opt.label}</p>
+                  {opt.description && (
+                    <p className="text-xs text-muted-foreground mt-1">{opt.description}</p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {question.inputType === "deadline" && (
+          <DeadlineInput value={value} onChange={onChange} />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Deadline input (date OR ongoing) ────────────────────────────────────────
+
+const DeadlineInput: React.FC<{
+  value: AnswerValue;
+  onChange: (v: AnswerValue) => void;
+}> = ({ value, onChange }) => {
+  const isOngoing = !!value && typeof value === "object" && "kind" in value && value.kind === "ongoing";
+  const dateValue =
+    value && typeof value === "object" && "kind" in value && value.kind === "date" && value.date
+      ? new Date(value.date)
+      : (() => {
+          const d = new Date();
+          d.setMonth(d.getMonth() + 3);
+          return d;
+        })();
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => onChange({ kind: "date", date: dateValue.toISOString().split("T")[0] })}
+          className={cn(
+            "rounded-xl border p-3 text-left transition-all",
+            !isOngoing && value
+              ? "border-primary bg-primary/10 shadow-sm"
+              : "border-border bg-background hover:border-primary/50"
+          )}
+        >
+          <p className="font-semibold text-sm">Target date</p>
+          <p className="text-xs text-muted-foreground mt-0.5">I have a deadline in mind</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange({ kind: "ongoing" })}
+          className={cn(
+            "rounded-xl border p-3 text-left transition-all",
+            isOngoing
+              ? "border-primary bg-primary/10 shadow-sm"
+              : "border-border bg-background hover:border-primary/50"
+          )}
+        >
+          <p className="font-semibold text-sm">Ongoing</p>
+          <p className="text-xs text-muted-foreground mt-0.5">No fixed end date</p>
+        </button>
+      </div>
+
+      {!isOngoing && value && (
+        <div className="pt-1">
+          <MobileDatePicker
+            date={dateValue}
+            setDate={(d) => d && onChange({ kind: "date", date: d.toISOString().split("T")[0] })}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ReviewRow: React.FC<{ icon?: string; label: string; value: string }> = ({ icon, label, value }) => (
+  <div className="flex items-center gap-3">
+    {icon && <span className="text-lg shrink-0 leading-none">{icon}</span>}
+    <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground w-20 shrink-0">
+      {label}
+    </span>
+    <span className="text-sm text-foreground capitalize">{value}</span>
+  </div>
+);

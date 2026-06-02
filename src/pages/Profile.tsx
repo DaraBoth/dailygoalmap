@@ -17,6 +17,17 @@ import { cn } from "@/lib/utils";
 
 type SettingsTab = 'profile' | 'api-keys' | 'model' | 'notifications' | 'security';
 
+// Hoisted outside the component so the URL→tab sync effect doesn't see a new
+// reference on every render (which used to re-apply ?tab=… and lock the user
+// onto whichever tab the slide-sheet linked them to).
+const NAV_ITEMS: Array<{ id: SettingsTab; label: string; icon: typeof UserIcon; description: string }> = [
+  { id: 'profile',       label: 'Profile',       icon: UserIcon, description: 'Edit your name, bio, and avatar' },
+  { id: 'api-keys',      label: 'API Keys',      icon: Key,      description: 'Add and manage your API keys' },
+  { id: 'model',         label: 'AI Model',      icon: Bot,      description: 'Pick the AI model you want to use' },
+  { id: 'notifications', label: 'Notifications', icon: Bell,     description: 'Choose how you get alerts' },
+  { id: 'security',      label: 'Security',      icon: Lock,     description: 'Update your password and security settings' },
+];
+
 const Profile = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
@@ -24,13 +35,7 @@ const Profile = () => {
   const { goToLogin, goToHistoryOrDashboard } = useRouterNavigation();
   const { toast } = useToast();
 
-  const navItems = [
-    { id: 'profile' as SettingsTab, label: 'Profile', icon: UserIcon, description: 'Edit your name, bio, and avatar' },
-    { id: 'api-keys' as SettingsTab, label: 'API Keys', icon: Key, description: 'Add and manage your API keys' },
-    { id: 'model' as SettingsTab, label: 'AI Model', icon: Bot, description: 'Pick the AI model you want to use' },
-    { id: 'notifications' as SettingsTab, label: 'Notifications', icon: Bell, description: 'Choose how you get alerts' },
-    { id: 'security' as SettingsTab, label: 'Security', icon: Lock, description: 'Update your password and security settings' },
-  ];
+  const navItems = NAV_ITEMS;
 
   useEffect(() => {
     const checkAuth = async () => {

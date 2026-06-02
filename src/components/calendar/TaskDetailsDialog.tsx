@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { enableRealtimeForTable } from "./taskDatabase";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { MarkdownRenderer } from "../ui/MarkdownRenderer";
-import { openCalendarOptionsDialog } from "@/utils/calendarIntegration";
+import CalendarOptionsDialog from "./CalendarOptionsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -104,6 +104,7 @@ const TaskDetailsDialog = ({
   const safeIndex = currentIndex >= 0 ? currentIndex : initialTaskIndex;
   const { toast } = useToast();
   const [isAddingReminder, setIsAddingReminder] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const handleAddToReminders = async () => {
     if (!selectedTask) return;
@@ -111,7 +112,7 @@ const TaskDetailsDialog = ({
     setIsAddingReminder(true);
     try {
       // Show calendar options dialog
-      openCalendarOptionsDialog(selectedTask);
+      setCalendarOpen(true);
 
       // Add desktop notification reminder as a backup
       const taskDate = new Date(selectedTask.start_date);
@@ -438,6 +439,11 @@ const TaskDetailsDialog = ({
           </div>
         </motion.div>
       )}
+      <CalendarOptionsDialog
+        open={calendarOpen}
+        onOpenChange={setCalendarOpen}
+        task={selectedTask}
+      />
     </AnimatePresence>
   );
 };

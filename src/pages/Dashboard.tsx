@@ -282,8 +282,9 @@ const Dashboard = () => {
               />
             </div>
 
-            {/* Main Content */}
-            <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8 lg:pb-12">
+            {/* Main Content — extra bottom padding on mobile so the last goal
+                card clears the floating Today's Tasks peek bar (h-12 fixed bottom-0). */}
+            <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-8 lg:pb-12">
               <div className="space-y-4 sm:space-y-6">
                 
                 {/* Section Header */}
