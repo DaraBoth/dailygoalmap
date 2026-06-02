@@ -653,6 +653,7 @@ const GoalDetail: React.FC = () => {
                 >
                   <GoalTasksTable
                     tasks={tasks}
+                    goalId={goalId}
                     goalTitle={goalTitle}
                     onTaskCompletionChange={(taskId, completed) => {
                       setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, completed } : task)));

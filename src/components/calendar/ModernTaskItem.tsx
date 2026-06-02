@@ -16,6 +16,14 @@ interface ModernTaskItemProps {
     compact?: boolean;
 }
 
+function middleTruncate(text: string, max: number) {
+    if (text.length <= max) return text;
+    const keep = max - 3;
+    const head = Math.ceil(keep / 2);
+    const tail = Math.floor(keep / 2);
+    return `${text.slice(0, head)}...${text.slice(-tail)}`;
+}
+
 export const ModernTaskItem = memo(({
     task,
     onClick,
@@ -25,7 +33,7 @@ export const ModernTaskItem = memo(({
     compact = false,
 }: ModernTaskItemProps) => {
     const rawTitle = task.title || task.description || '';
-    const displayTitle = rawTitle.length > 23 ? `${rawTitle.slice(0, 23)}...` : rawTitle;
+    const displayTitle = middleTruncate(rawTitle, 22);
 
     const handleToggle = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -80,7 +88,7 @@ export const ModernTaskItem = memo(({
                 <span
                     title={rawTitle}
                     className={cn(
-                        'block w-full min-w-0 overflow-hidden whitespace-nowrap text-ellipsis truncate text-[13px] font-medium leading-tight',
+                        'block w-full min-w-0 overflow-hidden whitespace-nowrap text-[13px] font-medium leading-tight',
                         task.completed ? 'text-muted-foreground line-through' : 'text-foreground',
                     )}
                 >

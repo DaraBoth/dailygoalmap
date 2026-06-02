@@ -96,6 +96,17 @@ const Calendar = ({
     return getTasksForDateWrapper(selectedDate);
   }, [selectedDate, getTasksForDateWrapper]);
 
+  const existingTags = useMemo(() => {
+    const set = new Set<string>();
+    (tasks || []).forEach((task) => {
+      (task.tags || []).forEach((tag) => {
+        const normalized = String(tag || '').trim();
+        if (normalized) set.add(normalized);
+      });
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [tasks]);
+
   useEffect(() => {
     if (externalSelectedDate && externalOnDateChange) {
       setSelectedDate(externalSelectedDate);
@@ -292,6 +303,7 @@ const Calendar = ({
       is_anytime?: boolean;
       duration_minutes?: number | null;
       completed?: boolean;
+      tags?: string[];
     }
   ) => {
     try {
@@ -313,6 +325,10 @@ const Calendar = ({
       updates.daily_end_time = isAnytime ? null : ((range?.daily_end_time || (time ? `${time}` : null)) ? `${range?.daily_end_time || time}:00` : null);
       updates.duration_minutes = typeof range?.duration_minutes === 'number' ? range.duration_minutes : null;
       if (typeof range?.completed !== 'undefined') updates.completed = range?.completed;
+      const cleanedTags = Array.isArray(range?.tags)
+        ? range!.tags!.map((t) => String(t || '').trim()).filter(Boolean)
+        : undefined;
+      if (cleanedTags) updates.tags = cleanedTags;
 
       // Create updated task object with updated_at field
       const updatedTask = {
@@ -327,6 +343,7 @@ const Calendar = ({
         duration_minutes: typeof range?.duration_minutes === 'number' ? range.duration_minutes : null,
         updated_at: new Date().toISOString(),
         ...(typeof range?.completed !== 'undefined' ? { completed: range.completed } : {}),
+        ...(cleanedTags ? { tags: cleanedTags } : {}),
       };
 
       // Now update the backend FIRST
@@ -625,6 +642,7 @@ const Calendar = ({
         onClose={() => setIsAddTaskDialogOpen(false)}
         onAddTask={handleAddTask}
         defaultDate={selectedDate || new Date()}
+        existingTags={existingTags}
       />
 
       <EditTaskDialog
@@ -633,6 +651,7 @@ const Calendar = ({
         onUpdateTask={handleUpdateTask}
         onDeleteTask={handleDeleteTask}
         task={editingTask}
+        existingTags={existingTags}
       />
 
       {isMobile &&

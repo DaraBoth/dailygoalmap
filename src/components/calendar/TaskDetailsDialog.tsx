@@ -10,8 +10,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { enableRealtimeForTable } from "./taskDatabase";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownRenderer } from "../ui/MarkdownRenderer";
 import { openCalendarOptionsDialog } from "@/utils/calendarIntegration";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -235,23 +234,12 @@ const TaskDetailsDialog = ({
 
                       {selectedTask.description && selectedTask.title && (
                         <div className="bg-white/80 dark:bg-white/15 backdrop-blur-sm rounded-lg sm:rounded-xl p-2.5 sm:p-3 border border-gray-200/60 dark:border-white/25">
-                          <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 leading-relaxed break-words whitespace-pre-wrap">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              components={{
-                                a: ({ node, ...props }) => (
-                                  <a
-                                    {...props}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 dark:text-blue-400 underline break-words"
-                                  />
-                                ),
-                              }}
-                            >
-                              {selectedTask.description}
-                            </ReactMarkdown>
-                          </p>
+                          <MarkdownRenderer
+                            content={selectedTask.description}
+                            isStreaming={false}
+                            isLoading={false}
+                            noCopy
+                          />
                         </div>
                       )}
 

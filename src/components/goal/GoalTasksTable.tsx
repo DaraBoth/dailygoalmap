@@ -16,15 +16,18 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ArrowUpDown, CalendarRange, ChevronDown, FilterX, Loader2, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import TaskDetailsSidebar from '@/components/calendar/TaskDetailsSidebar';
+import AddTaskDialog from '@/components/calendar/AddTaskDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 import dayjs, { Dayjs } from 'dayjs';
+import { Plus } from 'lucide-react';
 
 interface GoalTasksTableProps {
   tasks: Task[];
+  goalId?: string;
   goalTitle?: string;
   onTaskCompletionChange?: (taskId: string, completed: boolean) => void;
 }
@@ -63,7 +66,7 @@ function formatRangeLabel(range: DateRangeValue) {
   return `${start?.format('MMM D, YYYY')} - ${end?.format('MMM D, YYYY')}`;
 }
 
-const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalTitle, onTaskCompletionChange }) => {
+const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitle, onTaskCompletionChange }) => {
   const { toast } = useToast();
   const controlClass = 'h-11';
   const detectDarkTheme = () => {
@@ -100,6 +103,7 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalTitle, onTas
 
   const [visibleCount, setVisibleCount] = useState(LAZY_BATCH_SIZE);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
   useEffect(() => {
     setTableTasks(tasks);
@@ -287,6 +291,90 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalTitle, onTas
     setIsLoadingMore(true);
     setVisibleCount((prev) => Math.min(prev + LAZY_BATCH_SIZE, sortedRows.length));
     window.setTimeout(() => setIsLoadingMore(false), 120);
+  };
+
+  const handleCreateTask = async (
+    description: string,
+    date: Date,
+    time?: string,
+    range?: {
+      title?: string;
+      start_date?: Date;
+      end_date?: Date;
+      daily_start_time?: string;
+      daily_end_time?: string;
+      is_anytime?: boolean;
+      duration_minutes?: number | null;
+      completed?: boolean;
+      tags?: string[];
+    }
+  ) => {
+    if (!goalId) {
+      toast({
+        title: 'Cannot create task',
+        description: 'No goal context available.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        toast({
+          title: 'Authentication required',
+          description: 'Please log in to add tasks.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const taskDate = new Date(date);
+      if (time) {
+        const [hours, minutes] = time.split(':').map(Number);
+        taskDate.setHours(hours, minutes);
+      }
+
+      const startForInsert = range?.start_date ? new Date(range.start_date) : taskDate;
+      const endForInsert = range?.end_date ? new Date(range.end_date) : startForInsert;
+      const isAnytime = !!range?.is_anytime;
+      const startTimeStr = isAnytime ? null : (range?.daily_start_time || time || null);
+      const endTimeStr = isAnytime ? null : (range?.daily_end_time || time || null);
+      const cleanedTags = Array.isArray(range?.tags)
+        ? range!.tags!.map((t) => String(t || '').trim()).filter(Boolean)
+        : [];
+
+      const payload = {
+        id: crypto.randomUUID(),
+        goal_id: goalId,
+        user_id: userData.user.id,
+        title: range?.title ?? description,
+        description: description,
+        completed: range?.completed ?? false,
+        start_date: startForInsert.toISOString(),
+        end_date: endForInsert.toISOString(),
+        daily_start_time: startTimeStr ? `${startTimeStr}:00` : null,
+        daily_end_time: endTimeStr ? `${endTimeStr}:00` : null,
+        is_anytime: isAnytime,
+        duration_minutes: typeof range?.duration_minutes === 'number' ? range.duration_minutes : null,
+        tags: cleanedTags.length > 0 ? cleanedTags : null,
+      };
+
+      const { error } = await supabase.from('tasks').insert(payload);
+      if (error) throw error;
+
+      toast({
+        title: 'Task added',
+        description: `Task "${range?.title || description || 'Untitled'}" has been added.`,
+      });
+    } catch (error: any) {
+      console.error('Failed to add task from tasks tab:', error);
+      toast({
+        title: 'Error',
+        description: error?.message || 'Failed to add task. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const columns = useMemo<ColumnDef<Task>[]>(() => [
@@ -501,10 +589,18 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalTitle, onTas
               {filteredTasks.length} filtered of {tableTasks.length} total tasks
             </p>
           </div>
-          <Button type="button" variant="outline" size="sm" onClick={resetFilters} className="self-start sm:self-auto">
-            <FilterX className="h-3.5 w-3.5 mr-1.5" />
-            Reset Filters
-          </Button>
+          <div className="flex flex-wrap gap-2 self-start sm:self-auto">
+            <Button type="button" variant="outline" size="sm" onClick={resetFilters}>
+              <FilterX className="h-3.5 w-3.5 mr-1.5" />
+              Reset Filters
+            </Button>
+            {goalId ? (
+              <Button type="button" size="sm" onClick={() => setIsAddTaskOpen(true)}>
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Add Task
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         {isPhoneScreen ? (
@@ -820,6 +916,17 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalTitle, onTas
           </div>
         </SheetContent>
       </Sheet>
+
+      {goalId ? (
+        <AddTaskDialog
+          isOpen={isAddTaskOpen}
+          onClose={() => setIsAddTaskOpen(false)}
+          onAddTask={handleCreateTask}
+          defaultDate={new Date()}
+          existingTags={allTags}
+          formId="goal-tasks-table-add-form"
+        />
+      ) : null}
     </div>
   );
 };

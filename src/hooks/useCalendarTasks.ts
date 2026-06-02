@@ -472,6 +472,7 @@ export const useCalendarTasks = ({
       is_anytime?: boolean;
       duration_minutes?: number | null;
       completed?: boolean;
+      tags?: string[];
     }
   ) => {
 
@@ -508,6 +509,7 @@ export const useCalendarTasks = ({
         daily_end_time?: string | null;
         is_anytime?: boolean;
         duration_minutes?: number | null;
+        tags?: string[] | null;
       } = {
         id: taskId,
         goal_id: goalId,
@@ -516,6 +518,10 @@ export const useCalendarTasks = ({
         description: description,
         completed: range?.completed ?? false,
       };
+      const cleanedTags = Array.isArray(range?.tags)
+        ? range!.tags!.map((t) => String(t || '').trim()).filter(Boolean)
+        : [];
+      payload.tags = cleanedTags.length > 0 ? cleanedTags : null;
 
       // Determine unified fields: prefer provided range values; fallback to selected date/time
       const startForInsert = range?.start_date ? new Date(range.start_date) : taskDate;
@@ -550,6 +556,7 @@ export const useCalendarTasks = ({
         daily_end_time: endTimeStr ? `${endTimeStr}:00` : null,
         is_anytime: isAnytime,
         duration_minutes: typeof range?.duration_minutes === 'number' ? range.duration_minutes : null,
+        tags: cleanedTags,
       };
 
       const updatedTasks = [...tasks, newTask];

@@ -359,3 +359,48 @@ WHERE COALESCE(no_duration, false) = false
 -- 3) Optional index for filtering no-duration goals quickly
 CREATE INDEX IF NOT EXISTS idx_goals_no_duration
 ON goals(no_duration);
+
+-- ============================================
+-- TASK ATTACHMENTS STORAGE BUCKET
+-- Used by the rich markdown description editor for image uploads.
+-- Each user uploads under their own auth.uid() prefix, e.g.
+--   {uid}/1727000000000-ab12cd.png
+-- Public-read so the resulting URL can be embedded in markdown.
+-- ============================================
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('task-attachments', 'task-attachments', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Anyone can view task attachments" ON storage.objects;
+CREATE POLICY "Anyone can view task attachments"
+  ON storage.objects
+  FOR SELECT
+  USING (bucket_id = 'task-attachments');
+
+DROP POLICY IF EXISTS "Users can upload their own task attachments" ON storage.objects;
+CREATE POLICY "Users can upload their own task attachments"
+  ON storage.objects
+  FOR INSERT
+  WITH CHECK (
+    bucket_id = 'task-attachments'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+DROP POLICY IF EXISTS "Users can update their own task attachments" ON storage.objects;
+CREATE POLICY "Users can update their own task attachments"
+  ON storage.objects
+  FOR UPDATE
+  USING (
+    bucket_id = 'task-attachments'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+DROP POLICY IF EXISTS "Users can delete their own task attachments" ON storage.objects;
+CREATE POLICY "Users can delete their own task attachments"
+  ON storage.objects
+  FOR DELETE
+  USING (
+    bucket_id = 'task-attachments'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
