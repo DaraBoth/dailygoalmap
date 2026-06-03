@@ -18,17 +18,17 @@ const About: React.FC = () => {
       <div className="relative min-h-screen text-foreground selection:bg-primary/30">
         <GlobalBackground />
         {/* Header */}
-        <header className="relative z-10 p-4 md:p-6">
-          <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <header className="relative z-10 p-3 md:p-4">
+          <div className="max-w-5xl mx-auto flex items-center justify-between rounded-2xl border border-border bg-background/80 backdrop-blur-md px-4 py-3">
             <SmartLink to="/">
-              <Button variant="ghost" className="flex items-center gap-2">
+              <Button variant="ghost" className="flex items-center gap-2 font-medium">
                 <ArrowLeft className="h-4 w-4" />
                 Back to Home
               </Button>
             </SmartLink>
             <div className="flex items-center gap-3">
               <LogoAvatar size={32} />
-              <span className="font-black text-xl tracking-tighter">
+              <span className="font-semibold text-xl tracking-tight">
                 Orbit
               </span>
             </div>
@@ -36,18 +36,18 @@ const About: React.FC = () => {
         </header>
 
         {/* Main Content */}
-        <main className="relative z-10 py-12 px-4 md:px-6">
-          <div className="max-w-4xl mx-auto">
+        <main className="relative z-10 py-10 px-4 md:px-6">
+          <div className="max-w-5xl mx-auto">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.8 }}
-              className="text-center mb-16 space-y-4"
+              transition={{ duration: 0.45 }}
+              className="text-center mb-10 space-y-3"
             >
-              <h1 className="text-5xl lg:text-7xl font-black tracking-tighter leading-none">
-                About <span className="text-primary italic">Orbit</span>
+              <h1 className="text-4xl lg:text-6xl font-semibold tracking-tight leading-tight">
+                About <span className="text-primary">Orbit</span>
               </h1>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto font-medium">
+              <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
                 An autonomous intelligence platform engineered to transform your complex aspirations into an automated trajectory of success.
               </p>
             </motion.div>
@@ -56,17 +56,17 @@ const About: React.FC = () => {
             <motion.div
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="bg-white/40 dark:bg-white/10 backdrop-blur-xl rounded-3xl p-8 md:p-12 border border-white/30 dark:border-white/20 shadow-xl mb-12"
+              transition={{ duration: 0.45, delay: 0.08 }}
+              className="rounded-2xl border border-border bg-card/85 p-6 md:p-8 mb-8"
             >
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center">
-                  <Heart className="w-6 h-6 text-white" />
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-primary/12 rounded-xl flex items-center justify-center">
+                  <Heart className="w-5 h-5 text-primary" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Our Story</h2>
+                <h2 className="text-2xl font-semibold text-foreground">Our Story</h2>
               </div>
 
-              <div className="prose prose-lg max-w-none text-gray-700 dark:text-gray-300">
+              <div className="prose prose-base max-w-none text-foreground/85 dark:prose-invert">
                 <p className="mb-6">
                   Orbit was born from a simple belief: <strong>everyone deserves to achieve their absolute potential</strong>.
                   Too many ambitious missions fail because of the friction between high-level vision and tactical execution.
@@ -85,7 +85,7 @@ const About: React.FC = () => {
             </motion.div>
 
             {/* Mission & Values */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
               {[
                 {
                   icon: PremiumTarget,
@@ -107,14 +107,14 @@ const About: React.FC = () => {
                   key={item.title}
                   initial={{ y: 30, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  transition={{ duration: 0.8, delay: 0.4 + index * 0.1 }}
-                  className="bg-white/40 dark:bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/30 dark:border-white/20 shadow-xl text-center"
+                  transition={{ duration: 0.45, delay: 0.16 + index * 0.08 }}
+                  className="rounded-2xl border border-border bg-card/85 p-5 text-center"
                 >
                   <div className="mb-4">
-                    <item.icon size={64} className="mx-auto" />
+                    <item.icon size={56} className="mx-auto" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{item.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-300">{item.description}</p>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground">{item.description}</p>
                 </motion.div>
               ))}
             </div>
@@ -123,15 +123,15 @@ const About: React.FC = () => {
             <motion.div
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.8 }}
-              className="bg-white/40 dark:bg-white/10 backdrop-blur-xl rounded-[2.5rem] p-8 md:p-12 border border-white/30 dark:border-white/20 shadow-xl text-center"
+              transition={{ duration: 0.45, delay: 0.34 }}
+              className="rounded-2xl border border-border bg-card/85 p-6 md:p-8 text-center"
             >
-              <h2 className="text-2xl font-black tracking-tight mb-6 uppercase">Forged with Precision</h2>
-              <p className="text-lg text-muted-foreground font-medium mb-4">
+              <h2 className="text-2xl font-semibold tracking-tight mb-4">Forged with Precision</h2>
+              <p className="text-base sm:text-lg text-muted-foreground mb-3">
                 Orbit is architected and maintained by{" "}
-                <span className="font-black text-foreground underline decoration-primary/30 underline-offset-4">Vong PichdaraBoth</span>
+                <span className="font-semibold text-foreground underline decoration-primary/30 underline-offset-4">Vong PichdaraBoth</span>
               </p>
-              <p className="text-muted-foreground font-medium max-w-2xl mx-auto italic">
+              <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto italic">
                 A dedicated engineer focused on bridging the gap between human ambition and high-velocity execution.
                 This platform is a testament to the power of autonomous intelligence in personal acceleration.
               </p>
@@ -141,11 +141,11 @@ const About: React.FC = () => {
             <motion.div
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.8, delay: 1.0 }}
-              className="text-center mt-12"
+              transition={{ duration: 0.45, delay: 0.42 }}
+              className="text-center mt-8"
             >
               <SmartLink to="/register">
-                <Button size="lg" className="text-lg px-8 py-8 h-auto font-black uppercase tracking-widest bg-primary hover:bg-primary/90 rounded-2xl shadow-xl">
+                <Button variant="magic" size="lg" className="text-base px-7 rounded-xl">
                   Initialize Your Orbit
                 </Button>
               </SmartLink>

@@ -1,13 +1,17 @@
 
-import { format, isSameDay, isToday } from "date-fns";
+import { isSameDay, isToday } from "date-fns";
 import { Task } from "./types";
 import { motion } from "framer-motion";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
-import useSystemTheme from "@/hooks/use-system-theme";
-import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+
+export interface CalendarDayRangeTask {
+  task: Task;
+  lane: number;
+  isStart: boolean;
+  isEnd: boolean;
+}
 
 interface CalendarDayProps {
   date: Date;
@@ -16,7 +20,10 @@ interface CalendarDayProps {
   selectedDate: Date | undefined;
   onDateChange: (date: Date | undefined) => void;
   dayTasks: Task[];
+  rangeTasks?: CalendarDayRangeTask[];
   onTaskClick?: (task: Task) => void;
+  onTaskDrop?: (taskId: string, targetDate: Date) => void;
+  multiDayOffsetPx?: number;
   isLoadingTasks?: boolean;
 }
 
@@ -28,39 +35,17 @@ const CalendarDay = ({
   onDateChange,
   dayTasks,
   onTaskClick,
+  onTaskDrop,
+  multiDayOffsetPx = 0,
   isLoadingTasks = false,
 }: CalendarDayProps) => {
   const isMobile = useIsMobile();
-  const { theme } = useTheme();
-  const systemTheme = useSystemTheme();
-  const themeMode = theme == "system" ? systemTheme : theme;
   const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
   const isSelected = selectedDate && isSameDay(date, selectedDate);
   const _isToday = isToday(date);
-  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-
-  const formatTimeDisplay = (task: Task) => {
-    const title = task.title || task.description;
-    const short = isMobile ? title : title.substring(0, 12) + (title.length > 12 ? "..." : "");
-    const timeRange = "";
-    return `${task.completed ? "✓" : "○"} ${short}${timeRange}`;
-  };
-
-  const getTaskColor = (date: Date) => {
-    const colors = [
-      " bg-blue-800 dark:bg-blue-500",
-      " bg-pink-800 dark:bg-pink-500",
-      " bg-teal-800 dark:bg-teal-500",
-      " bg-orange-800 dark:bg-orange-500",
-      " bg-purple-800 dark:bg-purple-500",
-      " bg-green-800 dark:bg-green-500",
-      " bg-red-800 dark:bg-red-500",
-      " bg-indigo-800 dark:bg-indigo-500",
-      " bg-yellow-800 dark:bg-yellow-500"
-    ];
-    const colorIndex = date.getDate() % colors.length;
-    return colors[colorIndex];
-  };
+  const maxVisibleRows = 3;
+  const hiddenTaskCount = Math.max(0, dayTasks.length - maxVisibleRows);
+  const mobilePreviewTasks = dayTasks.slice(0, 4);
 
   return (
     <motion.div
@@ -73,6 +58,16 @@ const CalendarDay = ({
         isSelected && "bg-primary/5 shadow-[inset_0_0_20px_rgba(var(--primary-rgb),0.05)] border-primary/20"
       )}
       onClick={() => isCurrentMonth && onDateChange(date)}
+      onDragOver={(e) => {
+        if (!isCurrentMonth) return;
+        e.preventDefault();
+      }}
+      onDrop={(e) => {
+        if (!isCurrentMonth || !onTaskDrop) return;
+        e.preventDefault();
+        const taskId = e.dataTransfer.getData('text/task-id');
+        if (taskId) onTaskDrop(taskId, date);
+      }}
     >
       <div className="flex justify-center mb-1">
         <span className={cn(
@@ -87,7 +82,10 @@ const CalendarDay = ({
 
       {/* Task Indicators */}
       {isCurrentMonth && (
-        <div className="flex-1 flex flex-col justify-end gap-1">
+        <div
+          className="flex-1 flex flex-col justify-start gap-1"
+          style={!isMobile && multiDayOffsetPx > 0 ? { paddingTop: `${multiDayOffsetPx}px` } : undefined}
+        >
           {isLoadingTasks ? (
             <>
               <div className="sm:hidden flex justify-center gap-1 h-1.5 flex-wrap px-1">
@@ -105,7 +103,7 @@ const CalendarDay = ({
           ) : (
             <>
               <div className="sm:hidden flex justify-center gap-0.5 h-1.5 flex-wrap px-1">
-                {dayTasks.slice(0, 4).map((task, i) => (
+                {mobilePreviewTasks.map((task, i) => (
                   <div key={i} className={cn(
                     "h-1 w-1 rounded-full",
                     task.completed ? "bg-muted-foreground/40" : "bg-primary"
@@ -115,15 +113,21 @@ const CalendarDay = ({
               </div>
 
               <div className="hidden sm:flex flex-col gap-0.5 overflow-hidden">
-                {dayTasks.slice(0, 3).map((task) => (
-                  <div key={task.id}
+                {dayTasks.slice(0, maxVisibleRows).map((task, rowIndex) => (
+                  <div
+                    key={`${task.id}-${rowIndex}`}
                     className={cn(
-                      "text-[9px] font-bold truncate px-2 py-1 rounded-md mx-0.5 cursor-pointer transition-all border",
+                      "text-[9px] font-bold truncate px-2 py-1 h-5 rounded-md mx-0.5 cursor-grab active:cursor-grabbing transition-all border select-none",
                       task.completed
                         ? "bg-muted/40 text-muted-foreground border-transparent line-through opacity-60"
                         : "bg-primary/10 text-primary border-primary/10 hover:bg-primary/20 hover:border-primary/30",
                       isSelected && !task.completed && "bg-primary/20 border-primary/40 text-primary"
                     )}
+                    draggable={true}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/task-id", task.id);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       onTaskClick?.(task);
@@ -133,9 +137,9 @@ const CalendarDay = ({
                     {task.title || task.description}
                   </div>
                 ))}
-                {dayTasks.length > 3 && (
+                {hiddenTaskCount > 0 && (
                   <div className="text-[9px] text-muted-foreground text-center font-medium">
-                    +{dayTasks.length - 3} more
+                    +{hiddenTaskCount} more
                   </div>
                 )}
               </div>

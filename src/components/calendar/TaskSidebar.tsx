@@ -239,6 +239,7 @@ const TaskSidebar = React.memo(({
                   onClick={(t) => onTaskClick && onTaskClick(t)}
                   onEdit={onEditTask}
                   onDelete={onDeleteTask}
+                  enableDrag
                 />
               );
             })

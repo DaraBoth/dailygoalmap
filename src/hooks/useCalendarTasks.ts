@@ -84,7 +84,7 @@ export const useCalendarTasks = ({
       const { start, end } = getMonthRange(month);
       const { data, error: fetchError } = await supabase
         .from('tasks')
-        .select('id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, is_anytime, duration_minutes, tags, goal_id, user_id, created_at, updated_at, updated_by')
+        .select('id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, is_anytime, duration_minutes, tags, color, goal_id, user_id, created_at, updated_at, updated_by')
         .eq('goal_id', goalId)
         .lt('start_date', end.toISOString())
         .gte('end_date', start.toISOString())
@@ -473,6 +473,7 @@ export const useCalendarTasks = ({
       duration_minutes?: number | null;
       completed?: boolean;
       tags?: string[];
+      color?: string | null;
     }
   ) => {
 
@@ -510,6 +511,7 @@ export const useCalendarTasks = ({
         is_anytime?: boolean;
         duration_minutes?: number | null;
         tags?: string[] | null;
+        color?: string | null;
       } = {
         id: taskId,
         goal_id: goalId,
@@ -535,6 +537,7 @@ export const useCalendarTasks = ({
       payload.daily_start_time = startTimeStr ? `${startTimeStr}:00` : null;
       payload.daily_end_time = endTimeStr ? `${endTimeStr}:00` : null;
       payload.duration_minutes = typeof range?.duration_minutes === 'number' ? range.duration_minutes : null;
+      payload.color = range?.color ?? null;
 
       const { error: saveError } = await supabase
         .from('tasks')
@@ -557,6 +560,7 @@ export const useCalendarTasks = ({
         is_anytime: isAnytime,
         duration_minutes: typeof range?.duration_minutes === 'number' ? range.duration_minutes : null,
         tags: cleanedTags,
+        color: range?.color ?? null,
       };
 
       const updatedTasks = [...tasks, newTask];

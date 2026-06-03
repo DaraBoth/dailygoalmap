@@ -15,6 +15,7 @@ import TaskTagInput from "./TaskTagInput";
 import MarkdownEditor from "@/components/editor/MarkdownEditor";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, Settings2, Tag as TagIcon, CalendarRange } from "lucide-react";
+import { TASK_COLORS } from "./types";
 
 
 interface EditTaskDialogProps {
@@ -35,6 +36,7 @@ interface EditTaskDialogProps {
       duration_minutes?: number | null;
       completed?: boolean;
       tags?: string[];
+      color?: string | null;
     }
   ) => void;
   onDeleteTask: (taskId: string) => void;
@@ -67,6 +69,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task, exi
   const [isAnytime, setIsAnytime] = useState<boolean>(false);
   const [completed, setCompleted] = useState<boolean>(false);
   const [tags, setTags] = useState<string[]>([]);
+  const [color, setColor] = useState<string | null>(null);
   const [timeError, setTimeError] = useState<string | null>(null);
   const [propertiesOpen, setPropertiesOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -117,6 +120,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task, exi
       setTimeError(null);
       setCompleted(!!task.completed);
       setTags(Array.isArray(task.tags) ? task.tags.filter((t): t is string => typeof t === "string") : []);
+      setColor(task.color ?? null);
     }
   }, [task]);
 
@@ -152,6 +156,7 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task, exi
         duration_minutes: durationMinutes,
         completed,
         tags,
+        color,
       };
 
       onUpdateTask(task.id, description, combinedDateTime, taskTime, range);
@@ -331,6 +336,27 @@ const EditTaskDialog = ({ isOpen, onClose, onUpdateTask, onDeleteTask, task, exi
                         <div className="flex items-center justify-between bg-muted/40 border border-border px-3 py-2.5 rounded-lg">
                           <Label className="text-sm font-medium text-muted-foreground">Completed</Label>
                           <Switch checked={completed} onCheckedChange={setCompleted} />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Color</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {TASK_COLORS.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              title={c.label}
+                              onClick={() => setColor(c.hex)}
+                              className={cn(
+                                "h-6 w-6 rounded-full border-2 transition-all",
+                                color === c.hex
+                                  ? "border-foreground scale-110 shadow-sm"
+                                  : "border-transparent hover:border-muted-foreground/50",
+                              )}
+                              style={{ backgroundColor: c.hex ?? 'transparent', outline: c.hex ? undefined : '2px dashed hsl(var(--muted-foreground)/0.4)' }}
+                            />
+                          ))}
                         </div>
                       </div>
 

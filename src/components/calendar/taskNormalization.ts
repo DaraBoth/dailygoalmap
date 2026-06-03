@@ -45,6 +45,7 @@ export const normalizeTaskRecord = (row: TaskRow): Task => {
     is_anytime: row.is_anytime ?? null,
     duration_minutes: row.duration_minutes ?? null,
     tags: row.tags || [],
+    color: row.color ?? null,
   };
 };
 

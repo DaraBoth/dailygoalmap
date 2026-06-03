@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Star, Quote } from "lucide-react";
+import { Quote } from "lucide-react";
+import { Rating } from "@mui/material";
 
 interface Testimonial {
   name: string;
@@ -12,73 +13,69 @@ interface Testimonial {
 const testimonials: Testimonial[] = [
   {
     name: "Alex Rivera",
-    role: "Founding Engineer",
+    role: "Freelancer",
     avatarLetter: "A",
-    content: "Orbit transformed my chaotic product roadmap into a precise orbital trajectory. The AI breakdown is disturbingly accurate."
+    content: "I finally stopped overplanning. I just open Orbit and follow my daily task list."
   },
   {
     name: "Sarah Chen",
-    role: "Performance Athlete",
+    role: "Student",
     avatarLetter: "S",
-    content: "Minimalist, fast, and intelligent. It's the first goal tracker that actually understands how I think and act."
+    content: "The interface is simple, and I always know what to do next. It helped me build a study routine."
   },
   {
     name: "Marcus Thorne",
-    role: "Strategic Consultant",
+    role: "Product Manager",
     avatarLetter: "M",
-    content: "The zero-friction interface and mission-critical notifications keep me in a flow state I didn't think was possible."
+    content: "I use it for work and personal goals. Setup was easy and the progress view is very clear."
   }
 ];
 
 const TestimonialsSection: React.FC = () => {
   return (
-    <section id="intelligence" className="relative z-10 py-32 px-4 md:px-6">
-      <div className="max-w-7xl mx-auto">
+    <section id="stories" className="relative z-10 py-16 sm:py-20 px-4 md:px-6">
+      <div className="max-w-6xl mx-auto">
         <motion.div
-          initial={{ y: 50, opacity: 0 }}
+          initial={{ y: 20, opacity: 0 }}
           whileInView={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.4 }}
           viewport={{ once: true }}
-          className="text-center mb-24 space-y-4"
+          className="text-center mb-10 space-y-4"
         >
-          <h4 className="text-primary font-black uppercase tracking-[0.3em] text-sm">Command Chronicles</h4>
-          <h2 className="text-5xl lg:text-7xl font-black text-foreground tracking-tight">
-            Trusted by <span className="text-primary italic">High Performers</span>
+          <h4 className="text-primary text-sm font-semibold">User feedback</h4>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-foreground tracking-tight">
+            People find it easy to start and stick with
           </h2>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {testimonials.map((testimonial, index) => (
             <motion.div
               key={testimonial.name}
-              initial={{ y: 30, opacity: 0 }}
+              initial={{ y: 16, opacity: 0 }}
               whileInView={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
+              transition={{ duration: 0.35, delay: index * 0.08 }}
               viewport={{ once: true }}
-              className="group relative bg-white/40 dark:bg-white/5 backdrop-blur-2xl rounded-[2.5rem] p-10 border border-white/20 dark:border-white/10 shadow-2xl hover:bg-white/60 dark:hover:bg-white/10 transition-all duration-500"
+              className="group relative rounded-2xl border border-border/90 bg-card/92 p-5"
             >
-              <div className="absolute top-8 right-8 text-primary/10 group-hover:text-primary/20 transition-colors">
-                <Quote size={64} strokeWidth={3} />
+              <div className="absolute top-4 right-4 text-primary/30">
+                <Quote size={26} strokeWidth={2.2} />
               </div>
 
-              <div className="relative space-y-8">
-                <div className="flex gap-1 text-yellow-500">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Star key={s} size={14} fill="currentColor" stroke="none" />
-                  ))}
-                </div>
+              <div className="relative space-y-4">
+                <Rating value={5} readOnly size="small" />
 
-                <p className="text-lg font-medium text-foreground/80 leading-relaxed italic">
+                <p className="text-sm sm:text-base text-foreground/85 leading-relaxed">
                   "{testimonial.content}"
                 </p>
 
-                <div className="flex items-center gap-4 pt-6 border-t border-white/10">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center font-black text-white text-xl shadow-lg">
+                <div className="flex items-center gap-3 pt-4 border-t border-border">
+                  <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center font-semibold">
                     {testimonial.avatarLetter}
                   </div>
                   <div>
-                    <h4 className="font-black text-foreground leading-none">{testimonial.name}</h4>
-                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mt-1">{testimonial.role}</p>
+                    <h4 className="font-semibold text-foreground leading-none">{testimonial.name}</h4>
+                    <p className="text-xs text-foreground/70 mt-1">{testimonial.role}</p>
                   </div>
                 </div>
               </div>

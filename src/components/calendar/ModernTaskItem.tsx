@@ -14,6 +14,7 @@ interface ModernTaskItemProps {
     onEdit?: (task: Task) => void;
     onDelete?: (taskId: string) => void;
     compact?: boolean;
+    enableDrag?: boolean;
 }
 
 function middleTruncate(text: string, max: number) {
@@ -24,6 +25,28 @@ function middleTruncate(text: string, max: number) {
     return `${text.slice(0, head)}...${text.slice(-tail)}`;
 }
 
+function wordTailTruncate(text: string, max: number) {
+    const normalized = text.replace(/\s+/g, ' ').trim();
+    if (normalized.length <= max) return normalized;
+
+    const hardCut = normalized.slice(0, Math.max(1, max - 3)).trimEnd();
+    const lastSpace = hardCut.lastIndexOf(' ');
+
+    if (lastSpace >= Math.floor((max - 3) * 0.55)) {
+        return `${hardCut.slice(0, lastSpace)}...`;
+    }
+
+    return `${hardCut}...`;
+}
+
+function truncateTaskTitle(text: string, cjkKhmerMax: number, englishMax: number) {
+    if (!text) return '';
+    const hasCjkKhmer = /[\u1780-\u17FF\u3040-\u30FF\u3400-\u9FFF\uAC00-\uD7AF]/.test(text);
+    return hasCjkKhmer
+        ? middleTruncate(text, cjkKhmerMax)
+        : wordTailTruncate(text, englishMax);
+}
+
 export const ModernTaskItem = memo(({
     task,
     onClick,
@@ -31,9 +54,10 @@ export const ModernTaskItem = memo(({
     onEdit,
     onDelete,
     compact = false,
+    enableDrag = false,
 }: ModernTaskItemProps) => {
     const rawTitle = task.title || task.description || '';
-    const displayTitle = middleTruncate(rawTitle, 22);
+    const displayTitle = truncateTaskTitle(rawTitle, 18, 24);
 
     const handleToggle = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -52,7 +76,7 @@ export const ModernTaskItem = memo(({
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className={cn(
-                'relative flex items-center gap-2.5 rounded-lg border transition-colors cursor-pointer overflow-hidden',
+                'relative overflow-hidden rounded-lg border transition-colors',
                 task.completed
                     ? 'bg-muted/35 border-border/50 opacity-75'
                     : 'bg-slate-200/55 dark:bg-slate-900/70 border-border/70 shadow-sm',
@@ -60,6 +84,18 @@ export const ModernTaskItem = memo(({
             )}
             onClick={() => onClick?.(task)}
         >
+            <div
+                draggable={enableDrag}
+                onDragStart={(e: React.DragEvent<HTMLDivElement>) => {
+                    if (!enableDrag) return;
+                    e.dataTransfer.setData('text/task-id', task.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                }}
+                className={cn(
+                    'flex items-center gap-2.5',
+                    enableDrag && 'cursor-grab active:cursor-grabbing'
+                )}
+            >
             <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={handleToggle}
@@ -143,12 +179,15 @@ export const ModernTaskItem = memo(({
                     )}
                 </div>
             )}
+            </div>
 
             <div
                 className={cn(
                     'absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-r-full',
-                    task.completed ? 'h-3.5 bg-primary/30' : 'h-7 bg-primary/45',
+                    task.completed ? 'h-3.5' : 'h-7',
+                    !task.color && (task.completed ? 'bg-primary/30' : 'bg-primary/45'),
                 )}
+                style={task.color ? { backgroundColor: task.completed ? `${task.color}66` : task.color } : undefined}
             />
         </motion.div>
     );

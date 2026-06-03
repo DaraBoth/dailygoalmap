@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CalendarRange, ChevronDown, Settings2, Tag as TagIcon, Target } from "lucide-react";
 import { format } from "date-fns";
+import { TASK_COLORS } from "./types";
 
 interface AddTaskDialogProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ interface AddTaskDialogProps {
       duration_minutes?: number | null;
       completed?: boolean;
       tags?: string[];
+      color?: string | null;
     }
   ) => void;
   defaultDate?: Date;
@@ -86,7 +88,8 @@ const AddTaskDialog = ({
   const [isAnytime, setIsAnytime] = useState<boolean>(false);
   const [completed, setCompleted] = useState<boolean>(false);
   const [tags, setTags] = useState<string[]>([]);
-  const [extraGoalIds, setExtraGoalIds] = useState<string[]>([]);
+  const [color, setColor] = useState<string | null>(null);
+  const [extraGoalIds, setExtraGoalIds] = useState<string[]>([]);;
   const [timeError, setTimeError] = useState<string | null>(null);
   const [propertiesOpen, setPropertiesOpen] = useState(false);
 
@@ -154,6 +157,7 @@ const AddTaskDialog = ({
         duration_minutes: durationMinutes,
         completed,
         tags,
+        color,
       };
 
       await onAddTask(description, selectedDate, isAnytime ? undefined : finalStart, range);
@@ -182,9 +186,10 @@ const AddTaskDialog = ({
             is_anytime: isAnytime,
             duration_minutes: durationMinutes,
             tags: cleanedTags.length > 0 ? cleanedTags : null,
+            color: color ?? null,
           }));
 
-          const { error: copyError } = await supabase.from("tasks").insert(rows);
+          const { error: copyError } = await supabase.from("tasks").insert(rows as any);
           if (copyError) throw copyError;
 
           toast({
@@ -221,6 +226,7 @@ const AddTaskDialog = ({
     setDailyStart("09:00");
     setDailyEnd("10:00");
     setTags([]);
+    setColor(null);
     setExtraGoalIds([]);
   };
 
@@ -387,6 +393,27 @@ const AddTaskDialog = ({
                         <div className="flex items-center justify-between bg-muted/40 border border-border px-3 py-2.5 rounded-lg">
                           <Label className="text-sm font-medium text-muted-foreground">Completed</Label>
                           <Switch checked={completed} onCheckedChange={setCompleted} />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Color</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {TASK_COLORS.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              title={c.label}
+                              onClick={() => setColor(c.hex)}
+                              className={cn(
+                                "h-6 w-6 rounded-full border-2 transition-all",
+                                color === c.hex
+                                  ? "border-foreground scale-110 shadow-sm"
+                                  : "border-transparent hover:border-muted-foreground/50",
+                              )}
+                              style={{ backgroundColor: c.hex ?? 'transparent', outline: c.hex ? undefined : '2px dashed hsl(var(--muted-foreground)/0.4)' }}
+                            />
+                          ))}
                         </div>
                       </div>
 

@@ -1,4 +1,14 @@
 -- ============================================
+-- ADD color COLUMN TO tasks TABLE
+-- Run this in the Supabase SQL Editor to support per-task color labeling.
+-- ============================================
+
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS color TEXT DEFAULT NULL;
+
+COMMENT ON COLUMN tasks.color IS
+  'Optional hex color string (e.g. #7c3aed) set by the user to visually label this task on the calendar.';
+
+-- ============================================
 -- FIX conversation_memory TABLE SCHEMA MISMATCH
 -- The table was created with 'content TEXT'+'metadata JSONB' columns
 -- but the app code expects 'memory_value JSONB'. Run this first.

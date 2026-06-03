@@ -12,6 +12,7 @@ interface CalendarContainerProps {
   onMonthChange?: (month: Date) => void;
   tasks: Task[];
   getTasksForDate: (date: Date) => Task[];
+  onMoveTask?: (taskId: string, targetDate: Date) => void;
   financialData: any | null;
   dailySpendingLimit?: number;
   isLoading: boolean;
@@ -28,6 +29,7 @@ const CalendarContainer = ({
   onMonthChange,
   tasks,
   getTasksForDate,
+  onMoveTask,
   financialData,
   dailySpendingLimit,
   isLoading,
@@ -55,6 +57,7 @@ const CalendarContainer = ({
           onMonthChange={onMonthChange}
           tasks={tasks}
           getTasksForDate={getTasksForDate}
+            onMoveTask={onMoveTask}
           monthlyIncome={financialData?.monthlyIncome}
           dailySpendingLimit={dailySpendingLimit}
           currency={financialData?.currency || "USD"}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { parseYMD, formatYMD } from '@/utils/parseYMD';
+import { addDays, differenceInCalendarDays } from 'date-fns';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSearch } from "@tanstack/react-router";
 import AddTaskDialog from "./calendar/AddTaskDialog";
@@ -280,9 +281,77 @@ const Calendar = ({
     }
   };
 
+  const handleColorChange = async (taskId: string, color: string | null) => {
+    // Optimistic update
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, color } : t));
+    if (selectedTask?.id === taskId) setSelectedTask({ ...selectedTask, color });
+    try {
+      await updateTask(taskId, { color });
+    } catch (err) {
+      console.error("Failed to update task color:", err);
+    }
+  };
+
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setIsEditTaskOpen(true);
+  };
+
+  const handleMoveTask = async (taskId: string, targetDate: Date) => {
+    const taskToMove = tasks.find((task) => task.id === taskId);
+    if (!taskToMove) return;
+
+    const currentStart = getTaskAnchorDate(taskToMove as any);
+    const currentEnd = taskToMove.end_date ? new Date(taskToMove.end_date) : new Date(taskToMove.start_date);
+    if (Number.isNaN(currentStart.getTime()) || Number.isNaN(currentEnd.getTime())) return;
+
+    currentStart.setHours(0, 0, 0, 0);
+    currentEnd.setHours(0, 0, 0, 0);
+
+    const nextStart = new Date(targetDate);
+    nextStart.setHours(0, 0, 0, 0);
+    const durationDays = Math.max(0, differenceInCalendarDays(currentEnd, currentStart));
+    const nextEnd = addDays(nextStart, durationDays);
+
+    const updatedAt = new Date().toISOString();
+    const movedTask: Task = {
+      ...taskToMove,
+      start_date: nextStart.toISOString(),
+      end_date: nextEnd.toISOString(),
+      updated_at: updatedAt,
+    };
+
+    // Optimistic UI update.
+    setTasks((prevTasks) => prevTasks.map((task) => (task.id === taskId ? movedTask : task)));
+    if (selectedTask?.id === taskId) {
+      setSelectedTask(movedTask);
+    }
+
+    try {
+      await updateTask(taskId, {
+        start_date: nextStart.toISOString(),
+        end_date: nextEnd.toISOString(),
+        updated_at: updatedAt,
+      });
+
+      toast({
+        title: 'Task moved',
+        description: durationDays > 0
+          ? `Task shifted to ${formatYMD(nextStart)} and kept its ${durationDays + 1}-day span.`
+          : 'Task moved to the new date.',
+      });
+    } catch (error) {
+      console.error('Error moving task:', error);
+      setTasks((prevTasks) => prevTasks.map((task) => (task.id === taskId ? taskToMove : task)));
+      if (selectedTask?.id === taskId) {
+        setSelectedTask(taskToMove);
+      }
+      toast({
+        title: 'Error',
+        description: 'Failed to move task. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleMonthChange = (month: Date) => {
@@ -304,6 +373,7 @@ const Calendar = ({
       duration_minutes?: number | null;
       completed?: boolean;
       tags?: string[];
+      color?: string | null;
     }
   ) => {
     try {
@@ -329,6 +399,7 @@ const Calendar = ({
         ? range!.tags!.map((t) => String(t || '').trim()).filter(Boolean)
         : undefined;
       if (cleanedTags) updates.tags = cleanedTags;
+      if (typeof range?.color !== 'undefined') updates.color = range.color;
 
       // Create updated task object with updated_at field
       const updatedTask = {
@@ -344,18 +415,18 @@ const Calendar = ({
         updated_at: new Date().toISOString(),
         ...(typeof range?.completed !== 'undefined' ? { completed: range.completed } : {}),
         ...(cleanedTags ? { tags: cleanedTags } : {}),
+        ...(typeof range?.color !== 'undefined' ? { color: range.color } : {}),
       };
 
-      // Now update the backend FIRST
-      await updateTask(taskId, updates);
-
-      // Update local state AFTER successful backend update for immediate UI feedback
+      // Optimistic UI: reflect changes immediately and rollback on failure.
       setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? updatedTask : t));
-
-      // Update selectedTask if it's the one being edited
       if (selectedTask && selectedTask.id === taskId) {
         setSelectedTask(updatedTask);
       }
+      setIsEditTaskOpen(false);
+
+      // Persist to backend.
+      await updateTask(taskId, updates);
 
       // Format datetime for notification
       const startDate = new Date(updatedTask.start_date);
@@ -365,29 +436,37 @@ const Calendar = ({
         : '';
       const datetimeInfo = timeStr ? `${dateStr} at ${timeStr}` : dateStr;
 
-      // Send internal notification only (push notifications handled by database trigger)
-      const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
-
-      await createTaskUpdateNotification(
-        goalId,
-        taskToUpdate.user_id,
-        'task_updated',
-        {
-          task_title: updatedTask.title?.trim() || 'Untitled task',
-          task_id: taskId,
-          action: 'updated',
-          datetime: datetimeInfo
+      // Fire notification side effects in the background to avoid blocking UI.
+      void (async () => {
+        try {
+          const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
+          await createTaskUpdateNotification(
+            goalId,
+            taskToUpdate.user_id,
+            'task_updated',
+            {
+              task_title: updatedTask.title?.trim() || 'Untitled task',
+              task_id: taskId,
+              action: 'updated',
+              datetime: datetimeInfo
+            }
+          );
+        } catch (notifyError) {
+          console.error('Error creating task update notification:', notifyError);
         }
-      );
+      })();
 
       toast({
         title: "Task updated",
         description: "Task has been updated successfully.",
       });
-
-      setIsEditTaskOpen(false);
     } catch (error) {
       console.error('Error updating task:', error);
+      // Best-effort rollback if optimistic write was applied.
+      const taskToRestore = tasks.find(t => t.id === taskId);
+      if (taskToRestore) {
+        setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? { ...taskToRestore } : t));
+      }
       toast({
         title: "Error",
         description: "Failed to update task. Please try again.",
@@ -532,6 +611,7 @@ const Calendar = ({
               onMonthChange={handleMonthChange}
               tasks={tasks}
               getTasksForDate={getTasksForDateWrapper}
+              onMoveTask={handleMoveTask}
               financialData={financialData}
               dailySpendingLimit={dailySpendingLimit}
               isLoading={isLoading}
@@ -601,6 +681,7 @@ const Calendar = ({
                     onMonthChange={handleMonthChange}
                     tasks={tasks}
                     getTasksForDate={getTasksForDateWrapper}
+                    onMoveTask={handleMoveTask}
                     financialData={financialData}
                     dailySpendingLimit={dailySpendingLimit}
                     isLoading={isLoading || isLoadingAllTasks}
@@ -625,6 +706,7 @@ const Calendar = ({
                     onToggleTaskCompletion={handleToggleTaskCompletion}
                     onEditTask={handleEditTask}
                     onDeleteTask={handleDeleteTask}
+                    onColorChange={handleColorChange}
                     goalTitle={allTasks ? "All Goals" : goalTitle}
                     goalId={goalId}
                     isImmersive={true}

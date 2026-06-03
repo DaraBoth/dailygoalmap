@@ -528,7 +528,7 @@ const ShareTasksModal: React.FC<ShareTasksModalProps> = ({ open, onClose, tasks,
         <div className="flex-shrink-0 p-3 md:p-4 border-t border-border/60 bg-background flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             {displayTasks.length} task{displayTasks.length !== 1 ? 's' : ''}
-            <span className="hidden sm:inline"> \u00b7 copies to clipboard</span>
+            <span className="hidden sm:inline"> - ready to copy to clipboard</span>
           </p>
           {copyButton}
         </div>

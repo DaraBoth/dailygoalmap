@@ -7,14 +7,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { useRouterNavigation } from '@/hooks/useRouterNavigation';
-import { ClipboardList, CheckCircle } from '@/components/icons/CustomIcons';
+import { ClipboardList } from '@/components/icons/CustomIcons';
 import { PremiumClipboard } from '@/components/icons/PremiumIcons';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile, useIsLargeScreen } from '@/hooks/use-mobile';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, ChevronRight, Share2 } from 'lucide-react';
+import { CheckCheck, CheckSquare, ChevronLeft, ChevronRight, Circle, CircleCheck, Clock3, ListFilter, Search, Share2, X } from 'lucide-react';
 import ShareTasksModal from './ShareTasksModal';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 type TodayTask = {
   id: string;
@@ -41,6 +43,7 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
   const [availableGoals, setAvailableGoals] = useState<Array<{ id: string; title: string }>>([]);
   const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [goalFilterQuery, setGoalFilterQuery] = useState('');
   // Mobile-only bottom-sheet visibility
   const [mobileVisible, setMobileVisible] = useState(false);
   const [undoTimeout, setUndoTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -158,9 +161,9 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
       if (!a.is_anytime && b.is_anytime) return 1;
       // both anytime — stable
       if (a.is_anytime && b.is_anytime) return 0;
-      // sort by daily_start_time ascending (HH:MM:SS strings compare lexicographically)
-      const ta = a.daily_start_time ?? '';
-      const tb = b.daily_start_time ?? '';
+      // non-anytime tasks: timed items first, then sort by start time
+      const ta = a.daily_start_time ?? '99:99:99';
+      const tb = b.daily_start_time ?? '99:99:99';
       if (ta < tb) return -1;
       if (ta > tb) return 1;
       return 0;
@@ -336,52 +339,330 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
     });
   };
 
+  const getTaskTimeLabel = (task: TodayTask) => {
+    if (task.is_anytime) return 'Anytime';
+    if (task.daily_start_time && task.daily_end_time) {
+      return `${task.daily_start_time.slice(0, 5)} - ${task.daily_end_time.slice(0, 5)}`;
+    }
+    if (task.daily_start_time) return task.daily_start_time.slice(0, 5);
+    if (task.daily_end_time) return task.daily_end_time.slice(0, 5);
+    return 'Anytime';
+  };
+
+  const iconButtonContrastClass = 'border-slate-300/90 bg-white/95 text-slate-800 shadow-sm hover:bg-slate-100 hover:text-slate-900 dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-accent';
+
   const renderFilter = (mobile = false) => (
     <div className={mobile ? 'relative' : 'relative inline-block ml-auto'} ref={filterRef}>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setIsFilterOpen(s => !s)}
-        className={mobile ? 'w-full h-10 rounded-xl' : 'h-8 text-xs sm:text-sm rounded-xl'}
-      >
-        Filter Goals
-      </Button>
-      {isFilterOpen && (
-        <div className={mobile
-          ? 'absolute left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 p-4'
-          : 'absolute right-0 mt-2 w-56 sm:w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 p-3 sm:p-4'}>
-          <div className="flex items-center py-1.5">
-            <input
-              id="filter-all"
-              type="checkbox"
-              checked={availableGoals.length > 0 && selectedGoalIds.length === availableGoals.length}
-              onChange={() => toggleAll()}
-              className="mr-3 h-4 w-4"
-            />
-            <label htmlFor="filter-all" className={mobile ? 'font-medium text-base' : 'font-medium text-sm'}>
-              All
-            </label>
+      {mobile ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsFilterOpen(s => !s)}
+              className={cn('h-10 w-10 rounded-xl', iconButtonContrastClass)}
+              aria-label="Filter goals"
+            >
+              <ListFilter className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Filter goals</TooltipContent>
+        </Tooltip>
+      ) : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsFilterOpen(s => !s)}
+              className={cn('h-8 w-8 rounded-xl', iconButtonContrastClass)}
+              aria-label="Filter goals"
+            >
+              <ListFilter className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Filter goals</TooltipContent>
+        </Tooltip>
+      )}
+      {!mobile && isFilterOpen && (
+        <div className={cn(
+          'z-50 p-4 rounded-2xl border backdrop-blur-xl',
+          'bg-background/95 border-primary/20 shadow-[0_12px_40px_hsl(var(--primary)/0.18)]',
+          'absolute right-0 mt-2 w-[19rem]'
+        )}>
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-10 rounded-t-2xl bg-gradient-to-r from-primary/15 via-primary/5 to-transparent" />
+          <div className="mb-3 flex items-center justify-between">
+            <p className={mobile ? 'text-sm font-semibold text-foreground' : 'text-xs font-semibold uppercase tracking-wider text-foreground/80'}>
+              Filter by goal
+            </p>
+            <span className="text-[11px] text-muted-foreground">
+              {selectedGoalIds.length}/{availableGoals.length} selected
+            </span>
           </div>
-          <div className={mobile ? 'max-h-56 overflow-y-auto mt-2 space-y-2.5' : 'max-h-44 sm:max-h-48 overflow-y-auto mt-2 space-y-1.5 sm:space-y-2'}>
-            {availableGoals.map(g => (
-              <div key={g.id} className="flex items-center py-1.5">
-                <input
-                  id={`goal-${g.id}`}
-                  type="checkbox"
-                  checked={selectedGoalIds.includes(g.id)}
-                  onChange={() => toggleGoal(g.id)}
-                  className="mr-3 h-4 w-4"
-                />
-                <label htmlFor={`goal-${g.id}`} className={mobile ? 'truncate text-base' : 'truncate text-sm'}>
+
+          <div className="relative mb-3">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              value={goalFilterQuery}
+              onChange={(e) => setGoalFilterQuery(e.target.value)}
+              placeholder="Search goals"
+              className={cn(
+                'w-full rounded-xl border border-primary/20 bg-background/90 py-2 pl-8 pr-3 text-sm text-foreground outline-none transition-colors',
+                'placeholder:text-muted-foreground focus:border-primary/50 focus:bg-background'
+              )}
+            />
+          </div>
+
+          <div className="mb-3 flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={mobile ? 'h-8 rounded-lg text-xs px-2.5' : 'h-7 rounded-lg text-[11px] px-2'}
+              onClick={() => {
+                const allIds = availableGoals.map(g => g.id);
+                setSelectedGoalIds(allIds);
+                supabase.auth.getUser().then(({ data }) => {
+                  if (data?.user) persistSelection(data.user.id, allIds);
+                });
+                refetchForSelection(allIds);
+              }}
+            >
+              Select all
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={mobile ? 'h-8 rounded-lg text-xs px-2.5' : 'h-7 rounded-lg text-[11px] px-2'}
+              onClick={() => {
+                setSelectedGoalIds([]);
+                supabase.auth.getUser().then(({ data }) => {
+                  if (data?.user) persistSelection(data.user.id, []);
+                });
+                refetchForSelection([]);
+              }}
+            >
+              Clear
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={mobile ? 'ml-auto h-8 rounded-lg text-xs px-2.5' : 'ml-auto h-7 rounded-lg text-[11px] px-2'}
+              onClick={() => setGoalFilterQuery('')}
+              disabled={!goalFilterQuery}
+            >
+              Reset search
+            </Button>
+          </div>
+
+          <div className={mobile ? 'max-h-56 overflow-y-auto space-y-1.5' : 'max-h-52 overflow-y-auto space-y-1.5'}>
+            {availableGoals
+              .filter(g => (g.title || 'Untitled').toLowerCase().includes(goalFilterQuery.toLowerCase().trim()))
+              .map(g => (
+              <div
+                key={g.id}
+                role="checkbox"
+                aria-checked={selectedGoalIds.includes(g.id)}
+                tabIndex={0}
+                onClick={() => toggleGoal(g.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    void toggleGoal(g.id);
+                  }
+                }}
+                className={cn(
+                  'flex items-center gap-2.5 rounded-xl border px-2.5 py-2 transition-colors cursor-pointer',
+                  selectedGoalIds.includes(g.id)
+                    ? 'border-primary/40 bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]'
+                    : 'border-border/70 hover:bg-accent/50'
+                )}
+              >
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-primary/30 bg-background/90">
+                  {selectedGoalIds.includes(g.id)
+                    ? <CircleCheck className="h-4 w-4 text-primary" />
+                    : <Circle className="h-4 w-4 text-muted-foreground" />}
+                </span>
+                <span className={mobile ? 'truncate text-sm text-foreground' : 'truncate text-xs text-foreground'}>
                   {g.title || 'Untitled'}
-                </label>
+                </span>
               </div>
             ))}
+
             {availableGoals.length === 0 && (
-              <div className={mobile ? 'text-sm text-muted-foreground' : 'text-xs sm:text-sm text-muted-foreground py-1.5'}>No goals</div>
+              <div className={mobile ? 'text-sm text-muted-foreground py-1.5' : 'text-xs text-muted-foreground py-1.5'}>No goals</div>
+            )}
+
+            {availableGoals.length > 0 &&
+              availableGoals.filter(g => (g.title || 'Untitled').toLowerCase().includes(goalFilterQuery.toLowerCase().trim())).length === 0 && (
+              <div className={mobile ? 'text-sm text-muted-foreground py-1.5' : 'text-xs text-muted-foreground py-1.5'}>
+                No goals match "{goalFilterQuery}"
+              </div>
             )}
           </div>
+
+          <div className="mt-3 pt-3 border-t border-border/70 flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              className={mobile ? 'h-8 rounded-lg px-3 text-xs bg-primary/90 hover:bg-primary' : 'h-7 rounded-lg px-2.5 text-[11px] bg-primary/90 hover:bg-primary'}
+              onClick={() => setIsFilterOpen(false)}
+            >
+              Done
+            </Button>
+          </div>
         </div>
+      )}
+
+      {mobile && createPortal(
+        <AnimatePresence>
+          {isFilterOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 bg-black/35 z-50"
+                onClick={() => setIsFilterOpen(false)}
+              />
+
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+                className="fixed inset-x-0 bottom-0 z-[60] rounded-t-2xl border border-border bg-background/95 backdrop-blur-xl p-4 shadow-2xl"
+              >
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-10 rounded-t-2xl bg-gradient-to-r from-primary/15 via-primary/5 to-transparent" />
+
+                <div className="relative mb-3 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-foreground">Filter by goal</p>
+                  <span className="text-[11px] text-muted-foreground">
+                    {selectedGoalIds.length}/{availableGoals.length} selected
+                  </span>
+                </div>
+
+                <div className="relative mb-3">
+                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={goalFilterQuery}
+                    onChange={(e) => setGoalFilterQuery(e.target.value)}
+                    placeholder="Search goals"
+                    className={cn(
+                      'w-full rounded-xl border border-primary/20 bg-background/90 py-2 pl-8 pr-3 text-sm text-foreground outline-none transition-colors',
+                      'placeholder:text-muted-foreground focus:border-primary/50 focus:bg-background'
+                    )}
+                  />
+                </div>
+
+                <div className="mb-3 flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-lg text-xs px-2.5"
+                    onClick={() => {
+                      const allIds = availableGoals.map(g => g.id);
+                      setSelectedGoalIds(allIds);
+                      supabase.auth.getUser().then(({ data }) => {
+                        if (data?.user) persistSelection(data.user.id, allIds);
+                      });
+                      refetchForSelection(allIds);
+                    }}
+                  >
+                    Select all
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-lg text-xs px-2.5"
+                    onClick={() => {
+                      setSelectedGoalIds([]);
+                      supabase.auth.getUser().then(({ data }) => {
+                        if (data?.user) persistSelection(data.user.id, []);
+                      });
+                      refetchForSelection([]);
+                    }}
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto h-8 rounded-lg text-xs px-2.5"
+                    onClick={() => setGoalFilterQuery('')}
+                    disabled={!goalFilterQuery}
+                  >
+                    Reset search
+                  </Button>
+                </div>
+
+                <div className="max-h-[40vh] overflow-y-auto space-y-1.5">
+                  {availableGoals
+                    .filter(g => (g.title || 'Untitled').toLowerCase().includes(goalFilterQuery.toLowerCase().trim()))
+                    .map(g => (
+                      <div
+                        key={g.id}
+                        role="checkbox"
+                        aria-checked={selectedGoalIds.includes(g.id)}
+                        tabIndex={0}
+                        onClick={() => toggleGoal(g.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            void toggleGoal(g.id);
+                          }
+                        }}
+                        className={cn(
+                          'flex items-center gap-2.5 rounded-xl border px-2.5 py-2 transition-colors cursor-pointer',
+                          selectedGoalIds.includes(g.id)
+                            ? 'border-primary/40 bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]'
+                            : 'border-border/70 hover:bg-accent/50'
+                        )}
+                      >
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-primary/30 bg-background/90">
+                          {selectedGoalIds.includes(g.id)
+                            ? <CircleCheck className="h-4 w-4 text-primary" />
+                            : <Circle className="h-4 w-4 text-muted-foreground" />}
+                        </span>
+                        <span className="truncate text-sm text-foreground">{g.title || 'Untitled'}</span>
+                      </div>
+                    ))}
+
+                  {availableGoals.length === 0 && (
+                    <div className="text-sm text-muted-foreground py-1.5">No goals</div>
+                  )}
+
+                  {availableGoals.length > 0 &&
+                    availableGoals.filter(g => (g.title || 'Untitled').toLowerCase().includes(goalFilterQuery.toLowerCase().trim())).length === 0 && (
+                    <div className="text-sm text-muted-foreground py-1.5">
+                      No goals match "{goalFilterQuery}"
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-border/70 flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 rounded-lg px-3 text-xs bg-primary/90 hover:bg-primary"
+                    onClick={() => setIsFilterOpen(false)}
+                  >
+                    Done
+                  </Button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body,
       )}
     </div>
   );
@@ -421,15 +702,15 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
             initial={{ opacity: 0, y: mobile ? 10 : 0, x: mobile ? 0 : -10 }}
             animate={{ opacity: 1, y: 0, x: 0 }}
             className={mobile
-              ? `flex items-start space-x-2 p-3 rounded-lg bg-background border transition-colors cursor-pointer ${
+              ? `flex items-start space-x-3 p-3.5 rounded-2xl border border-slate-300/90 dark:border-slate-700/70 bg-white dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 shadow-[0_10px_24px_rgba(15,23,42,0.12)] dark:shadow-[0_10px_24px_rgba(2,6,23,0.5)] transition-colors cursor-pointer ${
                   selectMode && selectedTaskIds.has(task.id)
-                    ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/30'
-                    : 'border-border/40 hover:bg-accent/40'
+                    ? 'border-primary/50 bg-primary/10 ring-1 ring-primary/30'
+                    : 'hover:bg-slate-50 dark:hover:bg-slate-900/90'
                 }`
-              : `flex items-start space-x-4 p-4 bg-background/90 backdrop-blur-sm border rounded-[1.5rem] hover:bg-background hover:shadow-lg transition-all duration-300 cursor-pointer group/item ${
+              : `flex items-start space-x-4 p-4 border border-slate-300/90 dark:border-slate-700/70 bg-white dark:bg-gradient-to-br dark:from-slate-950/95 dark:via-slate-950/95 dark:to-slate-900 rounded-2xl shadow-[0_10px_24px_rgba(15,23,42,0.12)] dark:shadow-[0_10px_24px_rgba(2,6,23,0.5)] hover:bg-slate-50 dark:hover:bg-slate-900/85 transition-all duration-200 cursor-pointer group/item ${
                   selectMode && selectedTaskIds.has(task.id)
                     ? 'border-primary/50 bg-primary/5 ring-2 ring-primary/20'
-                    : 'border-border/50 hover:border-primary/20'
+                    : 'hover:border-slate-400 dark:hover:border-slate-600'
                 }`}
             onClick={() => selectMode ? toggleTaskSelection(task.id) : handleTaskClick(task)}
           >
@@ -459,23 +740,30 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
                 htmlFor={selectMode ? undefined : `task-${task.id}`}
                 className={mobile
                   ? `text-sm font-medium text-foreground ${selectMode ? '' : 'cursor-pointer'} ${task.completed ? 'line-through text-muted-foreground' : ''}`
-                  : `text-sm ${selectMode ? '' : 'cursor-pointer'} font-bold transition-colors block leading-snug ${task.completed ? 'line-through text-muted-foreground/50' : 'text-foreground group-hover/item:text-primary'}`}
+                  : `text-sm ${selectMode ? '' : 'cursor-pointer'} font-semibold transition-colors block leading-snug ${task.completed ? 'line-through text-muted-foreground/60' : 'text-foreground group-hover/item:text-primary'}`}
               >
                 {task.title || task.description}
               </label>
+
+              {mobile && task.description && task.description !== task.title && (
+                <p className="mt-1 text-xs text-foreground/75 line-clamp-2">
+                  {task.description}
+                </p>
+              )}
+
+              {!mobile && task.description && task.description !== task.title && (
+                <p className="mt-1.5 text-xs text-foreground/70 line-clamp-2">
+                  {task.description}
+                </p>
+              )}
+
               <div className={mobile ? 'flex items-center justify-between text-xs text-foreground/70 dark:text-muted-foreground mt-1' : 'flex items-center justify-between text-[10px] mt-3'}>
-                <span>
-                  {task.is_anytime
-                    ? 'Anytime'
-                    : (task.daily_start_time && task.daily_end_time
-                      ? `${task.daily_start_time.slice(0, 5)} - ${task.daily_end_time.slice(0, 5)}`
-                      : '')}
-                </span>
+                <span>{getTaskTimeLabel(task)}</span>
                 {task.goals?.title && (
                   mobile ? (
                     <SmartLink
                       to={`/goal/${task.goal_id}?date=${encodeURIComponent(String(task.start_date).slice(0, 10))}&taskId=${encodeURIComponent(task.id)}`}
-                      className="truncate text-foreground/80 dark:text-muted-foreground hover:text-primary"
+                      className="truncate text-slate-700 dark:text-muted-foreground hover:text-primary"
                     >
                       {task.goals.title}
                     </SmartLink>
@@ -486,6 +774,48 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
                   )
                 )}
               </div>
+
+              {mobile && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-foreground/75">
+                  <span className="inline-flex items-center gap-1 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 px-2 py-0.5">
+                    <Clock3 className="h-3.5 w-3.5" />
+                    {getTaskTimeLabel(task)}
+                  </span>
+
+                  <span className={cn(
+                    'inline-flex items-center rounded-md border px-2 py-0.5 font-medium',
+                    task.completed
+                      ? 'border-emerald-300/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                      : 'border-amber-300/40 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                  )}>
+                    {task.completed ? 'Completed' : 'In progress'}
+                  </span>
+                </div>
+              )}
+
+              {!mobile && (
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] text-foreground/70">
+                  <span className="inline-flex items-center gap-1 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 px-2 py-0.5">
+                    <Clock3 className="h-3.5 w-3.5" />
+                    {getTaskTimeLabel(task)}
+                  </span>
+
+                  <span className={cn(
+                    "inline-flex items-center rounded-md border px-2 py-0.5 font-medium",
+                    task.completed
+                      ? "border-emerald-300/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                      : "border-amber-300/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                  )}>
+                    {task.completed ? 'Completed' : 'In progress'}
+                  </span>
+
+                  {task.goals?.title && (
+                    <span className="inline-flex items-center rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 px-2 py-0.5 truncate max-w-[170px]">
+                      {task.goals.title}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
         ))}
@@ -505,88 +835,131 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className="fixed inset-x-0 bottom-0 bg-background border-t border-border/60 shadow-lg rounded-t-2xl max-h-[85vh] overflow-hidden z-40"
+                className="fixed inset-x-0 bottom-0 bg-background/90 border border-primary/20 backdrop-blur-2xl shadow-[0_20px_80px_hsl(var(--primary)/0.2)] rounded-t-3xl max-h-[90vh] overflow-hidden z-40"
               >
-                <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border/60 bg-background/95 sticky top-0 z-10">
+                <div className="flex items-center justify-between p-4 sm:p-5 border-b border-primary/15 bg-background/90 sticky top-0 z-10">
                   <h2 className="text-base sm:text-lg font-semibold text-foreground">Today's Tasks</h2>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setMobileVisible(false)}
-                    className="rounded-xl h-9 bg-background text-foreground border-border/60 hover:bg-accent"
+                    className="rounded-xl h-9 bg-background/90 text-foreground border-primary/20 hover:bg-accent"
                   >
                     Close
                   </Button>
                 </div>
-                <div className="p-4 sm:p-5">
-                  {selectMode ? (
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="text-sm text-muted-foreground shrink-0">{selectedTaskIds.size} selected</span>
-                      <Button variant="outline" size="sm" onClick={exitSelectMode} className="h-10 rounded-xl px-4">
-                        Cancel
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => setShareOpen(true)}
-                        disabled={selectedTaskIds.size === 0}
-                        className="flex-1 h-10 rounded-xl flex items-center justify-center gap-2"
-                      >
-                        <Share2 className="h-4 w-4" />
-                        Share {selectedTaskIds.size > 0 ? `(${selectedTaskIds.size})` : ''}
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex flex-col gap-3 mb-4">
-                        <div className="flex space-x-2">
+                <div className="p-4 sm:p-5 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+                  <TooltipProvider delayDuration={200}>
+                    {selectMode ? (
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="text-sm text-muted-foreground shrink-0">{selectedTaskIds.size} selected</span>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={exitSelectMode}
+                              className={cn('h-10 w-10 rounded-xl', iconButtonContrastClass)}
+                              aria-label="Cancel selection"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Cancel selection</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              onClick={() => setShareOpen(true)}
+                              disabled={selectedTaskIds.size === 0}
+                              className="h-10 w-10 rounded-xl"
+                              aria-label="Share selected tasks"
+                            >
+                              <Share2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Share selected tasks</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 mb-4">
                           {previousTasksState.length > 0 ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleUndoMarkAllCompleted}
-                              className="flex-1 h-10 flex items-center justify-center gap-2 text-red-500 rounded-xl"
-                            >
-                              Undo
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={handleUndoMarkAllCompleted}
+                                  className={cn('h-10 w-10 text-red-500 rounded-xl', iconButtonContrastClass)}
+                                  aria-label="Undo mark all completed"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">Undo mark all completed</TooltipContent>
+                            </Tooltip>
                           ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleMarkAllCompleted}
-                              className="flex-1 h-10 flex items-center justify-center gap-2 rounded-xl"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                              Mark All
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={handleMarkAllCompleted}
+                                  className={cn('h-10 w-10 rounded-xl', iconButtonContrastClass)}
+                                  aria-label="Mark all completed"
+                                >
+                                  <CheckCheck className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">Mark all completed</TooltipContent>
+                            </Tooltip>
                           )}
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setShareOpen(true)}
+                                disabled={tasksForToday.length === 0}
+                                className={cn('h-10 w-10 rounded-xl', iconButtonContrastClass)}
+                                aria-label="Share screenshot"
+                              >
+                                <Share2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Share screenshot</TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setSelectMode(true)}
+                                disabled={tasksForToday.length === 0}
+                                className={cn('h-10 w-10 rounded-xl', iconButtonContrastClass)}
+                                aria-label="Select tasks"
+                              >
+                                <CheckSquare className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Select tasks</TooltipContent>
+                          </Tooltip>
+
+                          <div className="ml-auto">
+                            {renderFilter(true)}
+                          </div>
                         </div>
-                        {renderFilter(true)}
-                      </div>
-                      <div className="flex gap-2 mb-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShareOpen(true)}
-                          disabled={tasksForToday.length === 0}
-                          className="flex-1 h-10 flex items-center justify-center gap-2 rounded-xl"
-                        >
-                          <Share2 className="h-4 w-4" />
-                          Share Screenshot
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectMode(true)}
-                          disabled={tasksForToday.length === 0}
-                          className="h-10 px-4 rounded-xl text-muted-foreground hover:text-foreground"
-                        >
-                          Select
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                  <Card className="rounded-xl border border-border bg-card shadow-sm">
-                    <CardContent className="max-h-[50vh] overflow-y-auto p-0 bg-card">
+                      </>
+                    )}
+                  </TooltipProvider>
+                  <Card className="rounded-2xl border border-primary/15 bg-background/85 backdrop-blur-xl shadow-[0_12px_36px_hsl(var(--primary)/0.14)]">
+                    <CardContent className="max-h-[calc(100vh-19rem)] overflow-y-auto p-0 bg-transparent">
                       {renderTasks(true)}
                     </CardContent>
                   </Card>
@@ -597,7 +970,7 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
 
           {!mobileVisible && (
             <Button
-              className="fixed inset-x-0 bottom-0 rounded-t-2xl h-12 z-40 border-t border-border/60 bg-background text-foreground shadow-md text-base font-medium"
+              className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+0.25rem)] rounded-none rounded-t-3xl h-12 z-40 border-x-0 border-b-0 border-t border-primary/20 bg-background/90 backdrop-blur-xl shadow-[0_12px_40px_hsl(var(--primary)/0.18)] text-foreground text-base font-medium"
               onClick={() => setMobileVisible(true)}
             >
               View Today's Tasks
@@ -638,10 +1011,10 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
                   onClick={() => onToggle?.()}
                   title="Show Today's Tasks"
                   className="flex flex-col items-center justify-center gap-1.5 py-4 px-2.5
-                             bg-slate-100/98 dark:bg-slate-950/98 backdrop-blur-xl
-                             border border-r-0 border-border/60
+                             bg-background/90 backdrop-blur-xl
+                             border border-r-0 border-primary/20
                              rounded-l-2xl shadow-xl
-                             hover:bg-slate-200/90 dark:hover:bg-slate-900/90
+                             hover:bg-accent/70
                              transition-all duration-200 group"
                 >
                   <ClipboardList className="h-4 w-4 text-primary" />
@@ -667,18 +1040,19 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
                 className="fixed top-14 sm:top-16 right-0
                            h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)]
                            w-[380px]
-                           bg-slate-100/98 dark:bg-slate-950/98 backdrop-blur-xl
-                           border-l border-border/60 shadow-2xl z-40 flex flex-col"
+                           bg-background/88 backdrop-blur-2xl
+                           border-l border-primary/15 shadow-[0_20px_80px_hsl(var(--primary)/0.18)] z-40 flex flex-col"
               >
                 {/* Panel Header */}
-                <div className="flex-shrink-0 pt-6 pb-4 px-6 border-b border-border/60">
+                <div className="relative flex-shrink-0 pt-6 pb-4 px-6 border-b border-primary/15">
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-r from-primary/20 via-primary/5 to-transparent" />
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 bg-primary/10 rounded-xl ring-1 ring-primary/20">
                         <ClipboardList className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-black tracking-tight">Mission Logs</h2>
+                        <h2 className="text-xl font-black tracking-tight">Today's Tasks</h2>
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                           {format(new Date(), 'EEEE, MMMM d, yyyy')}
                         </p>
@@ -688,7 +1062,7 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
                       variant="ghost"
                       size="icon"
                       onClick={() => onToggle?.()}
-                      className="h-8 w-8 mt-1 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent flex-shrink-0"
+                      className={cn('h-8 w-8 mt-1 rounded-xl flex-shrink-0', iconButtonContrastClass)}
                       title="Hide panel"
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -700,68 +1074,99 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
                 </div>
 
                 {/* Panel Actions */}
-                <div className="flex-shrink-0 px-5 py-3 border-b border-border/40 flex items-center gap-2 flex-wrap">
-                  {selectMode ? (
-                    <>
-                      <span className="text-xs text-muted-foreground shrink-0">{selectedTaskIds.size} selected</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={exitSelectMode}
-                        className="h-8 text-xs rounded-xl"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => setShareOpen(true)}
-                        disabled={selectedTaskIds.size === 0}
-                        className="h-8 text-xs rounded-xl flex items-center gap-1.5"
-                      >
-                        <Share2 className="h-3.5 w-3.5" />
-                        Share {selectedTaskIds.size > 0 ? `(${selectedTaskIds.size})` : ''}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      {previousTasksState.length > 0 ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleUndoMarkAllCompleted}
-                          className="h-8 text-xs text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl flex items-center gap-2"
-                        >
-                          Undo
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleMarkAllCompleted}
-                          className="h-8 text-xs text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:text-green-700 dark:hover:text-green-300 rounded-xl flex items-center gap-2"
-                        >
-                          <CheckCircle className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">Mark All Completed</span>
-                          <span className="sm:hidden">Complete All</span>
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShareOpen(true)}
-                        disabled={tasksForToday.length === 0}
-                        className="h-8 text-xs rounded-xl flex items-center gap-1.5"
-                        title="Share as Screenshot"
-                      >
-                        <Share2 className="h-3.5 w-3.5" />
-                        Share
-                      </Button>
-                      <div className="ml-auto">
-                        {renderFilter(false)}
-                      </div>
-                    </>
-                  )}
-                </div>
+                <TooltipProvider delayDuration={250}>
+                  <div className="flex-shrink-0 px-5 py-3 border-b border-border/40 flex items-center gap-2 flex-wrap">
+                    {selectMode ? (
+                      <>
+                        <span className="text-xs text-muted-foreground shrink-0">{selectedTaskIds.size} selected</span>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={exitSelectMode}
+                              className={cn('h-8 w-8 rounded-xl', iconButtonContrastClass)}
+                              aria-label="Cancel selection"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Cancel selection</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              onClick={() => setShareOpen(true)}
+                              disabled={selectedTaskIds.size === 0}
+                              className="h-8 w-8 rounded-xl"
+                              aria-label="Share selected tasks"
+                            >
+                              <Share2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Share selected tasks</TooltipContent>
+                        </Tooltip>
+                      </>
+                    ) : (
+                      <>
+                        {previousTasksState.length > 0 ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={handleUndoMarkAllCompleted}
+                                className={cn('h-8 w-8 text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50 hover:text-red-700 dark:hover:text-red-300 rounded-xl', iconButtonContrastClass)}
+                                aria-label="Undo mark all completed"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Undo mark all completed</TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={handleMarkAllCompleted}
+                                className={cn('h-8 w-8 text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50 hover:text-green-700 dark:hover:text-green-300 rounded-xl', iconButtonContrastClass)}
+                                aria-label="Mark all completed"
+                              >
+                                <CheckCheck className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Mark all completed</TooltipContent>
+                          </Tooltip>
+                        )}
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setShareOpen(true)}
+                              disabled={tasksForToday.length === 0}
+                              className={cn('h-8 w-8 rounded-xl', iconButtonContrastClass)}
+                              aria-label="Share task screenshot"
+                            >
+                              <Share2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Share task screenshot</TooltipContent>
+                        </Tooltip>
+
+                        <div className="ml-auto">
+                          {renderFilter(false)}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </TooltipProvider>
 
                 {/* Scrollable task list */}
                 <div className="flex-1 overflow-y-auto px-4 py-3">

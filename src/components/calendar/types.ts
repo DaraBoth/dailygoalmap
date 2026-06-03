@@ -1,6 +1,21 @@
 
 import { User } from "@supabase/supabase-js";
 
+export const TASK_COLORS = [
+  { id: 'default', label: 'Default', hex: null },
+  { id: 'purple',  label: 'Purple',  hex: '#7c3aed' },
+  { id: 'blue',    label: 'Blue',    hex: '#2563eb' },
+  { id: 'teal',    label: 'Teal',    hex: '#0d9488' },
+  { id: 'green',   label: 'Green',   hex: '#16a34a' },
+  { id: 'yellow',  label: 'Yellow',  hex: '#ca8a04' },
+  { id: 'orange',  label: 'Orange',  hex: '#ea580c' },
+  { id: 'red',     label: 'Red',     hex: '#dc2626' },
+  { id: 'pink',    label: 'Pink',    hex: '#db2777' },
+  { id: 'gray',    label: 'Gray',    hex: '#6b7280' },
+] as const;
+
+export type TaskColorId = typeof TASK_COLORS[number]['id'];
+
 export interface Task {
   id: string;
   description: string;
@@ -18,6 +33,7 @@ export interface Task {
   is_anytime?: boolean | null;
   duration_minutes?: number | null;
   tags?: string[];          // Array of task tags
+  color?: string | null;    // Optional hex color string, e.g. '#7c3aed'
 }
 
 export interface TaskTag {

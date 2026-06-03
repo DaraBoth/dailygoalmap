@@ -344,75 +344,52 @@ export const updateTask = async (taskId: string, updates: any) => {
       return { offline: true, taskId, updates };
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("User not authenticated");
-
-    // Get original task data for comparison
-    const { data: originalTask, error: fetchError } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('id', taskId)
-      .single();
-
-    if (fetchError || !originalTask) {
-      throw new Error("Failed to fetch original task data");
-    }
-
     const { data, error } = await supabase
       .from('tasks')
       .update(updates)
       .eq('id', taskId)
-      .select();
+      .select()
+      .single();
 
     if (error) throw error;
 
-    // Send notifications for task content updates (not just completion)
-    try {
-      const hasContentChanges =
-        (updates.title && updates.title !== originalTask.title) ||
-        (updates.description && updates.description !== originalTask.description) ||
-        (updates.start_date && updates.start_date !== originalTask.start_date) ||
-        (updates.end_date && updates.end_date !== originalTask.end_date);
+    // Non-blocking notifications: never delay caller/UI update.
+    void (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || !data) return;
 
-      const hasCompletionChange =
-        updates.completed !== undefined && updates.completed !== originalTask.completed;
+        const hasContentChanges =
+          updates.title !== undefined ||
+          updates.description !== undefined ||
+          updates.start_date !== undefined ||
+          updates.end_date !== undefined;
 
-      if (hasContentChanges || hasCompletionChange) {
+        const hasCompletionChange = updates.completed !== undefined;
+        if (!hasContentChanges && !hasCompletionChange) return;
+
         const { notifyTaskUpdated } = await import('@/services/notificationService');
 
-        // Get goal information
-        const { data: goalData } = await supabase
-          .from('goals')
-          .select('*')
-          .eq('id', originalTask.goal_id)
-          .single();
-
-        const goalTitle = goalData?.title || 'your goal';
-
-        // Determine the action
-        let action: 'completed' | 'uncompleted' | 'edited';
-        if (hasCompletionChange) {
-          action = updates.completed ? 'completed' : 'uncompleted';
-        } else {
-          action = 'edited';
-        }
+        const action: 'completed' | 'uncompleted' | 'edited' =
+          hasCompletionChange
+            ? (updates.completed ? 'completed' : 'uncompleted')
+            : 'edited';
 
         await notifyTaskUpdated(
-          originalTask.goal_id,
+          data.goal_id,
           user.id,
-          originalTask.title,
+          data.title || data.description || 'Task',
           taskId,
-          goalTitle,
-          updates.start_date || originalTask.start_date,
+          'your goal',
+          updates.start_date || data.start_date,
           action
         );
+      } catch (notifError) {
+        console.error('Error sending task update notifications:', notifError);
       }
-    } catch (notifError) {
-      console.error('Error sending task update notifications:', notifError);
-      // Don't throw - task update succeeded
-    }
+    })();
 
-    return data?.[0];
+    return data;
   } catch (error) {
     console.error("Error updating task:", error);
     throw error;

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Task } from "./types";
+import { Task, TASK_COLORS } from "./types";
 import { format, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +31,7 @@ interface TaskDetailsPanelProps {
   onToggleTaskCompletion: (taskId: string) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
+  onColorChange?: (taskId: string, color: string | null) => void;
   goalTitle: string;
   goalId?: string;
   isImmersive?: boolean;
@@ -43,6 +44,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   onToggleTaskCompletion,
   onEditTask,
   onDeleteTask,
+  onColorChange,
   goalTitle,
   goalId,
   isImmersive,
@@ -52,6 +54,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   const [isAddingReminder, setIsAddingReminder] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
 
   const handleAddToCalendar = async () => {
     if (!selectedTask) return;
@@ -99,7 +102,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   return (
     <div className="w-full h-full flex flex-col bg-card/80 overflow-hidden">
 
-      {/* ?? Header bar ?? */}
+      {/* Header bar */}
       <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-border/60 bg-card/95 backdrop-blur-sm">
         {onClose && (
           <Button
@@ -193,12 +196,67 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
 
               <h1
                 className={cn(
-                  "text-2xl lg:text-3xl font-bold leading-snug text-foreground flex-1 break-words",
+                  "text-2xl lg:text-3xl font-bold leading-snug text-foreground break-words",
                   selectedTask.completed && "line-through text-muted-foreground"
                 )}
               >
                 {selectedTask.title || "Untitled Task"}
               </h1>
+
+              {/* Inline color picker */}
+              <div className="relative mt-2">
+                <button
+                  type="button"
+                  title="Change color"
+                  onClick={() => setColorPickerOpen(o => !o)}
+                  className="flex items-center gap-1.5 group"
+                >
+                  <span
+                    className="h-4 w-4 rounded-full border-2 border-border/60 shadow-sm transition-transform group-hover:scale-110"
+                    style={{
+                      backgroundColor: selectedTask.color ?? 'transparent',
+                      outline: selectedTask.color ? undefined : '2px dashed hsl(var(--muted-foreground)/0.4)',
+                    }}
+                  />
+                  <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                    {TASK_COLORS.find(c => c.hex === selectedTask.color)?.label ?? 'Color'}
+                  </span>
+                </button>
+
+                <AnimatePresence>
+                  {colorPickerOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.95 }}
+                      transition={{ duration: 0.12 }}
+                      className="absolute left-0 top-6 z-20 flex flex-wrap gap-2 p-2.5 rounded-xl border border-border/60 bg-popover shadow-lg"
+                    >
+                      {TASK_COLORS.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          title={c.label}
+                          onClick={() => {
+                            onColorChange?.(selectedTask.id, c.hex);
+                            setColorPickerOpen(false);
+                          }}
+                          className={cn(
+                            "h-5 w-5 rounded-full border-2 transition-all hover:scale-110",
+                            selectedTask.color === c.hex
+                              ? "border-foreground scale-110 shadow-sm"
+                              : "border-transparent hover:border-muted-foreground/50",
+                          )}
+                          style={{
+                            backgroundColor: c.hex ?? 'transparent',
+                            outline: c.hex ? undefined : '2px dashed hsl(var(--muted-foreground)/0.4)',
+                          }}
+                        />
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
 
             {/* ?? Properties table ?? */}

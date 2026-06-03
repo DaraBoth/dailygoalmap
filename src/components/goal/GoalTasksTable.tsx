@@ -894,8 +894,6 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
             if (typeof range?.completed !== 'undefined') updates.completed = range.completed;
             if (cleanedTags) updates.tags = cleanedTags;
 
-            await updateTask(taskId, updates);
-
             setTableTasks((prev) =>
               prev.map((t) =>
                 t.id === taskId
@@ -906,6 +904,8 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
                   : t
               )
             );
+
+            await updateTask(taskId, updates);
 
             toast({
               title: 'Task updated',

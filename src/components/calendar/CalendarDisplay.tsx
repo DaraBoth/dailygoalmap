@@ -10,6 +10,7 @@ interface CalendarDisplayProps {
   onMonthChange?: (month: Date) => void;
   tasks: Task[];
   getTasksForDate: (date: Date) => Task[];
+  onMoveTask?: (taskId: string, targetDate: Date) => void;
   monthlyIncome?: number;
   dailySpendingLimit?: number;
   currency?: string;
@@ -24,6 +25,7 @@ const CalendarDisplay = ({
   onMonthChange,
   tasks,
   getTasksForDate,
+  onMoveTask,
   monthlyIncome,
   dailySpendingLimit,
   currency = "USD",
@@ -76,6 +78,8 @@ const CalendarDisplay = ({
               selectedDate={selectedDate}
               onDateChange={onDateChange}
               getTasksForDate={getTasksForDate}
+              tasks={tasks}
+              onMoveTask={onMoveTask}
               onTaskClick={onTaskClick}
               isLoadingTasks={isLoading}
             />

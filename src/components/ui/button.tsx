@@ -19,7 +19,10 @@ const buttonVariants = cva(
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         // Orbit / Magic UI variants
-        magic: "bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-[1.02] transition-all duration-300",
+        magic:
+          "relative overflow-hidden border border-primary/30 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:shadow-md active:scale-[0.99] transition-all duration-300 before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_top_left,hsl(var(--primary-foreground)/0.22),transparent_50%)] before:opacity-80 before:transition-opacity hover:before:opacity-100",
+        shimmer:
+          "relative overflow-hidden border border-primary/40 bg-primary text-primary-foreground shadow-sm transition-all duration-300 hover:bg-primary/90 hover:shadow-md active:scale-[0.99] before:absolute before:inset-0 before:bg-[linear-gradient(110deg,transparent_35%,hsl(var(--primary-foreground)/0.28)_50%,transparent_65%)] before:bg-[length:220%_100%] before:animate-[shimmer_2.1s_linear_infinite]",
         glass: "bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 text-foreground shadow-sm",
         orbit: "bg-primary text-white shadow-[0_10px_20px_-5px_rgba(var(--primary),0.3)] hover:shadow-[0_15px_30px_-5px_rgba(var(--primary),0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300",
       },

@@ -1,96 +1,124 @@
 import React from "react";
 import { SmartLink } from "@/components/ui/SmartLink";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles } from "@/components/icons/CustomIcons";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
-import { Rocket, Zap } from "lucide-react";
+import { Chip } from "@mui/material";
+import { Button } from "@/components/ui/button";
 
 const CTASection: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
+  const shouldReduceMotion = useReducedMotion();
+  const [activeSlide, setActiveSlide] = React.useState(0);
+  const [isPaused, setIsPaused] = React.useState(false);
+
+  const slides = React.useMemo(
+    () => [
+      {
+        title: "See a real daily plan",
+        body: "Goal: Learn React. Orbit breaks this into focused daily tasks so you always know the next step.",
+      },
+      {
+        title: "Stay consistent each week",
+        body: "Track completed tasks and keep momentum with a clear weekly view that is easy to follow.",
+      },
+      {
+        title: "Works on web and mobile",
+        body: "Plan anywhere, update quickly, and keep your progress synced across devices.",
+      },
+    ],
+    []
+  );
+
+  React.useEffect(() => {
+    if (isPaused || slides.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % slides.length);
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [isPaused, slides.length]);
 
   return (
-    <section className="relative z-10 py-32 px-4 md:px-6 overflow-hidden">
-      <div className="max-w-6xl mx-auto">
+    <section className="relative z-10 py-16 sm:py-20 px-4 md:px-6">
+      <div className="max-w-5xl mx-auto">
         <motion.div
-          initial={{ y: 100, opacity: 0 }}
+          initial={{ y: 20, opacity: 0 }}
           whileInView={{ y: 0, opacity: 1 }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.45 }}
           viewport={{ once: true }}
-          className="relative rounded-[3.5rem] p-12 md:p-24 overflow-hidden border border-white/10 glass-card bg-black/60 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] group"
+          className="rounded-2xl border border-border/90 bg-card/92 p-6 sm:p-10 text-center"
         >
-          {/* Advanced Orbital Glows */}
-          <div className="absolute -top-1/2 -left-1/4 w-full h-full bg-primary/20 rounded-full blur-[160px] animate-pulse pointer-events-none" />
-          <div className="absolute -bottom-1/2 -right-1/4 w-full h-full bg-blue-500/10 rounded-full blur-[160px] animate-pulse pointer-events-none [animation-delay:2s]" />
-
-          {/* Geometric Grid Overlay */}
-          <div className="absolute inset-0 opacity-20 mix-blend-overlay pointer-events-none" style={{
-                backgroundImage: `
-                  repeating-linear-gradient(
-                    0deg,
-                    transparent,
-                    transparent 1px,
-                    rgba(0,0,0,0.03) 1px,
-                    rgba(0,0,0,0.03) 2px
-                  ),
-                  repeating-linear-gradient(
-                    90deg,
-                    transparent,
-                    transparent 1px,
-                    rgba(0,0,0,0.03) 1px,
-                    rgba(0,0,0,0.03) 2px
-                  )
-                `,
-                backgroundSize: '16px 16px'
-            }} />
-          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.05] to-transparent pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col items-center text-center space-y-12">
-            <motion.div
-              whileHover={{ rotate: 180, scale: 1.1 }}
-              transition={{ duration: 0.8, ease: "circOut" }}
-              className="p-6 bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/20 ring-1 ring-white/10 cursor-pointer shadow-2xl"
-            >
-              <Rocket className="h-12 w-12 text-primary drop-shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
-            </motion.div>
-
-            <div className="space-y-8 max-w-3xl">
-              <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter leading-none">
+          <div className="space-y-5">
+            <div className="flex justify-center">
+              <Chip label="Ready when you are" variant="outlined" sx={{ borderRadius: 999 }} />
+            </div>
+            <div className="space-y-3 max-w-2xl mx-auto">
+              <h2 className="text-2xl sm:text-4xl font-semibold text-foreground tracking-tight">
                 {isAuthenticated
-                  ? <>Ready to <span className="text-primary italic">Accelerate</span>, <br className="hidden md:block" /> {user?.user_metadata?.full_name?.split(' ')[0] || 'Commander'}?</>
-                  : <>Ready to <span className="text-primary italic">Initialize</span> <br className="hidden md:block" /> Your Orbit?</>
+                  ? <>Welcome back, {user?.user_metadata?.full_name?.split(' ')[0] || 'there'}. Continue your plan?</>
+                  : <>Start your first goal today</>
                 }
               </h2>
-              <p className="text-xl md:text-2xl text-white/50 font-medium max-w-2xl mx-auto leading-relaxed">
-                Join the high-performers who have automated their trajectory to success.
-                <span className="text-white/80 block mt-2">Zero friction. Maximum velocity. Absolute autonomy.</span>
+              <p className="text-sm sm:text-base text-foreground/80 max-w-xl mx-auto">
+                Keep it simple: create one goal, add daily tasks, and follow your progress each day.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-8 w-full justify-center">
-              <SmartLink to={isAuthenticated ? "/dashboard" : "/register"} className="w-full sm:w-auto">
-                <Button size="xl" className="w-full sm:w-auto text-xl px-16 py-10 h-auto rounded-[2.5rem] bg-primary text-white hover:bg-primary/90 hover:scale-105 shadow-[0_20px_40px_-10px_rgba(var(--primary),0.3)] transition-all duration-500 group/btn border border-white/20">
-                  <span className="flex items-center font-black uppercase tracking-widest">
-                    {isAuthenticated ? "Launch Dashboard" : "Initiate System"}
-                    <Zap className="ml-3 h-7 w-7 fill-current group-hover/btn:translate-x-1 transition-transform" />
-                  </span>
-                </Button>
-              </SmartLink>
+            <div
+              className="mx-auto w-full max-w-2xl rounded-xl border border-border bg-background/90 p-4 sm:p-5 text-left"
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
+              onFocusCapture={() => setIsPaused(true)}
+              onBlurCapture={() => setIsPaused(false)}
+            >
+              <div className="min-h-[92px] sm:min-h-[84px]">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeSlide}
+                    initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+                    animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <p className="text-sm font-semibold text-foreground">{slides[activeSlide].title}</p>
+                    <p className="mt-1 text-sm text-foreground/75 leading-relaxed">{slides[activeSlide].body}</p>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-xs text-foreground/60">Auto-rotates every 5s</p>
+                <div className="flex items-center gap-1.5" role="tablist" aria-label="CTA slides">
+                  {slides.map((slide, index) => (
+                    <button
+                      key={slide.title}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeSlide === index}
+                      aria-label={`Show slide ${index + 1}`}
+                      onClick={() => setActiveSlide(index)}
+                      className={`h-2 w-2 rounded-full transition-all ${
+                        activeSlide === index ? "w-5 bg-primary" : "bg-border hover:bg-foreground/40"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <div className="pt-8 grid grid-cols-2 md:grid-cols-3 gap-12 text-white/30 text-[10px] font-black uppercase tracking-[0.3em]">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-                No Constraints
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
-                Pure Intelligence
-              </div>
-              <div className="hidden md:flex items-center gap-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                Global Access
-              </div>
+            <div className="flex flex-col sm:flex-row gap-3 w-full justify-center pt-1">
+              <SmartLink to={isAuthenticated ? "/dashboard" : "/register"} className="w-full sm:w-auto">
+                <Button variant="shimmer" size="lg" className="w-full sm:w-auto rounded-xl px-6">
+                  {isAuthenticated ? "Open dashboard" : "Create free account"}
+                </Button>
+              </SmartLink>
+              {!isAuthenticated && (
+                <SmartLink to="/login" className="w-full sm:w-auto">
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto rounded-xl px-6">
+                    I already have an account
+                  </Button>
+                </SmartLink>
+              )}
             </div>
           </div>
         </motion.div>
