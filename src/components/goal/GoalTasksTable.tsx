@@ -28,7 +28,6 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getInitials, useUserProfiles } from '@/hooks/useUserProfiles';
-import EditTaskDialog from '@/components/calendar/EditTaskDialog';
 import { updateTask } from '@/utils/supabaseOperations';
 
 interface GoalTasksTableProps {
@@ -110,7 +109,6 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
   const [visibleCount, setVisibleCount] = useState(LAZY_BATCH_SIZE);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const involvedUserIds = useMemo(() => {
     const set = new Set<string>();
@@ -379,7 +377,9 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
         tags: cleanedTags.length > 0 ? cleanedTags : null,
       };
 
-      const { error } = await supabase.from('tasks').insert(payload);
+      // Supabase generated types miss is_anytime/duration_minutes/color —
+      // cast through any to match the pattern used in other insert paths.
+      const { error } = await supabase.from('tasks').insert(payload as any);
       if (error) throw error;
 
       toast({
@@ -855,17 +855,20 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
         onToggleTaskCompletion={handleToggleTaskCompletion}
         goalTitle={goalTitle || 'Task Details'}
         goalId={goalId}
-        onEditTask={(task) => {
-          setEditingTask(task);
-          setIsDetailOpen(false);
+        onColorChange={async (taskId, color) => {
+          // Optimistic local update; selectedTask is derived from tableTasks
+          // via useMemo so the sidebar reflects this without extra wiring.
+          setTableTasks(prev => prev.map(t => t.id === taskId ? { ...t, color } : t));
+          try {
+            await updateTask(taskId, { color, updated_at: new Date().toISOString() } as any);
+          } catch (err: any) {
+            toast({
+              title: 'Color update failed',
+              description: err?.message || 'Could not update color.',
+              variant: 'destructive',
+            });
+          }
         }}
-      />
-
-      <EditTaskDialog
-        isOpen={!!editingTask}
-        onClose={() => setEditingTask(null)}
-        task={editingTask}
-        existingTags={allTags}
         onUpdateTask={async (taskId, description, date, time, range) => {
           try {
             const taskToUpdate = tableTasks.find((t) => t.id === taskId);
@@ -893,14 +896,14 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
             };
             if (typeof range?.completed !== 'undefined') updates.completed = range.completed;
             if (cleanedTags) updates.tags = cleanedTags;
+            if (typeof range?.color !== 'undefined') updates.color = range.color;
 
+            // Optimistic — selectedTask is a useMemo derived from tableTasks
+            // so this also refreshes the sidebar in place.
             setTableTasks((prev) =>
               prev.map((t) =>
                 t.id === taskId
-                  ? {
-                      ...t,
-                      ...(updates as Partial<Task>),
-                    }
+                  ? { ...t, ...(updates as Partial<Task>) }
                   : t
               )
             );
@@ -911,7 +914,6 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
               title: 'Task updated',
               description: 'Task has been updated successfully.',
             });
-            setEditingTask(null);
           } catch (err: any) {
             toast({
               title: 'Update failed',
@@ -926,7 +928,7 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
             if (error) throw error;
             setTableTasks((prev) => prev.filter((t) => t.id !== taskId));
             toast({ title: 'Task deleted' });
-            setEditingTask(null);
+            setIsDetailOpen(false);
           } catch (err: any) {
             toast({
               title: 'Delete failed',

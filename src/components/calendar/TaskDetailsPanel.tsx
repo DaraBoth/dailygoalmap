@@ -1,10 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Task, TASK_COLORS } from "./types";
-import { isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
-  CheckCircle2,
-  Circle,
+  Check,
+  Copy,
   Pencil,
   Trash2,
   ChevronLeft,
@@ -12,6 +11,7 @@ import {
   Loader2,
   AlignLeft,
   Share2,
+  X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import CalendarOptionsDialog from "./CalendarOptionsDialog";
@@ -21,31 +21,42 @@ import { cn } from "@/lib/utils";
 import ShareTasksModal, { ShareableTask } from "@/components/dashboard/ShareTasksModal";
 import { TaskGoalActionsMenu } from "./TaskGoalActionsMenu";
 import TaskMetaSheet, { TaskMetaFab } from "./TaskMetaSheet";
+import MarkdownEditor from "@/components/editor/MarkdownEditor";
+import { useTaskEditor, TaskUpdateRange } from "./useTaskEditor";
 
 interface TaskDetailsPanelProps {
   selectedTask: Task | null;
   selectedDate: Date | undefined;
   onToggleTaskCompletion: (taskId: string) => void;
-  onEditTask: (task: Task) => void;
+  onUpdateTask: (
+    taskId: string,
+    description: string,
+    date: Date,
+    time?: string,
+    range?: TaskUpdateRange
+  ) => void;
   onDeleteTask: (taskId: string) => void;
   onColorChange?: (taskId: string, color: string | null) => void;
   goalTitle: string;
   goalId?: string;
   isImmersive?: boolean;
   onClose?: () => void;
+  /** When true, mount with the editor already in edit mode. */
+  initialEditMode?: boolean;
 }
 
 const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   selectedTask,
   selectedDate,
   onToggleTaskCompletion,
-  onEditTask,
+  onUpdateTask,
   onDeleteTask,
   onColorChange,
   goalTitle,
   goalId,
   isImmersive,
   onClose,
+  initialEditMode,
 }) => {
   const { toast } = useToast();
   const [isAddingReminder, setIsAddingReminder] = useState(false);
@@ -53,25 +64,46 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [metaOpen, setMetaOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(!!initialEditMode);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
 
-  // Derive meta-sheet values from the selected task. Always called so React
-  // hook order stays stable even when there's no task selected.
-  const startDate = useMemo(
-    () => (selectedTask?.start_date ? new Date(selectedTask.start_date) : new Date()),
-    [selectedTask?.start_date]
-  );
-  const endDate = useMemo(
-    () => (selectedTask?.end_date ? new Date(selectedTask.end_date) : startDate),
-    [selectedTask?.end_date, startDate]
-  );
-  const dailyStart = (selectedTask?.daily_start_time || "09:00").slice(0, 5);
-  const dailyEnd = (selectedTask?.daily_end_time || "10:00").slice(0, 5);
-  const isAnytime = !!selectedTask?.is_anytime || !selectedTask?.daily_start_time;
-  const completed = !!selectedTask?.completed;
-  const color = selectedTask?.color ?? null;
-  const tags = Array.isArray(selectedTask?.tags)
-    ? (selectedTask!.tags as string[]).filter((t): t is string => typeof t === "string")
-    : [];
+  const editor = useTaskEditor(selectedTask);
+  const {
+    title, description, startDate, endDate, dailyStart, dailyEnd,
+    isAnytime, completed, color, tags, timeError,
+    setTitle, setDescription, setStartDate, setEndDate, setDailyStart,
+    setDailyEnd, setIsAnytime, setCompleted, setColor, setTags, setTimeError,
+    buildRange, buildCombinedDateTime, resetFromTask,
+  } = editor;
+
+  // When the selected task changes, drop back to read mode unless the
+  // caller explicitly asked to land in edit mode for this new selection.
+  useEffect(() => {
+    setIsEditing(!!initialEditMode);
+  }, [selectedTask?.id, initialEditMode]);
+
+  // Auto-resize the title textarea while editing so it behaves like the
+  // Notion title field used in the old Edit dialog.
+  useEffect(() => {
+    if (!isEditing) return;
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [title, isEditing]);
+
+  const handleCopyDescription = async () => {
+    if (!selectedTask?.description?.trim()) {
+      toast({ title: "Nothing to copy", description: "This task has no description.", variant: "destructive" });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(selectedTask.description);
+      toast({ title: "Copied", description: "Description copied to clipboard." });
+    } catch {
+      toast({ title: "Couldn't copy", description: "Select the text manually and copy it.", variant: "destructive" });
+    }
+  };
 
   const handleAddToCalendar = async () => {
     if (!selectedTask) return;
@@ -92,6 +124,27 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
     }
   };
 
+  const handleSave = () => {
+    if (!selectedTask || !title.trim()) return;
+    if (timeError) {
+      setMetaOpen(true);
+      return;
+    }
+    onUpdateTask(
+      selectedTask.id,
+      description.trim(),
+      buildCombinedDateTime(),
+      isAnytime ? undefined : (dailyStart || "09:00"),
+      buildRange()
+    );
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    resetFromTask();
+    setIsEditing(false);
+  };
+
   if (!selectedTask) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-4 p-8 text-center bg-background/30">
@@ -109,9 +162,14 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   const hasDescription = selectedTask.description && selectedTask.description !== selectedTask.title;
 
   return (
-    <div className="w-full h-full flex flex-col bg-card/80 overflow-hidden relative">
-      {/* Top action bar — stays above the sticky title */}
-      <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-border/60 bg-card/95 backdrop-blur-sm">
+    // data-task-detail-panel="open" lets the GoalChatWidget's modal detector
+    // hide the floating AI Coach FAB while the panel is showing a task.
+    <div
+      data-task-detail-panel="open"
+      className="w-full h-full flex flex-col bg-card/80 overflow-hidden relative"
+    >
+      {/* Top action bar */}
+      <div className="flex-shrink-0 relative z-20 flex items-center gap-2 px-4 py-2.5 border-b border-border/60 bg-card/95 backdrop-blur-sm">
         {onClose && (
           <Button
             variant="ghost"
@@ -126,21 +184,22 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
         <span className="text-xs text-muted-foreground truncate flex-1">{goalTitle}</span>
 
         <div className="flex items-center gap-0.5 shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
-            onClick={handleAddToCalendar}
-            disabled={isAddingReminder}
-          >
-            {isAddingReminder
-              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              : <CalendarCheck className="h-3.5 w-3.5" />}
-            <span className="hidden md:inline">Calendar</span>
-          </Button>
+          {!isEditing && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
+              onClick={handleAddToCalendar}
+              disabled={isAddingReminder}
+            >
+              {isAddingReminder
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : <CalendarCheck className="h-3.5 w-3.5" />}
+              <span className="hidden md:inline">Calendar</span>
+            </Button>
+          )}
 
-          {/* Color picker — sits next to the Calendar button in the top bar
-              so the title row stays clean (only checkbox + title). */}
+          {/* Color picker — also available while editing */}
           <div className="relative">
             <button
               type="button"
@@ -151,12 +210,12 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
               <span
                 className="h-3.5 w-3.5 rounded-full border border-border/60 shadow-sm"
                 style={{
-                  backgroundColor: selectedTask.color ?? 'transparent',
-                  outline: selectedTask.color ? undefined : '2px dashed hsl(var(--muted-foreground)/0.4)',
+                  backgroundColor: (isEditing ? color : selectedTask.color) ?? 'transparent',
+                  outline: (isEditing ? color : selectedTask.color) ? undefined : '2px dashed hsl(var(--muted-foreground)/0.4)',
                 }}
               />
               <span className="hidden md:inline">
-                {TASK_COLORS.find(c => c.hex === selectedTask.color)?.label ?? 'Color'}
+                {TASK_COLORS.find(c => c.hex === (isEditing ? color : selectedTask.color))?.label ?? 'Color'}
               </span>
             </button>
             <AnimatePresence>
@@ -174,12 +233,16 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                       type="button"
                       title={c.label}
                       onClick={() => {
-                        onColorChange?.(selectedTask.id, c.hex);
+                        if (isEditing) {
+                          setColor(c.hex);
+                        } else {
+                          onColorChange?.(selectedTask.id, c.hex);
+                        }
                         setColorPickerOpen(false);
                       }}
                       className={cn(
                         "h-5 w-5 rounded-full border-2 transition-all hover:scale-110",
-                        selectedTask.color === c.hex
+                        (isEditing ? color : selectedTask.color) === c.hex
                           ? "border-foreground scale-110 shadow-sm"
                           : "border-transparent hover:border-muted-foreground/50",
                       )}
@@ -194,36 +257,71 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
             </AnimatePresence>
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
-            onClick={() => onEditTask(selectedTask)}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-            <span className="hidden md:inline">Edit</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
-            onClick={() => setShareOpen(true)}
-          >
-            <Share2 className="h-3.5 w-3.5" />
-            <span className="hidden md:inline">Share</span>
-          </Button>
-          {goalId ? (
-            <TaskGoalActionsMenu task={selectedTask} sourceGoalId={goalId} label="More" />
-          ) : null}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2.5 rounded-md text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1.5"
-            onClick={() => onDeleteTask(selectedTask.id)}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            <span className="hidden md:inline">Delete</span>
-          </Button>
+          {isEditing ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                onClick={handleCancel}
+              >
+                <X className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">Cancel</span>
+              </Button>
+              <Button
+                size="sm"
+                className="h-7 px-2.5 rounded-md text-xs gap-1.5"
+                onClick={handleSave}
+                disabled={!title.trim()}
+              >
+                <Check className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">Save</span>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                onClick={() => setIsEditing(true)}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">Edit</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                onClick={handleCopyDescription}
+                title="Copy description"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">Copy</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                onClick={() => setShareOpen(true)}
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">Share</span>
+              </Button>
+              {goalId ? (
+                <TaskGoalActionsMenu task={selectedTask} sourceGoalId={goalId} label="More" />
+              ) : null}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2.5 rounded-md text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1.5"
+                onClick={() => onDeleteTask(selectedTask.id)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">Delete</span>
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -231,7 +329,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
       <div className="flex-1 overflow-y-auto">
         <AnimatePresence mode="wait">
           <motion.div
-            key={selectedTask.id}
+            key={`${selectedTask.id}-${isEditing ? "edit" : "read"}`}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
@@ -239,25 +337,49 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
           >
             {/* Sticky title row */}
             <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border/60 px-6 lg:px-10 pt-6 pb-4">
-              <h1
-                className={cn(
-                  "w-full text-base lg:text-lg font-semibold leading-snug text-foreground break-words",
-                  selectedTask.completed && "line-through text-muted-foreground"
-                )}
-              >
-                {selectedTask.title || "Untitled Task"}
-              </h1>
+              {isEditing ? (
+                <textarea
+                  ref={titleRef}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Untitled"
+                  rows={1}
+                  autoFocus
+                  className={cn(
+                    "w-full resize-none bg-transparent border-0 outline-none placeholder:text-muted-foreground/40",
+                    "text-base lg:text-lg font-semibold leading-snug tracking-tight text-foreground"
+                  )}
+                />
+              ) : (
+                <h1
+                  className={cn(
+                    "w-full text-base lg:text-lg font-semibold leading-snug text-foreground break-words",
+                    selectedTask.completed && "line-through text-muted-foreground"
+                  )}
+                >
+                  {selectedTask.title || "Untitled Task"}
+                </h1>
+              )}
             </div>
 
-            {/* Description — full-bleed main content. Extra bottom padding
-                leaves room for the floating action button + footer. */}
+            {/* Description — full-bleed main content. */}
             <div className="w-full pt-4 pb-32">
-              {hasDescription ? (
+              {isEditing ? (
+                <MarkdownEditor
+                  value={description}
+                  onChange={setDescription}
+                  placeholder="Add a description, paste images, write a checklist, drop in code…"
+                  minHeight="440px"
+                  className="rounded-none border-0 bg-transparent focus-within:ring-0"
+                  contentClassName="px-2 sm:px-3"
+                />
+              ) : hasDescription ? (
                 <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed bg-muted/20 px-6 lg:px-10 py-4">
                   <MarkdownRenderer
                     content={selectedTask.description}
                     isStreaming={false}
                     isLoading={false}
+                    noCopy
                   />
                 </div>
               ) : (
@@ -265,7 +387,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                   No description.{" "}
                   <button
                     type="button"
-                    onClick={() => onEditTask(selectedTask)}
+                    onClick={() => setIsEditing(true)}
                     className="text-primary hover:underline"
                   >
                     Add one
@@ -277,7 +399,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
         </AnimatePresence>
       </div>
 
-      {/* Floating action button — opens the read-only metadata sheet */}
+      {/* Floating action button — opens metadata sheet (editable while editing) */}
       <TaskMetaFab
         onClick={() => setMetaOpen(true)}
         startDate={startDate}
@@ -287,37 +409,10 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
         isAnytime={isAnytime}
         completed={completed}
         tagCount={tags.length}
-        className="bottom-20"
+        color={color}
+        hasError={!!timeError}
+        className="bottom-5"
       />
-
-      {/* Footer actions */}
-      <div className="flex-shrink-0 border-t border-border/50 px-6 py-3 flex items-center justify-between bg-background/40 backdrop-blur-sm">
-        <button
-          onClick={() => onToggleTaskCompletion(selectedTask.id)}
-          className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-            selectedTask.completed
-              ? "bg-muted text-muted-foreground hover:bg-muted/80"
-              : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20"
-          )}
-        >
-          {selectedTask.completed ? (
-            <><Circle className="h-4 w-4" /> Mark Incomplete</>
-          ) : (
-            <><CheckCircle2 className="h-4 w-4" /> Mark Complete</>
-          )}
-        </button>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 px-3 rounded-lg text-sm gap-2 text-muted-foreground hover:text-foreground"
-          onClick={() => onEditTask(selectedTask)}
-        >
-          <Pencil className="h-3.5 w-3.5" />
-          Edit task
-        </Button>
-      </div>
 
       <ShareTasksModal
         open={shareOpen}
@@ -345,7 +440,17 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
         completed={completed}
         color={color}
         tags={tags}
-        readOnly
+        timeError={timeError}
+        readOnly={!isEditing}
+        setStartDate={isEditing ? setStartDate : undefined}
+        setEndDate={isEditing ? setEndDate : undefined}
+        setDailyStart={isEditing ? setDailyStart : undefined}
+        setDailyEnd={isEditing ? setDailyEnd : undefined}
+        setIsAnytime={isEditing ? setIsAnytime : undefined}
+        setCompleted={isEditing ? setCompleted : undefined}
+        setColor={isEditing ? setColor : undefined}
+        setTags={isEditing ? setTags : undefined}
+        setTimeError={isEditing ? setTimeError : undefined}
       />
     </div>
   );

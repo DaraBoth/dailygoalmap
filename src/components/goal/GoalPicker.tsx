@@ -159,7 +159,7 @@ export const SingleGoalPicker: React.FC<SingleGoalPickerProps> = ({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-[--radix-popover-trigger-width] min-w-[260px] p-0 z-[60]"
+        className="w-[--radix-popover-trigger-width] min-w-[260px] p-0 z-[200]"
       >
         <Command>
           <CommandInput placeholder="Search goals…" />

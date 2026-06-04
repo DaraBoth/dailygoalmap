@@ -275,12 +275,11 @@ const TaskMetaSheet: React.FC<TaskMetaSheetProps> = (props) => {
                     title={c.label}
                     className={cn(
                       "h-6 w-6 rounded-full border-2",
-                      active ? "border-foreground" : "border-transparent"
+                      active ? "border-foreground shadow-sm" : "border-transparent"
                     )}
                     style={{
                       backgroundColor: c.hex ?? "transparent",
                       outline: c.hex ? undefined : "2px dashed hsl(var(--muted-foreground)/0.4)",
-                      opacity: active ? 1 : 0.45,
                     }}
                   />
                 ) : (
@@ -424,6 +423,8 @@ export const TaskMetaFab: React.FC<{
   tagCount: number;
   className?: string;
   hasError?: boolean;
+  /** Task color (hex) — tints the FAB so it matches its task's accent. */
+  color?: string | null;
 }> = ({
   onClick,
   startDate,
@@ -435,6 +436,7 @@ export const TaskMetaFab: React.FC<{
   tagCount,
   className,
   hasError,
+  color,
 }) => {
   const dateSummary =
     startDate.toDateString() === endDate.toDateString()
@@ -442,10 +444,20 @@ export const TaskMetaFab: React.FC<{
       : `${format(startDate, "MMM d")} – ${format(endDate, "MMM d")}`;
   const timeSummary = isAnytime ? "Anytime" : `${dailyStart}–${dailyEnd}`;
 
+  // When the task has a color and there's no error, tint the FAB with it
+  // (white text on top reads cleanly against the saturated palette).
+  // Otherwise fall back to a theme-aware neutral so it doesn't look reversed
+  // in light mode (was bg-foreground/text-background = dark pill on light bg).
+  const useTaskColor = !hasError && !!color;
+  const inlineStyle: React.CSSProperties | undefined = useTaskColor
+    ? { backgroundColor: color!, color: "#fff", borderColor: color! }
+    : undefined;
+
   return (
     <button
       type="button"
       onClick={onClick}
+      style={inlineStyle}
       className={cn(
         "absolute right-3 sm:right-5 z-20 inline-flex items-center gap-2 rounded-full",
         "shadow-lg",
@@ -454,7 +466,9 @@ export const TaskMetaFab: React.FC<{
         "border",
         hasError
           ? "bg-destructive text-destructive-foreground border-destructive shadow-destructive/30"
-          : "bg-foreground text-background border-border/40 shadow-foreground/20",
+          : useTaskColor
+            ? "shadow-black/20"
+            : "bg-card text-foreground border-border shadow-foreground/10",
         className
       )}
       aria-label="Open task details"

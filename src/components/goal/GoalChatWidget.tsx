@@ -447,6 +447,32 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
   const isMobile = useIsMobile();
   useAutoResizeTextArea(textareaRef, inputValue, { minRows: 1, maxRows: 6 });
 
+  // Hide the FAB whenever any Radix Sheet/Dialog is open. Radix Dialog 1.1.x
+  // doesn't actually set `aria-modal` as an attribute — only role + data-state
+  // — so the selector must rely on those alone. Detection is a MutationObserver
+  // on body which keeps the chat decoupled from every Sheet caller: no global
+  // store, no per-Sheet wiring. The chat just disappears while a Sheet is up
+  // and returns the moment the last one closes.
+  const [isAnyModalOpen, setIsAnyModalOpen] = useState(false);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const recheck = () => {
+      const openModal = document.querySelector(
+        '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"], [data-task-detail-panel="open"]'
+      );
+      setIsAnyModalOpen(!!openModal);
+    };
+    recheck();
+    const observer = new MutationObserver(recheck);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-state", "role", "data-task-detail-panel"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
   const stripMarkdownForSpeech = useCallback((content: string) => {
     return content
       .replace(/```[\s\S]*?```/g, ' ')
@@ -801,7 +827,10 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
         if (u.daily_start_time && patch.is_anytime !== true) patch.daily_start_time = `${u.daily_start_time}:00`;
         if (u.daily_end_time && patch.is_anytime !== true) patch.daily_end_time = `${u.daily_end_time}:00`;
         if (typeof u.duration_minutes === 'number') patch.duration_minutes = u.duration_minutes;
-        const { error } = await supabase.from('tasks').update(patch).eq('id', u.task_id);
+        // Supabase generated types don't include is_anytime / duration_minutes
+        // / color yet — cast through `any` to match the pattern used elsewhere
+        // (e.g. AddTaskDialog) until types are regenerated.
+        const { error } = await supabase.from('tasks').update(patch as any).eq('id', u.task_id);
         if (error) results.push(`[FAIL] ${u.task_id}: ${error.message}`);
         else {
           applyTaskMutation(prev => prev.map(t => t.id === u.task_id ? normalizeTaskRecord({ ...(t as any), ...(patch as any) }) : t));
@@ -859,7 +888,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
         completed: false,
         created_at: now,
         updated_at: now,
-      }).select().single();
+      } as any).select().single();
       if (error) return `[FAIL] Create task: ${error.message}`;
       if (data) {
         applyTaskMutation(prev => [...prev, normalizeTaskRecord(data as any)]);
@@ -1501,8 +1530,9 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
 
   return (
     <>
-      {/* FAB */}
-      {!isPopupMode && (
+      {/* FAB — hidden while any modal Sheet/Dialog is open so it can never
+          overlap the Task Detail / Add / Edit sheets. Returns when modal closes. */}
+      {!isPopupMode && !isAnyModalOpen && (
         <motion.button
           className={cn(
             'fixed z-50 flex items-center justify-center overflow-hidden border border-primary/30 shadow-lg backdrop-blur-xl transition-colors',

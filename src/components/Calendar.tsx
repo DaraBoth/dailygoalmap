@@ -5,7 +5,6 @@ import { addDays, differenceInCalendarDays } from 'date-fns';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSearch } from "@tanstack/react-router";
 import AddTaskDialog from "./calendar/AddTaskDialog";
-import EditTaskDialog from "./calendar/EditTaskDialog";
 import CalendarContainer from "./calendar/CalendarContainer";
 import TaskList from "./calendar/TaskList";
 import TaskDetailsSidebar from "./calendar/TaskDetailsSidebar";
@@ -53,8 +52,6 @@ const Calendar = ({
   const [showFAB, setShowFAB] = useState(false);
   const searchParams = useSearch({ strict: false }) as { date?: string; taskId?: string };
   const hasInitializedDate = useRef(false);
-  const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false); // State for confirm dialog
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null); // State to hold task to be deleted
   const [lastDeletedTask, setLastDeletedTask] = useState<Task | null>(null); // For undo functionality
@@ -275,6 +272,10 @@ const Calendar = ({
       }
     }
 
+    // Plain view (no edit) — make sure we don't accidentally land in edit
+    // mode because the previous trigger was an edit-pencil click.
+    setOpenInEditMode(false);
+
     // Only open dialog on mobile, desktop uses the TaskDetailsPanel
     if (isMobile) {
       setIsTaskDetailsOpen(true);
@@ -292,9 +293,21 @@ const Calendar = ({
     }
   };
 
+  // Unified edit flow: open the Detail view (Sidebar on mobile, Panel on
+  // desktop) with editMode=true. The Detail view handles the inline edit
+  // form via useTaskEditor; there is no separate edit dialog anymore.
+  const [openInEditMode, setOpenInEditMode] = useState(false);
   const handleEditTask = (task: Task) => {
-    setEditingTask(task);
-    setIsEditTaskOpen(true);
+    setSelectedTask(task);
+    const taskDate = getTaskAnchorDate(task as any);
+    setSelectedDate(taskDate);
+    const tasksForTaskDate = getTasksForDateWrapper(taskDate);
+    const taskIndex = tasksForTaskDate.findIndex(t => t.id === task.id);
+    setSelectedTaskIndex(taskIndex >= 0 ? taskIndex : 0);
+    syncTaskSelectionInUrl(task, taskDate);
+    if (externalOnDateChange) externalOnDateChange(taskDate);
+    setOpenInEditMode(true);
+    if (isMobile) setIsTaskDetailsOpen(true);
   };
 
   const handleMoveTask = async (taskId: string, targetDate: Date) => {
@@ -423,7 +436,9 @@ const Calendar = ({
       if (selectedTask && selectedTask.id === taskId) {
         setSelectedTask(updatedTask);
       }
-      setIsEditTaskOpen(false);
+      // Inline-edit lives inside the Detail view now — caller flips back to
+      // read mode itself, no separate dialog to close.
+      setOpenInEditMode(false);
 
       // Persist to backend.
       await updateTask(taskId, updates);
@@ -704,13 +719,14 @@ const Calendar = ({
                     selectedTask={selectedTask}
                     selectedDate={selectedDate}
                     onToggleTaskCompletion={handleToggleTaskCompletion}
-                    onEditTask={handleEditTask}
+                    onUpdateTask={handleUpdateTask}
                     onDeleteTask={handleDeleteTask}
                     onColorChange={handleColorChange}
                     goalTitle={allTasks ? "All Goals" : goalTitle}
                     goalId={goalId}
                     isImmersive={true}
                     onClose={handleCloseTaskDetails}
+                    initialEditMode={openInEditMode}
                   />
                 </motion.div>
               )}
@@ -729,26 +745,19 @@ const Calendar = ({
         primaryGoalId={goalId}
       />
 
-      <EditTaskDialog
-        isOpen={isEditTaskOpen}
-        onClose={() => setIsEditTaskOpen(false)}
-        onUpdateTask={handleUpdateTask}
-        onDeleteTask={handleDeleteTask}
-        task={editingTask}
-        existingTags={existingTags}
-      />
-
       {isMobile &&
         <TaskDetailsSidebar
           isOpen={isTaskDetailsOpen}
-          onClose={() => setIsTaskDetailsOpen(false)}
+          onClose={() => { setIsTaskDetailsOpen(false); setOpenInEditMode(false); }}
           selectedTask={selectedTask}
           selectedDate={selectedDate}
           onToggleTaskCompletion={handleToggleTaskCompletion}
           goalTitle={goalTitle}
           goalId={goalId}
-          onEditTask={handleEditTask}
+          initialEditMode={openInEditMode}
+          onUpdateTask={handleUpdateTask}
           onDeleteTask={handleDeleteTask}
+          onColorChange={handleColorChange}
         />
       }
 

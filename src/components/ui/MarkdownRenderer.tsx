@@ -84,8 +84,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 
                             return (
                                 <div className="relative group/code my-4">
-                                    {/* COPY CODE BUTTON */}
-                                    <div className="absolute right-3 top-3 opacity-0 group-hover/code:opacity-100 transition-opacity z-10">
+                                    {/* COPY CODE BUTTON — always visible so it
+                                        works on touch devices too (was hover-only). */}
+                                    <div className="absolute right-3 top-3 z-10">
                                         <button
                                             onClick={() => {
                                                 navigator.clipboard.writeText(
@@ -96,7 +97,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                                                     description: 'Code copied to clipboard.',
                                                 });
                                             }}
-                                            className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md font-medium shadow-lg flex items-center gap-1.5"
+                                            className="px-2.5 py-1 text-xs bg-zinc-800/80 hover:bg-zinc-700 text-zinc-100 backdrop-blur rounded-md font-medium shadow-md flex items-center gap-1.5 border border-white/10"
+                                            aria-label="Copy code"
+                                            title="Copy code"
                                         >
                                             <Copy className="w-3 h-3" />
                                             Copy

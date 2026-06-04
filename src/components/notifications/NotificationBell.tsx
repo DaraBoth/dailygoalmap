@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -21,24 +21,47 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onUnreadChan
     setUnread(count);
     onUnreadChange?.(count, open);
   }, [open, onUnreadChange]);
+
+  // Stash the latest refreshUnread in a ref so the realtime effect can run
+  // ONCE on mount. Otherwise re-running this effect every time `open` (or
+  // any caller-provided onUnreadChange) flips means Supabase hands back the
+  // already-subscribed channel for `notifications:<userId>` — and then
+  // `.on(...)` after `.subscribe()` throws.
+  const refreshUnreadRef = useRef(refreshUnread);
+  useEffect(() => { refreshUnreadRef.current = refreshUnread; }, [refreshUnread]);
+
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
     const setup = async () => {
-      await refreshUnread();
+      await refreshUnreadRef.current();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user || cancelled) return;
+      // Unique suffix per mount: Supabase reuses channels by topic name and
+      // its `removeChannel` cleanup is async, so during Vite HMR (or a fast
+      // re-mount) the new effect can grab the still-pending old channel and
+      // hit "cannot add postgres_changes callbacks after subscribe()". A
+      // fresh name sidesteps the cache entirely.
+      const channelKey = `notifications:${user.id}:${
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : Date.now()
+      }`;
       channel = supabase
-        .channel(`notifications:${user.id}`)
+        .channel(channelKey)
         .on('postgres_changes', {
           event: '*', schema: 'public', table: 'notifications', filter: `receiver_id=eq.${user.id}`
         }, () => {
-          refreshUnread();
+          refreshUnreadRef.current();
         })
         .subscribe();
     };
     setup();
-    return () => { if (channel) supabase.removeChannel(channel); };
-  }, [refreshUnread]);
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Notify parent when open/unread changes
   useEffect(() => {

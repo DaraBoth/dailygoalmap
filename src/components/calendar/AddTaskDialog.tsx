@@ -282,6 +282,7 @@ const AddTaskDialog = ({
             isAnytime={isAnytime}
             completed={completed}
             tagCount={tags.length}
+            color={color}
             hasError={!!timeError}
             className="bottom-24 sm:bottom-24"
           />

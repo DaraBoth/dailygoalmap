@@ -254,7 +254,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     },
   });
 
-  // Keep the editor in sync if the external `value` changes (e.g. when an EditTaskDialog
+  // Keep the editor in sync if the external `value` changes (e.g. when the Detail view
   // is re-opened with a different task).
   useEffect(() => {
     if (!editor) return;

@@ -1,7 +1,8 @@
-import { Task } from "./types";
+import { Task, TASK_COLORS } from "./types";
 import {
   CalendarIcon,
-  CheckCircle2,
+  Check,
+  Copy,
   Edit2,
   Trash2,
   AlertCircle,
@@ -10,12 +11,14 @@ import {
   Share2,
   User as UserIcon,
   History,
+  X,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import CalendarOptionsDialog from "./CalendarOptionsDialog";
 import { MarkdownRenderer } from "../ui/MarkdownRenderer";
@@ -25,6 +28,8 @@ import ShareTasksModal, { ShareableTask } from "@/components/dashboard/ShareTask
 import { TaskGoalActionsMenu } from "./TaskGoalActionsMenu";
 import { getInitials, useUserProfiles } from "@/hooks/useUserProfiles";
 import TaskMetaSheet, { TaskMetaFab } from "./TaskMetaSheet";
+import MarkdownEditor from "@/components/editor/MarkdownEditor";
+import { useTaskEditor, TaskUpdateRange } from "./useTaskEditor";
 
 interface TaskDetailsSidebarProps {
   isOpen: boolean;
@@ -34,8 +39,18 @@ interface TaskDetailsSidebarProps {
   onToggleTaskCompletion: (taskId: string) => void;
   goalTitle: string;
   goalId?: string;
-  onEditTask?: (task: Task) => void;
+  onUpdateTask?: (
+    taskId: string,
+    description: string,
+    date: Date,
+    time?: string,
+    range?: TaskUpdateRange
+  ) => void;
   onDeleteTask?: (taskId: string) => void;
+  /** Called when the user changes color in read mode (fire-and-forget persist). */
+  onColorChange?: (taskId: string, color: string | null) => void;
+  /** When true, mount with the editor already in edit mode. */
+  initialEditMode?: boolean;
 }
 
 function normalizeMarkdown(md: string) {
@@ -52,8 +67,10 @@ const TaskDetailsSidebar = ({
   onToggleTaskCompletion,
   goalTitle,
   goalId,
-  onEditTask,
+  onUpdateTask,
   onDeleteTask,
+  onColorChange,
+  initialEditMode,
 }: TaskDetailsSidebarProps) => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -61,6 +78,18 @@ const TaskDetailsSidebar = ({
   const [shareOpen, setShareOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [metaOpen, setMetaOpen] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(!!initialEditMode);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+
+  const editor = useTaskEditor(selectedTask);
+  const {
+    title, description, startDate, endDate, dailyStart, dailyEnd,
+    isAnytime, completed, color, tags, timeError,
+    setTitle, setDescription, setStartDate, setEndDate, setDailyStart,
+    setDailyEnd, setIsAnytime, setCompleted, setColor, setTags, setTimeError,
+    buildRange, buildCombinedDateTime, resetFromTask,
+  } = editor;
 
   const creatorId = selectedTask?.user_id || "";
   const updaterId = selectedTask?.updated_by || creatorId;
@@ -72,23 +101,38 @@ const TaskDetailsSidebar = ({
   const creatorName = creator?.display_name || "Unknown";
   const updaterName = updater?.display_name || creatorName;
 
-  // Read-only field values for the metadata Sheet.
-  const startDate = useMemo(
-    () => (selectedTask?.start_date ? new Date(selectedTask.start_date) : new Date()),
-    [selectedTask?.start_date]
-  );
-  const endDate = useMemo(
-    () => (selectedTask?.end_date ? new Date(selectedTask.end_date) : startDate),
-    [selectedTask?.end_date, startDate]
-  );
-  const dailyStart = (selectedTask?.daily_start_time || "09:00").slice(0, 5);
-  const dailyEnd = (selectedTask?.daily_end_time || "10:00").slice(0, 5);
-  const isAnytime = !!selectedTask?.is_anytime || !selectedTask?.daily_start_time;
-  const completed = !!selectedTask?.completed;
-  const color = selectedTask?.color ?? null;
-  const tags = Array.isArray(selectedTask?.tags)
-    ? (selectedTask!.tags as string[]).filter((t): t is string => typeof t === "string")
-    : [];
+  // Reset to view mode each time a different task is selected, unless the
+  // caller asked to open this sidebar straight into edit mode.
+  useEffect(() => {
+    setIsEditing(!!initialEditMode);
+  }, [selectedTask?.id, initialEditMode]);
+
+  // Closing the sheet drops back to view mode so the next open isn't
+  // accidentally still editable.
+  useEffect(() => {
+    if (!isOpen) setIsEditing(false);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [title, isEditing]);
+
+  const handleCopyDescription = async () => {
+    if (!selectedTask?.description?.trim()) {
+      toast({ title: "Nothing to copy", description: "This task has no description.", variant: "destructive" });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(selectedTask.description);
+      toast({ title: "Copied", description: "Description copied to clipboard." });
+    } catch {
+      toast({ title: "Couldn't copy", description: "Select the text manually and copy it.", variant: "destructive" });
+    }
+  };
 
   const handleAddToReminders = async () => {
     if (!selectedTask) return;
@@ -116,6 +160,27 @@ const TaskDetailsSidebar = ({
     }
   };
 
+  const handleSave = () => {
+    if (!selectedTask || !title.trim() || !onUpdateTask) return;
+    if (timeError) {
+      setMetaOpen(true);
+      return;
+    }
+    onUpdateTask(
+      selectedTask.id,
+      description.trim(),
+      buildCombinedDateTime(),
+      isAnytime ? undefined : (dailyStart || "09:00"),
+      buildRange()
+    );
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    resetFromTask();
+    setIsEditing(false);
+  };
+
   const updatedAt = selectedTask?.updated_at ? new Date(selectedTask.updated_at) : null;
   const createdAt = selectedTask?.created_at ? new Date(selectedTask.created_at) : null;
   const wasEdited =
@@ -135,11 +200,8 @@ const TaskDetailsSidebar = ({
         >
           {selectedTask ? (
             <div className="h-full flex flex-col relative">
-              {/* Scrollable body — title stays sticky at the top of the scroll
-                  container so it remains visible while reading long descriptions. */}
               <div className="flex-1 overflow-y-auto no-scrollbar">
-                {/* Sticky title + action bar — visible divider separates
-                    the title block from the full-bleed description below. */}
+                {/* Sticky title + action bar */}
                 <div className="sticky top-0 z-10 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-border/60">
                   <SheetHeader className="px-4 sm:px-8 lg:px-12 pt-4 sm:pt-5 pb-2 pr-12 sm:pr-16">
                     <div className="w-full flex items-center justify-between gap-3">
@@ -151,138 +213,263 @@ const TaskDetailsSidebar = ({
                       </div>
 
                       <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
-                        {onEditTask && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onEditTask(selectedTask)}
-                            className="h-8 px-2 sm:px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
-                            title="Edit"
+                        {/* Color picker — works in both view and edit mode.
+                            In view mode it persists via onColorChange; in edit
+                            mode it updates local state and is saved with the rest. */}
+                        <div className="relative">
+                          <button
+                            type="button"
+                            title="Change color"
+                            onClick={() => setColorPickerOpen(o => !o)}
+                            className="h-8 px-2 sm:px-2.5 rounded-md inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                           >
-                            <Edit2 className="h-3.5 w-3.5" />
-                            <span className="hidden sm:inline">Edit</span>
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShareOpen(true)}
-                          className="h-8 px-2 sm:px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
-                          title="Share"
-                        >
-                          <Share2 className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">Share</span>
-                        </Button>
-                        {onDeleteTask && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onDeleteTask(selectedTask.id)}
-                            className="h-8 px-2 sm:px-2.5 rounded-md text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1.5"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            <span className="hidden sm:inline">Delete</span>
-                          </Button>
+                            <span
+                              className="h-3.5 w-3.5 rounded-full border border-border/60 shadow-sm"
+                              style={{
+                                backgroundColor: (isEditing ? color : selectedTask.color) ?? 'transparent',
+                                outline: (isEditing ? color : selectedTask.color)
+                                  ? undefined
+                                  : '2px dashed hsl(var(--muted-foreground)/0.4)',
+                              }}
+                            />
+                            <span className="hidden sm:inline">Color</span>
+                          </button>
+                          <AnimatePresence>
+                            {colorPickerOpen && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -6, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -6, scale: 0.95 }}
+                                transition={{ duration: 0.12 }}
+                                className="absolute right-0 top-9 z-30 flex flex-wrap gap-2 p-2.5 rounded-xl border border-border/60 bg-popover shadow-lg"
+                              >
+                                {TASK_COLORS.map((c) => (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    title={c.label}
+                                    onClick={() => {
+                                      if (isEditing) {
+                                        setColor(c.hex);
+                                      } else if (onColorChange) {
+                                        onColorChange(selectedTask.id, c.hex);
+                                      }
+                                      setColorPickerOpen(false);
+                                    }}
+                                    className={cn(
+                                      "h-5 w-5 rounded-full border-2 transition-all hover:scale-110",
+                                      (isEditing ? color : selectedTask.color) === c.hex
+                                        ? "border-foreground scale-110 shadow-sm"
+                                        : "border-transparent hover:border-muted-foreground/50"
+                                    )}
+                                    style={{
+                                      backgroundColor: c.hex ?? 'transparent',
+                                      outline: c.hex
+                                        ? undefined
+                                        : '2px dashed hsl(var(--muted-foreground)/0.4)',
+                                    }}
+                                  />
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+
+                        {isEditing ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleCancel}
+                              className="h-8 px-2 sm:px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                              title="Cancel"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Cancel</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={handleSave}
+                              disabled={!title.trim()}
+                              className="h-8 px-2 sm:px-2.5 rounded-md text-xs gap-1.5"
+                              title="Save"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Save</span>
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            {onUpdateTask && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setIsEditing(true)}
+                                className="h-8 px-2 sm:px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                                title="Edit"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Edit</span>
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleCopyDescription}
+                              className="h-8 px-2 sm:px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                              title="Copy description"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Copy</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShareOpen(true)}
+                              className="h-8 px-2 sm:px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                              title="Share"
+                            >
+                              <Share2 className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Share</span>
+                            </Button>
+                            {onDeleteTask && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onDeleteTask(selectedTask.id)}
+                                className="h-8 px-2 sm:px-2.5 rounded-md text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1.5"
+                                title="Delete"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Delete</span>
+                              </Button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
                   </SheetHeader>
 
                   <div className="px-4 sm:px-8 lg:px-12 pb-4">
-                    <h1
-                      className={cn(
-                        "w-full text-base sm:text-lg lg:text-xl font-semibold leading-tight tracking-tight text-foreground break-words",
-                        selectedTask.completed && "line-through text-muted-foreground"
-                      )}
-                    >
-                      {selectedTask.title || "Untitled"}
-                    </h1>
+                    {isEditing ? (
+                      <textarea
+                        ref={titleRef}
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder="Untitled"
+                        rows={1}
+                        autoFocus
+                        className={cn(
+                          "w-full resize-none bg-transparent border-0 outline-none placeholder:text-muted-foreground/40",
+                          "text-base sm:text-lg lg:text-xl font-semibold leading-tight tracking-tight text-foreground"
+                        )}
+                      />
+                    ) : (
+                      <h1
+                        className={cn(
+                          "w-full text-base sm:text-lg lg:text-xl font-semibold leading-tight tracking-tight text-foreground break-words",
+                          selectedTask.completed && "line-through text-muted-foreground"
+                        )}
+                      >
+                        {selectedTask.title || "Untitled"}
+                      </h1>
+                    )}
                   </div>
                 </div>
 
                 {/* Description — full-bleed main content. */}
                 <div className="w-full pt-4 pb-4">
-                  <div className="bg-muted/15 px-4 py-3 sm:px-6 sm:py-4 lg:px-12 min-h-[200px] sm:min-h-[280px]">
-                    {selectedTask.description?.trim() ? (
-                      <MarkdownRenderer
-                        content={normalizeMarkdown(selectedTask.description)}
-                        isStreaming={false}
-                        isLoading={false}
-                        noCopy
-                      />
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">
-                        No description.{" "}
-                        {onEditTask && (
-                          <button
-                            type="button"
-                            onClick={() => onEditTask(selectedTask)}
-                            className="text-primary hover:underline"
-                          >
-                            Add one
-                          </button>
-                        )}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* People rows — created by / last edited. Stays inline
-                    (not in the FAB sheet) since it's authorship context
-                    rather than schedule data. */}
-                <div className="w-full px-4 sm:px-8 lg:px-12 pb-40">
-                  <div className="rounded-xl border border-border/40 bg-background/30 backdrop-blur-sm divide-y divide-border/30 overflow-hidden">
-                    {creatorId && (
-                      <PropertyRow
-                        icon={<UserIcon className="h-3.5 w-3.5 text-muted-foreground" />}
-                        label="Created by"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Avatar className="h-6 w-6 ring-1 ring-border/60 shrink-0">
-                            <AvatarImage src={creator?.avatar_url || undefined} alt={creatorName} />
-                            <AvatarFallback className="text-[10px] font-semibold">
-                              {getInitials(creatorName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-xs sm:text-sm text-foreground truncate">
-                            {creatorName}
-                          </span>
-                          {createdAt && (
-                            <span className="text-[11px] text-muted-foreground shrink-0">
-                              · {format(createdAt, "MMM d, yyyy")}
-                            </span>
+                  {isEditing ? (
+                    <MarkdownEditor
+                      value={description}
+                      onChange={setDescription}
+                      placeholder="Add a description, paste images, write a checklist, drop in code…"
+                      minHeight={isMobile ? "260px" : "440px"}
+                      className="rounded-none border-0 bg-transparent focus-within:ring-0"
+                      contentClassName="px-2 sm:px-3"
+                    />
+                  ) : (
+                    <div className="bg-muted/15 px-4 py-3 sm:px-6 sm:py-4 lg:px-12 min-h-[200px] sm:min-h-[280px]">
+                      {selectedTask.description?.trim() ? (
+                        <MarkdownRenderer
+                          content={normalizeMarkdown(selectedTask.description)}
+                          isStreaming={false}
+                          isLoading={false}
+                          noCopy
+                        />
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">
+                          No description.{" "}
+                          {onUpdateTask && (
+                            <button
+                              type="button"
+                              onClick={() => setIsEditing(true)}
+                              className="text-primary hover:underline"
+                            >
+                              Add one
+                            </button>
                           )}
-                        </div>
-                      </PropertyRow>
-                    )}
-
-                    {wasEdited && updatedAt && (
-                      <PropertyRow
-                        icon={<History className="h-3.5 w-3.5 text-muted-foreground" />}
-                        label="Last edited"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Avatar className="h-5 w-5 ring-1 ring-border/60 shrink-0">
-                            <AvatarImage src={updater?.avatar_url || undefined} alt={updaterName} />
-                            <AvatarFallback className="text-[9px] font-semibold">
-                              {getInitials(updaterName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-xs sm:text-sm text-foreground truncate">
-                            {updaterName}
-                          </span>
-                          <span className="text-[11px] text-muted-foreground shrink-0">
-                            · {formatDistanceToNow(updatedAt, { addSuffix: true })}
-                          </span>
-                        </div>
-                      </PropertyRow>
-                    )}
-                  </div>
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
+
+                {/* People rows — only shown in read mode */}
+                {!isEditing && (
+                  <div className="w-full px-4 sm:px-8 lg:px-12 pb-40">
+                    <div className="rounded-xl border border-border/40 bg-background/30 backdrop-blur-sm divide-y divide-border/30 overflow-hidden">
+                      {creatorId && (
+                        <PropertyRow
+                          icon={<UserIcon className="h-3.5 w-3.5 text-muted-foreground" />}
+                          label="Created by"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Avatar className="h-6 w-6 ring-1 ring-border/60 shrink-0">
+                              <AvatarImage src={creator?.avatar_url || undefined} alt={creatorName} />
+                              <AvatarFallback className="text-[10px] font-semibold">
+                                {getInitials(creatorName)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs sm:text-sm text-foreground truncate">
+                              {creatorName}
+                            </span>
+                            {createdAt && (
+                              <span className="text-[11px] text-muted-foreground shrink-0">
+                                · {format(createdAt, "MMM d, yyyy")}
+                              </span>
+                            )}
+                          </div>
+                        </PropertyRow>
+                      )}
+
+                      {wasEdited && updatedAt && (
+                        <PropertyRow
+                          icon={<History className="h-3.5 w-3.5 text-muted-foreground" />}
+                          label="Last edited"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Avatar className="h-5 w-5 ring-1 ring-border/60 shrink-0">
+                              <AvatarImage src={updater?.avatar_url || undefined} alt={updaterName} />
+                              <AvatarFallback className="text-[9px] font-semibold">
+                                {getInitials(updaterName)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs sm:text-sm text-foreground truncate">
+                              {updaterName}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground shrink-0">
+                              · {formatDistanceToNow(updatedAt, { addSuffix: true })}
+                            </span>
+                          </div>
+                        </PropertyRow>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Floating action button → opens the read-only metadata sheet */}
+              {/* Floating action button → opens metadata sheet */}
               <TaskMetaFab
                 onClick={() => setMetaOpen(true)}
                 startDate={startDate}
@@ -292,33 +479,37 @@ const TaskDetailsSidebar = ({
                 isAnytime={isAnytime}
                 completed={completed}
                 tagCount={tags.length}
+                color={color}
+                hasError={!!timeError}
                 className="bottom-24 sm:bottom-24"
               />
 
-              {/* Bottom action bar */}
-              <div className="flex-shrink-0 border-t border-border/50 bg-slate-100/80 dark:bg-slate-950/80 backdrop-blur-md px-4 sm:px-6 pt-3 pb-safe-or-4 sm:pb-3 flex items-center gap-2 flex-wrap">
-                <Button
-                  variant="outline"
-                  onClick={handleAddToReminders}
-                  disabled={isAddingReminder}
-                  className="min-h-11 text-sm px-4 gap-2"
-                >
-                  {isAddingReminder ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-4 w-4" />
-                  )}
-                  {isAddingReminder ? "Adding..." : "Add to Calendar"}
-                </Button>
-                {goalId && selectedTask ? (
-                  <TaskGoalActionsMenu
-                    task={selectedTask}
-                    sourceGoalId={goalId}
-                    label="More"
-                    triggerClassName="min-h-11 px-4 rounded-md text-sm border border-border bg-background hover:bg-accent text-foreground gap-2"
-                  />
-                ) : null}
-              </div>
+              {/* Bottom action bar — hidden while editing to keep focus on save/cancel */}
+              {!isEditing && (
+                <div className="flex-shrink-0 border-t border-border/50 bg-slate-100/80 dark:bg-slate-950/80 backdrop-blur-md px-4 sm:px-6 pt-3 pb-safe-or-4 sm:pb-3 flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    onClick={handleAddToReminders}
+                    disabled={isAddingReminder}
+                    className="min-h-11 text-sm px-4 gap-2"
+                  >
+                    {isAddingReminder ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    {isAddingReminder ? "Adding..." : "Add to Calendar"}
+                  </Button>
+                  {goalId && selectedTask ? (
+                    <TaskGoalActionsMenu
+                      task={selectedTask}
+                      sourceGoalId={goalId}
+                      label="More"
+                      triggerClassName="min-h-11 px-4 rounded-md text-sm border border-border bg-background hover:bg-accent text-foreground gap-2"
+                    />
+                  ) : null}
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center h-full p-6 sm:p-8 lg:p-12 text-center">
@@ -365,7 +556,17 @@ const TaskDetailsSidebar = ({
           completed={completed}
           color={color}
           tags={tags}
-          readOnly
+          timeError={timeError}
+          readOnly={!isEditing}
+          setStartDate={isEditing ? setStartDate : undefined}
+          setEndDate={isEditing ? setEndDate : undefined}
+          setDailyStart={isEditing ? setDailyStart : undefined}
+          setDailyEnd={isEditing ? setDailyEnd : undefined}
+          setIsAnytime={isEditing ? setIsAnytime : undefined}
+          setCompleted={isEditing ? setCompleted : undefined}
+          setColor={isEditing ? setColor : undefined}
+          setTags={isEditing ? setTags : undefined}
+          setTimeError={isEditing ? setTimeError : undefined}
         />
       )}
     </>
