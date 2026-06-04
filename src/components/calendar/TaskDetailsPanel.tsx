@@ -1,15 +1,12 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Task, TASK_COLORS } from "./types";
-import { format, isValid } from "date-fns";
+import { isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
   CheckCircle2,
   Circle,
-  Clock,
-  CalendarDays,
   Pencil,
   Trash2,
-  Tag,
   ChevronLeft,
   CalendarCheck,
   Loader2,
@@ -21,9 +18,9 @@ import CalendarOptionsDialog from "./CalendarOptionsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { MarkdownRenderer } from "../ui/MarkdownRenderer";
 import { cn } from "@/lib/utils";
-import { formatTaskDateRange, formatTaskTimeRange } from "./taskDateTime";
 import ShareTasksModal, { ShareableTask } from "@/components/dashboard/ShareTasksModal";
 import { TaskGoalActionsMenu } from "./TaskGoalActionsMenu";
+import TaskMetaSheet, { TaskMetaFab } from "./TaskMetaSheet";
 
 interface TaskDetailsPanelProps {
   selectedTask: Task | null;
@@ -55,6 +52,26 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   const [shareOpen, setShareOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [metaOpen, setMetaOpen] = useState(false);
+
+  // Derive meta-sheet values from the selected task. Always called so React
+  // hook order stays stable even when there's no task selected.
+  const startDate = useMemo(
+    () => (selectedTask?.start_date ? new Date(selectedTask.start_date) : new Date()),
+    [selectedTask?.start_date]
+  );
+  const endDate = useMemo(
+    () => (selectedTask?.end_date ? new Date(selectedTask.end_date) : startDate),
+    [selectedTask?.end_date, startDate]
+  );
+  const dailyStart = (selectedTask?.daily_start_time || "09:00").slice(0, 5);
+  const dailyEnd = (selectedTask?.daily_end_time || "10:00").slice(0, 5);
+  const isAnytime = !!selectedTask?.is_anytime || !selectedTask?.daily_start_time;
+  const completed = !!selectedTask?.completed;
+  const color = selectedTask?.color ?? null;
+  const tags = Array.isArray(selectedTask?.tags)
+    ? (selectedTask!.tags as string[]).filter((t): t is string => typeof t === "string")
+    : [];
 
   const handleAddToCalendar = async () => {
     if (!selectedTask) return;
@@ -75,7 +92,6 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
     }
   };
 
-  // ?? Empty state ????????????????????????????????????????????????????????????
   if (!selectedTask) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-4 p-8 text-center bg-background/30">
@@ -90,19 +106,11 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
     );
   }
 
-  // ?? Helpers ????????????????????????????????????????????????????????????????
-  const hasTime = !!(selectedTask.is_anytime || selectedTask.daily_start_time);
-
-  const createdAt = selectedTask.created_at ? new Date(selectedTask.created_at) : null;
-  const updatedAt = selectedTask.updated_at ? new Date(selectedTask.updated_at) : null;
-  const wasUpdated = updatedAt && isValid(updatedAt) && createdAt && Math.abs(updatedAt.getTime() - createdAt.getTime()) > 5000;
   const hasDescription = selectedTask.description && selectedTask.description !== selectedTask.title;
 
-  // ?? Main view ??????????????????????????????????????????????????????????????
   return (
-    <div className="w-full h-full flex flex-col bg-card/80 overflow-hidden">
-
-      {/* Header bar */}
+    <div className="w-full h-full flex flex-col bg-card/80 overflow-hidden relative">
+      {/* Top action bar — stays above the sticky title */}
       <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-border/60 bg-card/95 backdrop-blur-sm">
         {onClose && (
           <Button
@@ -130,6 +138,62 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
               : <CalendarCheck className="h-3.5 w-3.5" />}
             <span className="hidden md:inline">Calendar</span>
           </Button>
+
+          {/* Color picker — sits next to the Calendar button in the top bar
+              so the title row stays clean (only checkbox + title). */}
+          <div className="relative">
+            <button
+              type="button"
+              title="Change color"
+              onClick={() => setColorPickerOpen(o => !o)}
+              className="h-7 px-2.5 rounded-md inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            >
+              <span
+                className="h-3.5 w-3.5 rounded-full border border-border/60 shadow-sm"
+                style={{
+                  backgroundColor: selectedTask.color ?? 'transparent',
+                  outline: selectedTask.color ? undefined : '2px dashed hsl(var(--muted-foreground)/0.4)',
+                }}
+              />
+              <span className="hidden md:inline">
+                {TASK_COLORS.find(c => c.hex === selectedTask.color)?.label ?? 'Color'}
+              </span>
+            </button>
+            <AnimatePresence>
+              {colorPickerOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.95 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute right-0 top-9 z-30 flex flex-wrap gap-2 p-2.5 rounded-xl border border-border/60 bg-popover shadow-lg"
+                >
+                  {TASK_COLORS.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      title={c.label}
+                      onClick={() => {
+                        onColorChange?.(selectedTask.id, c.hex);
+                        setColorPickerOpen(false);
+                      }}
+                      className={cn(
+                        "h-5 w-5 rounded-full border-2 transition-all hover:scale-110",
+                        selectedTask.color === c.hex
+                          ? "border-foreground scale-110 shadow-sm"
+                          : "border-transparent hover:border-muted-foreground/50",
+                      )}
+                      style={{
+                        backgroundColor: c.hex ?? 'transparent',
+                        outline: c.hex ? undefined : '2px dashed hsl(var(--muted-foreground)/0.4)',
+                      }}
+                    />
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           <Button
             variant="ghost"
             size="sm"
@@ -149,11 +213,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
             <span className="hidden md:inline">Share</span>
           </Button>
           {goalId ? (
-            <TaskGoalActionsMenu
-              task={selectedTask}
-              sourceGoalId={goalId}
-              label="More"
-            />
+            <TaskGoalActionsMenu task={selectedTask} sourceGoalId={goalId} label="More" />
           ) : null}
           <Button
             variant="ghost"
@@ -167,7 +227,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
         </div>
       </div>
 
-      {/* ?? Scrollable body ?? */}
+      {/* Scrollable body — title sticks at the top while description scrolls */}
       <div className="flex-1 overflow-y-auto">
         <AnimatePresence mode="wait">
           <motion.div
@@ -176,181 +236,61 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="max-w-2xl mx-auto px-6 lg:px-10 py-8 space-y-7"
           >
-
-            {/* ?? Title row ?? */}
-            <div className="flex items-start gap-3">
-              <button
-                onClick={() => onToggleTaskCompletion(selectedTask.id)}
-                className={cn(
-                  "mt-1.5 shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-200",
-                  selectedTask.completed
-                    ? "border-green-500 bg-green-500/15 text-green-700 dark:text-green-400"
-                    : "border-border/80 bg-background/90 hover:border-primary"
-                )}
-                title={selectedTask.completed ? "Mark incomplete" : "Mark complete"}
-              >
-                {selectedTask.completed && <CheckCircle2 className="h-3 w-3" />}
-              </button>
-
+            {/* Sticky title row */}
+            <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border/60 px-6 lg:px-10 pt-6 pb-4">
               <h1
                 className={cn(
-                  "text-2xl lg:text-3xl font-bold leading-snug text-foreground break-words",
+                  "w-full text-base lg:text-lg font-semibold leading-snug text-foreground break-words",
                   selectedTask.completed && "line-through text-muted-foreground"
                 )}
               >
                 {selectedTask.title || "Untitled Task"}
               </h1>
-
-              {/* Inline color picker */}
-              <div className="relative mt-2">
-                <button
-                  type="button"
-                  title="Change color"
-                  onClick={() => setColorPickerOpen(o => !o)}
-                  className="flex items-center gap-1.5 group"
-                >
-                  <span
-                    className="h-4 w-4 rounded-full border-2 border-border/60 shadow-sm transition-transform group-hover:scale-110"
-                    style={{
-                      backgroundColor: selectedTask.color ?? 'transparent',
-                      outline: selectedTask.color ? undefined : '2px dashed hsl(var(--muted-foreground)/0.4)',
-                    }}
-                  />
-                  <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-                    {TASK_COLORS.find(c => c.hex === selectedTask.color)?.label ?? 'Color'}
-                  </span>
-                </button>
-
-                <AnimatePresence>
-                  {colorPickerOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -6, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -6, scale: 0.95 }}
-                      transition={{ duration: 0.12 }}
-                      className="absolute left-0 top-6 z-20 flex flex-wrap gap-2 p-2.5 rounded-xl border border-border/60 bg-popover shadow-lg"
-                    >
-                      {TASK_COLORS.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          title={c.label}
-                          onClick={() => {
-                            onColorChange?.(selectedTask.id, c.hex);
-                            setColorPickerOpen(false);
-                          }}
-                          className={cn(
-                            "h-5 w-5 rounded-full border-2 transition-all hover:scale-110",
-                            selectedTask.color === c.hex
-                              ? "border-foreground scale-110 shadow-sm"
-                              : "border-transparent hover:border-muted-foreground/50",
-                          )}
-                          style={{
-                            backgroundColor: c.hex ?? 'transparent',
-                            outline: c.hex ? undefined : '2px dashed hsl(var(--muted-foreground)/0.4)',
-                          }}
-                        />
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
             </div>
 
-            {/* ?? Properties table ?? */}
-            <div className="rounded-xl border border-border/50 overflow-hidden divide-y divide-border/30">
-
-              <PropertyRow label="Status">
-                <button
-                  onClick={() => onToggleTaskCompletion(selectedTask.id)}
-                  className={cn(
-                    "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
-                    selectedTask.completed
-                      ? "bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-500/20"
-                      : "bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
-                  )}
-                >
-                  {selectedTask.completed ? (
-                    <><CheckCircle2 className="h-3 w-3" /> Completed</>
-                  ) : (
-                    <><Circle className="h-3 w-3" /> In Progress</>
-                  )}
-                </button>
-              </PropertyRow>
-
-              <PropertyRow label="Date">
-                <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                  {formatTaskDateRange(selectedTask.start_date, selectedTask.end_date)}
-                </span>
-              </PropertyRow>
-
-              {hasTime && (
-                <PropertyRow label="Time">
-                  <span className="flex items-center gap-1.5 text-sm text-foreground">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    {formatTaskTimeRange(
-                      selectedTask.daily_start_time,
-                      selectedTask.daily_end_time,
-                      selectedTask.is_anytime,
-                    )}
-                  </span>
-                </PropertyRow>
-              )}
-
-              {selectedTask.tags && selectedTask.tags.length > 0 && (
-                <PropertyRow label="Tags">
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedTask.tags.map((tag, i) => (
-                      <span
-                        key={i}
-                        className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary"
-                      >
-                        <Tag className="h-2.5 w-2.5" />
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </PropertyRow>
-              )}
-
-              {createdAt && isValid(createdAt) && (
-                <PropertyRow label="Created">
-                  <span className="text-sm text-muted-foreground">
-                    {format(createdAt, "MMM d, yyyy 'at' h:mm a")}
-                  </span>
-                </PropertyRow>
-              )}
-              {wasUpdated && (
-                <PropertyRow label="Updated">
-                  <span className="text-sm text-muted-foreground">
-                    {format(updatedAt!, "MMM d, yyyy 'at' h:mm a")}
-                  </span>
-                </PropertyRow>
-              )}
-            </div>
-
-            {/* ?? Description ?? */}
-            {hasDescription && (
-              <div className="space-y-2.5">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Description</h2>
-                <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed rounded-xl border border-border/40 bg-muted/20 px-5 py-4">
+            {/* Description — full-bleed main content. Extra bottom padding
+                leaves room for the floating action button + footer. */}
+            <div className="w-full pt-4 pb-32">
+              {hasDescription ? (
+                <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed bg-muted/20 px-6 lg:px-10 py-4">
                   <MarkdownRenderer
                     content={selectedTask.description}
                     isStreaming={false}
                     isLoading={false}
                   />
                 </div>
-              </div>
-            )}
-
+              ) : (
+                <p className="text-sm text-muted-foreground italic px-6 lg:px-10">
+                  No description.{" "}
+                  <button
+                    type="button"
+                    onClick={() => onEditTask(selectedTask)}
+                    className="text-primary hover:underline"
+                  >
+                    Add one
+                  </button>
+                </p>
+              )}
+            </div>
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* ?? Footer actions ?? */}
+      {/* Floating action button — opens the read-only metadata sheet */}
+      <TaskMetaFab
+        onClick={() => setMetaOpen(true)}
+        startDate={startDate}
+        endDate={endDate}
+        dailyStart={dailyStart}
+        dailyEnd={dailyEnd}
+        isAnytime={isAnytime}
+        completed={completed}
+        tagCount={tags.length}
+        className="bottom-20"
+      />
+
+      {/* Footer actions */}
       <div className="flex-shrink-0 border-t border-border/50 px-6 py-3 flex items-center justify-between bg-background/40 backdrop-blur-sm">
         <button
           onClick={() => onToggleTaskCompletion(selectedTask.id)}
@@ -393,16 +333,22 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
         onOpenChange={setCalendarOpen}
         task={selectedTask}
       />
+
+      <TaskMetaSheet
+        open={metaOpen}
+        onOpenChange={setMetaOpen}
+        startDate={startDate}
+        endDate={endDate}
+        dailyStart={dailyStart}
+        dailyEnd={dailyEnd}
+        isAnytime={isAnytime}
+        completed={completed}
+        color={color}
+        tags={tags}
+        readOnly
+      />
     </div>
   );
 };
-
-// ?? Property row helper ????????????????????????????????????????????????????
-const PropertyRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="flex items-center min-h-[42px] px-4 bg-background/60 hover:bg-muted/30 transition-colors">
-    <span className="w-20 shrink-0 text-xs font-medium text-muted-foreground">{label}</span>
-    <div className="flex-1 py-2">{children}</div>
-  </div>
-);
 
 export default TaskDetailsPanel;

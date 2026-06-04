@@ -34,6 +34,7 @@ interface MarkdownEditorProps {
   onChange: (markdown: string) => void;
   placeholder?: string;
   className?: string;
+  contentClassName?: string;
   minHeight?: string;
 }
 
@@ -183,6 +184,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   onChange,
   placeholder = "Write something, or paste an image…",
   className,
+  contentClassName,
   minHeight = "360px",
 }) => {
   const { toast } = useToast();
@@ -328,7 +330,10 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         onChange={onFileChosen}
       />
       <div
-        className="prose prose-sm dark:prose-invert max-w-none px-4 py-3 leading-relaxed text-[15px] focus-within:outline-none"
+        className={cn(
+          "prose prose-sm dark:prose-invert max-w-none px-4 py-3 leading-relaxed text-[15px] focus-within:outline-none",
+          contentClassName
+        )}
         style={{ minHeight }}
         onClick={() => editor.chain().focus().run()}
       >

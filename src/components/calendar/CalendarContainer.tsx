@@ -76,7 +76,7 @@ const CalendarContainer = ({
             onClick={onOpenAddTaskDialog}
             variant="orbit"
             size="icon"
-            className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] z-50 hover:scale-110 hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] transition-all duration-300 border border-white/10"
+            className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] z-40 hover:scale-110 hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] transition-all duration-300 border border-white/10"
           >
             <Plus className="h-6 w-6" />
             <span className="sr-only">Add Task</span>
