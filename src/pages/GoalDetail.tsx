@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLoaderData, useSearch, useParams, useNavigate } from '@tanstack/react-router';
 import { supabase } from '@/integrations/supabase/client';
 import Calendar from '@/components/Calendar';
@@ -16,7 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from '@/lib/utils';
-import { Menu, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2, PanelLeftClose, PanelLeftOpen, Search, Trash2, UserPlus, Settings2, Table2 } from 'lucide-react';
+import { Menu, X, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2, PanelLeftClose, PanelLeftOpen, Search, Trash2, UserPlus, Settings2, Table2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { searchUsers, sendInvitation, SearchUser } from '@/services/internalNotifications';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
@@ -108,6 +109,33 @@ const GoalDetail: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [autoOpenTaskId, setAutoOpenTaskId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isPillHidden, setIsPillHidden] = useState(false);
+  const mainScrollRef = useRef<HTMLElement>(null);
+
+  // Auto-hide the floating Menu pill while the user is scrolling down so it
+  // never sits on top of the last bit of content. Reappears as soon as the
+  // scroll direction flips upward. Stays visible whenever the menu popover
+  // is open so the trigger isn't ripped out from under an active interaction.
+  useEffect(() => {
+    const el = mainScrollRef.current;
+    if (!el) return;
+    let lastY = el.scrollTop;
+    const threshold = 8;
+    const onScroll = () => {
+      const y = el.scrollTop;
+      const delta = y - lastY;
+      if (Math.abs(delta) < threshold) return;
+      // Stay visible near the top so it's always available at first paint.
+      if (y < 80) {
+        setIsPillHidden(false);
+      } else {
+        setIsPillHidden(delta > 0);
+      }
+      lastY = y;
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMembersSheetOpen, setIsMembersSheetOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -482,7 +510,8 @@ const GoalDetail: React.FC = () => {
           {/* Header */}
           <header className="sticky top-0 z-40 border-b border-border/50 bg-slate-100/80 dark:bg-slate-950/80 backdrop-blur-xl">
             <div className="flex h-12 items-center gap-2 px-3 sm:px-4">
-              {/* Mobile: back + hamburger */}
+              {/* Mobile: back button only — the menu lives in a Vercel-style
+                  floating pill at the bottom-center of the screen (below). */}
               <div className="flex items-center gap-1 lg:hidden">
                 <Button
                   variant="ghost"
@@ -492,59 +521,6 @@ const GoalDetail: React.FC = () => {
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Menu className="h-4 w-4" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="left" className="p-0 w-72 bg-slate-100/95 dark:bg-slate-950/95 border-border/60">
-                    <div className="flex flex-col h-full">
-                      <div className="p-4 border-b border-border/50">
-                        <GoalSwitcher useSheet />
-                      </div>
-                      <div className="px-4 py-3 border-b border-border/50">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs text-muted-foreground">Progress</span>
-                          <span className="text-xs font-semibold">{Math.round(progress)}%</span>
-                        </div>
-                        <Progress value={progress} className="h-1" />
-                        <p className="text-[11px] text-muted-foreground mt-1">{completedTasksCount} / {tasks.length} tasks</p>
-                      </div>
-                      <nav className="flex-1 p-2 space-y-0.5">
-                        {navItems.map((item) => (
-                          <button
-                            key={item.id}
-                            onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }}
-                            className={cn(
-                              "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                              activeTab === item.id ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                            )}
-                          >
-                            <item.icon className="h-4 w-4" />
-                            <span>{item.label}</span>
-                          </button>
-                        ))}
-                      </nav>
-                      <div className="px-2 py-2 border-t border-border/50">
-                        <button
-                          onClick={() => { setIsSidebarOpen(false); handleOpenMembersSheet(); }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                        >
-                          <Users className="h-4 w-4 shrink-0" />
-                          <span className="flex-1 text-left">Members</span>
-                          <span className="text-[11px] tabular-nums bg-accent px-1.5 py-0.5 rounded-sm">{members.length}</span>
-                          <ChevronRight className="h-3.5 w-3.5 opacity-40" />
-                        </button>
-                      </div>
-                      {user?.id && (
-                        <div className="px-2 py-2 border-t border-border/50">
-                          <ThemeSelector userId={user.id} currentThemeId={currentTheme?.id} onThemeSelect={handleThemeChange} />
-                        </div>
-                      )}
-                    </div>
-                  </SheetContent>
-                </Sheet>
               </div>
 
               {/* Desktop: back + collapse controls */}
@@ -597,7 +573,7 @@ const GoalDetail: React.FC = () => {
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          <main ref={mainScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
             <AnimatePresence mode="wait">
               {activeTab === 'overview' && (
                 <motion.div
@@ -704,6 +680,97 @@ const GoalDetail: React.FC = () => {
           </main>
         </div>
       </div>
+
+      {/* Mobile nav — Vercel-style floating "Menu" pill anchored at the
+          bottom-center that opens a popover ABOVE itself (not a sheet).
+          The hamburger flips to an X while the popover is open. */}
+      {isMobile && (
+        <Popover open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "lg:hidden fixed left-1/2 z-40",
+                "bottom-[calc(env(safe-area-inset-bottom)+1rem)]",
+                "inline-flex items-center gap-2 px-4 py-2.5 rounded-full",
+                "bg-foreground/95 text-background backdrop-blur-xl",
+                "shadow-lg shadow-foreground/20 border border-border/40",
+                "text-xs font-medium tracking-tight",
+                "active:scale-100 transition-all duration-300",
+                // Slide off-screen on scroll-down; stay put while the menu
+                // popover is open so the trigger never disappears mid-tap.
+                isPillHidden && !isSidebarOpen
+                  ? "-translate-x-1/2 translate-y-[calc(100%+1.5rem)] opacity-0 pointer-events-none"
+                  : "-translate-x-1/2 translate-y-0 opacity-100 hover:scale-[1.02]"
+              )}
+              aria-label={isSidebarOpen ? "Close navigation menu" : "Open navigation menu"}
+            >
+              {isSidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+              <span>Menu</span>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            side="top"
+            align="center"
+            sideOffset={12}
+            className="w-[92vw] max-w-sm p-0 z-50 bg-slate-100/95 dark:bg-slate-950/95 border-border/60 shadow-2xl rounded-2xl overflow-hidden"
+          >
+            <div className="flex flex-col max-h-[70vh]">
+              {/* Goal switcher — dropdown (Popover/Command) variant */}
+              <div className="p-3 border-b border-border/50 shrink-0">
+                <GoalSwitcher />
+              </div>
+
+              {/* Progress */}
+              <div className="px-4 py-3 border-b border-border/50 shrink-0">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-muted-foreground">Progress</span>
+                  <span className="text-xs font-semibold">{Math.round(progress)}%</span>
+                </div>
+                <Progress value={progress} className="h-1" />
+                <p className="text-[11px] text-muted-foreground mt-1">{completedTasksCount} / {tasks.length} tasks</p>
+              </div>
+
+              {/* Tabs */}
+              <nav className="p-2 space-y-0.5 overflow-y-auto">
+                {navItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                      activeTab === item.id ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </nav>
+
+              {/* Members */}
+              <div className="px-2 py-2 border-t border-border/50 shrink-0">
+                <button
+                  onClick={() => { setIsSidebarOpen(false); handleOpenMembersSheet(); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                >
+                  <Users className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 text-left">Members</span>
+                  <span className="text-[11px] tabular-nums bg-accent px-1.5 py-0.5 rounded-sm">{members.length}</span>
+                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
+                </button>
+              </div>
+
+              {/* Theme */}
+              {user?.id && (
+                <div className="px-2 py-2 border-t border-border/50 shrink-0">
+                  <ThemeSelector userId={user.id} currentThemeId={currentTheme?.id} onThemeSelect={handleThemeChange} />
+                </div>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
 
       {/* Chat Widget */}
       <GoalChatWidgetErrorBoundary>

@@ -11,7 +11,11 @@
       "Bash(rm -rf src/data/goalTemplates)",
       "Bash(rm src/types/goalTemplate.ts)",
       "PowerShell(.\\\\deploy.ps1 \"Survey-style goal intake wizard, iPhone Shortcut generator, Notion-style calendar dialog, mobile safe-area + tab/z-index fixes\")",
-      "PowerShell(.\\\\deploy.ps1 \"Notification switch state fix, iPhone Shortcut prod URL + clearer iOS setup steps\")"
+      "PowerShell(.\\\\deploy.ps1 \"Notification switch state fix, iPhone Shortcut prod URL + clearer iOS setup steps\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "PowerShell(.\\\\deploy.ps1 \"Goal Detail mobile nav: floating Menu pill with scroll-aware hide + Popover menu\")"
     ]
   }
 }
