@@ -30,52 +30,95 @@ const CalendarHeader = ({
 
   return (
     <nav
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-2"
       role="navigation"
       aria-label="Calendar navigation"
     >
-      <div className="flex items-center justify-between gap-3 p-1">
-        {/* Left: Date Navigation */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center bg-card/40 rounded-xl p-1 border border-border/50 shadow-2xl backdrop-blur-xl">
-            <Button variant="ghost" size="icon" onClick={onPreviousMonth} className="h-8 w-8 hover:bg-muted/50 text-muted-foreground hover:text-primary transition-colors">
-              <ChevronLeft className="h-4 w-4" />
+      {isMobile ? (
+        /* ── Mobile header: month title centered, nav on sides ── */
+        <div className="flex items-center justify-between px-1 py-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onPreviousMonth}
+            className="h-10 w-10 rounded-2xl hover:bg-muted/60 text-muted-foreground hover:text-primary transition-colors active:scale-95"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+
+          <button
+            onClick={onGoToToday}
+            className="flex flex-col items-center gap-0.5 active:scale-95 transition-transform"
+          >
+            <span className="text-lg font-black text-foreground tracking-tight leading-none">
+              {format(currentMonth, "MMMM")}
+            </span>
+            <span className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase">
+              {format(currentMonth, "yyyy")}
+            </span>
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onGoToToday}
+              className="h-8 w-8 rounded-xl border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+              aria-label="Go to today"
+            >
+              <Home className="h-3.5 w-3.5" />
             </Button>
-            <div className="w-px h-4 bg-border/50 mx-1" />
-            <Button variant="ghost" size="icon" onClick={onNextMonth} className="h-8 w-8 hover:bg-muted/50 text-muted-foreground hover:text-primary transition-colors">
-              <ChevronRight className="h-4 w-4" />
+            <Button
+              onClick={onOpenAddTaskDialog}
+              size="icon"
+              className="h-10 w-10 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg transition-all active:scale-95 text-primary-foreground"
+              aria-label="Add task"
+            >
+              <CalendarIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onNextMonth}
+              className="h-10 w-10 rounded-2xl hover:bg-muted/60 text-muted-foreground hover:text-primary transition-colors active:scale-95"
+            >
+              <ChevronRight className="h-5 w-5" />
             </Button>
           </div>
-
-          <h2 className="text-xl sm:text-2xl font-black min-w-[140px] text-foreground uppercase tracking-[0.1em]">
-            {format(currentMonth, "MMMM yyyy")}
-          </h2>
         </div>
-
-        {/* Right: Actions */}
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={onGoToToday}
-            className="hidden sm:flex h-9 rounded-xl border border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_6px_16px_-8px_hsl(var(--primary)/0.9)] transition-all font-bold uppercase tracking-widest text-[10px]"
-          >
-            <Home className="h-3.5 w-3.5 mr-2 text-primary-foreground" />
-            Today
-          </Button>
-          <Button
-            size="icon"
-            onClick={onGoToToday}
-            className="sm:hidden h-9 w-9 rounded-xl border border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_6px_16px_-8px_hsl(var(--primary)/0.9)]"
-            aria-label="Go to today"
-          >
-            <Home className="h-4 w-4" />
-          </Button>
-          <Button onClick={onOpenAddTaskDialog} size="sm" className="h-9 rounded-xl bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all font-bold uppercase tracking-widest text-[10px] px-5 text-primary-foreground">
-            <CalendarIcon className="h-3.5 w-3.5 mr-2" />
-            {isMobile ? "Add" : "Add Task"}
-          </Button>
+      ) : (
+        /* ── Desktop header ── */
+        <div className="flex items-center justify-between gap-3 p-1">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center bg-card/40 rounded-xl p-1 border border-border/50 shadow-2xl backdrop-blur-xl">
+              <Button variant="ghost" size="icon" onClick={onPreviousMonth} className="h-8 w-8 hover:bg-muted/50 text-muted-foreground hover:text-primary transition-colors">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="w-px h-4 bg-border/50 mx-1" />
+              <Button variant="ghost" size="icon" onClick={onNextMonth} className="h-8 w-8 hover:bg-muted/50 text-muted-foreground hover:text-primary transition-colors">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black min-w-[140px] text-foreground uppercase tracking-[0.1em]">
+              {format(currentMonth, "MMMM yyyy")}
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={onGoToToday}
+              className="h-9 rounded-xl border border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_6px_16px_-8px_hsl(var(--primary)/0.9)] transition-all font-bold uppercase tracking-widest text-[10px]"
+            >
+              <Home className="h-3.5 w-3.5 mr-2 text-primary-foreground" />
+              Today
+            </Button>
+            <Button onClick={onOpenAddTaskDialog} size="sm" className="h-9 rounded-xl bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all font-bold uppercase tracking-widest text-[10px] px-5 text-primary-foreground">
+              <CalendarIcon className="h-3.5 w-3.5 mr-2" />
+              Add Task
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Optional: Spending Limit / Progress (Glassmorphic Card) */}
       {dailySpendingLimit && (

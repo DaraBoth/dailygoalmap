@@ -638,7 +638,10 @@ const Calendar = ({
             />
           </div>
 
-          <div className="pb-safe-or-6 mt-2 sm:mt-3">
+          {/* ── Divider between calendar and task list ── */}
+          <div className="mx-4 my-1 border-t border-border/40" />
+
+          <div className="pb-safe-or-6">
             <TaskList
               selectedDate={selectedDate}
               tasks={currentDateTasks}

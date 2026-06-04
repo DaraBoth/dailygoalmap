@@ -72,7 +72,7 @@ const CalendarDisplay = ({
 
         {/* Calendar Grid Container */}
         <div className="flex-1 min-h-0">
-          <div className="w-full">
+          <div className="w-full h-full">
             <CalendarGrid
               currentMonth={currentMonth}
               selectedDate={selectedDate}

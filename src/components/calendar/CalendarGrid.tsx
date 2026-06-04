@@ -5,7 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const DAY_NUM_ROW_H = 32;  // px — row 1: day-number badges
+const DAY_NUM_ROW_H = 36;  // px — row 1: day-number badges (slightly taller for mobile tap targets)
 const RANGE_ROW_H   = 22;  // px — rows 2…N: one per lane
 const RANGE_ROW_GAP =  4;  // px — vertical gap inside each lane
 
@@ -221,8 +221,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             <div
               key={day}
               className={cn(
-                "py-3 md:py-4 font-black text-[10px] uppercase tracking-[0.2em]",
-                index === 0 || index === 6 ? "text-muted-foreground/60" : "text-muted-foreground",
+                "py-2.5 md:py-4 font-black text-[10px] uppercase tracking-[0.15em]",
+                index === 0 || index === 6 ? "text-muted-foreground/50" : "text-muted-foreground/80",
               )}
             >
               {isMobile ? day.charAt(0) : day}
@@ -237,10 +237,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             //   row 1            = day-number badges     (fixed DAY_NUM_ROW_H px)
             //   rows 2…laneCount+1 = one range-bar lane each (RANGE_ROW_H px)
             //   last row         = normal task chips     (1fr)
-            const taskGridRow = week.laneCount + 2;
-            const gridTemplateRows = week.laneCount > 0
-              ? `${DAY_NUM_ROW_H}px repeat(${week.laneCount}, ${RANGE_ROW_H}px) minmax(60px, 1fr)`
-              : `${DAY_NUM_ROW_H}px minmax(60px, 1fr)`;
+            // On mobile, range bars are hidden so don't allocate lane rows
+            const effectiveLaneCount = isMobile ? 0 : week.laneCount;
+            const taskGridRow = effectiveLaneCount + 2;
+            const gridTemplateRows = effectiveLaneCount > 0
+              ? `${DAY_NUM_ROW_H}px repeat(${effectiveLaneCount}, ${RANGE_ROW_H}px) minmax(${isMobile ? 44 : 60}px, 1fr)`
+              : `${DAY_NUM_ROW_H}px minmax(${isMobile ? 44 : 60}px, 1fr)`;
 
             return (
               <div
@@ -293,11 +295,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                       style={{ gridColumn: col + 1, gridRow: 1, zIndex: 1 }}
                     >
                       <span className={cn(
-                        "h-7 w-7 flex items-center justify-center rounded-lg text-[11px] font-black transition-all",
-                        today   && !selected && "bg-primary text-primary-foreground shadow-lg",
-                        selected              && "bg-primary/90 text-primary-foreground shadow-lg scale-110",
-                        !today  && !selected && inMonth  && "text-muted-foreground hover:text-foreground",
-                        !today  && !selected && !inMonth && "text-muted-foreground/30",
+                        "flex items-center justify-center rounded-full text-[12px] font-black transition-all duration-200",
+                        isMobile ? "h-8 w-8" : "h-7 w-7",
+                        today   && !selected && "ring-2 ring-primary text-primary font-black",
+                        selected              && "bg-primary text-primary-foreground shadow-lg scale-110 ring-2 ring-primary/40",
+                        !today  && !selected && inMonth  && "text-foreground/80",
+                        !today  && !selected && !inMonth && "text-muted-foreground/25",
                       )}>
                         {date.getDate()}
                       </span>
@@ -361,7 +364,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     : [];
                   // Find highest lane index covering this column so chips start immediately below it.
                   // colStart/colEnd are 1-based column numbers; col here is 0-based.
-                  const colSegs = week.segs.filter(
+                  // On mobile, lanes are hidden so chips always start at row 2.
+                  const colSegs = isMobile ? [] : week.segs.filter(
                     (seg) => seg.colStart <= col + 1 && col + 1 < seg.colEnd,
                   );
                   const maxLaneInCol = colSegs.length > 0
@@ -394,11 +398,29 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                             </div>
                           ) : (
                             <>
-                              <div className="sm:hidden flex justify-center gap-0.5 h-1.5 flex-wrap px-1 pt-1">
-                                {normalTasks.slice(0, 4).map((task, i) => (
-                                  <div key={i} className={cn("h-1 w-1 rounded-full", task.completed ? "bg-muted-foreground/40" : "bg-primary")} />
-                                ))}
-                                {normalTasks.length > 4 && <div className="h-1 w-1 rounded-full bg-muted-foreground" />}
+                              <div className="sm:hidden flex flex-col items-center gap-0.5 pt-0.5 px-0.5">
+                                {/* Task dots — colored when task has a color */}
+                                <div className="flex justify-center flex-wrap gap-[3px]">
+                                  {normalTasks.slice(0, 3).map((task, i) => (
+                                    <div
+                                      key={i}
+                                      className={cn(
+                                        "h-[5px] w-[5px] rounded-full transition-all",
+                                        task.completed ? "opacity-40" : "opacity-90",
+                                      )}
+                                      style={{ backgroundColor: task.color ?? (task.completed ? 'hsl(var(--muted-foreground))' : 'hsl(var(--primary))') }}
+                                    />
+                                  ))}
+                                  {normalTasks.length > 3 && (
+                                    <div className="h-[5px] w-[5px] rounded-full bg-muted-foreground/50" />
+                                  )}
+                                </div>
+                                {/* Task count badge for days with many tasks */}
+                                {normalTasks.length > 3 && (
+                                  <span className="text-[8px] font-bold text-muted-foreground leading-none">
+                                    {normalTasks.length}
+                                  </span>
+                                )}
                               </div>
                               <div
                                 className="hidden sm:flex flex-col gap-0.5 overflow-hidden p-0.5"

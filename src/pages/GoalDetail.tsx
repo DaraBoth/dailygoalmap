@@ -693,8 +693,8 @@ const GoalDetail: React.FC = () => {
                 "lg:hidden fixed left-1/2 z-40",
                 "bottom-[calc(env(safe-area-inset-bottom)+1rem)]",
                 "inline-flex items-center gap-2 px-4 py-2.5 rounded-full",
-                "bg-foreground/95 text-background backdrop-blur-xl",
-                "shadow-lg shadow-foreground/20 border border-border/40",
+                "bg-card/95 text-foreground backdrop-blur-xl",
+                "shadow-lg shadow-black/20 border border-border/60",
                 "text-xs font-medium tracking-tight",
                 "active:scale-100 transition-all duration-300",
                 // Slide off-screen on scroll-down; stay put while the menu
