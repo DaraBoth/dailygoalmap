@@ -429,9 +429,9 @@ const GoalDetail: React.FC = () => {
         )}>
           <div className="p-2 border-b border-border/50">
             {!isSidebarCollapsed ? (
-              <GoalSwitcher useSheet />
+              <GoalSwitcher />
             ) : (
-              <GoalSwitcher useSheet collapsed />
+              <GoalSwitcher collapsed />
             )}
           </div>
 

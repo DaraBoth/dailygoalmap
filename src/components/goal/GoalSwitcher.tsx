@@ -130,15 +130,21 @@ export function GoalSwitcher({ className, useSheet = false, collapsed = false }:
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className={cn("w-full justify-between h-12 bg-accent/50 border-border hover:bg-accent text-left font-normal backdrop-blur-md pr-8", className)}
+                    className={cn(
+                        collapsed
+                            ? "w-full h-10 px-0 justify-center bg-accent/40 border-border hover:bg-accent"
+                            : "w-full justify-between h-12 bg-accent/50 border-border hover:bg-accent text-left font-normal backdrop-blur-md pr-8",
+                        className
+                    )}
+                    title={collapsed ? (selectedGoal?.title || 'Switch goal') : undefined}
                 >
-                    <div className="flex items-center gap-2 truncate">
-                        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-indigo-500/20 text-indigo-400">
+                    <div className={cn("flex items-center gap-2 truncate", collapsed && "justify-center")}>
+                        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-indigo-500/20 text-indigo-400 shrink-0">
                             <Rocket className="w-3.5 h-3.5" />
                         </div>
-                        <span className="truncate font-medium">{selectedGoal?.title || "Select goal..."}</span>
+                        {!collapsed && <span className="truncate font-medium">{selectedGoal?.title || "Select goal..."}</span>}
                     </div>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    {!collapsed && <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-background/95 backdrop-blur-xl border-border/50">

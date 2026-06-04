@@ -15,7 +15,9 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "PowerShell(.\\\\deploy.ps1 \"Goal Detail mobile nav: floating Menu pill with scroll-aware hide + Popover menu\")"
+      "PowerShell(.\\\\deploy.ps1 \"Goal Detail mobile nav: floating Menu pill with scroll-aware hide + Popover menu\")",
+      "Bash(pnpm --version)",
+      "PowerShell(.\\\\deploy.ps1 \"Goal switcher dropdown on desktop sidebar + Notion-style TipTap editor with BubbleMenu/FloatingMenu\")"
     ]
   }
 }

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import { BubbleMenu, FloatingMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
@@ -23,6 +24,7 @@ import {
   Link as LinkIcon,
   Image as ImageIcon,
   Loader2,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uploadTaskImage } from "./taskAttachments";
@@ -40,7 +42,12 @@ interface MarkdownEditorProps {
 
 const lowlight = createLowlight(common);
 
-type ToolbarBtnProps = {
+// ── Contextual menus (Notion-style) ──────────────────────────────────────────
+// BubbleMenu appears on text selection with inline formatting actions;
+// FloatingMenu appears on an empty paragraph with a "+ Add block" strip.
+// Both replace what was previously a persistent top toolbar.
+
+type MenuBtnProps = {
   onClick: () => void;
   active?: boolean;
   disabled?: boolean;
@@ -48,7 +55,7 @@ type ToolbarBtnProps = {
   children: React.ReactNode;
 };
 
-const ToolbarBtn: React.FC<ToolbarBtnProps> = ({ onClick, active, disabled, title, children }) => (
+const MenuBtn: React.FC<MenuBtnProps> = ({ onClick, active, disabled, title, children }) => (
   <button
     type="button"
     onClick={(e) => {
@@ -60,129 +67,22 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({ onClick, active, disabled, titl
     title={title}
     aria-label={title}
     className={cn(
-      "inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+      "inline-flex items-center justify-center h-7 w-7 rounded-md transition-colors",
+      "text-foreground/80 hover:text-foreground hover:bg-accent",
       active && "bg-accent text-foreground",
-      disabled && "opacity-50 cursor-not-allowed"
+      disabled && "opacity-40 cursor-not-allowed"
     )}
   >
     {children}
   </button>
 );
 
-const Divider: React.FC = () => <div className="mx-1 h-5 w-px bg-border" aria-hidden />;
-
-const Toolbar: React.FC<{
-  editor: Editor;
-  onPickImage: () => void;
-  isUploadingImage: boolean;
-}> = ({ editor, onPickImage, isUploadingImage }) => {
-  const setLink = () => {
-    const prev = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("Link URL", prev ?? "https://");
-    if (url === null) return;
-    if (url.trim() === "") {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
-      return;
-    }
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url.trim() }).run();
-  };
-
-  return (
-    <div className="flex items-center gap-0.5 border-b border-border/60 bg-muted/30 px-2 py-1.5 rounded-t-md overflow-x-auto no-scrollbar md:flex-wrap md:overflow-visible whitespace-nowrap">
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-        active={editor.isActive("heading", { level: 1 })}
-        title="Heading 1"
-      >
-        <Heading1 className="h-4 w-4" />
-      </ToolbarBtn>
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        active={editor.isActive("heading", { level: 2 })}
-        title="Heading 2"
-      >
-        <Heading2 className="h-4 w-4" />
-      </ToolbarBtn>
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-        active={editor.isActive("heading", { level: 3 })}
-        title="Heading 3"
-      >
-        <Heading3 className="h-4 w-4" />
-      </ToolbarBtn>
-      <Divider />
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        active={editor.isActive("bold")}
-        title="Bold"
-      >
-        <Bold className="h-4 w-4" />
-      </ToolbarBtn>
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        active={editor.isActive("italic")}
-        title="Italic"
-      >
-        <Italic className="h-4 w-4" />
-      </ToolbarBtn>
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().toggleStrike().run()}
-        active={editor.isActive("strike")}
-        title="Strikethrough"
-      >
-        <Strikethrough className="h-4 w-4" />
-      </ToolbarBtn>
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().toggleCode().run()}
-        active={editor.isActive("code")}
-        title="Inline code"
-      >
-        <CodeIcon className="h-4 w-4" />
-      </ToolbarBtn>
-      <Divider />
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-        active={editor.isActive("bulletList")}
-        title="Bullet list"
-      >
-        <List className="h-4 w-4" />
-      </ToolbarBtn>
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        active={editor.isActive("orderedList")}
-        title="Numbered list"
-      >
-        <ListOrdered className="h-4 w-4" />
-      </ToolbarBtn>
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        active={editor.isActive("blockquote")}
-        title="Quote"
-      >
-        <Quote className="h-4 w-4" />
-      </ToolbarBtn>
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-        active={editor.isActive("codeBlock")}
-        title="Code block"
-      >
-        <Code2 className="h-4 w-4" />
-      </ToolbarBtn>
-      <Divider />
-      <ToolbarBtn onClick={setLink} active={editor.isActive("link")} title="Link">
-        <LinkIcon className="h-4 w-4" />
-      </ToolbarBtn>
-      <ToolbarBtn onClick={onPickImage} title="Image" disabled={isUploadingImage}>
-        {isUploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
-      </ToolbarBtn>
-    </div>
-  );
-};
+const MenuDivider: React.FC = () => <div className="mx-0.5 h-5 w-px bg-border" aria-hidden />;
 
 export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   value,
   onChange,
-  placeholder = "Write something, or paste an image…",
+  placeholder = "Press '+' for blocks, or just start writing…",
   className,
   contentClassName,
   minHeight = "360px",
@@ -302,6 +202,18 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     event.target.value = "";
   };
 
+  const setLink = useCallback(() => {
+    if (!editor) return;
+    const prev = editor.getAttributes("link").href as string | undefined;
+    const url = window.prompt("Link URL", prev ?? "https://");
+    if (url === null) return;
+    if (url.trim() === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url.trim() }).run();
+  }, [editor]);
+
   if (!editor) {
     return (
       <div
@@ -321,7 +233,6 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         className
       )}
     >
-      <Toolbar editor={editor} onPickImage={onPickImage} isUploadingImage={isUploadingImage} />
       <input
         ref={fileInputRef}
         type="file"
@@ -329,6 +240,134 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         className="hidden"
         onChange={onFileChosen}
       />
+
+      {/* BUBBLE MENU — inline formatting on selection */}
+      <BubbleMenu
+        editor={editor}
+        options={{ placement: "top", offset: 8 }}
+        shouldShow={({ editor, from, to }) =>
+          from !== to && !editor.isActive("image") && !editor.isActive("codeBlock")
+        }
+      >
+        <div className="flex items-center gap-0.5 rounded-lg border border-border bg-popover/95 backdrop-blur-md shadow-lg p-1">
+          <MenuBtn
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            active={editor.isActive("bold")}
+            title="Bold"
+          >
+            <Bold className="h-3.5 w-3.5" />
+          </MenuBtn>
+          <MenuBtn
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            active={editor.isActive("italic")}
+            title="Italic"
+          >
+            <Italic className="h-3.5 w-3.5" />
+          </MenuBtn>
+          <MenuBtn
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+            active={editor.isActive("strike")}
+            title="Strikethrough"
+          >
+            <Strikethrough className="h-3.5 w-3.5" />
+          </MenuBtn>
+          <MenuBtn
+            onClick={() => editor.chain().focus().toggleCode().run()}
+            active={editor.isActive("code")}
+            title="Inline code"
+          >
+            <CodeIcon className="h-3.5 w-3.5" />
+          </MenuBtn>
+          <MenuDivider />
+          <MenuBtn
+            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+            active={editor.isActive("heading", { level: 1 })}
+            title="Heading 1"
+          >
+            <Heading1 className="h-3.5 w-3.5" />
+          </MenuBtn>
+          <MenuBtn
+            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            active={editor.isActive("heading", { level: 2 })}
+            title="Heading 2"
+          >
+            <Heading2 className="h-3.5 w-3.5" />
+          </MenuBtn>
+          <MenuBtn
+            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+            active={editor.isActive("heading", { level: 3 })}
+            title="Heading 3"
+          >
+            <Heading3 className="h-3.5 w-3.5" />
+          </MenuBtn>
+          <MenuDivider />
+          <MenuBtn onClick={setLink} active={editor.isActive("link")} title="Link">
+            <LinkIcon className="h-3.5 w-3.5" />
+          </MenuBtn>
+        </div>
+      </BubbleMenu>
+
+      {/* FLOATING MENU — insert-block "+" on empty lines */}
+      <FloatingMenu
+        editor={editor}
+        options={{ placement: "left-start", offset: 8 }}
+        shouldShow={({ editor }) => {
+          const { $from } = editor.state.selection;
+          const isEmpty = $from.parent.content.size === 0;
+          return isEmpty && editor.isActive("paragraph");
+        }}
+      >
+        <div className="flex items-center gap-0.5 rounded-lg border border-border bg-popover/95 backdrop-blur-md shadow-md p-1">
+          <span className="inline-flex items-center justify-center h-7 w-7 text-muted-foreground">
+            <Plus className="h-3.5 w-3.5" />
+          </span>
+          <MenuDivider />
+          <MenuBtn
+            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+            title="Heading 1"
+          >
+            <Heading1 className="h-3.5 w-3.5" />
+          </MenuBtn>
+          <MenuBtn
+            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            title="Heading 2"
+          >
+            <Heading2 className="h-3.5 w-3.5" />
+          </MenuBtn>
+          <MenuBtn
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+            title="Bullet list"
+          >
+            <List className="h-3.5 w-3.5" />
+          </MenuBtn>
+          <MenuBtn
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            title="Numbered list"
+          >
+            <ListOrdered className="h-3.5 w-3.5" />
+          </MenuBtn>
+          <MenuBtn
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+            title="Quote"
+          >
+            <Quote className="h-3.5 w-3.5" />
+          </MenuBtn>
+          <MenuBtn
+            onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+            title="Code block"
+          >
+            <Code2 className="h-3.5 w-3.5" />
+          </MenuBtn>
+          <MenuBtn onClick={onPickImage} title="Image" disabled={isUploadingImage}>
+            {isUploadingImage ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ImageIcon className="h-3.5 w-3.5" />
+            )}
+          </MenuBtn>
+        </div>
+      </FloatingMenu>
+
       <div
         className={cn(
           "prose prose-sm dark:prose-invert max-w-none px-4 py-3 leading-relaxed text-[15px] focus-within:outline-none",
