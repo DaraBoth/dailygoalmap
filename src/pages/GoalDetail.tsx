@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from '@/lib/utils';
-import { Menu, X, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2, PanelLeftClose, PanelLeftOpen, Search, Trash2, UserPlus, Settings2, Table2 } from 'lucide-react';
+import { Menu, X, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2, PanelLeftClose, PanelLeftOpen, Search, Trash2, UserPlus, Settings2, Table2, NotebookPen } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { searchUsers, sendInvitation, SearchUser } from '@/services/internalNotifications';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -30,6 +30,7 @@ import { UserMenu } from '@/components/user/UserMenu';
 import CustomSearchModal from '@/components/search/CustomSearchModal';
 import GoalAIContextSettings from '@/components/goal/GoalAIContextSettings';
 import GoalTasksTable from '@/components/goal/GoalTasksTable';
+import GoalNotes from '@/components/goal/GoalNotes';
 
 const GoalChatWidgetLazy = React.lazy(() =>
   import('@/components/goal/GoalChatWidget').then((mod) => ({ default: mod.GoalChatWidget }))
@@ -106,7 +107,22 @@ const GoalDetail: React.FC = () => {
   const [members, setMembers] = useState<GoalMember[]>(loaderData?.members || []);
   const [tasks, setTasks] = useState<Task[]>(normalizeTaskList(loaderData?.tasks || []));
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [activeTab, setActiveTab] = useState("overview");
+  // Active tab is mirrored in the URL (`?tab=...`) so refresh / share /
+  // back-forward keep the same view. Initial value is read from the URL on
+  // mount; the effect below pushes future changes back out.
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const t = (search as any)?.tab;
+    return typeof t === "string" && t ? t : "overview";
+  });
+  useEffect(() => {
+    if ((search as any)?.tab === activeTab) return;
+    navigate({
+      to: "." as any,
+      search: ((prev: any) => ({ ...(prev ?? {}), tab: activeTab })) as any,
+      replace: true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
   const [autoOpenTaskId, setAutoOpenTaskId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPillHidden, setIsPillHidden] = useState(false);
@@ -178,6 +194,15 @@ const GoalDetail: React.FC = () => {
     if (!shareCode) fetchShareCode();
     fetchMembers();
   };
+
+  // Fetch enriched members (with avatar/display_name from user_profiles) once
+  // on mount so features like the Notes tab's restricted-viewer picker show
+  // real names instead of falling back to the bare goal_members row from the
+  // loader, which has no profile join.
+  useEffect(() => {
+    fetchMembers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goalId]);
 
   // Debounced search for users to invite (exclude existing members)
   useEffect(() => {
@@ -414,6 +439,7 @@ const GoalDetail: React.FC = () => {
   const navItems = [
     { id: 'overview', label: 'Calendar', icon: LayoutDashboard },
     { id: 'tasksTable', label: 'Tasks', icon: Table2 },
+    { id: 'notes', label: 'Notes', icon: NotebookPen },
     { id: 'analytics', label: 'Analytics', icon: BarChart2 },
     { id: 'settings', label: 'Goal Settings', icon: Settings2 },
   ];
@@ -634,6 +660,24 @@ const GoalDetail: React.FC = () => {
                     onTaskCompletionChange={(taskId, completed) => {
                       setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, completed } : task)));
                     }}
+                  />
+                </motion.div>
+              )}
+
+              {activeTab === 'notes' && (
+                <motion.div
+                  key="notes"
+                  initial={{ opacity: 0, x: 16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ duration: 0.15 }}
+                  className="h-full"
+                >
+                  <GoalNotes
+                    goalId={goalId}
+                    goalOwnerUserId={(currentGoalData as any)?.user_id ?? null}
+                    currentUserId={user?.id ?? ''}
+                    members={displayMembers}
                   />
                 </motion.div>
               )}

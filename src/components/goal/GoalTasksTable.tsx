@@ -414,8 +414,15 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
         const task = row.original;
         const title = task.title || task.description || 'Untitled task';
         return (
-          <div className="max-w-[340px] min-w-0">
-            <p className="truncate font-medium" title={title}>{title}</p>
+          // break-words + min-w-0 + max-w cap = long titles wrap to multiple
+          // lines INSIDE the cell instead of stretching the column wider.
+          <div className="max-w-[340px] min-w-0 w-full">
+            <p
+              className="font-medium break-words [overflow-wrap:anywhere]"
+              title={title}
+            >
+              {title}
+            </p>
           </div>
         );
       },

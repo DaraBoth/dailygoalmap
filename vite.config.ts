@@ -7,7 +7,7 @@ import { TanStackRouterVite } from '@tanstack/router-vite-plugin';
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "::",
+    host: "localhost",
     port: 8080,
     strictPort: true,
     proxy: {

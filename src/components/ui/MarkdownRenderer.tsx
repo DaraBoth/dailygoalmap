@@ -7,6 +7,56 @@ import rehypeHighlight from 'rehype-highlight';
 import { Copy } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { ChartRenderer } from './ChartRenderer';
+import { EmbeddedTaskCard } from '@/components/goal/EmbeddedTaskCard';
+
+// Recognises a task-embed marker anywhere in the content and yields a stream
+// of blocks so the renderer can drop <EmbeddedTaskCard> elements between
+// regular markdown chunks. The marker can sit on its own line OR inline —
+// surrounding text becomes its own markdown block. Accepts:
+//   - {{task:UUID}}             ← preferred (curly braces aren't escaped by
+//                                  tiptap-markdown so the marker round-trips
+//                                  cleanly through the editor)
+//   - [[task:UUID]]             ← legacy
+//   - \[\[task:UUID\]\]         ← legacy when tiptap-markdown escaped brackets
+const TASK_EMBED_GLOBAL =
+  /\{\{\s*task:\s*([0-9a-fA-F-]{8,})\s*\}\}|\\?\[\\?\[\s*task:\s*([0-9a-fA-F-]{8,})\s*\\?\]\\?\]/g;
+
+type Block = { type: 'md'; value: string } | { type: 'task'; taskId: string };
+
+function splitTaskEmbeds(content: string): Block[] {
+    const out: Block[] = [];
+    let lastIdx = 0;
+    // Reset stateful global regex per call.
+    TASK_EMBED_GLOBAL.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = TASK_EMBED_GLOBAL.exec(content)) !== null) {
+        if (m.index > lastIdx) {
+            const md = content.slice(lastIdx, m.index);
+            if (md.length > 0) out.push({ type: 'md', value: md });
+        }
+        const taskId = m[1] || m[2];
+        if (taskId) out.push({ type: 'task', taskId });
+        lastIdx = m.index + m[0].length;
+    }
+    if (lastIdx < content.length) {
+        const md = content.slice(lastIdx);
+        if (md.length > 0) out.push({ type: 'md', value: md });
+    }
+    if (out.length === 0) out.push({ type: 'md', value: content });
+
+    // Diagnostic: surface mismatches when the content contains the marker
+    // string but the regex didn't catch it. Remove once stable.
+    if (
+        typeof window !== 'undefined' &&
+        /task:[0-9a-fA-F-]{8,}/.test(content) &&
+        !out.some((b) => b.type === 'task')
+    ) {
+        // eslint-disable-next-line no-console
+        console.warn('[MarkdownRenderer] saw "task:UUID" but no embed split — raw content:', JSON.stringify(content));
+    }
+
+    return out;
+}
 
 interface MarkdownRendererProps {
     content: string;
@@ -59,7 +109,12 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                     prose-hr:border-border prose-hr:my-6
                     "
             >
+                {splitTaskEmbeds(content).map((block, i) =>
+                    block.type === 'task' ? (
+                        <EmbeddedTaskCard key={`tk-${i}-${block.taskId}`} taskId={block.taskId} />
+                    ) : (
                 <ReactMarkdown
+                    key={`md-${i}`}
                     remarkPlugins={[remarkGfm, remarkMath]}
                     rehypePlugins={[rehypeKatex, rehypeHighlight]}
                     components={{
@@ -203,8 +258,10 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                         },
                     }}
                 >
-                    {content}
+                    {block.value}
                 </ReactMarkdown>
+                    )
+                )}
             </div>
 
             {/* TYPING LOADER */}

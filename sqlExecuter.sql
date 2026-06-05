@@ -414,3 +414,523 @@ CREATE POLICY "Users can delete their own task attachments"
     bucket_id = 'task-attachments'
     AND auth.uid()::text = (storage.foldername(name))[1]
   );
+
+  -- ============================================
+  -- GOAL NOTES (per-goal shared markdown notes with restricted visibility)
+  -- Authors a note inside a goal; everyone in the goal can see when
+  -- visibility='all', or only specifically invited members when
+  -- visibility='restricted'. The creator and the goal owner always see.
+  -- ============================================
+
+  CREATE TABLE IF NOT EXISTS goal_notes (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    goal_id     UUID NOT NULL REFERENCES goals(id) ON DELETE CASCADE,
+    created_by  UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    updated_by  UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    title       TEXT NOT NULL DEFAULT 'Untitled note',
+    content     TEXT NOT NULL DEFAULT '',
+    visibility  TEXT NOT NULL DEFAULT 'all' CHECK (visibility IN ('all', 'restricted')),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_goal_notes_goal_id    ON goal_notes(goal_id);
+  CREATE INDEX IF NOT EXISTS idx_goal_notes_created_by ON goal_notes(created_by);
+  CREATE INDEX IF NOT EXISTS idx_goal_notes_updated_at ON goal_notes(goal_id, updated_at DESC);
+
+  -- Per-note explicit viewer list (only relevant when visibility='restricted').
+  -- Composite PK guarantees one row per (note, user).
+  CREATE TABLE IF NOT EXISTS goal_note_viewers (
+    note_id  UUID NOT NULL REFERENCES goal_notes(id) ON DELETE CASCADE,
+    user_id  UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (note_id, user_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_goal_note_viewers_user_id ON goal_note_viewers(user_id);
+
+  -- Touch updated_at on every UPDATE so client-side "Last edited" stays honest
+  -- without callers having to remember to set it explicitly.
+  CREATE OR REPLACE FUNCTION touch_goal_notes_updated_at()
+  RETURNS TRIGGER AS $$
+  BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+  END;
+  $$ LANGUAGE plpgsql;
+
+  DROP TRIGGER IF EXISTS goal_notes_touch_updated_at ON goal_notes;
+  CREATE TRIGGER goal_notes_touch_updated_at
+  BEFORE UPDATE ON goal_notes
+  FOR EACH ROW EXECUTE FUNCTION touch_goal_notes_updated_at();
+
+  -- ─── RLS ─────────────────────────────────────────────────────────────────────
+  ALTER TABLE goal_notes        ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE goal_note_viewers ENABLE ROW LEVEL SECURITY;
+
+  -- goal_notes SELECT: viewer must be a goal member AND the note must be either
+  -- public-to-goal, authored by them, owned by them (goal owner), or share an
+  -- explicit viewer row with them.
+  DROP POLICY IF EXISTS "Goal members can view permitted goal notes" ON goal_notes;
+  CREATE POLICY "Goal members can view permitted goal notes"
+  ON goal_notes FOR SELECT
+  USING (
+    (
+      -- must be in the goal at all
+      EXISTS (
+        SELECT 1 FROM goal_members
+        WHERE goal_members.goal_id = goal_notes.goal_id
+          AND goal_members.user_id = auth.uid()
+      )
+      OR EXISTS (
+        SELECT 1 FROM goals
+        WHERE goals.id = goal_notes.goal_id
+          AND goals.user_id = auth.uid()
+      )
+    )
+    AND (
+      visibility = 'all'
+      OR created_by = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM goals
+        WHERE goals.id = goal_notes.goal_id
+          AND goals.user_id = auth.uid()
+      )
+      OR EXISTS (
+        SELECT 1 FROM goal_note_viewers
+        WHERE goal_note_viewers.note_id = goal_notes.id
+          AND goal_note_viewers.user_id = auth.uid()
+      )
+    )
+  );
+
+  -- INSERT: any goal member can create a note, and they must mark themselves as
+  -- the creator (auth.uid() = created_by).
+  DROP POLICY IF EXISTS "Goal members can create goal notes" ON goal_notes;
+  CREATE POLICY "Goal members can create goal notes"
+  ON goal_notes FOR INSERT
+  WITH CHECK (
+    auth.uid() = created_by
+    AND (
+      EXISTS (
+        SELECT 1 FROM goal_members
+        WHERE goal_members.goal_id = goal_notes.goal_id
+          AND goal_members.user_id = auth.uid()
+      )
+      OR EXISTS (
+        SELECT 1 FROM goals
+        WHERE goals.id = goal_notes.goal_id
+          AND goals.user_id = auth.uid()
+      )
+    )
+  );
+
+  -- UPDATE: only the note's creator or the goal's owner can edit.
+  DROP POLICY IF EXISTS "Note creator or goal owner can update goal notes" ON goal_notes;
+  CREATE POLICY "Note creator or goal owner can update goal notes"
+  ON goal_notes FOR UPDATE
+  USING (
+    created_by = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM goals
+      WHERE goals.id = goal_notes.goal_id
+        AND goals.user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    created_by = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM goals
+      WHERE goals.id = goal_notes.goal_id
+        AND goals.user_id = auth.uid()
+    )
+  );
+
+  -- DELETE: same constraint as UPDATE.
+  DROP POLICY IF EXISTS "Note creator or goal owner can delete goal notes" ON goal_notes;
+  CREATE POLICY "Note creator or goal owner can delete goal notes"
+  ON goal_notes FOR DELETE
+  USING (
+    created_by = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM goals
+      WHERE goals.id = goal_notes.goal_id
+        AND goals.user_id = auth.uid()
+    )
+  );
+
+  -- goal_note_viewers SELECT: anyone who can see the note can see its viewer
+  -- list. (The viewer list itself is who's-invited metadata, not the content.)
+  DROP POLICY IF EXISTS "Permitted readers can view note viewer rows" ON goal_note_viewers;
+  CREATE POLICY "Permitted readers can view note viewer rows"
+  ON goal_note_viewers FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM goal_notes
+      WHERE goal_notes.id = goal_note_viewers.note_id
+      -- This relies on the goal_notes SELECT policy applying to the inner row,
+      -- which Postgres does evaluate. So if the user can't see the note, they
+      -- can't see who else can.
+    )
+  );
+
+  -- INSERT / DELETE on viewer list: only the note creator or goal owner.
+  DROP POLICY IF EXISTS "Note creator or goal owner can manage viewers" ON goal_note_viewers;
+  CREATE POLICY "Note creator or goal owner can manage viewers"
+  ON goal_note_viewers FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM goal_notes
+      WHERE goal_notes.id = goal_note_viewers.note_id
+        AND (
+          goal_notes.created_by = auth.uid()
+          OR EXISTS (
+            SELECT 1 FROM goals
+            WHERE goals.id = goal_notes.goal_id
+              AND goals.user_id = auth.uid()
+          )
+        )
+    )
+  );
+
+  DROP POLICY IF EXISTS "Note creator or goal owner can delete viewers" ON goal_note_viewers;
+  CREATE POLICY "Note creator or goal owner can delete viewers"
+  ON goal_note_viewers FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM goal_notes
+      WHERE goal_notes.id = goal_note_viewers.note_id
+        AND (
+          goal_notes.created_by = auth.uid()
+          OR EXISTS (
+            SELECT 1 FROM goals
+            WHERE goals.id = goal_notes.goal_id
+              AND goals.user_id = auth.uid()
+          )
+        )
+    )
+  );
+
+  -- Enable realtime so the Notes tab can react to other members' edits live.
+  ALTER TABLE goal_notes        REPLICA IDENTITY FULL;
+  ALTER TABLE goal_note_viewers REPLICA IDENTITY FULL;
+
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime' AND tablename = 'goal_notes'
+    ) THEN
+      ALTER PUBLICATION supabase_realtime ADD TABLE goal_notes;
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime' AND tablename = 'goal_note_viewers'
+    ) THEN
+      ALTER PUBLICATION supabase_realtime ADD TABLE goal_note_viewers;
+    END IF;
+  END $$;
+
+  GRANT ALL ON goal_notes        TO service_role;
+  GRANT ALL ON goal_note_viewers TO service_role;
+
+  COMMENT ON TABLE goal_notes IS
+    'Shared markdown notes scoped to a goal. visibility=all means every goal member can read; visibility=restricted limits readers to the creator, goal owner, and rows in goal_note_viewers.';
+  COMMENT ON COLUMN goal_notes.visibility IS
+    '"all" = visible to every goal member. "restricted" = creator + goal owner + explicit goal_note_viewers rows only.';
+  COMMENT ON TABLE goal_note_viewers IS
+    'Per-note allowlist of additional viewers when goal_notes.visibility = restricted.';
+
+  -- ============================================
+  -- FIX: infinite recursion in goal_notes / goal_note_viewers policies
+  -- The original SELECT policies referenced each other, so Postgres recursed
+  -- forever evaluating one through the other. Wrap the cross-table visibility
+  -- check in a SECURITY DEFINER function that bypasses RLS internally, then
+  -- have both policies call that one function. Run this AFTER the initial
+  -- goal_notes/goal_note_viewers DDL above.
+  -- ============================================
+
+  CREATE OR REPLACE FUNCTION user_can_view_goal_note(p_note_id UUID, p_user_id UUID)
+  RETURNS BOOLEAN
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  STABLE
+  SET search_path = public
+  AS $$
+  DECLARE
+    v_goal_id    UUID;
+    v_visibility TEXT;
+    v_created_by UUID;
+  BEGIN
+    IF p_user_id IS NULL THEN
+      RETURN FALSE;
+    END IF;
+
+    SELECT goal_id, visibility, created_by
+      INTO v_goal_id, v_visibility, v_created_by
+      FROM goal_notes
+    WHERE id = p_note_id;
+
+    IF v_goal_id IS NULL THEN
+      RETURN FALSE;
+    END IF;
+
+    -- Goal owner always sees.
+    IF EXISTS (
+      SELECT 1 FROM goals
+      WHERE goals.id = v_goal_id
+        AND goals.user_id = p_user_id
+    ) THEN
+      RETURN TRUE;
+    END IF;
+
+    -- Otherwise the viewer must be a member of the goal.
+    IF NOT EXISTS (
+      SELECT 1 FROM goal_members
+      WHERE goal_members.goal_id = v_goal_id
+        AND goal_members.user_id = p_user_id
+    ) THEN
+      RETURN FALSE;
+    END IF;
+
+    -- visibility=all: every goal member sees.
+    IF v_visibility = 'all' THEN
+      RETURN TRUE;
+    END IF;
+
+    -- Author can see their own restricted note.
+    IF v_created_by = p_user_id THEN
+      RETURN TRUE;
+    END IF;
+
+    -- Explicit per-note allowlist.
+    IF EXISTS (
+      SELECT 1 FROM goal_note_viewers
+      WHERE note_id  = p_note_id
+        AND user_id  = p_user_id
+    ) THEN
+      RETURN TRUE;
+    END IF;
+
+    RETURN FALSE;
+  END;
+  $$;
+
+  REVOKE ALL ON FUNCTION user_can_view_goal_note(UUID, UUID) FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION user_can_view_goal_note(UUID, UUID) TO authenticated, service_role;
+
+  -- Replace the original recursive SELECT policies with calls into the helper.
+  DROP POLICY IF EXISTS "Goal members can view permitted goal notes" ON goal_notes;
+  CREATE POLICY "Goal members can view permitted goal notes"
+  ON goal_notes FOR SELECT
+  USING (user_can_view_goal_note(id, auth.uid()));
+
+  DROP POLICY IF EXISTS "Permitted readers can view note viewer rows" ON goal_note_viewers;
+  CREATE POLICY "Permitted readers can view note viewer rows"
+  ON goal_note_viewers FOR SELECT
+  USING (user_can_view_goal_note(note_id, auth.uid()));
+
+  -- ============================================
+  -- FIX 2: INSERT/UPDATE/DELETE policies on goal_notes & goal_note_viewers
+  -- used `EXISTS (SELECT FROM goal_members ...)` directly, which is evaluated
+  -- under the caller's RLS. If goal_members hides rows from regular members
+  -- the EXISTS returns false → "new row violates row-level security policy"
+  -- even when the user really IS a goal member. Route those checks through a
+  -- SECURITY DEFINER helper that bypasses RLS internally.
+  -- ============================================
+
+  CREATE OR REPLACE FUNCTION user_can_access_goal(p_goal_id UUID, p_user_id UUID)
+  RETURNS BOOLEAN
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  STABLE
+  SET search_path = public
+  AS $$
+  BEGIN
+    IF p_user_id IS NULL THEN
+      RETURN FALSE;
+    END IF;
+    IF EXISTS (
+      SELECT 1 FROM goals
+      WHERE goals.id = p_goal_id
+        AND goals.user_id = p_user_id
+    ) THEN
+      RETURN TRUE;
+    END IF;
+    IF EXISTS (
+      SELECT 1 FROM goal_members
+      WHERE goal_members.goal_id = p_goal_id
+        AND goal_members.user_id = p_user_id
+    ) THEN
+      RETURN TRUE;
+    END IF;
+    RETURN FALSE;
+  END;
+  $$;
+
+  REVOKE ALL ON FUNCTION user_can_access_goal(UUID, UUID) FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION user_can_access_goal(UUID, UUID) TO authenticated, service_role;
+
+  CREATE OR REPLACE FUNCTION user_owns_goal(p_goal_id UUID, p_user_id UUID)
+  RETURNS BOOLEAN
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  STABLE
+  SET search_path = public
+  AS $$
+  BEGIN
+    IF p_user_id IS NULL THEN
+      RETURN FALSE;
+    END IF;
+    RETURN EXISTS (
+      SELECT 1 FROM goals
+      WHERE goals.id = p_goal_id
+        AND goals.user_id = p_user_id
+    );
+  END;
+  $$;
+
+  REVOKE ALL ON FUNCTION user_owns_goal(UUID, UUID) FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION user_owns_goal(UUID, UUID) TO authenticated, service_role;
+
+  -- Rewrite the write policies on goal_notes to use the helpers.
+
+  DROP POLICY IF EXISTS "Goal members can create goal notes" ON goal_notes;
+  CREATE POLICY "Goal members can create goal notes"
+  ON goal_notes FOR INSERT
+  WITH CHECK (
+    auth.uid() = created_by
+    AND user_can_access_goal(goal_id, auth.uid())
+  );
+
+  DROP POLICY IF EXISTS "Note creator or goal owner can update goal notes" ON goal_notes;
+  CREATE POLICY "Note creator or goal owner can update goal notes"
+  ON goal_notes FOR UPDATE
+  USING (
+    created_by = auth.uid()
+    OR user_owns_goal(goal_id, auth.uid())
+  )
+  WITH CHECK (
+    created_by = auth.uid()
+    OR user_owns_goal(goal_id, auth.uid())
+  );
+
+  DROP POLICY IF EXISTS "Note creator or goal owner can delete goal notes" ON goal_notes;
+  CREATE POLICY "Note creator or goal owner can delete goal notes"
+  ON goal_notes FOR DELETE
+  USING (
+    created_by = auth.uid()
+    OR user_owns_goal(goal_id, auth.uid())
+  );
+
+  -- And the viewer-row management policies. Looking up the parent note via
+  -- a direct subquery would again hit RLS — so check via the helpers too.
+
+  DROP POLICY IF EXISTS "Note creator or goal owner can manage viewers" ON goal_note_viewers;
+  CREATE POLICY "Note creator or goal owner can manage viewers"
+  ON goal_note_viewers FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM goal_notes
+      WHERE goal_notes.id = goal_note_viewers.note_id
+        AND (
+          goal_notes.created_by = auth.uid()
+          OR user_owns_goal(goal_notes.goal_id, auth.uid())
+        )
+    )
+  );
+
+  DROP POLICY IF EXISTS "Note creator or goal owner can delete viewers" ON goal_note_viewers;
+  CREATE POLICY "Note creator or goal owner can delete viewers"
+  ON goal_note_viewers FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM goal_notes
+      WHERE goal_notes.id = goal_note_viewers.note_id
+        AND (
+          goal_notes.created_by = auth.uid()
+          OR user_owns_goal(goal_notes.goal_id, auth.uid())
+        )
+    )
+  );
+
+  -- ============================================
+  -- DIAGNOSTIC: paste your goal id where indicated and run these one at a time
+  -- to figure out which RLS condition is failing on goal_notes INSERT.
+  -- Tell me what each row returns and I'll know exactly what to fix.
+  -- ============================================
+
+  -- A. Confirm the helper functions exist and have SECURITY DEFINER.
+  --    prosecdef = true means SECURITY DEFINER. Should be 3 rows.
+  SELECT proname, prosecdef, proowner::regrole AS owner
+    FROM pg_proc
+  WHERE proname IN ('user_can_view_goal_note', 'user_can_access_goal', 'user_owns_goal');
+
+  -- B. List ALL policies currently active on goal_notes. There should be
+  --    exactly four: SELECT / INSERT / UPDATE / DELETE.
+  SELECT policyname, cmd, qual::text AS using_expr, with_check::text AS with_check_expr
+    FROM pg_policies
+  WHERE tablename = 'goal_notes';
+
+  -- C. Confirm who Supabase thinks you are right now in the SQL Editor.
+  --    This will be NULL when the editor is acting as the service role.
+  SELECT auth.uid() AS current_uid;
+
+  -- ============================================
+  -- FALLBACK: create_goal_note RPC
+  -- The INSERT policy keeps misfiring for at least one user (the WITH CHECK
+  -- expression is evaluating to false even when membership looks correct).
+  -- This RPC sidesteps that entirely: it runs SECURITY DEFINER, validates
+  -- membership in code via the same helper, and inserts the row without
+  -- going through the goal_notes INSERT policy.
+  -- ============================================
+
+  CREATE OR REPLACE FUNCTION create_goal_note(p_goal_id UUID)
+  RETURNS SETOF goal_notes
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path = public
+  AS $$
+  DECLARE
+    uid UUID := auth.uid();
+  BEGIN
+    IF uid IS NULL THEN
+      RAISE EXCEPTION 'Not authenticated';
+    END IF;
+
+    IF NOT user_can_access_goal(p_goal_id, uid) THEN
+      RAISE EXCEPTION 'You must be a member or owner of this goal to create a note';
+    END IF;
+
+    RETURN QUERY
+    INSERT INTO goal_notes (goal_id, created_by, updated_by, title, content, visibility)
+    VALUES (p_goal_id, uid, uid, '', '', 'all')
+    RETURNING *;
+  END;
+  $$;
+
+  REVOKE ALL ON FUNCTION create_goal_note(UUID) FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION create_goal_note(UUID) TO authenticated, service_role;
+
+-- ============================================
+-- DIAGNOSTIC (optional): if you still want to figure out why the direct
+-- INSERT policy fails, you can run this. Otherwise skip — the app will use
+-- the RPC above.
+-- ============================================
+
+-- D. Edit ONE place: the goal-id below. Get it from your goal page URL,
+--    e.g. /goal/7c4d9a2e-aaaa-bbbb-cccc-1234567890ab → paste that UUID
+--    between the single quotes. Then run the whole block.
+WITH params AS (
+  SELECT 'de44294c-5265-4edb-80ec-2797540c93dc'::uuid AS goal_id
+  --       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ replace this UUID
+)
+SELECT
+  params.goal_id                                                       AS goal_id,
+  auth.uid()                                                           AS my_uid,
+  EXISTS(SELECT 1 FROM goals
+          WHERE id = params.goal_id AND user_id = auth.uid())          AS am_i_owner,
+  EXISTS(SELECT 1 FROM goal_members
+          WHERE goal_id = params.goal_id AND user_id = auth.uid())     AS am_i_member,
+  user_can_access_goal(params.goal_id, auth.uid())                     AS function_says
+FROM params;

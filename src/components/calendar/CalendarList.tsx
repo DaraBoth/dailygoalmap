@@ -3,6 +3,7 @@ import { Task } from './types';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 
 interface CalendarListProps {
   currentMonth: Date;
@@ -53,7 +54,16 @@ const CalendarList: React.FC<CalendarListProps> = ({ currentMonth, selectedDate,
                               <div className="flex items-center justify-between w-full">
                                 <div>
                                   <div className="font-medium text-sm">{t.title || t.description}</div>
-                                  {t.description && <div className="text-xs text-muted-foreground line-clamp-1">{t.description}</div>}
+                                  {t.description && (
+                                    <div className="text-xs text-muted-foreground line-clamp-1 overflow-hidden [&_*]:!my-0 [&_img]:hidden [&_pre]:hidden [&_h1]:!text-xs [&_h2]:!text-xs [&_h3]:!text-xs [&_h1]:!border-0">
+                                      <MarkdownRenderer
+                                        content={t.description}
+                                        isStreaming={false}
+                                        isLoading={false}
+                                        noCopy
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="text-xs text-muted-foreground">{t.start_date ? format(new Date(t.start_date), 'p') : ''}</div>
                               </div>

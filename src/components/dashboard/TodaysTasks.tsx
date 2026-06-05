@@ -738,24 +738,17 @@ const TodaysTasks: React.FC<TodaysTasksProps> = React.memo(({ isOpen, onToggle }
             <div className="flex-1 min-w-0">
               <label
                 htmlFor={selectMode ? undefined : `task-${task.id}`}
-                className={mobile
-                  ? `text-sm font-medium text-foreground ${selectMode ? '' : 'cursor-pointer'} ${task.completed ? 'line-through text-muted-foreground' : ''}`
-                  : `text-sm ${selectMode ? '' : 'cursor-pointer'} font-semibold transition-colors block leading-snug ${task.completed ? 'line-through text-muted-foreground/60' : 'text-foreground group-hover/item:text-primary'}`}
+                className={cn(
+                  // break-words + min-w-0 (on the parent) keep long single-line
+                  // titles inside the card instead of stretching it horizontally.
+                  "block break-words min-w-0",
+                  mobile
+                    ? `text-sm font-medium text-foreground ${selectMode ? '' : 'cursor-pointer'} ${task.completed ? 'line-through text-muted-foreground' : ''}`
+                    : `text-sm ${selectMode ? '' : 'cursor-pointer'} font-semibold transition-colors leading-snug ${task.completed ? 'line-through text-muted-foreground/60' : 'text-foreground group-hover/item:text-primary'}`
+                )}
               >
                 {task.title || task.description}
               </label>
-
-              {mobile && task.description && task.description !== task.title && (
-                <p className="mt-1 text-xs text-foreground/75 line-clamp-2">
-                  {task.description}
-                </p>
-              )}
-
-              {!mobile && task.description && task.description !== task.title && (
-                <p className="mt-1.5 text-xs text-foreground/70 line-clamp-2">
-                  {task.description}
-                </p>
-              )}
 
               <div className={mobile ? 'flex items-center justify-between text-xs text-foreground/70 dark:text-muted-foreground mt-1' : 'flex items-center justify-between text-[10px] mt-3'}>
                 <span>{getTaskTimeLabel(task)}</span>

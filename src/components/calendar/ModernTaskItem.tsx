@@ -57,7 +57,6 @@ export const ModernTaskItem = memo(({
     enableDrag = false,
 }: ModernTaskItemProps) => {
     const rawTitle = task.title || task.description || '';
-    const displayTitle = truncateTaskTitle(rawTitle, 18, 24);
 
     const handleToggle = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -120,15 +119,17 @@ export const ModernTaskItem = memo(({
                 </AnimatePresence>
             </motion.button>
 
-            <div className="flex-1 min-w-0 overflow-hidden flex flex-col gap-0.5">
+            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                 <span
                     title={rawTitle}
                     className={cn(
-                        'block w-full min-w-0 overflow-hidden whitespace-nowrap text-[13px] font-medium leading-tight',
+                        // break-words lets long titles wrap to multiple lines
+                        // INSIDE the card instead of stretching the card wider.
+                        'block w-full min-w-0 break-words [overflow-wrap:anywhere] text-[13px] font-medium leading-tight',
                         task.completed ? 'text-muted-foreground line-through' : 'text-foreground',
                     )}
                 >
-                    {displayTitle}
+                    {rawTitle || 'Untitled'}
                 </span>
 
                 {timeDisplay && (
