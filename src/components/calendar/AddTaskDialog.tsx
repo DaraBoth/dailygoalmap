@@ -16,6 +16,7 @@ import MarkdownEditor from "@/components/editor/MarkdownEditor";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import TaskMetaSheet, { TaskMetaFab } from "./TaskMetaSheet";
+import { RecurrenceConfig, generateOccurrenceDates } from "@/utils/recurrenceUtils";
 
 interface AddTaskDialogProps {
   isOpen: boolean;
@@ -68,6 +69,7 @@ const AddTaskDialog = ({
   const [extraGoalIds, setExtraGoalIds] = useState<string[]>([]);
   const [timeError, setTimeError] = useState<string | null>(null);
   const [metaOpen, setMetaOpen] = useState(false);
+  const [recurrence, setRecurrence] = useState<RecurrenceConfig>({ frequency: "none" });
 
   const titleRef = useRef<HTMLTextAreaElement>(null);
 
@@ -130,6 +132,72 @@ const AddTaskDialog = ({
         tags,
         color,
       };
+
+      // ── Recurring series ──────────────────────────────────────────────────────
+      if (recurrence.frequency !== "none") {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData?.user) throw new Error("Not signed in");
+        const userId = userData.user.id;
+
+        // 1) Create the series record so we have its id
+        const { data: seriesData, error: seriesError } = await supabase
+          .from("task_series" as any)
+          .insert({
+            user_id: userId,
+            goal_id: primaryGoalId,
+            frequency: recurrence.frequency,
+            days_of_week: recurrence.daysOfWeek ?? null,
+            title: title.trim() || null,
+            description: description || "",
+            daily_start_time: isAnytime ? null : `${finalStart}:00`,
+            daily_end_time: isAnytime ? null : `${finalEnd}:00`,
+            is_anytime: isAnytime,
+            duration_minutes: durationMinutes,
+            tags: tags.length > 0 ? tags : null,
+            color: color ?? null,
+          })
+          .select("id")
+          .single();
+
+        if (seriesError) throw seriesError;
+        const seriesId = (seriesData as any).id as string;
+
+        // 2) Generate occurrence dates
+        const occurrenceDates = generateOccurrenceDates(startDate, recurrence);
+
+        // 3) Bulk-insert all tasks
+        const cleanedTags = tags.map((t) => String(t || "").trim()).filter(Boolean);
+        const taskRows = occurrenceDates.map((occDate) => ({
+          id: crypto.randomUUID(),
+          goal_id: primaryGoalId,
+          user_id: userId,
+          title: title.trim() || null,
+          description: description || null,
+          completed,
+          start_date: occDate.toISOString(),
+          end_date: occDate.toISOString(),
+          daily_start_time: isAnytime ? null : `${finalStart}:00`,
+          daily_end_time: isAnytime ? null : `${finalEnd}:00`,
+          is_anytime: isAnytime,
+          duration_minutes: durationMinutes,
+          tags: cleanedTags.length > 0 ? cleanedTags : null,
+          color: color ?? null,
+          series_id: seriesId,
+          series_detached: false,
+        }));
+
+        const { error: insertError } = await supabase.from("tasks").insert(taskRows as any);
+        if (insertError) throw insertError;
+
+        toast({
+          title: "Recurring tasks created",
+          description: `${taskRows.length} task${taskRows.length !== 1 ? "s" : ""} created.`,
+        });
+        resetForm();
+        onClose();
+        return;
+      }
+      // ── Single task (original path) ───────────────────────────────────────────
 
       await onAddTask(description, selectedDate, isAnytime ? undefined : finalStart, range);
 
@@ -200,6 +268,7 @@ const AddTaskDialog = ({
     setColor(null);
     setExtraGoalIds([]);
     setMetaOpen(false);
+    setRecurrence({ frequency: "none" });
   };
 
   const isMobile = useIsMobile();
@@ -339,6 +408,8 @@ const AddTaskDialog = ({
           extraGoalIds={extraGoalIds}
           setExtraGoalIds={setExtraGoalIds}
           primaryGoalId={primaryGoalId}
+          recurrence={recurrence}
+          setRecurrence={setRecurrence}
         />
       </SheetContent>
     </Sheet>

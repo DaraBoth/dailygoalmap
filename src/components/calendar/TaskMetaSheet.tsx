@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { MobileDatePicker } from "@/components/ui/mobile-date-picker";
 import { MobileTimePicker } from "@/components/ui/mobile-time-picker";
-import { AlertTriangle, CalendarRange, CheckCircle2, Circle, Clock, Tag as TagIcon, X } from "lucide-react";
+import { AlertTriangle, CalendarRange, CheckCircle2, Circle, Clock, Repeat, Tag as TagIcon, X } from "lucide-react";
 import { differenceInCalendarDays, format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -27,6 +27,8 @@ import TaskTagInput from "./TaskTagInput";
 import { TASK_COLORS } from "./types";
 import { MultiGoalPicker } from "@/components/goal/GoalPicker";
 import { formatTaskTimeRange } from "./taskDateTime";
+import RecurrenceSelector from "./RecurrenceSelector";
+import { RecurrenceConfig, recurrenceLabel } from "@/utils/recurrenceUtils";
 
 interface TaskMetaSheetProps {
   open: boolean;
@@ -58,6 +60,8 @@ interface TaskMetaSheetProps {
   extraGoalIds?: string[];
   setExtraGoalIds?: (v: string[]) => void;
   primaryGoalId?: string;
+  recurrence?: RecurrenceConfig;
+  setRecurrence?: (v: RecurrenceConfig) => void;
 
   readOnly?: boolean;
 }
@@ -96,6 +100,8 @@ const TaskMetaSheet: React.FC<TaskMetaSheetProps> = (props) => {
     extraGoalIds,
     setExtraGoalIds,
     primaryGoalId,
+    recurrence,
+    setRecurrence,
     readOnly = false,
   } = props;
 
@@ -329,6 +335,21 @@ const TaskMetaSheet: React.FC<TaskMetaSheetProps> = (props) => {
               />
             )}
           </FieldGroup>
+
+          {/* Recurrence — Add dialog only */}
+          {!readOnly && setRecurrence && recurrence ? (
+            <FieldGroup label="Repeat" icon={<Repeat className="h-3 w-3" />}>
+              <RecurrenceSelector
+                value={recurrence}
+                onChange={setRecurrence}
+                startDate={startDate}
+              />
+            </FieldGroup>
+          ) : readOnly && recurrence && recurrence.frequency !== "none" ? (
+            <FieldGroup label="Repeat" icon={<Repeat className="h-3 w-3" />}>
+              <ReadOnlyValue value={recurrenceLabel(recurrence)} />
+            </FieldGroup>
+          ) : null}
 
           {/* Extra goals — Add dialog only */}
           {!readOnly && primaryGoalId && setExtraGoalIds ? (

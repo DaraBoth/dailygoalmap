@@ -34,6 +34,8 @@ export interface Task {
   duration_minutes?: number | null;
   tags?: string[];          // Array of task tags
   color?: string | null;    // Optional hex color string, e.g. '#7c3aed'
+  series_id?: string | null;
+  series_detached?: boolean | null;
 }
 
 export interface TaskTag {

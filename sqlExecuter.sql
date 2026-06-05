@@ -944,3 +944,57 @@ FROM params;
 ALTER TABLE goal_note_viewers
   ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'viewer'
     CHECK (role IN ('viewer', 'editor'));
+
+-- ============================================
+-- RECURRING TASKS: task_series table
+-- Stores the recurrence template for a group of linked tasks.
+-- Each occurrence is a normal `tasks` row with series_id set.
+-- When series_detached = true the task has been individually edited
+-- and will no longer receive bulk-series updates.
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS task_series (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id          UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  goal_id          UUID NOT NULL REFERENCES goals(id)      ON DELETE CASCADE,
+  frequency        TEXT NOT NULL CHECK (frequency IN ('daily','weekly','monthly','yearly','days_of_week')),
+  days_of_week     INT[]   DEFAULT NULL,  -- [0=Sun … 6=Sat], used when frequency='days_of_week'
+  title            TEXT,
+  description      TEXT DEFAULT '',
+  daily_start_time TEXT,
+  daily_end_time   TEXT,
+  is_anytime       BOOLEAN DEFAULT false,
+  duration_minutes INT,
+  tags             TEXT[],
+  color            TEXT,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_series_user_id ON task_series(user_id);
+CREATE INDEX IF NOT EXISTS idx_task_series_goal_id ON task_series(goal_id);
+
+ALTER TABLE task_series ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own task series" ON task_series;
+CREATE POLICY "Users can view their own task series"
+ON task_series FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert their own task series" ON task_series;
+CREATE POLICY "Users can insert their own task series"
+ON task_series FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update their own task series" ON task_series;
+CREATE POLICY "Users can update their own task series"
+ON task_series FOR UPDATE USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete their own task series" ON task_series;
+CREATE POLICY "Users can delete their own task series"
+ON task_series FOR DELETE USING (auth.uid() = user_id);
+
+-- Add series columns to the tasks table
+ALTER TABLE tasks
+  ADD COLUMN IF NOT EXISTS series_id       UUID    REFERENCES task_series(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS series_detached BOOLEAN NOT NULL DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS idx_tasks_series_id ON tasks(series_id) WHERE series_id IS NOT NULL;

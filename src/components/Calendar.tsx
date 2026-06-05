@@ -15,8 +15,10 @@ import { updateTask, deleteTaskFromDatabase, insertTask } from "@/utils/supabase
 import { Task } from "./calendar/types";
 import { useToast } from "@/hooks/use-toast";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
+import RecurrenceUpdateDialog from "./calendar/RecurrenceUpdateDialog";
 import { cn } from "@/lib/utils";
 import { getTaskAnchorDate } from "./calendar/utils/dateUtils";
+import { supabase } from "@/integrations/supabase/client";
 
 
 interface CalendarProps {
@@ -56,6 +58,28 @@ const Calendar = ({
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null); // State to hold task to be deleted
   const [lastDeletedTask, setLastDeletedTask] = useState<Task | null>(null); // For undo functionality
   const [isTaskSidebarCollapsed, setIsTaskSidebarCollapsed] = useState(false);
+
+  // Pending series-update: holds args until user decides "just this" vs "all in series"
+  type UpdateRange = {
+    title?: string;
+    start_date?: Date | null;
+    end_date?: Date | null;
+    daily_start_time?: string | null;
+    daily_end_time?: string | null;
+    is_anytime?: boolean;
+    duration_minutes?: number | null;
+    completed?: boolean;
+    tags?: string[];
+    color?: string | null;
+  };
+  const pendingSeriesUpdate = useRef<null | {
+    taskId: string;
+    description: string;
+    date: Date;
+    time?: string;
+    range?: UpdateRange;
+  }>(null);
+  const [seriesDialogOpen, setSeriesDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const {
@@ -371,6 +395,81 @@ const Calendar = ({
     setViewedMonth(month);
   };
 
+  const applyTaskUpdate = async (
+    taskId: string,
+    description: string,
+    date: Date,
+    time?: string,
+    range?: UpdateRange,
+    extraUpdates?: Partial<Task>
+  ) => {
+    const taskToUpdate = tasks.find(t => t.id === taskId);
+    if (!taskToUpdate) return;
+
+    const updates: Partial<Task> = {
+      description,
+      updated_at: new Date().toISOString(),
+      ...extraUpdates,
+    };
+
+    updates.title = range?.title ?? null;
+    updates.start_date = (range?.start_date || date)?.toISOString();
+    updates.end_date = (range?.end_date || date)?.toISOString();
+    const isAnytime = !!range?.is_anytime;
+    updates.is_anytime = isAnytime;
+    updates.daily_start_time = isAnytime ? null : ((range?.daily_start_time || (time ? `${time}` : null)) ? `${range?.daily_start_time || time}:00` : null);
+    updates.daily_end_time = isAnytime ? null : ((range?.daily_end_time || (time ? `${time}` : null)) ? `${range?.daily_end_time || time}:00` : null);
+    updates.duration_minutes = typeof range?.duration_minutes === 'number' ? range.duration_minutes : null;
+    if (typeof range?.completed !== 'undefined') updates.completed = range?.completed;
+    const cleanedTags = Array.isArray(range?.tags)
+      ? range!.tags!.map((t) => String(t || '').trim()).filter(Boolean)
+      : undefined;
+    if (cleanedTags) updates.tags = cleanedTags;
+    if (typeof range?.color !== 'undefined') updates.color = range.color;
+
+    const updatedTask = {
+      ...taskToUpdate,
+      ...updates,
+      description,
+      title: range?.title ?? taskToUpdate.title,
+      start_date: (range?.start_date || date).toISOString(),
+      end_date: (range?.end_date || date).toISOString(),
+      is_anytime: !!range?.is_anytime,
+      daily_start_time: range?.is_anytime ? null : ((range?.daily_start_time || (time ? `${time}` : null)) ? `${range?.daily_start_time || time}:00` : null),
+      daily_end_time: range?.is_anytime ? null : ((range?.daily_end_time || (time ? `${time}` : null)) ? `${range?.daily_end_time || time}:00` : null),
+      duration_minutes: typeof range?.duration_minutes === 'number' ? range.duration_minutes : null,
+      updated_at: new Date().toISOString(),
+      ...(typeof range?.completed !== 'undefined' ? { completed: range.completed } : {}),
+      ...(cleanedTags ? { tags: cleanedTags } : {}),
+      ...(typeof range?.color !== 'undefined' ? { color: range.color } : {}),
+    };
+
+    setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? updatedTask : t));
+    if (selectedTask && selectedTask.id === taskId) setSelectedTask(updatedTask);
+    setOpenInEditMode(false);
+
+    await updateTask(taskId, updates);
+
+    const startDate = new Date(updatedTask.start_date);
+    const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const timeStr = updatedTask.daily_start_time
+      ? new Date(`2000-01-01T${updatedTask.daily_start_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      : '';
+    const datetimeInfo = timeStr ? `${dateStr} at ${timeStr}` : dateStr;
+
+    void (async () => {
+      try {
+        const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
+        await createTaskUpdateNotification(goalId, taskToUpdate.user_id, 'task_updated', {
+          task_title: updatedTask.title?.trim() || 'Untitled task',
+          task_id: taskId,
+          action: 'updated',
+          datetime: datetimeInfo,
+        });
+      } catch {}
+    })();
+  };
+
   const handleUpdateTask = async (
     taskId: string,
     description: string,
@@ -389,104 +488,108 @@ const Calendar = ({
       color?: string | null;
     }
   ) => {
+    const taskToUpdate = tasks.find(t => t.id === taskId);
+    if (!taskToUpdate) return;
+
+    // For series tasks that haven't been individually detached, ask the user.
+    if (taskToUpdate.series_id && !taskToUpdate.series_detached) {
+      pendingSeriesUpdate.current = { taskId, description, date, time, range };
+      setSeriesDialogOpen(true);
+      return;
+    }
+
     try {
-      const taskToUpdate = tasks.find(t => t.id === taskId);
-      if (!taskToUpdate) return;
-
-      const updates: Partial<Task> = {
-        description,
-        updated_at: new Date().toISOString()
-      };
-
-      // Always update unified fields
-      updates.title = range?.title ?? null;
-      updates.start_date = (range?.start_date || date)?.toISOString();
-      updates.end_date = (range?.end_date || date)?.toISOString();
-      const isAnytime = !!range?.is_anytime;
-      updates.is_anytime = isAnytime;
-      updates.daily_start_time = isAnytime ? null : ((range?.daily_start_time || (time ? `${time}` : null)) ? `${range?.daily_start_time || time}:00` : null);
-      updates.daily_end_time = isAnytime ? null : ((range?.daily_end_time || (time ? `${time}` : null)) ? `${range?.daily_end_time || time}:00` : null);
-      updates.duration_minutes = typeof range?.duration_minutes === 'number' ? range.duration_minutes : null;
-      if (typeof range?.completed !== 'undefined') updates.completed = range?.completed;
-      const cleanedTags = Array.isArray(range?.tags)
-        ? range!.tags!.map((t) => String(t || '').trim()).filter(Boolean)
-        : undefined;
-      if (cleanedTags) updates.tags = cleanedTags;
-      if (typeof range?.color !== 'undefined') updates.color = range.color;
-
-      // Create updated task object with updated_at field
-      const updatedTask = {
-        ...taskToUpdate,
-        description,
-        title: range?.title ?? taskToUpdate.title,
-        start_date: (range?.start_date || date).toISOString(),
-        end_date: (range?.end_date || date).toISOString(),
-        is_anytime: !!range?.is_anytime,
-        daily_start_time: range?.is_anytime ? null : ((range?.daily_start_time || (time ? `${time}` : null)) ? `${range?.daily_start_time || time}:00` : null),
-        daily_end_time: range?.is_anytime ? null : ((range?.daily_end_time || (time ? `${time}` : null)) ? `${range?.daily_end_time || time}:00` : null),
-        duration_minutes: typeof range?.duration_minutes === 'number' ? range.duration_minutes : null,
-        updated_at: new Date().toISOString(),
-        ...(typeof range?.completed !== 'undefined' ? { completed: range.completed } : {}),
-        ...(cleanedTags ? { tags: cleanedTags } : {}),
-        ...(typeof range?.color !== 'undefined' ? { color: range.color } : {}),
-      };
-
-      // Optimistic UI: reflect changes immediately and rollback on failure.
-      setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? updatedTask : t));
-      if (selectedTask && selectedTask.id === taskId) {
-        setSelectedTask(updatedTask);
-      }
-      // Inline-edit lives inside the Detail view now — caller flips back to
-      // read mode itself, no separate dialog to close.
-      setOpenInEditMode(false);
-
-      // Persist to backend.
-      await updateTask(taskId, updates);
-
-      // Format datetime for notification
-      const startDate = new Date(updatedTask.start_date);
-      const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      const timeStr = updatedTask.daily_start_time
-        ? new Date(`2000-01-01T${updatedTask.daily_start_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-        : '';
-      const datetimeInfo = timeStr ? `${dateStr} at ${timeStr}` : dateStr;
-
-      // Fire notification side effects in the background to avoid blocking UI.
-      void (async () => {
-        try {
-          const { createTaskUpdateNotification } = await import('@/services/internalNotifications');
-          await createTaskUpdateNotification(
-            goalId,
-            taskToUpdate.user_id,
-            'task_updated',
-            {
-              task_title: updatedTask.title?.trim() || 'Untitled task',
-              task_id: taskId,
-              action: 'updated',
-              datetime: datetimeInfo
-            }
-          );
-        } catch (notifyError) {
-          console.error('Error creating task update notification:', notifyError);
-        }
-      })();
-
-      toast({
-        title: "Task updated",
-        description: "Task has been updated successfully.",
-      });
+      await applyTaskUpdate(taskId, description, date, time, range);
+      toast({ title: "Task updated", description: "Task has been updated successfully." });
     } catch (error) {
       console.error('Error updating task:', error);
-      // Best-effort rollback if optimistic write was applied.
       const taskToRestore = tasks.find(t => t.id === taskId);
       if (taskToRestore) {
         setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? { ...taskToRestore } : t));
       }
-      toast({
-        title: "Error",
-        description: "Failed to update task. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to update task. Please try again.", variant: "destructive" });
+    }
+  };
+
+  // Called when user picks "Just this task" from the series dialog.
+  const handleSeriesJustThis = async () => {
+    const p = pendingSeriesUpdate.current;
+    if (!p) return;
+    setSeriesDialogOpen(false);
+    pendingSeriesUpdate.current = null;
+    try {
+      // Detach before applying so this task leaves the series.
+      await applyTaskUpdate(p.taskId, p.description, p.date, p.time, p.range, { series_detached: true });
+      setTasks(prev => prev.map(t => t.id === p.taskId ? { ...t, series_detached: true } : t));
+      toast({ title: "Task updated", description: "This occurrence has been updated and detached from the series." });
+    } catch (error) {
+      console.error('Error updating task:', error);
+      toast({ title: "Error", description: "Failed to update task.", variant: "destructive" });
+    }
+  };
+
+  // Called when user picks "All in series" from the series dialog.
+  const handleSeriesAll = async () => {
+    const p = pendingSeriesUpdate.current;
+    if (!p) return;
+    setSeriesDialogOpen(false);
+    pendingSeriesUpdate.current = null;
+
+    const taskToUpdate = tasks.find(t => t.id === p.taskId);
+    if (!taskToUpdate?.series_id) return;
+    const seriesId = taskToUpdate.series_id;
+
+    // Build the shared fields (no dates — each task keeps its own)
+    const isAnytime = !!p.range?.is_anytime;
+    const sharedUpdates: Partial<Task> = {
+      description: p.description,
+      title: p.range?.title ?? null,
+      is_anytime: isAnytime,
+      daily_start_time: isAnytime ? null : (p.range?.daily_start_time ? `${p.range.daily_start_time}:00` : (p.time ? `${p.time}:00` : null)),
+      daily_end_time: isAnytime ? null : (p.range?.daily_end_time ? `${p.range.daily_end_time}:00` : null),
+      duration_minutes: typeof p.range?.duration_minutes === 'number' ? p.range.duration_minutes : null,
+      ...(typeof p.range?.completed !== 'undefined' ? { completed: p.range.completed } : {}),
+      ...(Array.isArray(p.range?.tags) ? { tags: p.range!.tags!.map(t => String(t || '').trim()).filter(Boolean) } : {}),
+      ...(typeof p.range?.color !== 'undefined' ? { color: p.range.color } : {}),
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      // Update all non-detached tasks in the series
+      const { error } = await (supabase as any)
+        .from('tasks')
+        .update(sharedUpdates)
+        .eq('series_id', seriesId)
+        .eq('series_detached', false);
+      if (error) throw error;
+
+      // Also update the series template record
+      await (supabase as any).from('task_series').update({
+        title: sharedUpdates.title,
+        description: sharedUpdates.description,
+        daily_start_time: sharedUpdates.daily_start_time,
+        daily_end_time: sharedUpdates.daily_end_time,
+        is_anytime: sharedUpdates.is_anytime,
+        duration_minutes: sharedUpdates.duration_minutes,
+        tags: sharedUpdates.tags ?? null,
+        color: sharedUpdates.color ?? null,
+        updated_at: new Date().toISOString(),
+      }).eq('id', seriesId);
+
+      // Optimistic local update
+      setTasks(prev => prev.map(t =>
+        t.series_id === seriesId && !t.series_detached
+          ? { ...t, ...sharedUpdates }
+          : t
+      ));
+      if (selectedTask?.series_id === seriesId) {
+        setSelectedTask(prev => prev ? { ...prev, ...sharedUpdates } : prev);
+      }
+      setOpenInEditMode(false);
+      toast({ title: "Series updated", description: "All tasks in the series have been updated." });
+    } catch (error) {
+      console.error('Error updating series:', error);
+      toast({ title: "Error", description: "Failed to update the series.", variant: "destructive" });
     }
   };
 
@@ -770,6 +873,13 @@ const Calendar = ({
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
         goalTitle={taskToDelete?.title || "this task"}
+      />
+
+      <RecurrenceUpdateDialog
+        open={seriesDialogOpen}
+        onJustThis={handleSeriesJustThis}
+        onAllInSeries={handleSeriesAll}
+        onCancel={() => { setSeriesDialogOpen(false); pendingSeriesUpdate.current = null; }}
       />
     </motion.div>
   );

@@ -18,7 +18,9 @@
       "PowerShell(.\\\\deploy.ps1 \"Goal Detail mobile nav: floating Menu pill with scroll-aware hide + Popover menu\")",
       "Bash(pnpm --version)",
       "PowerShell(.\\\\deploy.ps1 \"Goal switcher dropdown on desktop sidebar + Notion-style TipTap editor with BubbleMenu/FloatingMenu\")",
-      "PowerShell(.\\\\deploy.ps1 \"Goal Notes feature with embedded tasks, URL deep-links, paste-as-markdown, completed-task UI + sticky title overflow\")"
+      "PowerShell(.\\\\deploy.ps1 \"Goal Notes feature with embedded tasks, URL deep-links, paste-as-markdown, completed-task UI + sticky title overflow\")",
+      "Bash(xargs grep -l \"editTask\\\\|EditTask\\\\|edit.*task\")",
+      "Bash(.\\\\deploy.ps1 \"v1.10.76 Recurring tasks: daily/weekly/monthly/yearly/days-of-week series with per-task or all-series update propagation\")"
     ]
   }
 }
