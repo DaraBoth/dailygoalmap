@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ArrowUpDown, CalendarRange, ChevronDown, FilterX, Loader2, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { ArrowUpDown, CalendarRange, ChevronDown, FilterX, Loader2, SlidersHorizontal } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import TaskDetailsSidebar from '@/components/calendar/TaskDetailsSidebar';
 import AddTaskDialog from '@/components/calendar/AddTaskDialog';
@@ -414,11 +414,13 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
         const task = row.original;
         const title = task.title || task.description || 'Untitled task';
         return (
-          // break-words + min-w-0 + max-w cap = long titles wrap to multiple
-          // lines INSIDE the cell instead of stretching the column wider.
-          <div className="max-w-[340px] min-w-0 w-full">
+          // Responsive cap on the title column so the table stays compact
+          // on phones (~160px) and only opens up on larger screens.
+          // break-words + min-w-0 = long titles wrap to multiple lines
+          // inside the cell instead of stretching the column wider.
+          <div className="max-w-[160px] sm:max-w-[220px] md:max-w-[280px] lg:max-w-[340px] min-w-0 w-full">
             <p
-              className="font-medium break-words [overflow-wrap:anywhere]"
+              className="font-medium break-words [overflow-wrap:anywhere] text-xs sm:text-sm"
               title={title}
             >
               {title}
@@ -653,36 +655,41 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
 
   return (
     <div className="max-w-7xl mx-auto space-y-4">
-      <div className="relative rounded-2xl border border-border/70 bg-gradient-to-br from-emerald-500/10 via-sky-500/10 to-background dark:from-emerald-400/15 dark:via-sky-400/12 dark:to-background/95 backdrop-blur-xl p-3 sm:p-4 space-y-3 overflow-hidden shadow-[0_10px_30px_-18px_rgba(16,185,129,0.45)] dark:shadow-[0_12px_36px_-20px_rgba(56,189,248,0.45)]">
-        <div className="pointer-events-none absolute -top-10 -left-8 h-32 w-32 rounded-full bg-amber-300/20 dark:bg-amber-400/20 blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-10 right-10 h-36 w-36 rounded-full bg-cyan-300/20 dark:bg-cyan-400/20 blur-3xl" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_0%,rgba(255,255,255,0.1),transparent_40%),radial-gradient(circle_at_100%_100%,rgba(255,255,255,0.08),transparent_42%)] dark:bg-[radial-gradient(circle_at_10%_0%,rgba(255,255,255,0.06),transparent_40%),radial-gradient(circle_at_100%_100%,rgba(255,255,255,0.04),transparent_42%)]" />
+      <div className="rounded-xl border border-border/60 bg-background/60 dark:bg-background/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <h2 className="text-base sm:text-lg font-semibold inline-flex items-center gap-1.5">
-              <Sparkles className="h-4 w-4 text-amber-400" />
-              Tasks Table
+          <div className="min-w-0">
+            <h2 className="text-sm sm:text-base font-semibold inline-flex items-center gap-2 text-foreground">
+              <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+              Tasks
+              {activeFilterCount > 0 && (
+                <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
+                  {activeFilterCount}
+                </span>
+              )}
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {filteredTasks.length} filtered of {tableTasks.length} total tasks
+              {filteredTasks.length} of {tableTasks.length} {tableTasks.length === 1 ? "task" : "tasks"}
+              {activeFilterCount > 0 ? " · filtered" : ""}
             </p>
           </div>
           <div className="flex flex-wrap gap-2 self-start sm:self-auto">
-            <Button type="button" variant="outline" size="sm" onClick={resetFilters}>
-              <FilterX className="h-3.5 w-3.5 mr-1.5" />
-              Reset Filters
-            </Button>
+            {activeFilterCount > 0 && (
+              <Button type="button" variant="ghost" size="sm" onClick={resetFilters} className="text-muted-foreground hover:text-foreground">
+                <FilterX className="h-3.5 w-3.5 mr-1.5" />
+                Clear
+              </Button>
+            )}
             {goalId ? (
-              <Button type="button" size="sm" onClick={() => setIsAddTaskOpen(true)}>
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Add Task
+              <Button type="button" size="sm" onClick={() => setIsAddTaskOpen(true)} className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" />
+                Add task
               </Button>
             ) : null}
           </div>
         </div>
 
         {isPhoneScreen ? (
-          <div className="relative z-[1]">
+          <div>
             <Button
               type="button"
               variant="outline"
@@ -699,7 +706,7 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-2.5 relative z-[1]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-2.5">
             <Input
               placeholder="Search task, status, id, date, tags..."
               value={globalQuery}
@@ -805,21 +812,34 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
                   </td>
                 </tr>
               ) : (
-                visibleRows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-border/40 last:border-b-0 hover:bg-muted/35 dark:hover:bg-muted/30 cursor-pointer"
-                    onClick={() => openTaskDetails(row.original)}
-                    onKeyDown={(event) => onTableRowKeyDown(event, row.original)}
-                    tabIndex={0}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-3 py-2.5 align-top">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))
+                visibleRows.map((row) => {
+                  const rowColor = (row.original as any).color as string | null | undefined;
+                  return (
+                    <tr
+                      key={row.id}
+                      className="border-b border-border/40 last:border-b-0 hover:bg-muted/35 dark:hover:bg-muted/30 cursor-pointer"
+                      onClick={() => openTaskDetails(row.original)}
+                      onKeyDown={(event) => onTableRowKeyDown(event, row.original)}
+                      tabIndex={0}
+                    >
+                      {row.getVisibleCells().map((cell, idx) => (
+                        <td
+                          key={cell.id}
+                          className="px-3 py-2.5 align-top"
+                          // First cell shows a 3px inset accent in the task's
+                          // color so the row inherits its visual identity.
+                          style={
+                            idx === 0 && rowColor
+                              ? { boxShadow: `inset 3px 0 0 0 ${rowColor}` }
+                              : undefined
+                          }
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
