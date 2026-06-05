@@ -123,82 +123,57 @@ const Login = () => {
   };
 
   const handleSelectSavedAccount = async (account: SavedAccount) => {
-    // One-tap login when we have stored tokens for this account.
-    if (account.accessToken && account.refreshToken) {
+    if (!account.accessToken || !account.refreshToken) {
+      // No tokens stored — pre-fill email and let user type password.
+      setEmail(account.email);
       setShowSaved(false);
-      setIsLoading(true);
-      try {
-        const { error } = await supabase.auth.setSession({
-          access_token: account.accessToken,
-          refresh_token: account.refreshToken,
-        });
-
-        if (error) throw error;
-
-        // Set this as the current account preference
-        setCurrentAccountPreference(account.id);
-        await goToDashboard();
-        return;
-      } catch {
-        // If token-based login fails (expired/revoked), fall back to password login.
-        toast({
-          title: "Session expired",
-          description: "Please log in once with password to refresh one-tap login.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      toast({
-        title: "One-tap not ready yet",
-        description: "Please log in once with password and keep save-account enabled.",
-      });
+      setTimeout(() => document.getElementById("password")?.focus(), 100);
+      return;
     }
 
-    setEmail(account.email);
     setShowSaved(false);
-    setTimeout(() => document.getElementById("password")?.focus(), 100);
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.setSession({
+        access_token: account.accessToken,
+        refresh_token: account.refreshToken,
+      });
+      if (error) throw error;
+
+      // Persist refreshed tokens so the next one-tap attempt doesn't re-use
+      // the old (now-expired) access token.
+      if (data.session && saveOnDevice) {
+        saveAccount({
+          ...account,
+          accessToken: data.session.access_token,
+          refreshToken: data.session.refresh_token,
+        });
+      }
+
+      setCurrentAccountPreference(account.id);
+      await goToDashboard();
+    } catch {
+      toast({
+        title: "Session expired",
+        description: "Please log in with your password to refresh one-tap login.",
+        variant: "destructive",
+      });
+      setEmail(account.email);
+      setTimeout(() => document.getElementById("password")?.focus(), 100);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRemoveSavedAccount = async (e: React.MouseEvent, id: string) => {
+  const handleRemoveSavedAccount = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    
-    try {
-      // Try to revoke the session using global scope for this specific account
-      const account = getSavedAccounts().find((a) => a.id === id);
-      if (account?.accessToken && account?.refreshToken) {
-        // Set session temporarily to revoke it
-        const { error } = await supabase.auth.setSession({
-          access_token: account.accessToken,
-          refresh_token: account.refreshToken,
-        });
-        
-        if (!error) {
-          // Now sign out globally to revoke this session
-          await supabase.auth.signOut({ scope: 'global' });
-          // Restore original session (if user was logged in)
-          const { data: { session: currentSession } } = await supabase.auth.getSession();
-          if (currentSession) {
-            await supabase.auth.setSession({
-              access_token: currentSession.access_token,
-              refresh_token: currentSession.refresh_token,
-            });
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error revoking account session:', error);
-      // Continue with removal even if revocation fails
-    } finally {
-      // Always remove from saved accounts list
-      removeAccount(id);
-      setSavedAccounts(getSavedAccounts());
-      toast({
-        title: "Account removed",
-        description: "This saved account has been removed and can no longer be used for one-tap login.",
-      });
-    }
+    // Just remove from the local device list — no server-side session
+    // manipulation. Globally revoking the session would log that user out
+    // from all their other devices, which is not what "remove from this
+    // device" should do.
+    removeAccount(id);
+    setSavedAccounts(getSavedAccounts());
+    toast({ title: "Account removed from this device" });
   };
 
   return (
@@ -252,10 +227,13 @@ const Login = () => {
                     >
                       <div className="mt-1 bg-card border border-border rounded-xl overflow-hidden divide-y divide-border">
                         {savedAccounts.map((acc) => (
-                          <button
+                          <div
                             key={acc.id}
+                            role="button"
+                            tabIndex={0}
                             onClick={() => handleSelectSavedAccount(acc)}
-                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors text-left group"
+                            onKeyDown={(e) => e.key === "Enter" && handleSelectSavedAccount(acc)}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors text-left group cursor-pointer"
                           >
                             {acc.avatarUrl ? (
                               <img src={acc.avatarUrl} alt={acc.fullName} className="h-8 w-8 rounded-full object-cover" />
@@ -271,11 +249,11 @@ const Login = () => {
                             <button
                               onClick={(e) => handleRemoveSavedAccount(e, acc.id)}
                               className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-all"
-                              title="Remove saved account"
+                              title="Remove saved account from this device"
                             >
                               <X className="h-3.5 w-3.5" />
                             </button>
-                          </button>
+                          </div>
                         ))}
                         <SmartLink to="/register" className="block">
                           <div className="flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors text-muted-foreground text-sm">
