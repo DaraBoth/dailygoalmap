@@ -104,10 +104,28 @@ const Dashboard = () => {
   const [activeInsight, setActiveInsight] = useState(0);
   const [pauseInsights, setPauseInsights] = useState(false);
   const [daysSinceLastVisit, setDaysSinceLastVisit] = useState(0);
-  const [noteMeta, setNoteMeta] = useState<{ totalNotes: number; daysSinceLastNote: number | null; lastNoteGoalTitle: string | null }>({
+  const [noteMeta, setNoteMeta] = useState<{
+    totalNotes: number;
+    daysSinceLastNote: number | null;
+    lastNoteGoalTitle: string | null;
+    publicNotesCount: number;
+    daysSinceLatestPublicNote: number | null;
+    latestPublicNoteGoalTitle: string | null;
+    isPublicNoteFromOther: boolean;
+    recentCompletedCount: number;
+    lastCompletedTitle: string | null;
+    lastCompletedGoalTitle: string | null;
+  }>({
     totalNotes: 0,
     daysSinceLastNote: null,
     lastNoteGoalTitle: null,
+    publicNotesCount: 0,
+    daysSinceLatestPublicNote: null,
+    latestPublicNoteGoalTitle: null,
+    isPublicNoteFromOther: false,
+    recentCompletedCount: 0,
+    lastCompletedTitle: null,
+    lastCompletedGoalTitle: null,
   });
 
   const insightSlides = useMemo(() => {
@@ -298,10 +316,25 @@ const Dashboard = () => {
     const challengeItem = challenges[Math.abs(daySeed >> 2) % challenges.length];
     const challengeSlide = { label: "Daily Challenge", headline: challengeItem.headline, detail: challengeItem.detail };
 
-    // Note-aware slide: surface real writing habits
-    const { totalNotes, daysSinceLastNote, lastNoteGoalTitle } = noteMeta;
+    // Slide 4 — Notes: own writing habits + public/shared note activity
+    const {
+      totalNotes, daysSinceLastNote, lastNoteGoalTitle,
+      publicNotesCount, daysSinceLatestPublicNote, latestPublicNoteGoalTitle, isPublicNoteFromOther,
+      recentCompletedCount, lastCompletedTitle, lastCompletedGoalTitle,
+    } = noteMeta;
+
     let noteSlide: { label: string; headline: string; detail: string };
-    if (totalNotes === 0) {
+    if (isPublicNoteFromOther && daysSinceLatestPublicNote !== null && daysSinceLatestPublicNote <= 3) {
+      noteSlide = {
+        label: "Team Notes",
+        headline: latestPublicNoteGoalTitle
+          ? `A collaborator shared a note in "${latestPublicNoteGoalTitle}"`
+          : "A collaborator shared a note recently",
+        detail: daysSinceLatestPublicNote === 0
+          ? "It was posted today. Check it out — shared notes often carry context you won't find in tasks."
+          : `Posted ${daysSinceLatestPublicNote === 1 ? 'yesterday' : `${daysSinceLatestPublicNote} days ago`}. Reading it keeps you aligned with your team.`,
+      };
+    } else if (totalNotes === 0) {
       noteSlide = {
         label: "Your Notes",
         headline: "Your thoughts deserve a home too",
@@ -315,12 +348,12 @@ const Dashboard = () => {
           ? `Your last note was in "${lastNoteGoalTitle}". Even a short entry keeps your thinking sharp.`
           : "Even a short entry keeps your thinking sharp and your goals feeling real.",
       };
-    } else if (daysSinceLastNote !== null && daysSinceLastNote === 0) {
+    } else if (daysSinceLastNote === 0) {
       noteSlide = {
         label: "Your Notes",
-        headline: `You wrote ${totalNotes > 1 ? `${totalNotes} notes` : 'a note'} today — keep capturing`,
+        headline: "You wrote a note today — keep capturing",
         detail: lastNoteGoalTitle
-          ? `Writing in "${lastNoteGoalTitle}" is a sign you're thinking, not just doing. That's a real edge.`
+          ? `Writing in "${lastNoteGoalTitle}" means you're thinking, not just doing. That's a real edge.`
           : "Capturing your thinking as you go is one of the most underrated productivity habits.",
       };
     } else {
@@ -329,25 +362,39 @@ const Dashboard = () => {
         headline: `${totalNotes} note${totalNotes !== 1 ? 's' : ''} across your goals`,
         detail: lastNoteGoalTitle
           ? `Last updated in "${lastNoteGoalTitle}" ${daysSinceLastNote === 1 ? 'yesterday' : `${daysSinceLastNote} days ago`}. Notes turn goals from tasks into thinking.`
-          : "Your notes are a record of how you think. Revisit them when you feel stuck.",
+          : `${publicNotesCount > 0 ? `${publicNotesCount} are shared with your team. ` : ''}Revisit them when you feel stuck.`,
       };
     }
 
-    // Remaining situation variants (all 3 always appear, just in rotated order)
-    const remaining = variants.filter(v => v !== primarySlide);
-    const slide4 = remaining.length > 0
-      ? remaining[Math.abs(daySeed >> 3) % remaining.length]
-      : noteSlide;
-    const slide5 = remaining.length > 1
-      ? remaining.filter(v => v !== slide4)[0]
-      : noteSlide;
+    // Slide 5 — Recent Activity: task completions this week
+    let activitySlide: { label: string; headline: string; detail: string };
+    if (recentCompletedCount === 0) {
+      activitySlide = {
+        label: "This Week",
+        headline: "No completed tasks yet this week",
+        detail: lastCompletedTitle
+          ? `Your last completed task was "${lastCompletedTitle}". What can you close today?`
+          : "Pick one open task and commit to finishing it today. Completion builds confidence.",
+      };
+    } else if (recentCompletedCount >= 10) {
+      activitySlide = {
+        label: "This Week",
+        headline: `${recentCompletedCount} tasks completed this week — outstanding`,
+        detail: lastCompletedGoalTitle
+          ? `Strong momentum in "${lastCompletedGoalTitle}". Protect the habits driving this.`
+          : "You are in a strong execution phase. Protect the habits that are driving this.",
+      };
+    } else {
+      activitySlide = {
+        label: "This Week",
+        headline: `${recentCompletedCount} task${recentCompletedCount !== 1 ? 's' : ''} completed this week`,
+        detail: lastCompletedTitle
+          ? `Most recent: "${lastCompletedTitle}"${lastCompletedGoalTitle ? ` in "${lastCompletedGoalTitle}"` : ''}. Keep the streak going.`
+          : "Good pace. Each completed task is a commitment kept.",
+      };
+    }
 
-    // Put noteSlide in position 5 only if situation variants fill 4; otherwise weave it in
-    const finalFive = remaining.length >= 2
-      ? [primarySlide, tipSlide, challengeSlide, slide4, slide5]
-      : [primarySlide, tipSlide, challengeSlide, noteSlide, slide4];
-
-    return finalFive;
+    return [primarySlide, tipSlide, challengeSlide, noteSlide, activitySlide];
   }, [goals, daysSinceLastVisit, noteMeta]);
 
   // Track days since last visit for personalized slides
@@ -361,27 +408,73 @@ const Dashboard = () => {
     localStorage.setItem(key, String(Date.now()));
   }, []);
 
-  // Fetch note metadata for personalized slides
+  // Fetch note + task metadata for personalized slides
   useEffect(() => {
     if (!user?.id) return;
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const sevenDaysAgo = new Date(Date.now() - 7 * msPerDay).toISOString();
+
     (async () => {
-      const { data } = await supabase
-        .from("goal_notes")
-        .select("id, updated_at, goal_id")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false })
-        .limit(20);
-      if (!data || data.length === 0) return;
-      const totalNotes = data.length;
-      const latest = data[0];
-      const daysSinceLastNote = Math.floor(
-        (Date.now() - new Date(latest.updated_at).getTime()) / (1000 * 60 * 60 * 24)
-      );
-      const matchingGoal = goals.find(g => g.id === latest.goal_id);
+      const [ownNotesRes, publicNotesRes, recentTasksRes] = await Promise.all([
+        supabase
+          .from("goal_notes")
+          .select("id, updated_at, goal_id")
+          .eq("user_id", user.id)
+          .order("updated_at", { ascending: false })
+          .limit(20),
+        supabase
+          .from("goal_notes")
+          .select("id, updated_at, goal_id, user_id, visibility")
+          .eq("visibility", "all")
+          .order("updated_at", { ascending: false })
+          .limit(10),
+        supabase
+          .from("tasks")
+          .select("id, title, description, updated_at, goal_id")
+          .eq("user_id", user.id)
+          .eq("completed", true)
+          .gte("updated_at", sevenDaysAgo)
+          .order("updated_at", { ascending: false })
+          .limit(20),
+      ]);
+
+      const ownNotes = ownNotesRes.data ?? [];
+      const publicNotes = publicNotesRes.data ?? [];
+      const recentTasks = recentTasksRes.data ?? [];
+
+      // Own notes
+      const totalNotes = ownNotes.length;
+      const latestOwn = ownNotes[0];
+      const daysSinceLastNote = latestOwn
+        ? Math.floor((Date.now() - new Date(latestOwn.updated_at).getTime()) / msPerDay)
+        : null;
+      const lastNoteGoal = goals.find(g => g.id === latestOwn?.goal_id);
+
+      // Public notes (RLS filters to goals user can access)
+      const latestPublic = publicNotes[0];
+      const daysSinceLatestPublicNote = latestPublic
+        ? Math.floor((Date.now() - new Date(latestPublic.updated_at).getTime()) / msPerDay)
+        : null;
+      const latestPublicGoal = goals.find(g => g.id === latestPublic?.goal_id);
+      const isPublicNoteFromOther = latestPublic ? latestPublic.user_id !== user.id : false;
+
+      // Recent completions
+      const recentCompletedCount = recentTasks.length;
+      const lastTask = recentTasks[0];
+      const lastCompletedTitle = lastTask?.title || lastTask?.description || null;
+      const lastCompletedGoal = goals.find(g => g.id === lastTask?.goal_id);
+
       setNoteMeta({
         totalNotes,
         daysSinceLastNote,
-        lastNoteGoalTitle: matchingGoal?.title ?? null,
+        lastNoteGoalTitle: lastNoteGoal?.title ?? null,
+        publicNotesCount: publicNotes.length,
+        daysSinceLatestPublicNote,
+        latestPublicNoteGoalTitle: latestPublicGoal?.title ?? null,
+        isPublicNoteFromOther,
+        recentCompletedCount,
+        lastCompletedTitle,
+        lastCompletedGoalTitle: lastCompletedGoal?.title ?? null,
       });
     })();
   }, [user?.id, goals]);
