@@ -297,6 +297,7 @@ const GoalNotes: React.FC<GoalNotesProps> = ({
                   note={note}
                   author={memberById.get(note.created_by)}
                   onClick={() => handleOpenNote(note)}
+                  query={searchQuery}
                 />
               ))}
             </div>
@@ -409,7 +410,7 @@ const GoalNotes: React.FC<GoalNotesProps> = ({
                           <Globe2 className="h-3 w-3 opacity-50 shrink-0" />
                         )}
                         <span className="text-sm font-medium truncate flex-1">
-                          {note.title || "Untitled note"}
+                          <Highlight text={note.title || "Untitled note"} query={searchQuery} />
                         </span>
                       </div>
                       <p className="text-[10px] text-muted-foreground/70 pl-4 mt-0.5">
@@ -478,6 +479,46 @@ const GoalNotes: React.FC<GoalNotesProps> = ({
   );
 };
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+const Highlight: React.FC<{ text: string; query: string }> = ({ text, query }) => {
+  const q = query.trim();
+  if (!q) return <>{text}</>;
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+  const lower = q.toLowerCase();
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === lower ? (
+          <mark key={i} className="bg-yellow-200/70 dark:bg-yellow-500/30 text-foreground rounded-sm px-0.5 not-italic">
+            {part}
+          </mark>
+        ) : (
+          <React.Fragment key={i}>{part}</React.Fragment>
+        )
+      )}
+    </>
+  );
+};
+
+function extractSnippet(content: string, query: string, maxLen = 130): string {
+  const plain = content
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`[^`]+`/g, '')
+    .replace(/!\[.*?\]\(.*?\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/#{1,6}\s/g, '')
+    .replace(/[*_~]{1,3}/g, '')
+    .replace(/\n+/g, ' ')
+    .trim();
+  const idx = plain.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return plain.slice(0, maxLen) + (plain.length > maxLen ? '…' : '');
+  const start = Math.max(0, idx - 40);
+  const end = Math.min(plain.length, idx + query.length + 80);
+  return (start > 0 ? '…' : '') + plain.slice(start, end) + (end < plain.length ? '…' : '');
+}
+
 // ── Sub-pieces ───────────────────────────────────────────────────────────────
 
 const LoadingState: React.FC = () => (
@@ -541,9 +582,11 @@ const NoteCard: React.FC<{
   note: GoalNote;
   author?: GoalMember;
   onClick: () => void;
-}> = ({ note, author, onClick }) => {
+  query?: string;
+}> = ({ note, author, onClick, query = "" }) => {
   const authorName = author?.user_profiles?.display_name || "Someone";
   const hasContent = !!note.content?.trim();
+  const showSnippet = query.trim().length > 0 && hasContent;
   return (
     <button
       type="button"
@@ -555,7 +598,7 @@ const NoteCard: React.FC<{
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold text-foreground line-clamp-2 break-words flex-1">
-          {note.title || "Untitled note"}
+          <Highlight text={note.title || "Untitled note"} query={query} />
         </h3>
         <span
           className={cn(
@@ -573,12 +616,18 @@ const NoteCard: React.FC<{
           cards stay compact. Line-clamp keeps the overall card height bounded. */}
       <div className="text-xs text-muted-foreground leading-relaxed flex-1 line-clamp-4 overflow-hidden [&_img]:hidden [&_pre]:hidden [&_h1]:!text-xs [&_h2]:!text-xs [&_h3]:!text-xs [&_h1]:!border-0 [&_h1]:!pb-0 [&_*]:!my-0">
         {hasContent ? (
-          <MarkdownRenderer
-            content={note.content}
-            isStreaming={false}
-            isLoading={false}
-            noCopy
-          />
+          showSnippet ? (
+            <span>
+              <Highlight text={extractSnippet(note.content, query)} query={query} />
+            </span>
+          ) : (
+            <MarkdownRenderer
+              content={note.content}
+              isStreaming={false}
+              isLoading={false}
+              noCopy
+            />
+          )
         ) : (
           <span className="italic">No content yet.</span>
         )}
@@ -605,6 +654,7 @@ const SearchResultsPane: React.FC<{
   memberById: Map<string, GoalMember>;
   onOpen: (note: GoalNote) => void;
 }> = ({ results, query, memberById, onOpen }) => (
+
   <div className="h-full flex flex-col overflow-hidden">
     <div className="px-6 py-4 border-b border-border/60">
       <p className="text-xs text-muted-foreground inline-flex items-center gap-2">
@@ -629,6 +679,7 @@ const SearchResultsPane: React.FC<{
               note={note}
               author={memberById.get(note.created_by)}
               onClick={() => onOpen(note)}
+              query={query}
             />
           ))}
         </div>

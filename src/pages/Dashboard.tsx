@@ -100,101 +100,221 @@ const Dashboard = () => {
   }).format(new Date());
   const [activeInsight, setActiveInsight] = useState(0);
   const [pauseInsights, setPauseInsights] = useState(false);
+  const [daysSinceLastVisit, setDaysSinceLastVisit] = useState(0);
 
   const insightSlides = useMemo(() => {
+    // Day-seeded stable randomness: different per user, different per day, stable per session
+    const dateStr = new Date().toDateString();
+    const userComponent = goals.reduce(
+      (acc, g) => acc + (g.id.charCodeAt(0) || 0) + (g.id.charCodeAt(g.id.length - 1) || 0),
+      0
+    );
+    let daySeed = 0;
+    for (let i = 0; i < dateStr.length; i++) daySeed = (daySeed * 31 + dateStr.charCodeAt(i)) >>> 0;
+    daySeed = (daySeed + userComponent) >>> 0;
+    const pick = <T,>(arr: T[]): T => arr[Math.abs(daySeed) % arr.length];
+
+    // Metrics
     const totalGoals = goals.length;
-    const totalTasks = goals.reduce((acc, goal) => acc + (goal.taskCounts?.total || 0), 0);
-    const completedTasks = goals.reduce((acc, goal) => acc + (goal.taskCounts?.completed || 0), 0);
+    const totalTasks = goals.reduce((acc, g) => acc + (g.taskCounts?.total || 0), 0);
+    const completedTasks = goals.reduce((acc, g) => acc + (g.taskCounts?.completed || 0), 0);
     const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-    const goalsWithTasks = goals.filter((goal) => (goal.taskCounts?.total || 0) > 0);
 
     const msPerDay = 1000 * 60 * 60 * 24;
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-
+    const now = new Date(); now.setHours(0, 0, 0, 0);
     const deadlineEntries = goals
-      .map((goal) => {
-        if (!goal.target_date) return null;
-        const d = new Date(goal.target_date);
+      .map(g => {
+        if (!g.target_date) return null;
+        const d = new Date(g.target_date);
         if (Number.isNaN(d.getTime())) return null;
         d.setHours(0, 0, 0, 0);
-        return {
-          goal,
-          days: Math.floor((d.getTime() - now.getTime()) / msPerDay),
-        };
+        return { goal: g, days: Math.floor((d.getTime() - now.getTime()) / msPerDay) };
       })
-      .filter((entry): entry is { goal: Goal; days: number } => entry !== null);
+      .filter((e): e is { goal: Goal; days: number } => e !== null);
 
-    const overdueCount = deadlineEntries.filter((entry) => entry.days < 0).length;
-    const dueSoonCount = deadlineEntries.filter((entry) => entry.days >= 0 && entry.days <= 7).length;
-    const nearestDeadline = deadlineEntries
-      .filter((entry) => entry.days >= 0)
-      .sort((a, b) => a.days - b.days)[0];
+    const overdueGoals = deadlineEntries.filter(e => e.days < 0);
+    const urgentGoals = deadlineEntries.filter(e => e.days >= 0 && e.days <= 2);
+    const nearestDeadline = deadlineEntries.filter(e => e.days >= 0).sort((a, b) => a.days - b.days)[0];
+    const spotlightGoal = goals.length > 0 ? goals[Math.abs(daySeed) % goals.length] : null;
 
-    const stalledGoals = goalsWithTasks.filter((goal) => (goal.taskCounts?.completed || 0) === 0);
-    const topMomentumGoal = goalsWithTasks
-      .map((goal) => {
-        const total = goal.taskCounts?.total || 0;
-        const completed = goal.taskCounts?.completed || 0;
-        return {
-          goal,
-          rate: total > 0 ? completed / total : 0,
-        };
-      })
-      .sort((a, b) => b.rate - a.rate)[0];
-
-    return [
-      {
-        label: "Focus Question",
-        headline:
-          nearestDeadline?.goal?.title
-            ? `If today counts, should "${nearestDeadline.goal.title}" come first?`
-            : totalGoals > 0
-              ? "Which goal would genuinely move your week forward today?"
-              : "What is one goal worth committing to today?",
-        detail:
-          nearestDeadline
-            ? nearestDeadline.days === 0
-              ? "It is due today. One completed task right now can reduce pressure fast."
-              : `${nearestDeadline.days} day${nearestDeadline.days === 1 ? '' : 's'} left. Pick the highest-impact task first.`
-            : "Name one concrete action before opening anything else.",
-      },
-      {
-        label: "Reality Check",
-        headline:
-          overdueCount > 0
-            ? `${overdueCount} ${overdueCount === 1 ? "goal is" : "goals are"} past due - still your priority?`
-            : stalledGoals.length > 0
-              ? `${stalledGoals.length} ${stalledGoals.length === 1 ? "goal has" : "goals have"} zero completed tasks`
-              : dueSoonCount > 0
-                ? `${dueSoonCount} ${dueSoonCount === 1 ? "goal is" : "goals are"} due soon - what gets protected?`
-                : "Your timeline is calm - what can you finish early?",
-        detail:
-          overdueCount > 0
-            ? "Decide clearly: recommit, rescope, or let it go. Unclear goals drain energy."
-            : stalledGoals.length > 0
-              ? "Start with a 10-minute win to break inertia and rebuild momentum."
-              : "Use this low-pressure window to ship one meaningful task.",
-      },
-      {
-        label: "Momentum Mirror",
-        headline:
-          totalTasks === 0
-            ? "No task system yet - ready to define your first step?"
-            : completionRate >= 70
-              ? "Your execution rhythm is strong - keep protecting it"
-              : completionRate >= 40
-                ? "Progress exists, but your focus may be fragmented"
-                : "Your plan may be too heavy for your current pace",
-        detail:
-          totalTasks === 0
-            ? "Create 3 small tasks under one goal to make progress measurable."
-            : topMomentumGoal?.goal?.title
-              ? `Best momentum is in "${topMomentumGoal.goal.title}" (${Math.round(topMomentumGoal.rate * 100)}%). Can you replicate that pattern elsewhere?`
-              : `${completedTasks}/${totalTasks} tasks done (${completionRate}%). Close one task before you add a new one.`,
-      },
+    // Content pools
+    const tips = [
+      { headline: "Shrink the task, not the goal", detail: "If a task feels heavy, split it into two 15-minute steps. Small wins compound." },
+      { headline: "One priority, then the rest", detail: "Before checking anything, name the single task that would make today count." },
+      { headline: "Protect your first hour", detail: "The first hour sets your tone. Start with intention, not notifications." },
+      { headline: "Done beats perfect", detail: "A completed 80% task creates momentum. A polished 0% task creates none." },
+      { headline: "Pair a hard task with a ritual", detail: "Attach your most avoided task to a habit you already keep. Habit stacking builds consistency." },
+      { headline: "Review before you add", detail: "Check what is already in progress before creating new tasks. Finishing is faster than starting." },
+      { headline: "Narrow your day to three", detail: "Pick three must-do tasks each morning. Everything else is a bonus." },
     ];
-  }, [goals]);
+    const challenges = [
+      { headline: "5-minute start rule", detail: "Commit to working on your top goal for just 5 minutes. Starting is the hardest part." },
+      { headline: "Task audit", detail: "Find one task that has been pending for over a week. Either do it today or remove it." },
+      { headline: "Streak starter", detail: "Complete one task in each active goal today. Even a small action per goal rebuilds rhythm." },
+      { headline: "No multitasking hour", detail: "Block one hour. One tab. One task. See how much farther you get." },
+      { headline: "Forward one goal", detail: "Pick the goal you have been avoiding most. Do one concrete action on it before noon." },
+      { headline: "Progress snapshot", detail: "Write two sentences: where you are and what you will do next on your main goal." },
+    ];
+
+    // Situation detection (priority order)
+    type Situation = 'new_user' | 'long_absence' | 'deadline_crisis' | 'thriving' | 'stalled' | 'normal';
+    let situation: Situation = 'normal';
+    if (totalGoals === 0) situation = 'new_user';
+    else if (daysSinceLastVisit > 7) situation = 'long_absence';
+    else if (overdueGoals.length > 0 || urgentGoals.length > 0) situation = 'deadline_crisis';
+    else if (completionRate >= 70 && totalTasks >= 5) situation = 'thriving';
+    else if (completionRate < 20 && totalTasks >= 5) situation = 'stalled';
+
+    const situationSlides: Record<Situation, Array<{ label: string; headline: string; detail: string }>> = {
+      new_user: [
+        { label: "Welcome", headline: "Every journey starts with one goal", detail: "Create your first goal and add three tasks to it. That is all it takes to begin." },
+        { label: "Getting Started", headline: "What would you want to be true in 30 days?", detail: "Set a concrete target date and one measurable task. Clarity beats ambition every time." },
+        { label: "First Step", headline: "Small systems beat big intentions", detail: "Goals with even one task are far more likely to be achieved. Start small and build." },
+      ],
+      long_absence: [
+        {
+          label: "Welcome Back",
+          headline: `${daysSinceLastVisit} day${daysSinceLastVisit !== 1 ? 's' : ''} away — let's see where things stand`,
+          detail: "Take 5 minutes to review your goals before diving in. A lot can shift in that time.",
+        },
+        {
+          label: "Re-entry",
+          headline: "Returning is a decision, not a failure",
+          detail: "Pick one goal to focus on today. Ignore the gap — what matters is the next action you take.",
+        },
+        {
+          label: "Catch-up Mode",
+          headline: "What changed while you were away?",
+          detail: "Scan your task list. Archive what no longer matters. Prioritize what still does.",
+        },
+      ],
+      deadline_crisis: [
+        {
+          label: "Urgent",
+          headline: overdueGoals.length > 0
+            ? `${overdueGoals.length} goal${overdueGoals.length > 1 ? 's are' : ' is'} overdue — decide now`
+            : urgentGoals.length > 0
+              ? `"${urgentGoals[0].goal.title}" is due ${urgentGoals[0].days === 0 ? 'today' : `in ${urgentGoals[0].days} day${urgentGoals[0].days > 1 ? 's' : ''}`}`
+              : "A deadline is very close",
+          detail: overdueGoals.length > 0
+            ? "Recommit, rescope, or let it go. Ambiguity here costs focus everywhere else."
+            : "Clear your schedule for one focused push. One completed task now beats ten planned ones.",
+        },
+        {
+          label: "Crunch Mode",
+          headline: "Pressure reveals priority",
+          detail: nearestDeadline
+            ? `Focus on "${nearestDeadline.goal.title}". Block 30 minutes now and work only on the next task.`
+            : "Identify the one thing that would most reduce pressure and do that first.",
+        },
+        {
+          label: "Deadline",
+          headline: "What absolutely must happen today?",
+          detail: "Write it down. Do it before anything else. Everything else is negotiable.",
+        },
+      ],
+      thriving: [
+        {
+          label: "Momentum",
+          headline: `${completionRate}% completion — your execution is strong`,
+          detail: spotlightGoal
+            ? `"${spotlightGoal.title}" is today's spotlight. What one task would push it further?`
+            : "You are building real momentum. The key now is protecting your system.",
+        },
+        {
+          label: "Keep Going",
+          headline: "Consistency is a competitive advantage",
+          detail: "Most people stop when things get hard. You are proving you won't. What does your next level look like?",
+        },
+        {
+          label: "Raise the Bar",
+          headline: "Strong rhythm — time to go deeper",
+          detail: `${completedTasks} tasks done. Pick the goal with the biggest impact potential and double down today.`,
+        },
+      ],
+      stalled: [
+        {
+          label: "Stuck?",
+          headline: "Low completion often means the tasks are too big",
+          detail: "Take your next task and cut it in half. A smaller action is easier to start — and starting is everything.",
+        },
+        {
+          label: "Break Inertia",
+          headline: `${completionRate}% done — one win changes the feel`,
+          detail: spotlightGoal
+            ? `Start with "${spotlightGoal.title}". Pick its easiest open task and finish it before noon.`
+            : "Pick the easiest open task across all goals and finish it. Momentum is contagious.",
+        },
+        {
+          label: "Reset",
+          headline: "A stalled goal is feedback, not failure",
+          detail: "Ask why tasks are staying open. Are they unclear? Too large? Wrong priority? Rename them before you do them.",
+        },
+      ],
+      normal: [
+        {
+          label: "Today",
+          headline: nearestDeadline
+            ? `"${nearestDeadline.goal.title}" is due in ${nearestDeadline.days} day${nearestDeadline.days === 1 ? '' : 's'}`
+            : spotlightGoal
+              ? `Spotlight: "${spotlightGoal.title}"`
+              : "What will you finish today?",
+          detail: nearestDeadline
+            ? `${nearestDeadline.days === 1 ? 'Tomorrow is the deadline.' : `${nearestDeadline.days} days left.`} Pick the highest-impact task first.`
+            : `${completedTasks}/${totalTasks} tasks done (${completionRate}%). Closing one task creates space for the next.`,
+        },
+        {
+          label: "Progress",
+          headline: `${completionRate}% overall — ${completionRate >= 50 ? 'above halfway' : 'room to move'}`,
+          detail: spotlightGoal
+            ? `"${spotlightGoal.title}" is today's goal spotlight. What moves it forward in the next 30 minutes?`
+            : "Progress is built in sessions, not sprints. One focused block today compounds over a week.",
+        },
+        {
+          label: "Insight",
+          headline: totalGoals > 1
+            ? `You are managing ${totalGoals} goals — which one matters most today?`
+            : "Single-goal focus is a superpower",
+          detail: "Spreading attention evenly rarely produces the outcomes you want most. Pick one and go deep.",
+        },
+      ],
+    };
+
+    const variants = situationSlides[situation];
+    const primarySlide = pick(variants);
+
+    // Secondary: tip or challenge, alternates by day parity
+    const pool = daySeed % 2 === 0 ? tips : challenges;
+    const secondary = pool[Math.abs(daySeed >> 1) % pool.length];
+    const secondarySlide = {
+      label: daySeed % 2 === 0 ? "Tip of the Day" : "Daily Challenge",
+      headline: secondary.headline,
+      detail: secondary.detail,
+    };
+
+    // Third: a different situation variant, or stats fallback
+    const remaining = variants.filter(v => v !== primarySlide);
+    const thirdSlide = remaining.length > 0
+      ? remaining[Math.abs(daySeed >> 2) % remaining.length]
+      : {
+          label: "Your Stats",
+          headline: `${totalTasks} tasks across ${totalGoals} goal${totalGoals !== 1 ? 's' : ''}`,
+          detail: `${completedTasks} completed (${completionRate}%). Each task done is a decision honored.`,
+        };
+
+    return [primarySlide, secondarySlide, thirdSlide];
+  }, [goals, daysSinceLastVisit]);
+
+  // Track days since last visit for personalized slides
+  useEffect(() => {
+    const key = 'dgm:lastVisitTs';
+    const last = localStorage.getItem(key);
+    if (last) {
+      const days = Math.floor((Date.now() - parseInt(last, 10)) / (1000 * 60 * 60 * 24));
+      setDaysSinceLastVisit(days);
+    }
+    localStorage.setItem(key, String(Date.now()));
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {

@@ -766,7 +766,7 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
   return (
     <div className="max-w-7xl mx-auto space-y-4">
       <div className="rounded-xl border border-border/60 bg-background/60 dark:bg-background/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="flex flex-row sm:flex-row justify-between sm:items-center sm:justify-between gap-2">
           <div className="min-w-0">
             <h2 className="text-sm sm:text-base font-semibold inline-flex items-center gap-2 text-foreground">
               <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
