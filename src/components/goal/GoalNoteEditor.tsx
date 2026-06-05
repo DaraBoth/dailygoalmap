@@ -196,7 +196,14 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
           if (!next) return;
           // Ignore our own UPDATE round-trip.
           if (next.updated_by === currentUserId) return;
-          if (isEditing) {
+          // Only show the conflict banner when the user has unsaved local
+          // edits that would be clobbered. If nothing has changed since the
+          // last save, auto-apply even while in edit mode.
+          const snap = lastSavedRef.current;
+          const hasDirtyEdits =
+            isEditing &&
+            (title !== snap.title || content !== snap.content);
+          if (hasDirtyEdits) {
             const actor =
               members.find((m) => m.user_id === next.updated_by)?.user_profiles
                 ?.display_name || "Someone";
@@ -205,6 +212,11 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
             setTitle(next.title);
             setContent(next.content);
             setVisibility(next.visibility);
+            lastSavedRef.current = {
+              title: next.title,
+              content: next.content,
+              visibility: next.visibility,
+            };
           }
         }
       )
