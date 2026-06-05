@@ -651,7 +651,7 @@ const GoalDetail: React.FC = () => {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -16 }}
                   transition={{ duration: 0.15 }}
-                  className="h-full overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-6"
+                  className="h-full overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-6 bg-slate-100/80 dark:bg-slate-950/80 backdrop-blur-md"
                 >
                   <GoalTasksTable
                     tasks={tasks}
@@ -671,7 +671,7 @@ const GoalDetail: React.FC = () => {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -16 }}
                   transition={{ duration: 0.15 }}
-                  className="h-full"
+                  className="h-full bg-slate-100/80 dark:bg-slate-950/80 backdrop-blur-md"
                 >
                   <GoalNotes
                     goalId={goalId}

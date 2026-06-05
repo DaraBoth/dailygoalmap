@@ -934,3 +934,13 @@ SELECT
           WHERE goal_id = params.goal_id AND user_id = auth.uid())     AS am_i_member,
   user_can_access_goal(params.goal_id, auth.uid())                     AS function_says
 FROM params;
+
+-- ============================================
+-- FIX: goal_note_viewers missing `role` column
+-- The app queries SELECT user_id, role and INSERT role, but the table was
+-- created without a role column, causing a 400 Bad Request on every load.
+-- Run this once in Supabase SQL Editor.
+-- ============================================
+ALTER TABLE goal_note_viewers
+  ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'viewer'
+    CHECK (role IN ('viewer', 'editor'));
