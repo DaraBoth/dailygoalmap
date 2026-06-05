@@ -5,7 +5,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Subject } from "rxjs";
-import { debounceTime, distinctUntilChanged } from "rxjs/operators";
+import { debounceTime, distinctUntilChanged, throttleTime } from "rxjs/operators";
 import {
   Sheet,
   SheetContent,
@@ -24,7 +24,7 @@ import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
-import MarkdownEditor from "@/components/editor/MarkdownEditor";
+import MarkdownEditor, { type RemoteCursor } from "@/components/editor/MarkdownEditor";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { supabase } from "@/integrations/supabase/client";
 import type { GoalMember } from "@/types/goal";
@@ -118,6 +118,14 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
     () => new Subject<{ title: string; content: string; visibility: GoalNoteVisibility }>(),
     [],
   );
+  // Cursor presence state — other editors' caret / selection positions.
+  const [remoteCursors, setRemoteCursors] = useState<RemoteCursor[]>([]);
+  // RxJS stream for local cursor/selection changes → throttled broadcast.
+  const cursor$ = useMemo(() => new Subject<{ from: number; to: number }>(), []);
+  // Per-user timeout handles for auto-expiring stale cursors.
+  const cursorTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  // Stable cursor receive handler (same ref pattern as broadcastHandlerRef).
+  const cursorHandlerRef = useRef<((data: any) => void) | null>(null);
 
   // ── Realtime collaboration state ───────────────────────────────────────────
   // editorPresence: who else currently has this note open in edit mode.
@@ -357,6 +365,31 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
     persistNoteRef.current = persistNote;
   }, [persistNote]);
 
+  // ── Cursor presence ───────────────────────────────────────────────────────
+  // Deterministic color from user_id so every peer agrees on the same color.
+  const hashColor = (uid: string): string => {
+    const palette = ["#e03131","#f76707","#e67700","#2f9e44","#0c8599","#1971c2","#7048e8","#c2255c"];
+    let h = 0;
+    for (let i = 0; i < uid.length; i++) h = Math.imul(31, h) + uid.charCodeAt(i) | 0;
+    return palette[Math.abs(h) % palette.length];
+  };
+
+  cursorHandlerRef.current = ({ payload }: any) => {
+    const { user_id: uid, from, to, display_name, color } = payload ?? {};
+    if (!uid || uid === currentUserId) return;
+    // Refresh the 5-second expiry timeout for this user's cursor.
+    const prev = cursorTimeoutsRef.current.get(uid);
+    if (prev) clearTimeout(prev);
+    cursorTimeoutsRef.current.set(uid, setTimeout(() => {
+      setRemoteCursors((c) => c.filter((r) => r.user_id !== uid));
+      cursorTimeoutsRef.current.delete(uid);
+    }, 5000));
+    setRemoteCursors((cursors) => [
+      ...cursors.filter((r) => r.user_id !== uid),
+      { user_id: uid, from, to, display_name: display_name ?? "Someone", color: color ?? "#888" },
+    ]);
+  };
+
   // ── Broadcast channel: near-real-time content sync ───────────────────────
   // Stable handler ref — always holds the freshest closure. The channel
   // subscription is created once per note open and delegates to this ref,
@@ -384,7 +417,7 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
   };
 
   // Open a Broadcast channel when a note is open. Minimal deps = stable
-  // channel; the handler ref carries all fresh state.
+  // channel; the handler refs carry all fresh state.
   useEffect(() => {
     if (!open || !note?.id) return;
     const ch = (supabase as any).channel(`note-live:${note.id}`, {
@@ -393,11 +426,18 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
     ch.on("broadcast", { event: "content" }, (data: any) => {
       broadcastHandlerRef.current?.(data);
     });
+    ch.on("broadcast", { event: "cursor" }, (data: any) => {
+      cursorHandlerRef.current?.(data);
+    });
     ch.subscribe();
     broadcastChannelRef.current = ch;
     return () => {
       (supabase as any).removeChannel(ch);
       broadcastChannelRef.current = null;
+      // Clear all remote cursors and their expiry timers on close.
+      setRemoteCursors([]);
+      cursorTimeoutsRef.current.forEach(clearTimeout);
+      cursorTimeoutsRef.current.clear();
     };
   }, [open, note?.id]);
 
@@ -421,6 +461,26 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
       persist$.unsubscribe();
     };
   }, [changes$, currentUserId]);
+
+  // Broadcast local cursor/selection at 100 ms throttle (leading + trailing
+  // so the first move is instant and the final position is always sent).
+  useEffect(() => {
+    if (!isEditing) return;
+    const me = members.find((m) => m.user_id === currentUserId);
+    const display_name = me?.user_profiles?.display_name ?? "Someone";
+    const color = hashColor(currentUserId);
+    const sub = cursor$.pipe(
+      throttleTime(100, undefined, { leading: true, trailing: true }),
+    ).subscribe(({ from, to }) => {
+      broadcastChannelRef.current?.send({
+        type: "broadcast",
+        event: "cursor",
+        payload: { user_id: currentUserId, from, to, display_name, color },
+      });
+    });
+    return () => sub.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cursor$, currentUserId, isEditing, members]);
 
   // Visibility changes come from a button click, not the typing flow, so
   // emit them directly to the stream so they reach the DB save subscriber.
@@ -894,6 +954,10 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
                       changes$.next({ title: liveRef.current.title, content: c, visibility: liveRef.current.visibility });
                     }
                   }}
+                  onCursorChange={({ from, to }) => {
+                    if (isEditing) cursor$.next({ from, to });
+                  }}
+                  remoteCursors={remoteCursors}
                   placeholder="Write your note in markdown…"
                   minHeight={isMobile ? "320px" : "480px"}
                   className="rounded-none border-0 bg-transparent focus-within:ring-0"
