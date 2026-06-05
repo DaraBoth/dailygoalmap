@@ -283,26 +283,29 @@ const Dashboard = () => {
     const variants = situationSlides[situation];
     const primarySlide = pick(variants);
 
-    // Secondary: tip or challenge, alternates by day parity
-    const pool = daySeed % 2 === 0 ? tips : challenges;
-    const secondary = pool[Math.abs(daySeed >> 1) % pool.length];
-    const secondarySlide = {
-      label: daySeed % 2 === 0 ? "Tip of the Day" : "Daily Challenge",
-      headline: secondary.headline,
-      detail: secondary.detail,
+    // Always show one tip AND one challenge (both pools present every day, index varies by seed)
+    const tipItem = tips[Math.abs(daySeed >> 1) % tips.length];
+    const tipSlide = { label: "Tip of the Day", headline: tipItem.headline, detail: tipItem.detail };
+
+    const challengeItem = challenges[Math.abs(daySeed >> 2) % challenges.length];
+    const challengeSlide = { label: "Daily Challenge", headline: challengeItem.headline, detail: challengeItem.detail };
+
+    // Remaining situation variants (all 3 always appear, just in rotated order)
+    const statsSlide = {
+      label: "Your Stats",
+      headline: `${totalTasks} tasks across ${totalGoals} goal${totalGoals !== 1 ? 's' : ''}`,
+      detail: `${completedTasks} completed (${completionRate}%). Each task done is a decision honored.`,
     };
-
-    // Third: a different situation variant, or stats fallback
     const remaining = variants.filter(v => v !== primarySlide);
-    const thirdSlide = remaining.length > 0
-      ? remaining[Math.abs(daySeed >> 2) % remaining.length]
-      : {
-          label: "Your Stats",
-          headline: `${totalTasks} tasks across ${totalGoals} goal${totalGoals !== 1 ? 's' : ''}`,
-          detail: `${completedTasks} completed (${completionRate}%). Each task done is a decision honored.`,
-        };
+    const slide4 = remaining.length > 0
+      ? remaining[Math.abs(daySeed >> 3) % remaining.length]
+      : statsSlide;
+    const furtherRemaining = remaining.filter(v => v !== slide4);
+    const slide5 = furtherRemaining.length > 0
+      ? furtherRemaining[0]
+      : statsSlide;
 
-    return [primarySlide, secondarySlide, thirdSlide];
+    return [primarySlide, tipSlide, challengeSlide, slide4, slide5];
   }, [goals, daysSinceLastVisit]);
 
   // Track days since last visit for personalized slides
