@@ -5,7 +5,9 @@ import { Goal } from "@/types/goal";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import { useGoalStatus } from "@/hooks/useGoalStatus";
 import { useGoals } from "@/hooks/useGoals";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { getDashboardGoals, saveDashboardGoals } from "@/pwa/offlineDashboardCache";
 import GlobalBackground from "@/components/ui/GlobalBackground";
 import GoalList from "@/components/dashboard/GoalList";
@@ -71,6 +73,7 @@ const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth >= 1536 : false
   );
+  const { user } = useAuth();
   const isMobile = useIsMobile();
   const isLargeScreen = useIsLargeScreen();
   const prevIsLargeRef = useRef(isLargeScreen);
@@ -101,6 +104,11 @@ const Dashboard = () => {
   const [activeInsight, setActiveInsight] = useState(0);
   const [pauseInsights, setPauseInsights] = useState(false);
   const [daysSinceLastVisit, setDaysSinceLastVisit] = useState(0);
+  const [noteMeta, setNoteMeta] = useState<{ totalNotes: number; daysSinceLastNote: number | null; lastNoteGoalTitle: string | null }>({
+    totalNotes: 0,
+    daysSinceLastNote: null,
+    lastNoteGoalTitle: null,
+  });
 
   const insightSlides = useMemo(() => {
     // Day-seeded stable randomness: different per user, different per day, stable per session
@@ -290,23 +298,57 @@ const Dashboard = () => {
     const challengeItem = challenges[Math.abs(daySeed >> 2) % challenges.length];
     const challengeSlide = { label: "Daily Challenge", headline: challengeItem.headline, detail: challengeItem.detail };
 
+    // Note-aware slide: surface real writing habits
+    const { totalNotes, daysSinceLastNote, lastNoteGoalTitle } = noteMeta;
+    let noteSlide: { label: string; headline: string; detail: string };
+    if (totalNotes === 0) {
+      noteSlide = {
+        label: "Your Notes",
+        headline: "Your thoughts deserve a home too",
+        detail: "Try writing one note under any goal — even a few lines helps you think clearer and track your reasoning over time.",
+      };
+    } else if (daysSinceLastNote !== null && daysSinceLastNote >= 7) {
+      noteSlide = {
+        label: "Your Notes",
+        headline: `You haven't written a note in ${daysSinceLastNote} days`,
+        detail: lastNoteGoalTitle
+          ? `Your last note was in "${lastNoteGoalTitle}". Even a short entry keeps your thinking sharp.`
+          : "Even a short entry keeps your thinking sharp and your goals feeling real.",
+      };
+    } else if (daysSinceLastNote !== null && daysSinceLastNote === 0) {
+      noteSlide = {
+        label: "Your Notes",
+        headline: `You wrote ${totalNotes > 1 ? `${totalNotes} notes` : 'a note'} today — keep capturing`,
+        detail: lastNoteGoalTitle
+          ? `Writing in "${lastNoteGoalTitle}" is a sign you're thinking, not just doing. That's a real edge.`
+          : "Capturing your thinking as you go is one of the most underrated productivity habits.",
+      };
+    } else {
+      noteSlide = {
+        label: "Your Notes",
+        headline: `${totalNotes} note${totalNotes !== 1 ? 's' : ''} across your goals`,
+        detail: lastNoteGoalTitle
+          ? `Last updated in "${lastNoteGoalTitle}" ${daysSinceLastNote === 1 ? 'yesterday' : `${daysSinceLastNote} days ago`}. Notes turn goals from tasks into thinking.`
+          : "Your notes are a record of how you think. Revisit them when you feel stuck.",
+      };
+    }
+
     // Remaining situation variants (all 3 always appear, just in rotated order)
-    const statsSlide = {
-      label: "Your Stats",
-      headline: `${totalTasks} tasks across ${totalGoals} goal${totalGoals !== 1 ? 's' : ''}`,
-      detail: `${completedTasks} completed (${completionRate}%). Each task done is a decision honored.`,
-    };
     const remaining = variants.filter(v => v !== primarySlide);
     const slide4 = remaining.length > 0
       ? remaining[Math.abs(daySeed >> 3) % remaining.length]
-      : statsSlide;
-    const furtherRemaining = remaining.filter(v => v !== slide4);
-    const slide5 = furtherRemaining.length > 0
-      ? furtherRemaining[0]
-      : statsSlide;
+      : noteSlide;
+    const slide5 = remaining.length > 1
+      ? remaining.filter(v => v !== slide4)[0]
+      : noteSlide;
 
-    return [primarySlide, tipSlide, challengeSlide, slide4, slide5];
-  }, [goals, daysSinceLastVisit]);
+    // Put noteSlide in position 5 only if situation variants fill 4; otherwise weave it in
+    const finalFive = remaining.length >= 2
+      ? [primarySlide, tipSlide, challengeSlide, slide4, slide5]
+      : [primarySlide, tipSlide, challengeSlide, noteSlide, slide4];
+
+    return finalFive;
+  }, [goals, daysSinceLastVisit, noteMeta]);
 
   // Track days since last visit for personalized slides
   useEffect(() => {
@@ -318,6 +360,31 @@ const Dashboard = () => {
     }
     localStorage.setItem(key, String(Date.now()));
   }, []);
+
+  // Fetch note metadata for personalized slides
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("goal_notes")
+        .select("id, updated_at, goal_id")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(20);
+      if (!data || data.length === 0) return;
+      const totalNotes = data.length;
+      const latest = data[0];
+      const daysSinceLastNote = Math.floor(
+        (Date.now() - new Date(latest.updated_at).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      const matchingGoal = goals.find(g => g.id === latest.goal_id);
+      setNoteMeta({
+        totalNotes,
+        daysSinceLastNote,
+        lastNoteGoalTitle: matchingGoal?.title ?? null,
+      });
+    })();
+  }, [user?.id, goals]);
 
   // Keyboard shortcuts
   useEffect(() => {
