@@ -31,8 +31,8 @@ No test suite. Manual testing only (Desktop, Mobile, Offline).
 - **Router**: TanStack Router 1.131 (file-based routes in `src/routes/`)
 - **Backend**: Supabase (PostgreSQL, Auth, Realtime, Storage, Edge Functions)
 - **UI**: Radix UI, shadcn/ui, Tailwind CSS 3.4, Framer Motion
-- **Rich Text**: TipTap 3 (used in GoalNoteEditor for Notion-style editing)
-- **State**: TanStack Query 5.56 + React Context for auth
+- **Rich Text**: TipTap 3 (used in `src/components/editor/MarkdownEditor.tsx` for notes)
+- **State**: TanStack Query 5.56 (QueryClient configured in root, used selectively) + React Context for auth
 - **PWA**: Service Worker, IndexedDB for offline, Push Notifications (Firebase)
 - **AI**: OpenAI GPT + Google Gemini (via Supabase Edge Functions)
 
@@ -63,22 +63,22 @@ src/routes/
 ### Root (`__root.tsx`)
 - Creates `QueryClient` (staleTime: 5 min, gcTime: 10 min, no refetch on focus/mount)
 - Exports `UserContext` — provides `{ user, setUser }` globally
-- Sets up Supabase Auth subscription (lines ~48–57)
-- Sets up global realtime listener for notifications (lines ~61–227)
+- Sets up Supabase Auth subscription
+- Sets up global realtime listener for notifications (toasts + browser push)
 - Registers Service Worker via `src/pwa/registerSW.ts`
 - Route-progress bar using `useRouterState`
 
 ### Authentication
-- `authService` (`src/services/authService.ts`) wraps Supabase Auth
+- `authService` (`src/services/authService.ts`) is a **singleton** that persists session under the `orbit_session` localStorage key and re-validates against Supabase every 5 minutes in the background
 - `useAuth()` hook for components that need the current user
 - `ProtectedRoute` / `ConditionalProtectedRoute` in `src/components/auth/`
 
 ### Data Fetching
-- TanStack Query for server state (goals, tasks, notifications)
-- React Context for client state (auth, theme, offline mode)
-- `useGoals()` hook manages goal list, pagination (4/page), sort, and delete flow
-- Task fetching in GoalDetail paginates 1000 tasks per request (`fetchAllGoalTasks`)
-- **Always use `invalidateQueries()` over `window.location.reload()`**
+- **`useGoals`** (`src/hooks/useGoals.ts`) uses raw Supabase calls with `useState/useEffect` — NOT TanStack Query. It fetches owned + joined goals in two queries, then batch-fetches task counts and member counts.
+- **`useCalendarTasks`** also uses raw Supabase calls. It has two operating modes:
+  - *Managed mode*: GoalDetail passes `allTasks` prop — the hook syncs from that prop, skips its own fetch, and subscribes to realtime patches only for the viewed month.
+  - *Standalone mode*: No `allTasks` prop — the hook fetches tasks per-viewed-month with 250ms debounce and subscribes to realtime.
+- TanStack Query's `invalidateQueries()` is available via `useQueryClient()` — prefer it over `window.location.reload()`
 
 ### Task Data Model (`src/components/calendar/types.ts`)
 Tasks use unified datetime fields. Always normalize raw DB rows with `normalizeTaskList` / `normalizeTaskRecord` from `src/components/calendar/taskNormalization.ts` before use.
@@ -86,15 +86,47 @@ Tasks use unified datetime fields. Always normalize raw DB rows with `normalizeT
 ```typescript
 interface Task {
   id, description, completed, user_id
-  start_date: string    // ISO datetime
-  end_date: string      // ISO datetime
+  title?: string               // display name; normalizer merges with description as fallback
+  start_date: string           // ISO datetime
+  end_date: string             // ISO datetime
   daily_start_time?: string | null  // 'HH:MM:SS'
   daily_end_time?: string | null    // 'HH:MM:SS'
   is_anytime?: boolean | null
+  duration_minutes?: number | null
   tags?: string[]
-  color?: string | null  // hex, e.g. '#7c3aed'
+  color?: string | null        // hex, e.g. '#7c3aed'
+  series_id?: string | null    // recurring task series identifier
+  series_detached?: boolean | null  // true = this occurrence was individually edited
 }
 ```
+
+Normalizer guards: date-only values (`YYYY-MM-DD`) are coerced to local noon (`T12:00:00`) to prevent timezone day-shift.
+
+### Goal Detail Page (`src/pages/GoalDetail.tsx`)
+The main feature page, rendered by `goal.$id.tsx`. On mount it calls `fetchAllGoalTasks` (paginates 1000/request) and passes the full task list down to Calendar and other sub-components.
+
+- **Calendar** (`src/components/Calendar.tsx`) — FullCalendar task scheduling
+- **GoalTasksTable** — tabular task view
+- **GoalNotes / GoalNoteEditor** — rich text notes with visibility control (see Notes below)
+- **GoalAIChat / GoalChatWidget** — AI chat (**lazy-loaded** via `React.lazy` + ErrorBoundary — do not import directly)
+- **SmartAnalytics / GoalAnalytics** — progress charts
+- **GoalSwitcher** — dropdown to switch between goals
+- **GoalSidebar** — desktop sidebar with goal info, sharing, themes
+
+### Notes Architecture
+Notes are stored in a `goal_notes` DB table. The `GoalNote` type (`src/types/goalNote.ts`) has a `visibility` field (`"all" | "restricted"`). When restricted, an explicit `goal_note_viewers` table stores per-user `editor | viewer` roles. RLS enforces access; the client additionally checks permissions before opening edit mode.
+
+`GoalNoteEditor` uses `src/components/editor/MarkdownEditor.tsx` (TipTap 3 with `tiptap-markdown` — content stored as markdown strings). RxJS Subjects are used for auto-save debouncing (200ms) and realtime cursor broadcasting (1200ms throttle) via Supabase Broadcast channels.
+
+### Goal Sharing Model
+- `goals.share_code` — invite-link code; users join via `goal_members` table
+- `goals.is_public` / `goals.public_slug` — public read-only view
+- `goal_members.role`: `'creator' | 'member'`
+- Invitations are notifications of type `"invitation"` in the `notifications` table
+
+### Notification System (two channels)
+1. **Internal notifications** (`notifications` DB table, `src/services/internalNotifications.ts`): task_created, task_updated, task_deleted, member_joined, member_left, invitation. The root sets up a realtime INSERT listener scoped to the current user; it skips task-type notifications when already on the matching goal detail page.
+2. **Push notifications** (Firebase, `src/pwa/notificationService.ts` / `src/services/notificationService.ts`): browser push for task events to goal members.
 
 ### Real-time Updates
 ```typescript
@@ -108,20 +140,12 @@ Requires `enableRealtimeForTable(tableName)` from `src/components/calendar/taskD
 ### Offline Support
 - `src/pwa/registerSW.ts` — Service Worker registration
 - `src/pwa/offlineDashboardCache.ts` — Goal list cache for dashboard
-- `src/pwa/offlineTaskSync.ts` — Task sync queue
-- `src/utils/offlineSync.ts` — `saveTaskForSync()` via Service Worker postMessage
+- `src/utils/offlineSync.ts` — `saveTaskForSync()` / `saveTaskOperation()` via Service Worker postMessage; falls back to SW queue when online write fails
 - `src/pwa/notificationService.ts` — Firebase push notifications
 - `OfflinePopup.tsx` shows connection status
 
-### Goal Detail Page (`src/pages/GoalDetail.tsx`)
-The main feature page, rendered by `goal.$id.tsx`. Contains:
-- **Calendar** (`src/components/Calendar.tsx`) — FullCalendar task scheduling
-- **GoalTasksTable** — tabular task view
-- **GoalNotes / GoalNoteEditor** — TipTap-based rich text notes with embedded tasks and URL deep-links
-- **GoalAIChat / GoalChatWidget** — AI chat (lazy-loaded)
-- **SmartAnalytics / GoalAnalytics** — progress charts
-- **GoalSwitcher** — dropdown to switch between goals from the sidebar
-- **GoalSidebar** — desktop sidebar with goal info, sharing, themes
+### Financial Data
+Financial goal data (monthly income, target savings, currency) is stored in **localStorage** under the `financialData` key as a JSON array keyed by `goalId` — not in Supabase. `useCalendarTasks` reads this to compute daily spending limits.
 
 ### AI Edge Functions (`supabase/functions/`)
 - `ai-agent/` — Main AI agent with tool use (OpenAI)
@@ -172,6 +196,9 @@ const formatted = isNaN(date.getTime()) ? '—' : format(date, 'MMM d, yyyy')
 ### 7. Database Changes
 **Never execute raw SQL from code.** Write queries in `sqlExecuter.sql`, review, then run in Supabase SQL Editor.
 
+### 8. Recurring Task Series
+Tasks in a recurring series share a `series_id`. When updating a recurring task the user chooses "this only" vs "all in series". A task with `series_detached = true` has been individually edited and must not receive propagated series updates.
+
 ---
 
 ## File Organization
@@ -179,10 +206,11 @@ const formatted = isNaN(date.getTime()) ? '—' : format(date, 'MMM d, yyyy')
 ```
 src/
 ├── components/
-│   ├── calendar/         # Calendar component helpers, taskDatabase, taskNormalization, types
+│   ├── calendar/         # Calendar helpers, taskDatabase, taskNormalization, types
 │   ├── dashboard/        # GoalList, GoalSorter, EditGoalSlidePanel, TodaysTasks
+│   ├── editor/           # MarkdownEditor (TipTap), TaskEmbedPicker
 │   ├── goal/             # GoalNotes, GoalNoteEditor, GoalTasksTable, GoalSwitcher,
-│   │                     #   GoalAIChat, GoalChatWidget, GoalSidebar, sharing/
+│   │                     #   GoalAIChat, GoalChatWidget (lazy), GoalSidebar, ThemeSelector
 │   │   └── chat/         # Chat sub-components and hooks
 │   ├── notifications/    # NotificationBell, NotificationList
 │   ├── goal-form/        # Multi-step goal creation form steps
@@ -190,16 +218,14 @@ src/
 │   ├── profile/          # ApiKeyManager, ModelSelector, ProfileForm
 │   ├── search/           # SearchCommandPalette, CustomSearchModal
 │   ├── pwa/              # InstallButton, NotificationSettings, UpdateNotification
-│   ├── user/             # UserMenu
-│   ├── financial/        # FinancialDashboard, BudgetCalculator
 │   ├── theme/            # ThemeProvider, ThemeSwitcher
 │   └── ui/               # shadcn/ui base components
-├── hooks/                # useGoals, useAuth, useIsMobile, useRouterNavigation, etc.
+├── hooks/                # useGoals, useAuth, useIsMobile, useCalendarTasks, etc.
 ├── pages/                # Page components (Dashboard, GoalDetail, Profile, etc.)
 ├── routes/               # TanStack Router route files
-├── services/             # authService, internalNotifications, aiChatService, etc.
+├── services/             # authService, internalNotifications, aiChatService, notificationService
 ├── pwa/                  # registerSW, offlineDashboardCache, offlineTaskSync, notificationService
-├── types/                # goal.ts, notification.ts, theme.ts
+├── types/                # goal.ts, goalNote.ts, notification.ts, theme.ts
 ├── utils/                # offlineSync, goalDeadlineUtils
 └── integrations/supabase/ # Supabase client, generated types
 ```
@@ -233,14 +259,17 @@ supabase secrets set API_KEY=value
 
 ## Known Gotchas
 
-- **Task normalization**: Raw DB task rows must go through `normalizeTaskList()` before use — the DB schema and in-memory Task type have slightly different field shapes.
+- **Task normalization**: Raw DB rows must go through `normalizeTaskList()` before use — the `title`/`description` fields overlap and date-only strings need noon-coercion.
 - **GoalChatWidget is lazy-loaded** in GoalDetail — don't import it directly or it will inflate the initial bundle.
 - **`useIsMobile()` flash**: Returns `false` on first render; conditionally rendered mobile UI will flash on load.
 - **Realtime limits**: Max 100 concurrent connections on Supabase free tier.
 - **Build obfuscation**: `pnpm build` runs `javascript-obfuscator` post-build. Use `pnpm build:dev` when debugging production builds.
+- **Financial data is in localStorage**, not Supabase — key `financialData`, array of `{ goalId, monthlyIncome }`.
+- **`useGoals` bypasses TanStack Query** — it uses raw Supabase calls with `useState`. Don't expect it to respond to `invalidateQueries('goals')`.
+- **`fetchAllGoalTasks` in GoalDetail** paginates in a loop (1000 tasks/page) then passes the full array to Calendar; Calendar's own fetch is suppressed when `allTasks` prop is set.
 
 ---
 
 **Last Updated**: 2026-06-05
-**Project Version**: 1.10.66
+**Project Version**: 1.10.76
 **Maintainer**: Daraboth

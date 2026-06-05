@@ -29,6 +29,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getInitials, useUserProfiles } from '@/hooks/useUserProfiles';
 import { updateTask } from '@/utils/supabaseOperations';
+import RecurrenceUpdateDialog from '@/components/calendar/RecurrenceUpdateDialog';
+import RecurrenceDeleteDialog from '@/components/calendar/RecurrenceDeleteDialog';
 
 interface GoalTasksTableProps {
   tasks: Task[];
@@ -108,6 +110,15 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
 
   const [visibleCount, setVisibleCount] = useState(LAZY_BATCH_SIZE);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Series update dialog
+  type UpdateRange = Parameters<React.ComponentProps<typeof TaskDetailsSidebar>['onUpdateTask']>[4];
+  const pendingSeriesUpdateRef = useRef<{ taskId: string; description: string; date: Date; time?: string; range?: any } | null>(null);
+  const [seriesUpdateDialogOpen, setSeriesUpdateDialogOpen] = useState(false);
+
+  // Series delete dialog
+  const [pendingSeriesDeleteId, setPendingSeriesDeleteId] = useState<string | null>(null);
+  const [seriesDeleteDialogOpen, setSeriesDeleteDialogOpen] = useState(false);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
   const involvedUserIds = useMemo(() => {
@@ -270,6 +281,105 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
   const openTaskDetails = (task: Task) => {
     setSelectedTaskId(task.id);
     setIsDetailOpen(true);
+  };
+
+  const applyTableTaskUpdate = async (taskId: string, description: string, date: Date, time?: string, range?: any) => {
+    const taskToUpdate = tableTasks.find((t) => t.id === taskId);
+    if (!taskToUpdate) return;
+    const startISO = (range?.start_date || date).toISOString();
+    const endISO = (range?.end_date || date).toISOString();
+    const isAnytime = !!range?.is_anytime;
+    const startTimeStr = isAnytime ? null : (range?.daily_start_time ?? (time ? `${time}` : null));
+    const endTimeStr = isAnytime ? null : (range?.daily_end_time ?? null);
+    const cleanedTags = Array.isArray(range?.tags) ? range.tags.map((t: any) => String(t || '').trim()).filter(Boolean) : undefined;
+    const updates: Record<string, unknown> = {
+      description, title: range?.title ?? null,
+      start_date: startISO, end_date: endISO, is_anytime: isAnytime,
+      daily_start_time: startTimeStr ? `${startTimeStr}:00` : null,
+      daily_end_time: endTimeStr ? `${endTimeStr}:00` : null,
+      duration_minutes: typeof range?.duration_minutes === 'number' ? range.duration_minutes : null,
+      updated_at: new Date().toISOString(),
+    };
+    if (typeof range?.completed !== 'undefined') updates.completed = range.completed;
+    if (cleanedTags) updates.tags = cleanedTags;
+    if (typeof range?.color !== 'undefined') updates.color = range.color;
+    setTableTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...(updates as Partial<Task>) } : t));
+    await updateTask(taskId, updates);
+  };
+
+  const handleSeriesUpdateJustThis = async () => {
+    const p = pendingSeriesUpdateRef.current;
+    if (!p) return;
+    setSeriesUpdateDialogOpen(false);
+    pendingSeriesUpdateRef.current = null;
+    try {
+      await applyTableTaskUpdate(p.taskId, p.description, p.date, p.time, p.range);
+      await updateTask(p.taskId, { series_detached: true });
+      setTableTasks(prev => prev.map(t => t.id === p.taskId ? { ...t, series_detached: true } : t));
+      toast({ title: 'Task updated', description: 'This occurrence has been updated.' });
+    } catch (err: any) {
+      toast({ title: 'Update failed', description: err?.message, variant: 'destructive' });
+    }
+  };
+
+  const handleSeriesUpdateAll = async () => {
+    const p = pendingSeriesUpdateRef.current;
+    if (!p) return;
+    setSeriesUpdateDialogOpen(false);
+    pendingSeriesUpdateRef.current = null;
+    const taskToUpdate = tableTasks.find(t => t.id === p.taskId);
+    if (!taskToUpdate?.series_id) return;
+    const seriesId = taskToUpdate.series_id;
+    const isAnytime = !!p.range?.is_anytime;
+    const sharedUpdates: Record<string, unknown> = {
+      description: p.description, title: p.range?.title ?? null, is_anytime: isAnytime,
+      daily_start_time: isAnytime ? null : (p.range?.daily_start_time ? `${p.range.daily_start_time}:00` : (p.time ? `${p.time}:00` : null)),
+      daily_end_time: isAnytime ? null : (p.range?.daily_end_time ? `${p.range.daily_end_time}:00` : null),
+      duration_minutes: typeof p.range?.duration_minutes === 'number' ? p.range.duration_minutes : null,
+      updated_at: new Date().toISOString(),
+    };
+    if (Array.isArray(p.range?.tags)) sharedUpdates.tags = p.range.tags.map((t: any) => String(t || '').trim()).filter(Boolean);
+    if (typeof p.range?.color !== 'undefined') sharedUpdates.color = p.range.color;
+    try {
+      await (supabase as any).from('tasks').update(sharedUpdates).eq('series_id', seriesId).eq('series_detached', false);
+      setTableTasks(prev => prev.map(t => t.series_id === seriesId && !t.series_detached ? { ...t, ...(sharedUpdates as Partial<Task>) } : t));
+      toast({ title: 'Series updated', description: 'All tasks in the series have been updated.' });
+    } catch (err: any) {
+      toast({ title: 'Update failed', description: err?.message, variant: 'destructive' });
+    }
+  };
+
+  const handleSeriesDeleteJustThis = async () => {
+    if (!pendingSeriesDeleteId) return;
+    const taskId = pendingSeriesDeleteId;
+    setSeriesDeleteDialogOpen(false);
+    setPendingSeriesDeleteId(null);
+    try {
+      await supabase.from('tasks').delete().eq('id', taskId);
+      setTableTasks(prev => prev.filter(t => t.id !== taskId));
+      setIsDetailOpen(false);
+      toast({ title: 'Task deleted' });
+    } catch (err: any) {
+      toast({ title: 'Delete failed', description: err?.message, variant: 'destructive' });
+    }
+  };
+
+  const handleSeriesDeleteAll = async () => {
+    if (!pendingSeriesDeleteId) return;
+    const task = tableTasks.find(t => t.id === pendingSeriesDeleteId);
+    if (!task?.series_id) return;
+    const seriesId = task.series_id;
+    setSeriesDeleteDialogOpen(false);
+    setPendingSeriesDeleteId(null);
+    try {
+      await (supabase as any).from('tasks').delete().eq('series_id', seriesId);
+      await (supabase as any).from('task_series').delete().eq('id', seriesId);
+      setTableTasks(prev => prev.filter(t => t.series_id !== seriesId));
+      setIsDetailOpen(false);
+      toast({ title: 'Series deleted', description: 'All tasks in the series have been deleted.' });
+    } catch (err: any) {
+      toast({ title: 'Delete failed', description: err?.message, variant: 'destructive' });
+    }
   };
 
   const onTableRowKeyDown = (event: React.KeyboardEvent<HTMLTableRowElement>, task: Task) => {
@@ -897,59 +1007,27 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
           }
         }}
         onUpdateTask={async (taskId, description, date, time, range) => {
+          const taskToUpdate = tableTasks.find((t) => t.id === taskId);
+          if (!taskToUpdate) return;
+          if (taskToUpdate.series_id && !taskToUpdate.series_detached) {
+            pendingSeriesUpdateRef.current = { taskId, description, date, time, range };
+            setSeriesUpdateDialogOpen(true);
+            return;
+          }
           try {
-            const taskToUpdate = tableTasks.find((t) => t.id === taskId);
-            if (!taskToUpdate) return;
-
-            const startISO = (range?.start_date || date).toISOString();
-            const endISO = (range?.end_date || date).toISOString();
-            const isAnytime = !!range?.is_anytime;
-            const startTimeStr = isAnytime ? null : (range?.daily_start_time ?? (time ? `${time}` : null));
-            const endTimeStr = isAnytime ? null : (range?.daily_end_time ?? (time ? `${time}` : null));
-            const cleanedTags = Array.isArray(range?.tags)
-              ? range!.tags!.map((t) => String(t || '').trim()).filter(Boolean)
-              : undefined;
-
-            const updates: Record<string, unknown> = {
-              description,
-              title: range?.title ?? null,
-              start_date: startISO,
-              end_date: endISO,
-              is_anytime: isAnytime,
-              daily_start_time: startTimeStr ? `${startTimeStr}:00` : null,
-              daily_end_time: endTimeStr ? `${endTimeStr}:00` : null,
-              duration_minutes: typeof range?.duration_minutes === 'number' ? range.duration_minutes : null,
-              updated_at: new Date().toISOString(),
-            };
-            if (typeof range?.completed !== 'undefined') updates.completed = range.completed;
-            if (cleanedTags) updates.tags = cleanedTags;
-            if (typeof range?.color !== 'undefined') updates.color = range.color;
-
-            // Optimistic — selectedTask is a useMemo derived from tableTasks
-            // so this also refreshes the sidebar in place.
-            setTableTasks((prev) =>
-              prev.map((t) =>
-                t.id === taskId
-                  ? { ...t, ...(updates as Partial<Task>) }
-                  : t
-              )
-            );
-
-            await updateTask(taskId, updates);
-
-            toast({
-              title: 'Task updated',
-              description: 'Task has been updated successfully.',
-            });
+            await applyTableTaskUpdate(taskId, description, date, time, range);
+            toast({ title: 'Task updated', description: 'Task has been updated successfully.' });
           } catch (err: any) {
-            toast({
-              title: 'Update failed',
-              description: err?.message || 'Could not update task.',
-              variant: 'destructive',
-            });
+            toast({ title: 'Update failed', description: err?.message || 'Could not update task.', variant: 'destructive' });
           }
         }}
         onDeleteTask={async (taskId) => {
+          const task = tableTasks.find(t => t.id === taskId);
+          if (task?.series_id && !task.series_detached) {
+            setPendingSeriesDeleteId(taskId);
+            setSeriesDeleteDialogOpen(true);
+            return;
+          }
           try {
             const { error } = await supabase.from('tasks').delete().eq('id', taskId);
             if (error) throw error;
@@ -957,13 +1035,23 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
             toast({ title: 'Task deleted' });
             setIsDetailOpen(false);
           } catch (err: any) {
-            toast({
-              title: 'Delete failed',
-              description: err?.message || 'Could not delete task.',
-              variant: 'destructive',
-            });
+            toast({ title: 'Delete failed', description: err?.message || 'Could not delete task.', variant: 'destructive' });
           }
         }}
+      />
+
+      <RecurrenceUpdateDialog
+        open={seriesUpdateDialogOpen}
+        onJustThis={handleSeriesUpdateJustThis}
+        onAllInSeries={handleSeriesUpdateAll}
+        onCancel={() => { setSeriesUpdateDialogOpen(false); pendingSeriesUpdateRef.current = null; }}
+      />
+
+      <RecurrenceDeleteDialog
+        open={seriesDeleteDialogOpen}
+        onJustThis={handleSeriesDeleteJustThis}
+        onAllInSeries={handleSeriesDeleteAll}
+        onCancel={() => { setSeriesDeleteDialogOpen(false); setPendingSeriesDeleteId(null); }}
       />
 
       <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>

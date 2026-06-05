@@ -20,7 +20,10 @@
       "PowerShell(.\\\\deploy.ps1 \"Goal switcher dropdown on desktop sidebar + Notion-style TipTap editor with BubbleMenu/FloatingMenu\")",
       "PowerShell(.\\\\deploy.ps1 \"Goal Notes feature with embedded tasks, URL deep-links, paste-as-markdown, completed-task UI + sticky title overflow\")",
       "Bash(xargs grep -l \"editTask\\\\|EditTask\\\\|edit.*task\")",
-      "Bash(.\\\\deploy.ps1 \"v1.10.76 Recurring tasks: daily/weekly/monthly/yearly/days-of-week series with per-task or all-series update propagation\")"
+      "Bash(.\\\\deploy.ps1 \"v1.10.76 Recurring tasks: daily/weekly/monthly/yearly/days-of-week series with per-task or all-series update propagation\")",
+      "Bash(npx tsc *)",
+      "Bash(git checkout *)",
+      "Bash(.\\\\deploy.ps1 \"v1.10.77 fix recurring task delete: series-aware dialog, preserve series_id in normalizer, series update/delete in tasks table\")"
     ]
   }
 }

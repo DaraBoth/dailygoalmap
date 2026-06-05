@@ -16,6 +16,7 @@ import { Task } from "./calendar/types";
 import { useToast } from "@/hooks/use-toast";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 import RecurrenceUpdateDialog from "./calendar/RecurrenceUpdateDialog";
+import RecurrenceDeleteDialog from "./calendar/RecurrenceDeleteDialog";
 import { cn } from "@/lib/utils";
 import { getTaskAnchorDate } from "./calendar/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
@@ -80,6 +81,8 @@ const Calendar = ({
     range?: UpdateRange;
   }>(null);
   const [seriesDialogOpen, setSeriesDialogOpen] = useState(false);
+  const pendingSeriesDelete = useRef<Task | null>(null);
+  const [seriesDeleteDialogOpen, setSeriesDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const {
@@ -594,12 +597,15 @@ const Calendar = ({
   };
 
   const handleDeleteTask = (taskId: string) => {
-    // Instead of direct deletion, open confirmation dialog
     const task = tasks.find(t => t.id === taskId);
-    if (task) {
-      setTaskToDelete(task);
-      setIsConfirmDeleteOpen(true);
+    if (!task) return;
+    if (task.series_id && !task.series_detached) {
+      pendingSeriesDelete.current = task;
+      setSeriesDeleteDialogOpen(true);
+      return;
     }
+    setTaskToDelete(task);
+    setIsConfirmDeleteOpen(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -643,6 +649,41 @@ const Calendar = ({
   const handleCancelDelete = () => {
     setIsConfirmDeleteOpen(false);
     setTaskToDelete(null);
+  };
+
+  const handleSeriesDeleteJustThis = async () => {
+    const task = pendingSeriesDelete.current;
+    if (!task) return;
+    setSeriesDeleteDialogOpen(false);
+    pendingSeriesDelete.current = null;
+    try {
+      setLastDeletedTask(task);
+      setTasks(prev => prev.filter(t => t.id !== task.id));
+      setIsTaskDetailsOpen(false);
+      setSelectedTask(null);
+      await deleteTaskFromDatabase(task.id);
+      toast({ title: "Task deleted", description: "This occurrence has been deleted." });
+    } catch {
+      toast({ title: "Error", description: "Failed to delete task.", variant: "destructive" });
+    }
+  };
+
+  const handleSeriesDeleteAll = async () => {
+    const task = pendingSeriesDelete.current;
+    if (!task?.series_id) return;
+    const seriesId = task.series_id;
+    setSeriesDeleteDialogOpen(false);
+    pendingSeriesDelete.current = null;
+    try {
+      setTasks(prev => prev.filter(t => t.series_id !== seriesId));
+      setIsTaskDetailsOpen(false);
+      setSelectedTask(null);
+      await (supabase as any).from('tasks').delete().eq('series_id', seriesId);
+      await (supabase as any).from('task_series').delete().eq('id', seriesId);
+      toast({ title: "Series deleted", description: "All tasks in the series have been deleted." });
+    } catch {
+      toast({ title: "Error", description: "Failed to delete series.", variant: "destructive" });
+    }
   };
 
   const handleUndoDelete = async () => {
@@ -785,7 +826,7 @@ const Calendar = ({
             />
           </div>
 
-          <div className="h-full overflow-hidden border-r border-border/30 bg-slate-100/65 dark:bg-slate-950/60 relative">
+          <div className="h-full overflow-scroll border-r border-border/30 bg-slate-100/65 dark:bg-slate-950/60 relative">
             <AnimatePresence mode="wait">
               {!selectedTask ? (
                 <motion.div
@@ -794,7 +835,6 @@ const Calendar = ({
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ duration: 0.4, ease: "easeOut" }}
-                  className="h-full"
                 >
                   <CalendarContainer
                     selectedDate={selectedDate}
@@ -880,6 +920,13 @@ const Calendar = ({
         onJustThis={handleSeriesJustThis}
         onAllInSeries={handleSeriesAll}
         onCancel={() => { setSeriesDialogOpen(false); pendingSeriesUpdate.current = null; }}
+      />
+
+      <RecurrenceDeleteDialog
+        open={seriesDeleteDialogOpen}
+        onJustThis={handleSeriesDeleteJustThis}
+        onAllInSeries={handleSeriesDeleteAll}
+        onCancel={() => { setSeriesDeleteDialogOpen(false); pendingSeriesDelete.current = null; }}
       />
     </motion.div>
   );
