@@ -3,7 +3,9 @@
 // MarkdownEditor or MarkdownRenderer below, and a visibility picker in
 // the action bar for choosing who can read this note.
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Subject } from "rxjs";
+import { debounceTime, distinctUntilChanged } from "rxjs/operators";
 import {
   Sheet,
   SheetContent,
@@ -96,15 +98,26 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
-  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Last-saved snapshot so we don't re-save what's already in the DB.
   const lastSavedRef = useRef<{ title: string; content: string; visibility: GoalNoteVisibility }>({
     title: "",
     content: "",
     visibility: "all",
   });
-  // Suppress auto-save during the initial hydration from props.
+  // Suppress auto-save / broadcast during hydration and external-update application.
   const isHydratingRef = useRef(false);
+  // Always-current values without stale-closure issues in long-lived callbacks.
+  const liveRef = useRef({ title: "", content: "", visibility: "all" as GoalNoteVisibility });
+  // Supabase Broadcast channel for near-real-time content sync (bypasses DB round-trip).
+  const broadcastChannelRef = useRef<any>(null);
+  // Stable handler ref so the channel subscription never needs to be recreated.
+  const broadcastHandlerRef = useRef<((data: any) => void) | null>(null);
+  // RxJS stream for user-initiated content changes. Fanned out to a fast
+  // broadcast (200 ms) and a slower DB persist (1200 ms) in parallel.
+  const changes$ = useMemo(
+    () => new Subject<{ title: string; content: string; visibility: GoalNoteVisibility }>(),
+    [],
+  );
 
   // ── Realtime collaboration state ───────────────────────────────────────────
   // editorPresence: who else currently has this note open in edit mode.
@@ -123,6 +136,7 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
   useEffect(() => {
     if (!open || !note) return;
     isHydratingRef.current = true;
+    liveRef.current = { title: note.title, content: note.content, visibility: note.visibility };
     setTitle(note.title);
     setContent(note.content);
     setVisibility(note.visibility);
@@ -197,26 +211,25 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
           // Ignore our own UPDATE round-trip.
           if (next.updated_by === currentUserId) return;
           // Only show the conflict banner when the user has unsaved local
-          // edits that would be clobbered. If nothing has changed since the
-          // last save, auto-apply even while in edit mode.
+          // edits that would be clobbered. Use liveRef (always fresh) rather
+          // than the closure-captured title/content which can be stale.
           const snap = lastSavedRef.current;
           const hasDirtyEdits =
             isEditing &&
-            (title !== snap.title || content !== snap.content);
+            (liveRef.current.title !== snap.title || liveRef.current.content !== snap.content);
           if (hasDirtyEdits) {
             const actor =
               members.find((m) => m.user_id === next.updated_by)?.user_profiles
                 ?.display_name || "Someone";
             setExternalUpdate({ note: next, actor });
           } else {
+            isHydratingRef.current = true;
+            liveRef.current = { title: next.title, content: next.content, visibility: next.visibility };
             setTitle(next.title);
             setContent(next.content);
             setVisibility(next.visibility);
-            lastSavedRef.current = {
-              title: next.title,
-              content: next.content,
-              visibility: next.visibility,
-            };
+            lastSavedRef.current = { title: next.title, content: next.content, visibility: next.visibility };
+            queueMicrotask(() => { isHydratingRef.current = false; });
           }
         }
       )
@@ -276,10 +289,15 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
 
   const applyExternalUpdate = () => {
     if (!externalUpdate) return;
-    setTitle(externalUpdate.note.title);
-    setContent(externalUpdate.note.content);
-    setVisibility(externalUpdate.note.visibility);
+    const { title: t, content: c, visibility: v } = externalUpdate.note;
+    isHydratingRef.current = true;
+    liveRef.current = { title: t, content: c, visibility: v };
+    lastSavedRef.current = { title: t, content: c, visibility: v };
+    setTitle(t);
+    setContent(c);
+    setVisibility(v);
     setExternalUpdate(null);
+    queueMicrotask(() => { isHydratingRef.current = false; });
     toast({ title: "Reloaded with latest version" });
   };
 
@@ -334,29 +352,84 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
     [note, title, content, visibility, currentUserId, onSaved]
   );
 
-  // Debounced auto-save for title/content/visibility edits.
-  //
-  // We keep `persistNote` in a ref instead of listing it as a dep so the
-  // debounce timer ONLY resets when the user actually types — not whenever
-  // a callback's identity changes (parent re-render, fresh closures, etc.).
-  // Bumped to 1.2s to lower DB write pressure under heavy typing while
-  // still feeling near-real-time.
   const persistNoteRef = useRef(persistNote);
   useEffect(() => {
     persistNoteRef.current = persistNote;
   }, [persistNote]);
 
+  // ── Broadcast channel: near-real-time content sync ───────────────────────
+  // Stable handler ref — always holds the freshest closure. The channel
+  // subscription is created once per note open and delegates to this ref,
+  // so it never needs to be torn down when `isEditing` / `members` change.
+  broadcastHandlerRef.current = ({ payload }: any) => {
+    const { title: t, content: c, user_id: uid } = payload ?? {};
+    if (uid === currentUserId) return;
+    const snap = lastSavedRef.current;
+    const hasDirtyEdits =
+      liveRef.current.title !== snap.title || liveRef.current.content !== snap.content;
+    if (hasDirtyEdits) {
+      const actor =
+        members.find((m) => m.user_id === uid)?.user_profiles?.display_name ?? "Someone";
+      setExternalUpdate({
+        note: { ...note!, title: t ?? note!.title, content: c ?? note!.content, updated_by: uid } as GoalNote,
+        actor,
+      });
+    } else {
+      isHydratingRef.current = true;
+      if (t !== undefined) { liveRef.current.title = t; setTitle(t); }
+      if (c !== undefined) { liveRef.current.content = c; setContent(c); }
+      lastSavedRef.current = { title: liveRef.current.title, content: liveRef.current.content, visibility: snap.visibility };
+      queueMicrotask(() => { isHydratingRef.current = false; });
+    }
+  };
+
+  // Open a Broadcast channel when a note is open. Minimal deps = stable
+  // channel; the handler ref carries all fresh state.
   useEffect(() => {
-    if (!canEdit || !note || isHydratingRef.current) return;
-    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    setSaveStatus("idle");
-    autoSaveTimer.current = setTimeout(() => {
-      void persistNoteRef.current();
-    }, 1200);
+    if (!open || !note?.id) return;
+    const ch = (supabase as any).channel(`note-live:${note.id}`, {
+      config: { broadcast: { self: false, ack: false } },
+    });
+    ch.on("broadcast", { event: "content" }, (data: any) => {
+      broadcastHandlerRef.current?.(data);
+    });
+    ch.subscribe();
+    broadcastChannelRef.current = ch;
     return () => {
-      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+      (supabase as any).removeChannel(ch);
+      broadcastChannelRef.current = null;
     };
-  }, [title, content, visibility, canEdit, note?.id]);
+  }, [open, note?.id]);
+
+  // RxJS fan-out: same user-input stream → 200 ms broadcast + 1200 ms DB save.
+  useEffect(() => {
+    const broadcast$ = changes$.pipe(
+      debounceTime(200),
+      distinctUntilChanged((a, b) => a.title === b.title && a.content === b.content),
+    ).subscribe(({ title: t, content: c }) => {
+      broadcastChannelRef.current?.send({
+        type: "broadcast",
+        event: "content",
+        payload: { title: t, content: c, user_id: currentUserId },
+      });
+    });
+    const persist$ = changes$.pipe(debounceTime(1200)).subscribe(() => {
+      void persistNoteRef.current();
+    });
+    return () => {
+      broadcast$.unsubscribe();
+      persist$.unsubscribe();
+    };
+  }, [changes$, currentUserId]);
+
+  // Visibility changes come from a button click, not the typing flow, so
+  // emit them directly to the stream so they reach the DB save subscriber.
+  useEffect(() => {
+    if (!canEdit || !note) return;
+    if (visibility === lastSavedRef.current.visibility) return;
+    liveRef.current.visibility = visibility;
+    changes$.next({ title: liveRef.current.title, content: liveRef.current.content, visibility });
+  }, [visibility, canEdit, note?.id, changes$]);
 
   // Reconcile collaborator rows. Called when the visibility popover closes.
   //  - visibility='restricted': store every collaborator (their role
@@ -393,17 +466,10 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
     }
   }, [note, canEdit, visibility, collaborators]);
 
-  // Flush any pending debounce on unmount — persistNoteRef always holds the
-  // latest closure so we don't need persistNote in the dep array (which would
-  // re-run this cleanup on every keystroke).
+  // Flush any pending save on unmount. RxJS subscriptions self-clean via the
+  // effect cleanups above; this just forces the DB write immediately.
   useEffect(() => {
-    return () => {
-      if (autoSaveTimer.current) {
-        clearTimeout(autoSaveTimer.current);
-        autoSaveTimer.current = null;
-        persistNoteRef.current({ silent: true });
-      }
-    };
+    return () => { persistNoteRef.current({ silent: true }); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -762,7 +828,15 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
                   <textarea
                     ref={titleRef}
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setTitle(v);
+                      liveRef.current.title = v;
+                      if (canEdit && note) {
+                        setSaveStatus("idle");
+                        changes$.next({ title: v, content: liveRef.current.content, visibility: liveRef.current.visibility });
+                      }
+                    }}
                     placeholder="Untitled note"
                     rows={1}
                     autoFocus={!!initialEditMode}
@@ -812,7 +886,14 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
               {isEditing ? (
                 <MarkdownEditor
                   value={content}
-                  onChange={setContent}
+                  onChange={(c) => {
+                    setContent(c);
+                    liveRef.current.content = c;
+                    if (canEdit && note) {
+                      setSaveStatus("idle");
+                      changes$.next({ title: liveRef.current.title, content: c, visibility: liveRef.current.visibility });
+                    }
+                  }}
                   placeholder="Write your note in markdown…"
                   minHeight={isMobile ? "320px" : "480px"}
                   className="rounded-none border-0 bg-transparent focus-within:ring-0"
