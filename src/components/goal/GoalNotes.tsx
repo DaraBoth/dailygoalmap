@@ -158,13 +158,18 @@ const GoalNotes: React.FC<GoalNotesProps> = ({
           table: "goal_notes",
           filter: `goal_id=eq.${goalId}`,
         },
-        () => fetchNotes()
+        (payload: any) => {
+          // Own UPDATE round-trips are already reflected via the optimistic
+          // onSaved callback in GoalNoteEditor — skip to avoid a loading flash.
+          if (payload?.new?.updated_by === currentUserId) return;
+          fetchNotes();
+        }
       )
       .subscribe();
     return () => {
       (supabase as any).removeChannel(channel);
     };
-  }, [goalId, fetchNotes]);
+  }, [goalId, currentUserId, fetchNotes]);
 
   const selectedNote = useMemo(
     () => (selectedNoteId ? notes.find((n) => n.id === selectedNoteId) ?? null : null),

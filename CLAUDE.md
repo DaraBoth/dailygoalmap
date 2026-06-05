@@ -1,8 +1,27 @@
-# CLAUDE.md — Orbit (DailyGoalMap)
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 > **AI-powered goal tracking PWA** — React 19 + TypeScript + Vite + TanStack Router + Supabase
 
-This file provides context for Claude Code when working on this project. It documents architecture patterns, known issues, and conventions to follow.
+---
+
+## Commands
+
+```bash
+pnpm install          # Install dependencies
+pnpm dev              # Dev server on http://localhost:2000
+pnpm build            # Production build + obfuscation
+pnpm build:dev        # Dev build (no obfuscation)
+pnpm lint             # ESLint
+pnpm preview          # Preview production build
+```
+
+> **IMPORTANT FOR CLAUDE:** Never run `pnpm dev`, `pnpm install`, `pnpm build`, or any other shell command that installs packages or starts a server. Instead, tell the user which command to run and ask them to run it themselves (e.g. `! pnpm dev` in the prompt).
+>
+> **Exception:** `.\deploy.ps1 "message"` (and its variants) **may be run directly** — the user has explicitly granted permission to execute the deploy script.
+
+No test suite. Manual testing only (Desktop, Mobile, Offline).
 
 ---
 
@@ -11,146 +30,147 @@ This file provides context for Claude Code when working on this project. It docu
 - **Frontend**: React 19.2.1, TypeScript 5.5, Vite 7.2
 - **Router**: TanStack Router 1.131 (file-based routes in `src/routes/`)
 - **Backend**: Supabase (PostgreSQL, Auth, Realtime, Storage, Edge Functions)
-- **UI**: Radix UI, shadcn/ui, Tailwind CSS 3.4
+- **UI**: Radix UI, shadcn/ui, Tailwind CSS 3.4, Framer Motion
+- **Rich Text**: TipTap 3 (used in GoalNoteEditor for Notion-style editing)
 - **State**: TanStack Query 5.56 + React Context for auth
-- **PWA**: Service Worker, IndexedDB for offline, Push Notifications
+- **PWA**: Service Worker, IndexedDB for offline, Push Notifications (Firebase)
 - **AI**: OpenAI GPT + Google Gemini (via Supabase Edge Functions)
 
 ---
 
-## Architecture Patterns
+## Architecture
 
 ### File-based Routing
-Routes live in `src/routes/` and are auto-generated into `src/routeTree.gen.ts`. Do NOT manually edit `routeTree.gen.ts`.
+Routes live in `src/routes/` — auto-generated into `src/routeTree.gen.ts`. **Do NOT manually edit `routeTree.gen.ts`.**
 
 ```
 src/routes/
-  __root.tsx        → Root layout (auth provider, theme, query client)
-  index.tsx         → Landing page
-  dashboard.tsx     → Main dashboard
-  goal.$id.tsx      → Goal detail page
-  goal.create.tsx   → Create goal
+  __root.tsx              → Root layout (auth, theme, QueryClient, realtime, SW setup)
+  index.tsx               → Landing page
+  dashboard.tsx           → Main dashboard
+  goal.$id.tsx            → Goal detail page (calendar + tasks + notes + chat + analytics)
+  goal.create.tsx         → Create goal (multi-step form)
+  goal.create-custom.tsx  → Custom goal creation flow
+  profile.tsx             → User profile + API key management
+  login.tsx / register.tsx / reset-password.tsx
+  ai-api.tsx              → AI API settings page
+  chat-popup.tsx          → Standalone chat popup
+  ios-shortcut.tsx        → iOS Shortcuts integration guide
+  about.tsx / privacy.tsx / terms.tsx / security.tsx
+  $.tsx                   → 404 catch-all
 ```
 
+### Root (`__root.tsx`)
+- Creates `QueryClient` (staleTime: 5 min, gcTime: 10 min, no refetch on focus/mount)
+- Exports `UserContext` — provides `{ user, setUser }` globally
+- Sets up Supabase Auth subscription (lines ~48–57)
+- Sets up global realtime listener for notifications (lines ~61–227)
+- Registers Service Worker via `src/pwa/registerSW.ts`
+- Route-progress bar using `useRouterState`
+
 ### Authentication
-- Managed by `authService` (`src/services/authService.ts`) wrapping Supabase Auth
-- UserContext in `__root.tsx` provides `{ user, setUser }` globally
-- Auth state subscription pattern in `__root.tsx:48-57`
+- `authService` (`src/services/authService.ts`) wraps Supabase Auth
+- `useAuth()` hook for components that need the current user
+- `ProtectedRoute` / `ConditionalProtectedRoute` in `src/components/auth/`
 
 ### Data Fetching
-- Use TanStack Query for server state (goals, tasks, notifications)
-- Use React Context for client state (auth, theme, offline mode)
-- Prefer `invalidateQueries()` over `window.location.reload()` for refetching data
+- TanStack Query for server state (goals, tasks, notifications)
+- React Context for client state (auth, theme, offline mode)
+- `useGoals()` hook manages goal list, pagination (4/page), sort, and delete flow
+- Task fetching in GoalDetail paginates 1000 tasks per request (`fetchAllGoalTasks`)
+- **Always use `invalidateQueries()` over `window.location.reload()`**
 
-### Real-time Updates
-Global realtime listener in `__root.tsx` (lines 61-227) handles notifications across all pages.
+### Task Data Model (`src/components/calendar/types.ts`)
+Tasks use unified datetime fields. Always normalize raw DB rows with `normalizeTaskList` / `normalizeTaskRecord` from `src/components/calendar/taskNormalization.ts` before use.
 
 ```typescript
-// Pattern: Subscribe to table changes
+interface Task {
+  id, description, completed, user_id
+  start_date: string    // ISO datetime
+  end_date: string      // ISO datetime
+  daily_start_time?: string | null  // 'HH:MM:SS'
+  daily_end_time?: string | null    // 'HH:MM:SS'
+  is_anytime?: boolean | null
+  tags?: string[]
+  color?: string | null  // hex, e.g. '#7c3aed'
+}
+```
+
+### Real-time Updates
+```typescript
 supabase
   .channel(`table:${userId}`)
   .on('postgres_changes', { ... }, (payload) => { ... })
   .subscribe()
 ```
+Requires `enableRealtimeForTable(tableName)` from `src/components/calendar/taskDatabase.ts` and Replication enabled in Supabase Dashboard.
 
 ### Offline Support
-- Service Worker caches static assets
-- IndexedDB stores tasks/goals via `offlineSync.ts`
-- Background sync queues mutations when offline
+- `src/pwa/registerSW.ts` — Service Worker registration
+- `src/pwa/offlineDashboardCache.ts` — Goal list cache for dashboard
+- `src/pwa/offlineTaskSync.ts` — Task sync queue
+- `src/utils/offlineSync.ts` — `saveTaskForSync()` via Service Worker postMessage
+- `src/pwa/notificationService.ts` — Firebase push notifications
 - `OfflinePopup.tsx` shows connection status
+
+### Goal Detail Page (`src/pages/GoalDetail.tsx`)
+The main feature page, rendered by `goal.$id.tsx`. Contains:
+- **Calendar** (`src/components/Calendar.tsx`) — FullCalendar task scheduling
+- **GoalTasksTable** — tabular task view
+- **GoalNotes / GoalNoteEditor** — TipTap-based rich text notes with embedded tasks and URL deep-links
+- **GoalAIChat / GoalChatWidget** — AI chat (lazy-loaded)
+- **SmartAnalytics / GoalAnalytics** — progress charts
+- **GoalSwitcher** — dropdown to switch between goals from the sidebar
+- **GoalSidebar** — desktop sidebar with goal info, sharing, themes
+
+### AI Edge Functions (`supabase/functions/`)
+- `ai-agent/` — Main AI agent with tool use (OpenAI)
+- `generate-tasks/` — Task generation with fallback strategies
+- `generate-daily-tasks/` — Daily task suggestions
+- `generate-goal-chat/` + `generate-goal-chat-stream/` — Goal-scoped AI chat
+- `claude-chat/` — Claude-based chat endpoint
+- `secure-gemini-api/` — Proxy for Gemini API calls
 
 ---
 
 ## Critical Conventions
 
 ### 1. NO `window.location.reload()`
-Hard reloads destroy client state and break offline mode. Instead:
-- Pass a refetch callback as a prop (`onDataChanged`, `onLeaveGoal`)
-- Use TanStack Query's `invalidateQueries()` or `refetch()`
-
-**Example**: GoalList.tsx passes `onLeaveGoal` to parent, which calls `fetchGoals(true)`.
+Hard reloads destroy client state and break offline mode. Pass a refetch callback (`onDataChanged`, `onLeaveGoal`) or use `invalidateQueries()` / `refetch()`.
 
 ### 2. Event Handling in Radix Components
-Radix DropdownMenu, Dialog, Sheet emit custom events, not native `MouseEvent`.
+Radix DropdownMenu/Dialog/Sheet emit custom events, not native `MouseEvent`.
 
 ```typescript
-// ❌ Wrong — type mismatch
+// ❌ Wrong
 <DropdownMenuItem onClick={(e: React.MouseEvent) => onEdit(e)}>
 
-// ✅ Correct — use Radix's event type or cast carefully
+// ✅ Correct
 <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onEdit(); }}>
 ```
 
-Always call `e.stopPropagation()` in nested dialogs/sheets to prevent auto-close.
+Always `e.stopPropagation()` in nested dialogs/sheets to prevent auto-close.
 
 ### 3. Mobile-First Responsive Design
-`useIsMobile()` hook (breakpoint: 1024px) for conditional rendering.
-
-```typescript
-const isMobile = useIsMobile()
-// Note: Returns false on first render, true after effect runs (one-frame flash)
-```
-
-Use Tailwind responsive classes (`sm:`, `md:`, `lg:`) for layout.
+`useIsMobile()` (breakpoint: 1024px) and `useIsLargeScreen()` hooks from `src/hooks/use-mobile.ts`.
+- Returns `false` on first render (one-frame flash before effect runs)
+- Use Tailwind responsive classes (`sm:`, `md:`, `lg:`) for static layout
 
 ### 4. Component Memoization
-`React.memo()` requires stable prop references. Parent must use `useCallback` for handler props.
+`React.memo()` requires stable prop references — parent must use `useCallback` for handler props.
 
+### 5. TypeScript
+`tsconfig.app.json` has strict checks **disabled** (`strict: false`, `noImplicitAny: false`). Use explicit types for exported APIs and Supabase queries. Avoid `as any`.
+
+### 6. Date Handling
+All dates are ISO 8601 strings in DB. Use `date-fns` for formatting and always guard:
 ```typescript
-// In parent (Dashboard.tsx)
-const handleEdit = useCallback((goal: Goal) => { ... }, [fetchGoals])
-
-// In child (GoalList.tsx)
-const GoalList: React.FC<Props> = React.memo(({ onEditGoal }) => { ... })
-```
-
-### 5. TypeScript Strictness
-`tsconfig.app.json` has **all strict checks disabled** (`strict: false`, `noImplicitAny: false`).
-
-This is a deliberate choice for rapid prototyping but means:
-- Type errors won't be caught at build time
-- Use explicit types where critical (exported APIs, Supabase queries)
-- Avoid `as any` casts — they hide real type errors
-
-### 6. Supabase Patterns
-- **RLS policies** enforce data access. Test policies before deploying.
-- **Realtime** requires `enableRealtimeForTable(tableName)` call.
-- **Edge Functions** need secrets set: `supabase secrets set OPENAI_API_KEY=...`
-
-### 7. Date Handling
-All dates are ISO 8601 strings in DB. Use `date-fns` for formatting:
-
-```typescript
-import { format } from 'date-fns'
-
-// ✅ Guard against invalid dates
 const date = new Date(goal.target_date)
 const formatted = isNaN(date.getTime()) ? '—' : format(date, 'MMM d, yyyy')
 ```
 
----
-
-## Known Issues & Gotchas
-
-### 1. React/TypeScript Version Mismatch
-**Status**: Being fixed  
-`package.json` has `react@19.2.1` but `@types/react@^18.3.3`.
-
-React 19 changed `ReactNode`, `forwardRef`, JSX types. Bump to `@types/react@^19` and `@types/react-dom@^19` to fix type errors.
-
-### 2. Dual Package Managers
-**Status**: Fixed (bun.lockb removed)  
-Project now uses `pnpm` exclusively. Use `pnpm install`, not `npm` or `bun`.
-
-### 3. Router Context Type Safety
-**Status**: Fixed  
-`router.tsx` previously used `as any` to bypass context typing. Now fixed — context is not needed since `__root.tsx` uses plain `createRootRoute`.
-
-### 4. Strict Mode Disabled
-TypeScript strict mode is OFF. Enable at least `noImplicitAny` and `noUnusedLocals` before production.
-
-### 5. `useIsMobile()` Hydration Flash
-Hook returns `false` on first render (before effect runs), then flips to `true` on mobile. This causes one-frame layout shift. Not an SSR issue (Vite SPA), just visual flash.
+### 7. Database Changes
+**Never execute raw SQL from code.** Write queries in `sqlExecuter.sql`, review, then run in Supabase SQL Editor.
 
 ---
 
@@ -159,53 +179,34 @@ Hook returns `false` on first render (before effect runs), then flips to `true` 
 ```
 src/
 ├── components/
-│   ├── calendar/         # Task scheduling, TaskDetailsPanel
-│   ├── dashboard/        # GoalList, goal cards, EditGoalSlidePanel
-│   ├── notifications/    # NotificationBell, NotificationList, Sheet panels
-│   ├── goal/             # Goal creation forms, templates
-│   ├── ui/               # shadcn/ui base components (Button, Dialog, etc)
-│   └── theme/            # ThemeProvider, theme switcher
-├── hooks/                # Custom hooks (useGoals, useIsMobile, etc)
-├── pages/                # Page components (Dashboard, GoalDetail, Profile)
+│   ├── calendar/         # Calendar component helpers, taskDatabase, taskNormalization, types
+│   ├── dashboard/        # GoalList, GoalSorter, EditGoalSlidePanel, TodaysTasks
+│   ├── goal/             # GoalNotes, GoalNoteEditor, GoalTasksTable, GoalSwitcher,
+│   │                     #   GoalAIChat, GoalChatWidget, GoalSidebar, sharing/
+│   │   └── chat/         # Chat sub-components and hooks
+│   ├── notifications/    # NotificationBell, NotificationList
+│   ├── goal-form/        # Multi-step goal creation form steps
+│   ├── auth/             # ProtectedRoute, OAuthButtons
+│   ├── profile/          # ApiKeyManager, ModelSelector, ProfileForm
+│   ├── search/           # SearchCommandPalette, CustomSearchModal
+│   ├── pwa/              # InstallButton, NotificationSettings, UpdateNotification
+│   ├── user/             # UserMenu
+│   ├── financial/        # FinancialDashboard, BudgetCalculator
+│   ├── theme/            # ThemeProvider, ThemeSwitcher
+│   └── ui/               # shadcn/ui base components
+├── hooks/                # useGoals, useAuth, useIsMobile, useRouterNavigation, etc.
+├── pages/                # Page components (Dashboard, GoalDetail, Profile, etc.)
 ├── routes/               # TanStack Router route files
-├── services/             # API services (authService, internalNotifications, etc)
-├── types/                # TypeScript types (goal.ts, notification.ts, etc)
-├── utils/                # Utilities (offlineSync, goalDeadlineUtils, etc)
+├── services/             # authService, internalNotifications, aiChatService, etc.
+├── pwa/                  # registerSW, offlineDashboardCache, offlineTaskSync, notificationService
+├── types/                # goal.ts, notification.ts, theme.ts
+├── utils/                # offlineSync, goalDeadlineUtils
 └── integrations/supabase/ # Supabase client, generated types
 ```
 
-### DO NOT MODIFY (without explicit approval)
-- `routeTree.gen.ts` — auto-generated by TanStack Router
-- `src/integrations/supabase/types.ts` — generated from DB schema
-
----
-
-## Development Workflow
-
-### 1. Installing Dependencies
-```bash
-pnpm install
-```
-
-### 2. Running Dev Server
-```bash
-pnpm dev  # Starts on http://localhost:8080
-```
-
-### 3. Building
-```bash
-pnpm build       # Production build + obfuscation
-pnpm build:dev   # Development build (no obfuscation)
-```
-
-### 4. Database Changes
-**Never execute raw SQL from code.** Write queries in `sqlExecuter.sql`, review, then run in Supabase SQL Editor.
-
-### 5. Testing
-No test suite currently. Manual testing on:
-- Desktop (Chrome, Firefox, Safari)
-- Mobile (iOS Safari, Android Chrome)
-- Offline mode (Service Worker)
+### DO NOT MODIFY
+- `routeTree.gen.ts` — auto-generated by TanStack Router (restart dev server to regenerate)
+- `src/integrations/supabase/types.ts` — generated from DB schema (`supabase gen types typescript`)
 
 ---
 
@@ -220,11 +221,7 @@ No test suite currently. Manual testing on:
 1. Write migration SQL in `supabase/migrations/`
 2. Run via Supabase CLI or SQL Editor
 3. Regenerate types: `supabase gen types typescript --local > src/integrations/supabase/types.ts`
-
-### Adding Real-time to a Table
-1. Enable in Supabase Dashboard: Database > Replication > enable table
-2. Call `enableRealtimeForTable('table_name')` in component
-3. Subscribe to channel with `.on('postgres_changes', ...)`
+4. Enable Replication if realtime is needed: Dashboard > Database > Replication
 
 ### Deploying Edge Functions
 ```bash
@@ -234,85 +231,16 @@ supabase secrets set API_KEY=value
 
 ---
 
-## Error Patterns to Avoid
+## Known Gotchas
 
-### ❌ Hard Reloads
-```typescript
-window.location.reload()  // Breaks offline mode, loses client state
-```
-
-### ❌ Type Casts Without Validation
-```typescript
-const event = e as React.MouseEvent  // May not be a MouseEvent at runtime
-```
-
-### ❌ Missing Null Guards
-```typescript
-format(new Date(goal.target_date), ...)  // Crashes if target_date is invalid
-```
-
-### ❌ Inline Functions in Props
-```typescript
-<GoalList onEdit={(goal) => setEditing(goal)} />  // Breaks React.memo
-```
-
-### ❌ Missing `stopPropagation()` in Nested Dialogs
-```typescript
-<DropdownMenuItem onClick={handler}>  // Sheet closes when clicked
-```
+- **Task normalization**: Raw DB task rows must go through `normalizeTaskList()` before use — the DB schema and in-memory Task type have slightly different field shapes.
+- **GoalChatWidget is lazy-loaded** in GoalDetail — don't import it directly or it will inflate the initial bundle.
+- **`useIsMobile()` flash**: Returns `false` on first render; conditionally rendered mobile UI will flash on load.
+- **Realtime limits**: Max 100 concurrent connections on Supabase free tier.
+- **Build obfuscation**: `pnpm build` runs `javascript-obfuscator` post-build. Use `pnpm build:dev` when debugging production builds.
 
 ---
 
-## Debugging Tips
-
-### Supabase Connection Issues
-- Check `.env` has correct `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-- Verify RLS policies in Supabase Dashboard
-- Check browser console for auth errors
-
-### Real-time Not Working
-- Confirm table has replication enabled (Database > Replication)
-- Check channel subscription status in console logs
-- Verify user has RLS permissions to SELECT from table
-
-### PWA Issues
-- HTTPS required in production (localhost OK for dev)
-- Check Service Worker registration in DevTools > Application
-- Clear cache and unregister SW if stale
-
-### Build Failures
-- Clear `node_modules` and `pnpm-lock.yaml`, reinstall
-- Check for TypeScript errors (even with strict mode off, some errors block builds)
-- Ensure `.env` variables are set
-
----
-
-## Performance Considerations
-
-- **Code splitting**: TanStack Router lazy-loads routes automatically
-- **Image optimization**: Use Supabase Storage CDN, compress before upload
-- **Bundle size**: Current build ~500KB gzipped (obfuscation adds ~20%)
-- **Realtime limits**: Max 100 concurrent connections per Supabase project (free tier)
-
----
-
-## Security Notes
-
-- **RLS policies** are the only data security layer. Always test policies.
-- **API keys** stored encrypted in `api_keys` table (Supabase vault).
-- **Edge Functions** validate auth via `Authorization: Bearer` header.
-- **No CORS issues** — Supabase and Vite dev server on same origin in production.
-
----
-
-## Questions or Issues?
-
-- Check `README.md` for setup instructions
-- See `docs/` for detailed guides (SUPABASE.md, DATABASE_SCHEMA.md, etc)
-- Review `PROJECT_STRUCTURE.md` for file organization
-
----
-
-**Last Updated**: 2026-04-24  
-**Project Version**: 0.0.0  
+**Last Updated**: 2026-06-05
+**Project Version**: 1.10.66
 **Maintainer**: Daraboth

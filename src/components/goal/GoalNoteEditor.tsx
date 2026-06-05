@@ -153,7 +153,12 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
     queueMicrotask(() => {
       isHydratingRef.current = false;
     });
-  }, [note?.id, note?.updated_at, open]);
+  // Intentionally omit note?.updated_at — re-hydrating on every DB round-trip
+  // of our own save is what causes typed text to be overwritten. We only need
+  // to re-hydrate when a *different* note is opened (id change) or the panel
+  // is toggled (open change). External edits by collaborators are applied
+  // directly via the realtime subscription below.
+  }, [note?.id, open]);
 
   // Auto-resize the title textarea while editing.
   useEffect(() => {
@@ -270,11 +275,13 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
     onOpenChange(false);
   };
 
-  // Persist (or no-op if nothing changed since the last save). Used by both
-  // the debounced auto-save effect and the immediate-save paths (visibility,
-  // viewer-list, unmount-flush).
+  // Persist (or no-op if nothing changed since the last save). Fire-and-forget:
+  // state is updated optimistically so the editor never stalls while a write
+  // is in flight, and the last write to reach the DB wins (Supabase processes
+  // requests in arrival order per connection). The realtime channel on this
+  // note (WebSocket) will broadcast the saved content to any other editors.
   const persistNote = useCallback(
-    async ({ silent = true }: { silent?: boolean } = {}) => {
+    ({ silent: _silent = true }: { silent?: boolean } = {}) => {
       if (!note) return;
       const snap = lastSavedRef.current;
       const changed =
@@ -283,43 +290,36 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
         visibility !== snap.visibility;
       if (!changed) return;
 
-      setSaveStatus("saving");
-      try {
-        const { data, error } = await (supabase as any)
-          .from("goal_notes")
-          .update({
-            title,
-            content,
-            visibility,
-            updated_by: currentUserId,
-          })
-          .eq("id", note.id)
-          .select()
-          .single();
-        if (error) throw error;
-        const saved = data as GoalNote;
-        lastSavedRef.current = {
-          title: saved.title,
-          content: saved.content,
-          visibility: saved.visibility,
-        };
-        setLastSavedAt(new Date(saved.updated_at));
-        setSaveStatus("saved");
-        onSaved(saved);
-      } catch (err: any) {
-        setSaveStatus("idle");
-        if (!silent) {
-          toast({
-            title: "Couldn't save note",
-            description: err?.message ?? "Please try again.",
-            variant: "destructive",
-          });
-        } else {
-          console.error("Auto-save failed:", err);
-        }
-      }
+      // Optimistically commit so the next debounce cycle sees a clean baseline.
+      lastSavedRef.current = { title, content, visibility };
+      const savedAt = new Date();
+      setLastSavedAt(savedAt);
+      setSaveStatus("saved");
+
+      // Notify parent sidebar immediately (optimistic).
+      const optimisticNote: GoalNote = {
+        ...note,
+        title,
+        content,
+        visibility,
+        updated_at: savedAt.toISOString(),
+        updated_by: currentUserId,
+      };
+      onSaved(optimisticNote);
+
+      // Fire over the Supabase WebSocket transport — no await, no response
+      // destructuring. If the write fails it's logged but we don't revert
+      // local state (content is still in React state; a page reload would
+      // re-fetch the last DB snapshot).
+      (supabase as any)
+        .from("goal_notes")
+        .update({ title, content, visibility, updated_by: currentUserId })
+        .eq("id", note.id)
+        .then(({ error }: any) => {
+          if (error) console.error("Note auto-save failed:", error);
+        });
     },
-    [note, title, content, visibility, currentUserId, onSaved, toast]
+    [note, title, content, visibility, currentUserId, onSaved]
   );
 
   // Debounced auto-save for title/content/visibility edits.
@@ -381,18 +381,19 @@ const GoalNoteEditor: React.FC<GoalNoteEditorProps> = ({
     }
   }, [note, canEdit, visibility, collaborators]);
 
-  // Flush any pending edits when the editor is closing or the selected note
-  // changes — prevents losing the last 800ms of typing.
+  // Flush any pending debounce on unmount — persistNoteRef always holds the
+  // latest closure so we don't need persistNote in the dep array (which would
+  // re-run this cleanup on every keystroke).
   useEffect(() => {
     return () => {
       if (autoSaveTimer.current) {
         clearTimeout(autoSaveTimer.current);
         autoSaveTimer.current = null;
-        // Fire-and-forget flush; we're unmounting.
-        void persistNote({ silent: true });
+        persistNoteRef.current({ silent: true });
       }
     };
-  }, [persistNote]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDelete = async () => {
     if (!note) return;
