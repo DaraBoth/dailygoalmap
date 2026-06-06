@@ -301,13 +301,18 @@ const GoalDetail: React.FC = () => {
     updateLastSeen();
   }, [goalId, user?.id]);
 
+  // Consume task/taskId param only once on mount — it is a one-time navigation
+  // hint. Re-running on every search change caused the effect to force activeTab
+  // back to "overview" whenever the user switched tabs (tab change → URL change
+  // → search change → this effect re-runs → setActiveTab("overview")).
   useEffect(() => {
-    const taskParam = search?.task || search?.taskId;
+    const taskParam = (search as any)?.task || (search as any)?.taskId;
     if (taskParam) {
       setAutoOpenTaskId(taskParam);
       setActiveTab("overview");
     }
-  }, [search]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Sync state with loaderData
   useEffect(() => {
