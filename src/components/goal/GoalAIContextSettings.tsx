@@ -805,12 +805,36 @@ const GoalAIContextSettings: React.FC<GoalAIContextSettingsProps> = ({
               )}
             </div>
 
-            <div className="rounded-xl border border-border/70 bg-background/60 p-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <ExternalLink className="h-4 w-4 text-primary" />
-                <p className="text-sm font-semibold text-foreground">Open API Usage</p>
+            <div className="rounded-xl border border-border/70 bg-background/60 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4 text-primary" />
+                  <p className="text-sm font-semibold text-foreground">Open API Usage</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href="https://dailygoalmap.vercel.app/ORBIT_API_GUIDE.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent transition-colors"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    View online
+                  </a>
+                  <a
+                    href="/ORBIT_API_GUIDE.md"
+                    download="ORBIT_API_GUIDE.md"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent transition-colors"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Download
+                  </a>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">Use your generated key in <code>X-Project-Api-Key</code> header.</p>
+              <p className="text-xs text-muted-foreground">
+                Use your generated key in the <code className="rounded px-1 bg-muted/60">X-Project-Api-Key</code> header.
+                Download the guide to give any AI tool full API context.
+              </p>
               <div className="rounded-md border border-border/60 bg-background/80 p-3 text-xs font-mono overflow-x-auto whitespace-pre">
 {`GET    /api/project-tasks              -> read tasks
 POST   /api/project-tasks              -> create task

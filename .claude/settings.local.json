@@ -24,7 +24,9 @@
       "Bash(npx tsc *)",
       "Bash(git checkout *)",
       "Bash(.\\\\deploy.ps1 \"v1.10.77 fix recurring task delete: series-aware dialog, preserve series_id in normalizer, series update/delete in tasks table\")",
-      "Bash(.\\\\deploy.ps1 \"v1.10.78  v1.10.78 personalized dashboard insight slides: situation-aware, day-seeded per user\")"
+      "Bash(.\\\\deploy.ps1 \"v1.10.78  v1.10.78 personalized dashboard insight slides: situation-aware, day-seeded per user\")",
+      "Bash(curl *)",
+      "Bash(.\\\\deploy.ps1 \"v1.10.82 api guide: update guide accuracy, add view online + download buttons to goal settings API tab\")"
     ]
   }
 }
