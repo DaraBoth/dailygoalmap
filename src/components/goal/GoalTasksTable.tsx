@@ -130,7 +130,7 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
   const [bulkAction, setBulkAction] = useState<'move' | 'copy' | null>(null);
   const [availableGoals, setAvailableGoals] = useState<Array<{ id: string; title: string }> | null>(null);
   const [goalSearchQuery, setGoalSearchQuery] = useState('');
-  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [isBulkOperating, setIsBulkOperating] = useState(false);
 
   const involvedUserIds = useMemo(() => {
@@ -469,15 +469,43 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
     fetchAvailableGoals();
   };
 
-  const handleBulkDelete = async () => {
-    setBulkDeleteConfirm(false);
+  const executeBulkDelete = async (mode: 'selected-only' | 'include-series') => {
+    setBulkDeleteOpen(false);
     setIsBulkOperating(true);
     try {
-      const { error } = await (supabase as any).from('tasks').delete().in('id', selectedIds);
-      if (error) throw error;
-      setTableTasks((prev) => prev.filter((t) => !selectedIds.includes(t.id)));
+      if (mode === 'include-series') {
+        const seriesIds = [
+          ...new Set(
+            selectedTasks
+              .filter((t) => t.series_id && !t.series_detached)
+              .map((t) => t.series_id as string)
+          ),
+        ];
+        const nonSeriesIds = selectedTasks
+          .filter((t) => !t.series_id || t.series_detached)
+          .map((t) => t.id);
+
+        if (seriesIds.length > 0) {
+          await (supabase as any).from('tasks').delete().in('series_id', seriesIds);
+          await (supabase as any).from('task_series').delete().in('id', seriesIds);
+        }
+        if (nonSeriesIds.length > 0) {
+          await (supabase as any).from('tasks').delete().in('id', nonSeriesIds);
+        }
+        setTableTasks((prev) =>
+          prev.filter(
+            (t) =>
+              !(t.series_id && seriesIds.includes(t.series_id)) &&
+              !nonSeriesIds.includes(t.id)
+          )
+        );
+      } else {
+        const { error } = await (supabase as any).from('tasks').delete().in('id', selectedIds);
+        if (error) throw error;
+        setTableTasks((prev) => prev.filter((t) => !selectedIds.includes(t.id)));
+      }
       setRowSelection({});
-      toast({ title: `${selectedIds.length} task${selectedIds.length > 1 ? 's' : ''} deleted` });
+      toast({ title: 'Tasks deleted' });
     } catch (err: any) {
       toast({ title: 'Delete failed', description: err?.message, variant: 'destructive' });
     } finally {
@@ -1056,7 +1084,7 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
               type="button"
               variant="destructive"
               size="sm"
-              onClick={() => setBulkDeleteConfirm(true)}
+              onClick={() => setBulkDeleteOpen(true)}
               disabled={isBulkOperating}
               className="gap-1.5"
             >
@@ -1264,28 +1292,68 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
         onCancel={() => { setSeriesDeleteDialogOpen(false); setPendingSeriesDeleteId(null); }}
       />
 
-      {/* Bulk delete confirmation */}
-      <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Delete {selectedIds.length} task{selectedIds.length > 1 ? 's' : ''}?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the selected tasks. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleBulkDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Bulk delete confirmation — series-aware */}
+      {(() => {
+        const seriesCount = selectedTasks.filter((t) => t.series_id && !t.series_detached).length;
+        const hasSeries = seriesCount > 0;
+        return (
+          <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Delete {selectedIds.length} task{selectedIds.length > 1 ? 's' : ''}?
+                </AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-3">
+                    {hasSeries ? (
+                      <>
+                        <p>
+                          {seriesCount} of the selected task{seriesCount > 1 ? 's are' : ' is'} part
+                          of a recurring series. How would you like to delete them?
+                        </p>
+                        <div className="flex flex-col gap-2 pt-1">
+                          <Button
+                            variant="destructive"
+                            className="w-full justify-start"
+                            onClick={() => executeBulkDelete('selected-only')}
+                            disabled={isBulkOperating}
+                          >
+                            Selected tasks only
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start border-destructive/40 text-destructive hover:bg-destructive/10"
+                            onClick={() => executeBulkDelete('include-series')}
+                            disabled={isBulkOperating}
+                          >
+                            Selected tasks + all in their series
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <p>
+                        This will permanently delete the selected tasks. This action cannot be
+                        undone.
+                      </p>
+                    )}
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                {!hasSeries && (
+                  <AlertDialogAction
+                    onClick={() => executeBulkDelete('selected-only')}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                )}
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        );
+      })()}
 
       {/* Goal picker for move / copy */}
       <Dialog
