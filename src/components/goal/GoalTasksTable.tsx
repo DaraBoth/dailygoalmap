@@ -1006,12 +1006,18 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
             });
           }
         }}
-        onUpdateTask={async (taskId, description, date, time, range) => {
+        onUpdateTask={async (taskId, description, date, time, range, seriesMode) => {
           const taskToUpdate = tableTasks.find((t) => t.id === taskId);
           if (!taskToUpdate) return;
           if (taskToUpdate.series_id && !taskToUpdate.series_detached) {
             pendingSeriesUpdateRef.current = { taskId, description, date, time, range };
-            setSeriesUpdateDialogOpen(true);
+            if (seriesMode === 'all') {
+              await handleSeriesUpdateAll();
+            } else if (seriesMode === 'just-this') {
+              await handleSeriesUpdateJustThis();
+            } else {
+              setSeriesUpdateDialogOpen(true);
+            }
             return;
           }
           try {

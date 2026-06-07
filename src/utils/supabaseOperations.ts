@@ -375,12 +375,19 @@ export const updateTask = async (taskId: string, updates: any) => {
             ? (updates.completed ? 'completed' : 'uncompleted')
             : 'edited';
 
+        const { data: goalData } = await supabase
+          .from('goals')
+          .select('title')
+          .eq('id', data.goal_id)
+          .single();
+        const goalTitle = goalData?.title || '';
+
         await notifyTaskUpdated(
           data.goal_id,
           user.id,
           data.title || data.description || 'Task',
           taskId,
-          'your goal',
+          goalTitle,
           updates.start_date || data.start_date,
           action
         );

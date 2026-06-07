@@ -466,6 +466,7 @@ const Calendar = ({
         await createTaskUpdateNotification(goalId, taskToUpdate.user_id, 'task_updated', {
           task_title: updatedTask.title?.trim() || 'Untitled task',
           task_id: taskId,
+          goal_title: goalTitle,
           action: 'updated',
           datetime: datetimeInfo,
         });
@@ -489,15 +490,22 @@ const Calendar = ({
       completed?: boolean;
       tags?: string[];
       color?: string | null;
-    }
+    },
+    seriesMode?: 'just-this' | 'all'
   ) => {
     const taskToUpdate = tasks.find(t => t.id === taskId);
     if (!taskToUpdate) return;
 
-    // For series tasks that haven't been individually detached, ask the user.
     if (taskToUpdate.series_id && !taskToUpdate.series_detached) {
       pendingSeriesUpdate.current = { taskId, description, date, time, range };
-      setSeriesDialogOpen(true);
+      if (seriesMode === 'all') {
+        await handleSeriesAll();
+      } else if (seriesMode === 'just-this') {
+        await handleSeriesJustThis();
+      } else {
+        // Fallback: show dialog (e.g., when called from a path that doesn't pass seriesMode)
+        setSeriesDialogOpen(true);
+      }
       return;
     }
 

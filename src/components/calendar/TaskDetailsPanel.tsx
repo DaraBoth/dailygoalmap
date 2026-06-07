@@ -65,6 +65,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [metaOpen, setMetaOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(!!initialEditMode);
+  const [pendingDelete, setPendingDelete] = useState(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
 
   const editor = useTaskEditor(selectedTask);
@@ -80,6 +81,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   // caller explicitly asked to land in edit mode for this new selection.
   useEffect(() => {
     setIsEditing(!!initialEditMode);
+    setPendingDelete(false);
   }, [selectedTask?.id, initialEditMode]);
 
   // Auto-resize the title textarea while editing so it behaves like the
@@ -130,18 +132,17 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
       setMetaOpen(true);
       return;
     }
-    onUpdateTask(
-      selectedTask.id,
-      description.trim(),
-      buildCombinedDateTime(),
-      isAnytime ? undefined : (dailyStart || "09:00"),
-      buildRange()
-    );
+    const desc = description.trim();
+    const date = buildCombinedDateTime();
+    const time = isAnytime ? undefined : (dailyStart || "09:00");
+    const range = buildRange();
+    onUpdateTask(selectedTask.id, desc, date, time, range);
     setIsEditing(false);
   };
 
   const handleCancel = () => {
     resetFromTask();
+    setPendingDelete(false);
     setIsEditing(false);
   };
 
@@ -278,6 +279,27 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                 <span className="hidden md:inline">Save</span>
               </Button>
             </>
+          ) : pendingDelete ? (
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-destructive font-medium hidden md:inline">Delete?</span>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="h-7 px-2.5 rounded-md text-xs gap-1"
+                onClick={() => { setPendingDelete(false); onDeleteTask(selectedTask.id); }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">Confirm</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 rounded-md text-xs text-muted-foreground"
+                onClick={() => setPendingDelete(false)}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           ) : (
             <>
               <Button
@@ -315,7 +337,7 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
                 variant="ghost"
                 size="sm"
                 className="h-7 px-2.5 rounded-md text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1.5"
-                onClick={() => onDeleteTask(selectedTask.id)}
+                onClick={() => setPendingDelete(true)}
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 <span className="hidden md:inline">Delete</span>

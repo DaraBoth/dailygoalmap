@@ -134,7 +134,7 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
     // Get task and goal info for notifications
     const { data: task, error: taskError } = await supabase
       .from('tasks')
-      .select('goal_id, title, start_date, end_date, created_at')
+      .select('goal_id, title, start_date, end_date, created_at, goals(title)')
       .eq('id', taskId)
       .single();
 
@@ -203,15 +203,17 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
       );
 
       // Store internal notification
-        await createTaskUpdateNotification(
+      const goalTitle = (task as any).goals?.title || '';
+      await createTaskUpdateNotification(
         task.goal_id,
         user.id,
         'task_updated',
         {
           task_title: task.title,
           task_id: taskId,
+          goal_title: goalTitle,
           action: completed ? 'completed' : 'uncompleted',
-            url: absoluteDeepLinkComplete
+          url: absoluteDeepLinkComplete
         }
       );
     } catch (notifError) {

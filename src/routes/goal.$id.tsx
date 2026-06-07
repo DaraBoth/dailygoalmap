@@ -29,7 +29,7 @@ async function fetchAllGoalTasks(goalId: string) {
     const to = from + TASKS_PAGE_SIZE - 1
     const { data, error } = await supabase
       .from('tasks')
-      .select('id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, is_anytime, duration_minutes, tags, goal_id, user_id, created_at, updated_at, updated_by')
+      .select('id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, is_anytime, duration_minutes, tags, color, goal_id, user_id, created_at, updated_at, updated_by, series_id, series_detached')
       .eq('goal_id', goalId)
       .order('start_date', { ascending: true })
       .range(from, to)
