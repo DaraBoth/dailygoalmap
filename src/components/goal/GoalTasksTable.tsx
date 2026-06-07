@@ -5,6 +5,7 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   SortingState,
+  RowSelectionState,
   useReactTable,
 } from '@tanstack/react-table';
 import { Task } from '@/components/calendar/types';
@@ -12,8 +13,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ArrowUpDown, CalendarRange, ChevronDown, FilterX, Loader2, SlidersHorizontal } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ArrowUpDown, CalendarRange, ChevronDown, FilterX, Loader2, SlidersHorizontal, Trash2, Copy, ArrowRight, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import TaskDetailsSidebar from '@/components/calendar/TaskDetailsSidebar';
 import AddTaskDialog from '@/components/calendar/AddTaskDialog';
@@ -121,6 +125,14 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
   const [seriesDeleteDialogOpen, setSeriesDeleteDialogOpen] = useState(false);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
+  // Multi-select + bulk actions
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [bulkAction, setBulkAction] = useState<'move' | 'copy' | null>(null);
+  const [availableGoals, setAvailableGoals] = useState<Array<{ id: string; title: string }> | null>(null);
+  const [goalSearchQuery, setGoalSearchQuery] = useState('');
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [isBulkOperating, setIsBulkOperating] = useState(false);
+
   const involvedUserIds = useMemo(() => {
     const set = new Set<string>();
     tableTasks.forEach((task) => {
@@ -136,6 +148,11 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
   useEffect(() => {
     setTableTasks(tasks);
   }, [tasks]);
+
+  useEffect(() => {
+    setRowSelection({});
+    setAvailableGoals(null);
+  }, [goalId]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767px)');
@@ -231,6 +248,15 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
     });
     return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
   }, [tableTasks]);
+
+  const selectedIds = useMemo(
+    () => Object.keys(rowSelection).filter((id) => rowSelection[id]),
+    [rowSelection]
+  );
+  const selectedTasks = useMemo(
+    () => tableTasks.filter((t) => selectedIds.includes(t.id)),
+    [tableTasks, selectedIds]
+  );
 
   const filteredTasks = useMemo(() => {
     const lowerQuery = globalQuery.trim().toLowerCase();
@@ -420,6 +446,91 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
     window.setTimeout(() => setIsLoadingMore(false), 120);
   };
 
+  const fetchAvailableGoals = async () => {
+    if (availableGoals !== null) return;
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return;
+      const { data } = await (supabase as any)
+        .from('goals')
+        .select('id, title, goal_members!inner(user_id)')
+        .eq('goal_members.user_id', userData.user.id)
+        .order('title');
+      setAvailableGoals(
+        (data || []).filter((g: any) => g.id !== goalId).map((g: any) => ({ id: g.id, title: g.title }))
+      );
+    } catch (err) {
+      console.error('Failed to fetch goals for picker:', err);
+    }
+  };
+
+  const openGoalPicker = (mode: 'move' | 'copy') => {
+    setBulkAction(mode);
+    fetchAvailableGoals();
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleteConfirm(false);
+    setIsBulkOperating(true);
+    try {
+      const { error } = await (supabase as any).from('tasks').delete().in('id', selectedIds);
+      if (error) throw error;
+      setTableTasks((prev) => prev.filter((t) => !selectedIds.includes(t.id)));
+      setRowSelection({});
+      toast({ title: `${selectedIds.length} task${selectedIds.length > 1 ? 's' : ''} deleted` });
+    } catch (err: any) {
+      toast({ title: 'Delete failed', description: err?.message, variant: 'destructive' });
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
+  const handleBulkGoalAction = async (targetGoalId: string) => {
+    const mode = bulkAction;
+    setBulkAction(null);
+    setGoalSearchQuery('');
+    setIsBulkOperating(true);
+    try {
+      if (mode === 'move') {
+        const { error } = await (supabase as any).from('tasks').update({ goal_id: targetGoalId }).in('id', selectedIds);
+        if (error) throw error;
+        setTableTasks((prev) => prev.filter((t) => !selectedIds.includes(t.id)));
+        setRowSelection({});
+        toast({ title: `${selectedIds.length} task${selectedIds.length > 1 ? 's' : ''} moved` });
+      } else if (mode === 'copy') {
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData?.user?.id;
+        if (!userId) throw new Error('Not authenticated');
+        const copies = selectedTasks.map((t) => ({
+          id: crypto.randomUUID(),
+          goal_id: targetGoalId,
+          user_id: userId,
+          title: t.title ?? null,
+          description: t.description,
+          completed: false,
+          start_date: t.start_date,
+          end_date: t.end_date,
+          daily_start_time: t.daily_start_time ?? null,
+          daily_end_time: t.daily_end_time ?? null,
+          is_anytime: t.is_anytime ?? null,
+          duration_minutes: t.duration_minutes ?? null,
+          tags: t.tags ?? null,
+          color: t.color ?? null,
+          series_id: null,
+          series_detached: null,
+        }));
+        const { error } = await (supabase as any).from('tasks').insert(copies);
+        if (error) throw error;
+        setRowSelection({});
+        toast({ title: `${copies.length} task${copies.length > 1 ? 's' : ''} copied` });
+      }
+    } catch (err: any) {
+      toast({ title: `${mode === 'move' ? 'Move' : 'Copy'} failed`, description: err?.message, variant: 'destructive' });
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
   const handleCreateTask = async (
     description: string,
     date: Date,
@@ -507,6 +618,38 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
   };
 
   const columns = useMemo<ColumnDef<Task>[]>(() => [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <div className="flex items-center justify-center w-8">
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected()
+                ? true
+                : table.getIsSomePageRowsSelected()
+                ? 'indeterminate'
+                : false
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div
+          className="flex items-center justify-center w-8"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        </div>
+      ),
+      enableSorting: false,
+    },
     {
       accessorKey: 'title',
       header: ({ column }) => (
@@ -698,10 +841,13 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
   const table = useReactTable({
     data: filteredTasks,
     columns,
-    state: { sorting },
+    getRowId: (row) => row.id,
+    state: { sorting, rowSelection },
     onSortingChange: setSorting,
+    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    enableRowSelection: true,
   });
 
   const sortedRows = table.getRowModel().rows;
@@ -900,9 +1046,62 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
         )}
       </div>
 
+      {selectedIds.length > 0 && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 dark:bg-primary/10 p-3 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-foreground">
+            {selectedIds.length} task{selectedIds.length > 1 ? 's' : ''} selected
+          </span>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteConfirm(true)}
+              disabled={isBulkOperating}
+              className="gap-1.5"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => openGoalPicker('move')}
+              disabled={isBulkOperating}
+              className="gap-1.5"
+            >
+              <ArrowRight className="h-3.5 w-3.5" />
+              Move to goal
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => openGoalPicker('copy')}
+              disabled={isBulkOperating}
+              className="gap-1.5"
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Copy to goal
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={() => setRowSelection({})}
+              title="Clear selection"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-border/60 bg-background/70 dark:bg-background/85 backdrop-blur-sm overflow-hidden">
         <div className="w-full overflow-x-auto overscroll-x-contain">
-          <table className="w-full min-w-[860px] text-sm">
+          <table className="w-full min-w-[900px] text-sm">
             <thead className="bg-muted/70 dark:bg-muted/40 border-b border-border/60 sticky top-0 z-10">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -927,7 +1126,12 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
                   return (
                     <tr
                       key={row.id}
-                      className="border-b border-border/40 last:border-b-0 hover:bg-muted/35 dark:hover:bg-muted/30 cursor-pointer"
+                      className={cn(
+                        "border-b border-border/40 last:border-b-0 cursor-pointer transition-colors",
+                        rowSelection[row.id]
+                          ? "bg-primary/10 dark:bg-primary/15 hover:bg-primary/15 dark:hover:bg-primary/20"
+                          : "hover:bg-muted/35 dark:hover:bg-muted/30"
+                      )}
                       onClick={() => openTaskDetails(row.original)}
                       onKeyDown={(event) => onTableRowKeyDown(event, row.original)}
                       tabIndex={0}
@@ -936,10 +1140,10 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
                         <td
                           key={cell.id}
                           className="px-3 py-2.5 align-top"
-                          // First cell shows a 3px inset accent in the task's
-                          // color so the row inherits its visual identity.
+                          // Second cell (idx 1) is the title column — show the
+                          // 3px inset color accent there (idx 0 is now the checkbox).
                           style={
-                            idx === 0 && rowColor
+                            idx === 1 && rowColor
                               ? { boxShadow: `inset 3px 0 0 0 ${rowColor}` }
                               : undefined
                           }
@@ -1059,6 +1263,89 @@ const GoalTasksTable: React.FC<GoalTasksTableProps> = ({ tasks, goalId, goalTitl
         onAllInSeries={handleSeriesDeleteAll}
         onCancel={() => { setSeriesDeleteDialogOpen(false); setPendingSeriesDeleteId(null); }}
       />
+
+      {/* Bulk delete confirmation */}
+      <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {selectedIds.length} task{selectedIds.length > 1 ? 's' : ''}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the selected tasks. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Goal picker for move / copy */}
+      <Dialog
+        open={bulkAction !== null}
+        onOpenChange={(open) => { if (!open) { setBulkAction(null); setGoalSearchQuery(''); } }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {bulkAction === 'move' ? 'Move' : 'Copy'}{' '}
+              {selectedIds.length} task{selectedIds.length > 1 ? 's' : ''} to...
+            </DialogTitle>
+            <DialogDescription>Select the destination goal.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Search goals..."
+              value={goalSearchQuery}
+              onChange={(e) => setGoalSearchQuery(e.target.value)}
+              className="h-9"
+              autoFocus
+            />
+            <div className="space-y-0.5 max-h-64 overflow-y-auto pr-1">
+              {availableGoals === null ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : availableGoals.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">No other goals found.</p>
+              ) : (
+                availableGoals
+                  .filter(
+                    (g) =>
+                      !goalSearchQuery ||
+                      g.title.toLowerCase().includes(goalSearchQuery.toLowerCase())
+                  )
+                  .map((goal) => (
+                    <button
+                      key={goal.id}
+                      type="button"
+                      className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-muted/60 transition-colors text-sm font-medium disabled:opacity-50"
+                      onClick={() => handleBulkGoalAction(goal.id)}
+                      disabled={isBulkOperating}
+                    >
+                      {goal.title}
+                    </button>
+                  ))
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => { setBulkAction(null); setGoalSearchQuery(''); }}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
         <SheetContent side="bottom" className="h-[88vh] p-0 overflow-hidden bg-background/95 dark:bg-background/95">
