@@ -21,21 +21,25 @@ const TOOL_CATALOG = [
   {
     name: 'tasks.list',
     description:
-      'List tasks for the project key scope. Optional filters: tags (array of strings) and match=any|all (default any).',
+      'List tasks for the project key scope. Use date to fetch a specific day efficiently instead of paginating everything. Filters for date, completion status, and tags can be combined.',
     inputSchema: {
       type: 'object',
       properties: {
-        limit: { type: 'number', minimum: 1, maximum: 500 },
-        offset: { type: 'number', minimum: 0 },
+        limit: { type: 'number', minimum: 1, maximum: 500, description: 'Max tasks to return. Default 200, max 500.' },
+        offset: { type: 'number', minimum: 0, description: 'Pagination offset.' },
+        date: { type: 'string', description: 'YYYY-MM-DD — return only tasks whose start_date falls on this UTC day. Most efficient way to get today\'s tasks.' },
+        date_from: { type: 'string', description: 'YYYY-MM-DD — return tasks with start_date on or after this day (UTC).' },
+        date_to: { type: 'string', description: 'YYYY-MM-DD — return tasks with start_date on or before this day (UTC).' },
+        completed: { type: 'boolean', description: 'true = completed tasks only, false = incomplete only. Omit to return all.' },
         tags: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Filter tasks whose tags include these values. Use match=all to require every tag.',
+          description: 'Filter tasks whose tags include these values.',
         },
         match: {
           type: 'string',
           enum: ['any', 'all'],
-          description: 'How to combine the tags filter. "any" returns tasks with at least one match (overlap), "all" requires the row to contain every tag.',
+          description: '"any" returns tasks with at least one matching tag, "all" requires every tag to match.',
         },
       },
     },
