@@ -78,9 +78,11 @@ Response shape:
 {
   "tool": "tasks.list",
   "input": {
+    "date": "2026-06-07",
+    "completed": false,
     "limit": 50,
     "offset": 0,
-    "tags": ["work", "urgent"],
+    "tags": ["work"],
     "match": "any"
   }
 }
@@ -90,10 +92,16 @@ Response shape:
 |---|---|---|---|
 | `limit` | number | 200 | Max 500 |
 | `offset` | number | 0 | For pagination |
+| `date` | `"YYYY-MM-DD"` | — | Return only tasks whose `start_date` falls on this UTC day. Use this to get today's tasks instead of paginating everything. |
+| `date_from` | `"YYYY-MM-DD"` | — | Return tasks with `start_date` on or after this day (UTC) |
+| `date_to` | `"YYYY-MM-DD"` | — | Return tasks with `start_date` on or before this day (UTC) |
+| `completed` | boolean | — | `false` = incomplete only, `true` = completed only. Omit to return all. |
 | `tags` | string[] | — | Filter by tags |
 | `match` | `"any"` \| `"all"` | `"any"` | `"any"` = at least one tag matches, `"all"` = every tag must match |
 
-Results are ordered by `start_date` ascending.
+All filters can be combined. Results are ordered by `start_date` ascending.
+
+> **Tip:** Always use `date` or `date_from`/`date_to` when you only need a specific period. Fetching without a date filter on a large goal requires multiple paginated requests.
 
 **Result shape** (inside `result` when using MCP, or directly when using REST):
 
@@ -275,6 +283,9 @@ Same operations, same key header, direct HTTP methods:
 | Operation | Method + URL |
 |---|---|
 | List tasks | `GET /api/project-tasks?limit=50&offset=0` |
+| Today's tasks | `GET /api/project-tasks?date=2026-06-07` |
+| Date range | `GET /api/project-tasks?date_from=2026-06-01&date_to=2026-06-07` |
+| Incomplete tasks | `GET /api/project-tasks?completed=false` |
 | Filter by single tag | `GET /api/project-tasks?tag=work` |
 | Filter by multiple tags | `GET /api/project-tasks?tags=work,urgent&match=any` |
 | Create task | `POST /api/project-tasks` + JSON body |
@@ -282,7 +293,7 @@ Same operations, same key header, direct HTTP methods:
 | Move/reschedule | `PATCH /api/project-tasks` + JSON body with `task_id` |
 | Delete task | `DELETE /api/project-tasks?task_id=uuid` |
 
-Note: `?tag=foo` (singular) and `?tags=foo,bar` (comma-separated) can be combined — both are merged into the same filter.
+Note: `?tag=foo` (singular) and `?tags=foo,bar` (comma-separated) can be combined. All filters stack — e.g. `?date=2026-06-07&completed=false&tags=work`.
 
 ---
 

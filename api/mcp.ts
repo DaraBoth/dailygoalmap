@@ -115,6 +115,12 @@ async function callProjectTasks(
     if (matchInput === 'all' || matchInput === 'any') {
       upstream.searchParams.set('match', matchInput);
     }
+
+    // Forward date filters.
+    if (input.date) upstream.searchParams.set('date', String(input.date));
+    if (input.date_from) upstream.searchParams.set('date_from', String(input.date_from));
+    if (input.date_to) upstream.searchParams.set('date_to', String(input.date_to));
+    if (input.completed !== undefined) upstream.searchParams.set('completed', String(input.completed));
   } else if (method === 'DELETE') {
     const taskId = String(input.task_id || '');
     if (!taskId) return normalizeError('task_id is required for tasks.delete');
@@ -178,7 +184,18 @@ export default async function handler(req: Request) {
 
     if (!tool) return normalizeError('tool is required in body.');
 
-    if (tool === 'tasks.list') return callProjectTasks(req, 'GET', input);
+    if (tool === 'tasks.list') {
+    const listInput: Record<string, unknown> = {};
+    if (input.limit !== undefined) listInput.limit = input.limit;
+    if (input.offset !== undefined) listInput.offset = input.offset;
+    if (input.tags !== undefined) listInput.tags = input.tags;
+    if (input.match !== undefined) listInput.match = input.match;
+    if (input.date !== undefined) listInput.date = input.date;
+    if (input.date_from !== undefined) listInput.date_from = input.date_from;
+    if (input.date_to !== undefined) listInput.date_to = input.date_to;
+    if (input.completed !== undefined) listInput.completed = input.completed;
+    return callProjectTasks(req, 'GET', listInput);
+  }
     if (tool === 'tasks.create') return callProjectTasks(req, 'POST', input);
     if (tool === 'tasks.update') return callProjectTasks(req, 'PUT', input);
     if (tool === 'tasks.move') return callProjectTasks(req, 'PATCH', input);

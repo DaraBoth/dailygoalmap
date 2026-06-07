@@ -42,13 +42,20 @@ export default async function handler(req: Request) {
         .filter(Boolean);
       const tagMatch = (url.searchParams.get('match') || 'any').toLowerCase() === 'all' ? 'all' : 'any';
 
+      // Date filters: ?date=YYYY-MM-DD (single day) OR ?date_from + ?date_to (range)
+      const dateParam = url.searchParams.get('date');
+      const dateFrom = url.searchParams.get('date_from');
+      const dateTo = url.searchParams.get('date_to');
+
+      // Completion filter: ?completed=true|false (omit to return all)
+      const completedParam = url.searchParams.get('completed');
+
       let query = supabase
         .from('tasks')
         .select('id, goal_id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, is_anytime, duration_minutes, tags, created_at, updated_at, updated_by')
         .eq('goal_id', key.goal_id);
 
       if (tagList.length > 0) {
-        // Postgres array operators via PostgREST: ov (overlap) for any, cs (contains) for all.
         if (tagMatch === 'all') {
           query = query.contains('tags', tagList);
         } else {
@@ -56,16 +63,48 @@ export default async function handler(req: Request) {
         }
       }
 
+      if (dateParam) {
+        // Single day: start_date >= YYYY-MM-DD 00:00:00 AND < YYYY-MM-DD+1 00:00:00
+        const dayStart = new Date(`${dateParam}T00:00:00.000Z`);
+        const dayEnd = new Date(dayStart.getTime() + 86400000);
+        if (!isNaN(dayStart.getTime())) {
+          query = query.gte('start_date', dayStart.toISOString()).lt('start_date', dayEnd.toISOString());
+        }
+      } else {
+        if (dateFrom) {
+          const from = new Date(`${dateFrom}T00:00:00.000Z`);
+          if (!isNaN(from.getTime())) query = query.gte('start_date', from.toISOString());
+        }
+        if (dateTo) {
+          const to = new Date(`${dateTo}T23:59:59.999Z`);
+          if (!isNaN(to.getTime())) query = query.lte('start_date', to.toISOString());
+        }
+      }
+
+      if (completedParam === 'true') {
+        query = query.eq('completed', true);
+      } else if (completedParam === 'false') {
+        query = query.eq('completed', false);
+      }
+
       const { data, error } = await query
         .order('start_date', { ascending: true })
         .range(offset, offset + limit - 1);
 
       if (error) return buildJsonResponse({ error: error.message }, 500);
+
+      const activeFilters: Record<string, unknown> = {};
+      if (tagList.length > 0) { activeFilters.tags = tagList; activeFilters.match = tagMatch; }
+      if (dateParam) activeFilters.date = dateParam;
+      if (dateFrom) activeFilters.date_from = dateFrom;
+      if (dateTo) activeFilters.date_to = dateTo;
+      if (completedParam !== null) activeFilters.completed = completedParam === 'true';
+
       return buildJsonResponse({
         tasks: data || [],
         limit,
         offset,
-        filters: tagList.length > 0 ? { tags: tagList, match: tagMatch } : undefined,
+        filters: Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
       });
     }
 
