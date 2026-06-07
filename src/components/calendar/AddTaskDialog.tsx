@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import TaskMetaSheet, { TaskMetaFab } from "./TaskMetaSheet";
 import { RecurrenceConfig, generateOccurrenceDates } from "@/utils/recurrenceUtils";
+import { fetchGoalTargetDate } from "@/components/calendar/taskDatabase";
 
 interface AddTaskDialogProps {
   isOpen: boolean;
@@ -70,6 +71,12 @@ const AddTaskDialog = ({
   const [timeError, setTimeError] = useState<string | null>(null);
   const [metaOpen, setMetaOpen] = useState(false);
   const [recurrence, setRecurrence] = useState<RecurrenceConfig>({ frequency: "none" });
+  const [goalTargetDate, setGoalTargetDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (!primaryGoalId) { setGoalTargetDate(null); return; }
+    fetchGoalTargetDate(primaryGoalId).then(setGoalTargetDate).catch(() => setGoalTargetDate(null));
+  }, [primaryGoalId]);
 
   const titleRef = useRef<HTMLTextAreaElement>(null);
 
@@ -162,8 +169,13 @@ const AddTaskDialog = ({
         if (seriesError) throw seriesError;
         const seriesId = (seriesData as any).id as string;
 
-        // 2) Generate occurrence dates
-        const occurrenceDates = generateOccurrenceDates(startDate, recurrence);
+        // 2) Generate occurrence dates — capped at goal's target date (max 50)
+        const occurrenceDates = generateOccurrenceDates(
+          startDate,
+          recurrence,
+          50,
+          goalTargetDate ?? undefined
+        );
 
         // 3) Bulk-insert all tasks
         const cleanedTags = tags.map((t) => String(t || "").trim()).filter(Boolean);
@@ -410,6 +422,7 @@ const AddTaskDialog = ({
           primaryGoalId={primaryGoalId}
           recurrence={recurrence}
           setRecurrence={setRecurrence}
+          goalEndDate={goalTargetDate ?? undefined}
         />
       </SheetContent>
     </Sheet>

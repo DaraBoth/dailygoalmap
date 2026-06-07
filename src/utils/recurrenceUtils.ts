@@ -7,17 +7,24 @@ export interface RecurrenceConfig {
   daysOfWeek?: number[]; // 0=Sun, 1=Mon, ..., 6=Sat
 }
 
-const MAX_OCCURRENCES = 50;
+export const MAX_OCCURRENCES = 50;
 
 /**
- * Generate up to MAX_OCCURRENCES occurrence dates for a given recurrence config.
- * The first date in the result is always the anchor startDate itself (or the
- * first matching day on/after startDate for days_of_week).
+ * Generate occurrence dates for a recurrence config.
+ *
+ * Stops at whichever comes first:
+ *   • maxCount (default 50) — hard safety cap
+ *   • endDate  — goal target date or explicit series end; occurrences past
+ *                this date are excluded
+ *
+ * The first date is always startDate itself (or the first matching weekday
+ * on/after startDate for days_of_week).
  */
 export function generateOccurrenceDates(
   startDate: Date,
   config: RecurrenceConfig,
-  maxCount = MAX_OCCURRENCES
+  maxCount = MAX_OCCURRENCES,
+  endDate?: Date
 ): Date[] {
   if (config.frequency === "none") return [startDate];
 
@@ -25,28 +32,36 @@ export function generateOccurrenceDates(
 
   if (config.frequency === "daily") {
     for (let i = 0; i < maxCount; i++) {
-      dates.push(addDays(startDate, i));
+      const d = addDays(startDate, i);
+      if (endDate && d > endDate) break;
+      dates.push(d);
     }
     return dates;
   }
 
   if (config.frequency === "weekly") {
     for (let i = 0; i < maxCount; i++) {
-      dates.push(addWeeks(startDate, i));
+      const d = addWeeks(startDate, i);
+      if (endDate && d > endDate) break;
+      dates.push(d);
     }
     return dates;
   }
 
   if (config.frequency === "monthly") {
     for (let i = 0; i < maxCount; i++) {
-      dates.push(addMonths(startDate, i));
+      const d = addMonths(startDate, i);
+      if (endDate && d > endDate) break;
+      dates.push(d);
     }
     return dates;
   }
 
   if (config.frequency === "yearly") {
     for (let i = 0; i < maxCount; i++) {
-      dates.push(addYears(startDate, i));
+      const d = addYears(startDate, i);
+      if (endDate && d > endDate) break;
+      dates.push(d);
     }
     return dates;
   }
@@ -56,16 +71,16 @@ export function generateOccurrenceDates(
     if (targetDays.length === 0) return [startDate];
 
     let cursor = new Date(startDate);
-    // Walk forward day by day, collecting matching days
-    while (dates.length < maxCount) {
+    // Walk forward day by day collecting matching weekdays.
+    // Stop at endDate if provided, otherwise cap at 2 years.
+    const safetyEnd = endDate ?? addYears(startDate, 2);
+    while (dates.length < maxCount && cursor <= safetyEnd) {
       if (targetDays.includes(cursor.getDay())) {
         dates.push(new Date(cursor));
       }
       cursor = addDays(cursor, 1);
-      // Safety: don't loop forever (2 years max)
-      if (cursor.getFullYear() > startDate.getFullYear() + 2) break;
     }
-    return dates.slice(0, maxCount);
+    return dates;
   }
 
   return [startDate];

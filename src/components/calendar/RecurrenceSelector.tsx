@@ -1,10 +1,12 @@
 import React from "react";
 import { Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import {
   RecurrenceConfig,
   RecurrenceFrequency,
   DAY_LABELS,
+  MAX_OCCURRENCES,
   generateOccurrenceDates,
 } from "@/utils/recurrenceUtils";
 
@@ -21,17 +23,19 @@ interface RecurrenceSelectorProps {
   value: RecurrenceConfig;
   onChange: (v: RecurrenceConfig) => void;
   startDate: Date;
+  endDate?: Date;
 }
 
 const RecurrenceSelector: React.FC<RecurrenceSelectorProps> = ({
   value,
   onChange,
   startDate,
+  endDate,
 }) => {
   const occurrenceCount =
     value.frequency === "none"
       ? 0
-      : generateOccurrenceDates(startDate, value).length;
+      : generateOccurrenceDates(startDate, value, MAX_OCCURRENCES, endDate).length;
 
   const handleFrequencyChange = (freq: RecurrenceFrequency) => {
     if (freq === "days_of_week") {
@@ -98,7 +102,12 @@ const RecurrenceSelector: React.FC<RecurrenceSelectorProps> = ({
       {value.frequency !== "none" && (
         <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <Repeat className="h-3 w-3 shrink-0" />
-          {occurrenceCount} task{occurrenceCount !== 1 ? "s" : ""} will be created (max 50)
+          {occurrenceCount} task{occurrenceCount !== 1 ? "s" : ""} will be created
+          {occurrenceCount === MAX_OCCURRENCES
+            ? " (max 50)"
+            : endDate
+            ? ` (until ${format(endDate, "MMM d, yyyy")})`
+            : ""}
         </p>
       )}
     </div>

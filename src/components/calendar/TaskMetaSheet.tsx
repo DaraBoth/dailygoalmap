@@ -62,6 +62,7 @@ interface TaskMetaSheetProps {
   primaryGoalId?: string;
   recurrence?: RecurrenceConfig;
   setRecurrence?: (v: RecurrenceConfig) => void;
+  goalEndDate?: Date;
 
   readOnly?: boolean;
 }
@@ -102,6 +103,7 @@ const TaskMetaSheet: React.FC<TaskMetaSheetProps> = (props) => {
     primaryGoalId,
     recurrence,
     setRecurrence,
+    goalEndDate,
     readOnly = false,
   } = props;
 
@@ -343,6 +345,7 @@ const TaskMetaSheet: React.FC<TaskMetaSheetProps> = (props) => {
                 value={recurrence}
                 onChange={setRecurrence}
                 startDate={startDate}
+                endDate={goalEndDate}
               />
             </FieldGroup>
           ) : readOnly && recurrence && recurrence.frequency !== "none" ? (

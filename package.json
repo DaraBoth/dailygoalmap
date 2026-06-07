@@ -1,7 +1,7 @@
 {
     "name": "orbit",
     "private": true,
-    "version": "1.10.89",
+    "version": "1.10.90",
     "type": "module",
     "scripts": {
         "dev": "vite --port 2000",
