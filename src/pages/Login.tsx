@@ -1,36 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { SmartLink } from "@/components/ui/SmartLink";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, Lock, Eye, EyeOff, Chrome, UserCircle2, X, Plus, ChevronDown } from "lucide-react";
+import { Loader2, Mail, Lock, Eye, EyeOff, Chrome } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Separator } from "@/components/ui/separator";
 import LogoAvatar from "@/components/ui/LogoAvatar";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import GlobalBackground from "@/components/ui/GlobalBackground";
-import { getSavedAccounts, saveAccount, removeAccount, setCurrentAccountPreference, type SavedAccount } from "@/utils/savedAccounts";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [saveOnDevice, setSaveOnDevice] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
-  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
-  const [showSaved, setShowSaved] = useState(false);
   const { toast } = useToast();
   const { goToDashboard } = useRouterNavigation();
-
-  useEffect(() => {
-    setSavedAccounts(getSavedAccounts());
-  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,30 +33,13 @@ const Login = () => {
     setIsLoading(true);
     setEmailNotConfirmed(false);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         if (error.message.includes("Email not confirmed")) {
           setEmailNotConfirmed(true);
           throw new Error("Please confirm your email before logging in.");
         }
         throw error;
-      }
-      // Save account info for switcher only when user opts in.
-      if (data.user && saveOnDevice) {
-        const meta = data.user.user_metadata;
-        saveAccount({
-          id: data.user.id,
-          email: data.user.email ?? email,
-          fullName: meta?.full_name || meta?.name || email.split("@")[0],
-          avatarUrl: meta?.avatar_url,
-          accessToken: data.session?.access_token,
-          refreshToken: data.session?.refresh_token,
-        });
-        setSavedAccounts(getSavedAccounts());
-      }
-      // Set this account as the current preference
-      if (data.user) {
-        setCurrentAccountPreference(data.user.id);
       }
       await goToDashboard();
       toast({ title: "Welcome back!" });
@@ -122,60 +97,6 @@ const Login = () => {
     }
   };
 
-  const handleSelectSavedAccount = async (account: SavedAccount) => {
-    if (!account.accessToken || !account.refreshToken) {
-      // No tokens stored — pre-fill email and let user type password.
-      setEmail(account.email);
-      setShowSaved(false);
-      setTimeout(() => document.getElementById("password")?.focus(), 100);
-      return;
-    }
-
-    setShowSaved(false);
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.auth.setSession({
-        access_token: account.accessToken,
-        refresh_token: account.refreshToken,
-      });
-      if (error) throw error;
-
-      // Persist refreshed tokens so the next one-tap attempt doesn't re-use
-      // the old (now-expired) access token.
-      if (data.session && saveOnDevice) {
-        saveAccount({
-          ...account,
-          accessToken: data.session.access_token,
-          refreshToken: data.session.refresh_token,
-        });
-      }
-
-      setCurrentAccountPreference(account.id);
-      await goToDashboard();
-    } catch {
-      toast({
-        title: "Session expired",
-        description: "Please log in with your password to refresh one-tap login.",
-        variant: "destructive",
-      });
-      setEmail(account.email);
-      setTimeout(() => document.getElementById("password")?.focus(), 100);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRemoveSavedAccount = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    // Just remove from the local device list — no server-side session
-    // manipulation. Globally revoking the session would log that user out
-    // from all their other devices, which is not what "remove from this
-    // device" should do.
-    removeAccount(id);
-    setSavedAccounts(getSavedAccounts());
-    toast({ title: "Account removed from this device" });
-  };
-
   return (
     <>
       <title>{isForgotPassword ? "Reset Password | Orbit" : "Log In | Orbit"}</title>
@@ -188,7 +109,6 @@ const Login = () => {
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           className="relative w-full max-w-sm"
         >
-          {/* Logo */}
           <div className="flex flex-col items-center mb-8">
             <LogoAvatar size={56} />
             <h1 className="mt-3 text-2xl font-bold tracking-tight">Orbit</h1>
@@ -196,80 +116,6 @@ const Login = () => {
               {isForgotPassword ? "Reset your password" : "Log in to your account"}
             </p>
           </div>
-
-          {/* Saved Accounts Panel */}
-          <AnimatePresence>
-            {!isForgotPassword && savedAccounts.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="mb-4"
-              >
-                <button
-                  onClick={() => setShowSaved(!showSaved)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-medium hover:bg-accent transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <UserCircle2 className="h-4 w-4 text-muted-foreground" />
-                    <span>Saved accounts ({savedAccounts.length})</span>
-                  </div>
-                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showSaved ? "rotate-180" : ""}`} />
-                </button>
-
-                <AnimatePresence>
-                  {showSaved && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="mt-1 bg-card border border-border rounded-xl overflow-hidden divide-y divide-border">
-                        {savedAccounts.map((acc) => (
-                          <div
-                            key={acc.id}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => handleSelectSavedAccount(acc)}
-                            onKeyDown={(e) => e.key === "Enter" && handleSelectSavedAccount(acc)}
-                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors text-left group cursor-pointer"
-                          >
-                            {acc.avatarUrl ? (
-                              <img src={acc.avatarUrl} alt={acc.fullName} className="h-8 w-8 rounded-full object-cover" />
-                            ) : (
-                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                                {acc.fullName?.[0]?.toUpperCase() || "?"}
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{acc.fullName}</p>
-                              <p className="text-xs text-muted-foreground truncate">{acc.email}</p>
-                            </div>
-                            <button
-                              onClick={(e) => handleRemoveSavedAccount(e, acc.id)}
-                              className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-all"
-                              title="Remove saved account from this device"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                        <SmartLink to="/register" className="block">
-                          <div className="flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors text-muted-foreground text-sm">
-                            <div className="h-8 w-8 rounded-full border-2 border-dashed border-border flex items-center justify-center">
-                              <Plus className="h-3.5 w-3.5" />
-                            </div>
-                            Add another account
-                          </div>
-                        </SmartLink>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
           <div className="bg-card border border-border rounded-2xl shadow-sm p-6 space-y-5">
             {isForgotPassword && resetSent ? (
@@ -356,18 +202,6 @@ const Login = () => {
                         Resend confirmation email
                       </button>
                     </div>
-                  )}
-
-                  {!isForgotPassword && (
-                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={saveOnDevice}
-                        onChange={(e) => setSaveOnDevice(e.target.checked)}
-                        className="h-4 w-4 rounded border-border"
-                      />
-                      Save this account on this device
-                    </label>
                   )}
 
                   <Button type="submit" disabled={isLoading} className="w-full h-11 rounded-xl font-semibold">
