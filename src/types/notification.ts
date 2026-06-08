@@ -1,5 +1,5 @@
 
-export type NotificationType = 'invitation' | 'removal' | 'member_left' | 'member_joined' | 'task_created' | 'task_deleted' | 'task_updated';
+export type NotificationType = 'invitation' | 'removal' | 'member_left' | 'member_joined' | 'task_created' | 'task_deleted' | 'task_updated' | 'task_deadline';
 
 // A type-safe JSON type for Supabase payloads
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];

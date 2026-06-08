@@ -183,7 +183,7 @@ function RootComponent() {
           shownNotifications.add(notification.id);
 
           // Only show toast for certain notification types
-          const toastTypes = ['task_created', 'task_updated', 'task_deleted', 'member_joined', 'member_left'];
+          const toastTypes = ['task_created', 'task_updated', 'task_deleted', 'member_joined', 'member_left', 'task_deadline'];
           if (!toastTypes.includes(notification.type)) {
             console.log('⏭️ Skipping notification type:', notification.type);
             return;
@@ -236,6 +236,12 @@ function RootComponent() {
           } else if (notification.type === 'member_left') {
             toastTitle = '👋 Member Left';
             toastDescription = `${senderName} left "${goalTitle}"`;
+          } else if (notification.type === 'task_deadline') {
+            const window = (notification.payload as any)?.window;
+            const windowLabel = window === '1h' ? '1 hour' : window === '3h' ? '3 hours' : '24 hours';
+            toastTitle = '⏰ Deadline Coming Up';
+            toastDescription = `"${taskTitle}" in "${goalTitle}" is due in ${windowLabel}`;
+            void showBrowserNotification(toastTitle, toastDescription, notification.url || undefined);
           }
 
           // Show toast with View button

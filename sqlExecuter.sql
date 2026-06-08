@@ -215,6 +215,54 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- ============================================
+-- TASK DEADLINE ALERTS — CRON JOB SETUP
+-- Run these in the Supabase SQL Editor.
+-- Requires: pg_cron and pg_net extensions enabled.
+-- ============================================
+
+-- Step 1: Add 'task_deadline' to the notifications type constraint
+ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
+ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+CHECK (type IN (
+  'invitation',
+  'removal',
+  'member_left',
+  'member_joined',
+  'task_created',
+  'task_updated',
+  'task_deleted',
+  'task_deadline'
+));
+
+-- Step 2: Schedule the deadline-alerts Edge Function to run every hour.
+-- Replace YOUR_SERVICE_ROLE_KEY with your actual Supabase service role key.
+-- Replace the URL project ref if it differs.
+SELECT cron.schedule(
+  'deadline-alerts-hourly',
+  '0 * * * *',
+  $$
+  SELECT net.http_post(
+    url        := 'https://vddurwzfpcdoafgetnqo.supabase.co/functions/v1/deadline-alerts',
+    headers    := jsonb_build_object(
+      'Content-Type',  'application/json',
+      'Authorization', 'Bearer YOUR_SERVICE_ROLE_KEY'
+    ),
+    body       := jsonb_build_object('time', now()),
+    timeout_milliseconds := 10000
+  ) AS request_id;
+  $$
+);
+
+-- To verify the job was created:
+-- SELECT * FROM cron.job;
+
+-- To check recent run history:
+-- SELECT * FROM cron.job_run_details ORDER BY start_time DESC LIMIT 20;
+
+-- To remove the job if needed:
+-- SELECT cron.unschedule('deadline-alerts-hourly');
+
 -- Grant service role access for edge functions
 GRANT ALL ON conversation_memory TO service_role;
 
