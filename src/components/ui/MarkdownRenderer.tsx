@@ -8,6 +8,7 @@ import { Copy } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { ChartRenderer } from './ChartRenderer';
 import { EmbeddedTaskCard } from '@/components/goal/EmbeddedTaskCard';
+import { useFileViewer } from '@/hooks/useFileViewer';
 
 // Recognises a task-embed marker anywhere in the content and yields a stream
 // of blocks so the renderer can drop <EmbeddedTaskCard> elements between
@@ -75,6 +76,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     TypingLoader,
     extraActions,
 }) => {
+    const { openFile } = useFileViewer();
 
     // === COPY-TO-CLIPBOARD ===
     const copyMessage = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
@@ -193,6 +195,23 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                     </svg>
                                 </a>
+                            );
+                        },
+
+                        /* ================= IMAGE ================= */
+                        img({ src, alt }) {
+                            if (!src) return null;
+                            return (
+                                <img
+                                    src={src}
+                                    alt={alt || ''}
+                                    onClick={() =>
+                                        openFile({ url: src, fileName: alt || undefined })
+                                    }
+                                    className="rounded-xl shadow-lg my-4 max-w-full cursor-zoom-in hover:opacity-90 transition-opacity"
+                                    style={{ display: 'block' }}
+                                    title="Click to view"
+                                />
                             );
                         },
 

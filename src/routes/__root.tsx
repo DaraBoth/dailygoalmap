@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client"
 import React from 'react'
 import { enableRealtimeForTable } from '@/components/calendar/taskDatabase'
 import EnhancedLoading from "@/components/ui/enhanced-loading"
+import { FileViewerProvider } from "@/hooks/useFileViewer"
 
 // Create React Query client with optimized settings
 const queryClient = new QueryClient({
@@ -335,6 +336,7 @@ function RootComponent() {
       <ThemeProvider defaultTheme="dark" storageKey="theme-preference">
         <link rel="manifest" href="/manifest.json" />
         <QueryClientProvider client={queryClient}>
+          <FileViewerProvider>
           {showRouteProgress && (
             <div className="fixed left-0 right-0 top-0 z-[100] h-1 bg-transparent pointer-events-none">
               <div
@@ -361,6 +363,7 @@ function RootComponent() {
           {updateAvailable && <UpdateNotification onRefresh={handleRefresh} />}
           <OfflinePopup />
           {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools />}
+          </FileViewerProvider>
         </QueryClientProvider>
       </ThemeProvider>
     </UserContext.Provider>
