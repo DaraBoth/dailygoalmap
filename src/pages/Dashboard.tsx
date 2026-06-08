@@ -419,12 +419,12 @@ const Dashboard = () => {
         supabase
           .from("goal_notes")
           .select("id, updated_at, goal_id")
-          .eq("user_id", user.id)
+          .eq("created_by", user.id)
           .order("updated_at", { ascending: false })
           .limit(20),
         supabase
           .from("goal_notes")
-          .select("id, updated_at, goal_id, user_id, visibility")
+          .select("id, updated_at, goal_id, created_by, visibility")
           .eq("visibility", "all")
           .order("updated_at", { ascending: false })
           .limit(10),
@@ -456,7 +456,7 @@ const Dashboard = () => {
         ? Math.floor((Date.now() - new Date(latestPublic.updated_at).getTime()) / msPerDay)
         : null;
       const latestPublicGoal = goals.find(g => g.id === latestPublic?.goal_id);
-      const isPublicNoteFromOther = latestPublic ? latestPublic.user_id !== user.id : false;
+      const isPublicNoteFromOther = latestPublic ? latestPublic.created_by !== user.id : false;
 
       // Recent completions
       const recentCompletedCount = recentTasks.length;
