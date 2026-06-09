@@ -7,18 +7,21 @@ declare const Deno: { env: { get(key: string): string | undefined } };
 const APP_ORIGIN = "https://dailygoalmap.vercel.app";
 const TINYNOTIE_PUSH_URL = "https://tinynotie-api.vercel.app/openai/push";
 
-// Alert windows: notify when task is within X minutes of end_date
+// Non-overlapping time bands — each task hits exactly one band per cron run.
+// Cron runs every hour, so each band fires at most once per task.
 const WINDOWS = [
-  { label: "1h",  minutes: 60   },
-  { label: "3h",  minutes: 180  },
-  { label: "24h", minutes: 1440 },
+  { label: "1h",  minMinutes: 0,    maxMinutes: 60   }, // due within 1h
+  { label: "3h",  minMinutes: 60,   maxMinutes: 180  }, // due in 1–3h
+  { label: "24h", minMinutes: 180,  maxMinutes: 1440 }, // due in 3–24h
 ] as const;
 
-function formatWindowLabel(label: string | undefined): string {
+type WindowLabel = "1h" | "3h" | "24h";
+
+function formatWindowLabel(label: WindowLabel | string | undefined): string {
   if (label === "1h") return "1 hour";
   if (label === "3h") return "3 hours";
   if (label === "24h") return "24 hours";
-  return label || "24 hours";
+  return label || "soon";
 }
 
 function toAppUrl(path: string | null | undefined): string {
@@ -27,16 +30,18 @@ function toAppUrl(path: string | null | undefined): string {
   return `${APP_ORIGIN}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-async function sendDeadlinePushNotifications(
-  supabase: any,
-  inserts: Array<{
-    goal_id: string;
-    receiver_id: string;
-    payload: Record<string, any>;
-    url: string;
-  }>,
+interface AlertItem {
+  goal_id: string;
+  receiver_id: string;
+  payload: Record<string, unknown>;
+  url: string;
+}
+
+async function sendPushNotifications(
+  supabase: ReturnType<typeof createClient>,
+  alerts: AlertItem[],
 ): Promise<{ attempted: number; sent: number; skipped: number; failed: number }> {
-  const receiverIds = [...new Set(inserts.map((item) => item.receiver_id).filter(Boolean))];
+  const receiverIds = [...new Set(alerts.map((a) => a.receiver_id))];
   if (receiverIds.length === 0) {
     return { attempted: 0, sent: 0, skipped: 0, failed: 0 };
   }
@@ -52,45 +57,38 @@ async function sendDeadlinePushNotifications(
   }
 
   const identifierByUser = new Map<string, string>();
-  for (const subscription of subscriptions ?? []) {
-    if (subscription.user_id && subscription.identifier) {
-      identifierByUser.set(subscription.user_id, subscription.identifier);
+  for (const sub of subscriptions ?? []) {
+    if (sub.user_id && sub.identifier) {
+      identifierByUser.set(sub.user_id, sub.identifier);
     }
   }
 
-  let sent = 0;
-  let skipped = 0;
-  let failed = 0;
+  let sent = 0, skipped = 0, failed = 0;
 
-  const attempts = inserts.map(async (item) => {
-    const identifier = identifierByUser.get(item.receiver_id);
-    if (!identifier) {
-      skipped += 1;
-      return;
-    }
+  await Promise.all(alerts.map(async (alert) => {
+    const identifier = identifierByUser.get(alert.receiver_id);
+    if (!identifier) { skipped++; return; }
 
-    const taskTitle = item.payload.task_title || "A task";
-    const goalTitle = item.payload.goal_title || "your goal";
-    const windowLabel = formatWindowLabel(item.payload.window);
-    const url = toAppUrl(item.url);
+    const taskTitle = String(alert.payload.task_title || "A task");
+    const goalTitle = String(alert.payload.goal_title || "your goal");
+    const windowLabel = formatWindowLabel(alert.payload.window as WindowLabel);
+    const url = toAppUrl(alert.url);
 
     try {
-      const response = await fetch(TINYNOTIE_PUSH_URL, {
+      const res = await fetch(TINYNOTIE_PUSH_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           identifier,
           payload: {
-            title: "Task deadline approaching",
+            title: "⏰ Task deadline approaching",
             body: `"${taskTitle}" is due within ${windowLabel} in "${goalTitle}".`,
-            tag: `task-deadline:${item.payload.task_id}:${item.payload.window}`,
+            tag: `task-deadline:${alert.payload.task_id}:${alert.payload.window}`,
             data: {
               type: "task_deadline",
-              goal_id: item.goal_id,
-              task_id: item.payload.task_id,
+              goal_id: alert.goal_id,
               url,
-              timestamp: item.payload.end_date || new Date().toISOString(),
-              ...item.payload,
+              ...alert.payload,
             },
           },
           name: "Orbit",
@@ -98,34 +96,19 @@ async function sendDeadlinePushNotifications(
         }),
       });
 
-      if (!response.ok) {
-        failed += 1;
-        console.error("deadline-alerts: push send failed", {
-          receiver_id: item.receiver_id,
-          status: response.status,
-          statusText: response.statusText,
-        });
-        return;
+      if (!res.ok) {
+        failed++;
+        console.error("deadline-alerts: push failed", { status: res.status, receiver_id: alert.receiver_id });
+      } else {
+        sent++;
       }
-
-      sent += 1;
-    } catch (pushError) {
-      failed += 1;
-      console.error("deadline-alerts: push send error", {
-        receiver_id: item.receiver_id,
-        error: pushError,
-      });
+    } catch (err) {
+      failed++;
+      console.error("deadline-alerts: push error", { receiver_id: alert.receiver_id, err });
     }
-  });
+  }));
 
-  await Promise.all(attempts);
-
-  return {
-    attempted: inserts.length,
-    sent,
-    skipped,
-    failed,
-  };
+  return { attempted: alerts.length, sent, skipped, failed };
 }
 
 serve(async (req: Request) => {
@@ -133,7 +116,6 @@ serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Must be triggered by the cron job or an internal call
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
@@ -145,9 +127,10 @@ serve(async (req: Request) => {
   );
 
   const now = new Date();
+
+  // Fetch all incomplete tasks ending within the next 24h
   const windowEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-  // 1. Fetch all incomplete tasks ending within the next 24h
   const { data: tasks, error: tasksError } = await supabase
     .from("tasks")
     .select("id, title, description, end_date, goal_id, user_id")
@@ -169,7 +152,6 @@ serve(async (req: Request) => {
 
   const goalIds = [...new Set(tasks.map((t: any) => t.goal_id).filter(Boolean))];
 
-  // 2. Fetch goal members and goal titles
   const [membersRes, goalsRes] = await Promise.all([
     supabase.from("goal_members").select("goal_id, user_id").in("goal_id", goalIds),
     supabase.from("goals").select("id, title, user_id").in("id", goalIds),
@@ -188,61 +170,35 @@ serve(async (req: Request) => {
     if (g.user_id) goalOwnerMap[g.id] = g.user_id;
   }
 
-  // 3. Fetch already-sent deadline alerts for these tasks (last 25h covers all windows)
-  const { data: existingAlerts, error: existingAlertsError } = await supabase
-    .from("notifications")
-    .select("receiver_id, payload")
-    .eq("type", "task_deadline")
-    .gte("created_at", new Date(now.getTime() - 25 * 60 * 60 * 1000).toISOString());
-
-  if (existingAlertsError) {
-    console.error("deadline-alerts: existing alerts query failed", existingAlertsError);
-    return new Response(JSON.stringify({ error: existingAlertsError.message }), { status: 500 });
-  }
-
-  const alreadySent = new Set<string>();
-  for (const n of existingAlerts ?? []) {
-    const p = n.payload as any;
-    if (p?.task_id && p?.window) {
-      alreadySent.add(`${n.receiver_id}:${p.task_id}:${p.window}`);
-    }
-  }
-
-  // 4. Build notification inserts
-  const inserts: any[] = [];
+  // Build alerts — each task falls into exactly one non-overlapping window band
+  const alerts: AlertItem[] = [];
 
   for (const task of tasks) {
     const minutesUntilEnd = (new Date(task.end_date).getTime() - now.getTime()) / 60000;
+    const window = WINDOWS.find(
+      (w) => minutesUntilEnd >= w.minMinutes && minutesUntilEnd < w.maxMinutes,
+    );
+    if (!window) continue;
+
     const taskTitle = task.title || task.description || "Untitled task";
     const goalTitle = goalTitleMap[task.goal_id] ?? "your goal";
+
+    // Notify all goal members + owner + task creator
     const receivers = [...new Set([
       ...(goalMembersMap[task.goal_id] ?? []),
       goalOwnerMap[task.goal_id],
       task.user_id,
-    ].filter(Boolean))];
-    const alertWindow = WINDOWS.find((w) => minutesUntilEnd <= w.minutes);
-
-    if (!alertWindow) continue;
+    ].filter(Boolean))] as string[];
 
     for (const userId of receivers) {
-      const dedupeKey = `${userId}:${task.id}:${alertWindow.label}`;
-      if (alreadySent.has(dedupeKey)) continue; // already notified
-
-      // Mark sent inside this run so duplicate membership rows cannot fan out.
-      alreadySent.add(dedupeKey);
-
-      inserts.push({
-        type: "task_deadline",
+      alerts.push({
         goal_id: task.goal_id,
-        sender_id: task.user_id ?? goalOwnerMap[task.goal_id] ?? userId,
         receiver_id: userId,
         payload: {
-          goal_id: task.goal_id,
           task_id: task.id,
           task_title: taskTitle,
           goal_title: goalTitle,
-          window: alertWindow.label,
-          window_minutes: alertWindow.minutes,
+          window: window.label,
           end_date: task.end_date,
         },
         url: `/goal/${task.goal_id}?task=${task.id}`,
@@ -250,24 +206,19 @@ serve(async (req: Request) => {
     }
   }
 
-  if (inserts.length === 0) {
+  if (alerts.length === 0) {
     return new Response(
-      JSON.stringify({ ok: true, alerted: 0, message: "All alerts already sent" }),
+      JSON.stringify({ ok: true, alerted: 0, message: "No tasks in alert windows" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
-  const { error: insertError } = await supabase.from("notifications").insert(inserts);
-  if (insertError) {
-    console.error("deadline-alerts: insert failed", insertError);
-    return new Response(JSON.stringify({ error: insertError.message }), { status: 500 });
-  }
+  // Send push notifications only — no DB inserts
+  const push = await sendPushNotifications(supabase, alerts);
 
-  const push = await sendDeadlinePushNotifications(supabase, inserts);
-
-  console.log(`deadline-alerts: inserted ${inserts.length} notifications`, { push });
+  console.log(`deadline-alerts: ${alerts.length} alerts processed`, { push });
   return new Response(
-    JSON.stringify({ ok: true, alerted: inserts.length, push }),
+    JSON.stringify({ ok: true, alerted: alerts.length, push }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 });

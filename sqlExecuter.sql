@@ -267,6 +267,13 @@ SELECT cron.schedule(
 -- To remove the job if needed:
 -- SELECT cron.unschedule('deadline-alerts-hourly');
 
+-- ============================================
+-- CLEAN UP task_deadline NOTIFICATIONS
+-- Run this to remove test/old deadline records
+-- since deadline alerts no longer use the DB.
+-- ============================================
+DELETE FROM notifications WHERE type = 'task_deadline';
+
 -- Grant service role access for edge functions
 GRANT ALL ON conversation_memory TO service_role;
 
