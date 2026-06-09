@@ -7,30 +7,46 @@ declare const Deno: { env: { get(key: string): string | undefined } };
 const APP_ORIGIN = "https://dailygoalmap.vercel.app";
 const TINYNOTIE_PUSH_URL = "https://tinynotie-api.vercel.app/openai/push";
 
-// Non-overlapping time bands relative to now (minutesFromNow = end_date - now in minutes).
-// Negative = already past due. Each task falls into at most one band per hourly cron run.
-const WINDOWS = [
-  { label: "overdue", minMinutes: -60,  maxMinutes: 0,    past: true  }, // just became overdue
-  { label: "1h",      minMinutes: 0,    maxMinutes: 60,   past: false }, // due within 1h
-  { label: "3h",      minMinutes: 60,   maxMinutes: 180,  past: false }, // due in 1–3h
-  { label: "24h",     minMinutes: 180,  maxMinutes: 1440, past: false }, // due in 3–24h
+// ── Overdue bands (timed tasks only, is_anytime = false/null) ──────────────────
+// minutesFromNow is NEGATIVE for past tasks (end_date already passed)
+// Each band fires exactly once per task per hourly cron run.
+const OVERDUE_BANDS = [
+  {
+    label: "overdue-1h",
+    minMinutes: -60,    // 0–60 min overdue
+    maxMinutes: 0,
+    title: "⚠️ Task just missed",
+    bodyFn: (task: string, goal: string) =>
+      `"${task}" in "${goal}" just passed its deadline and is still not completed.`,
+  },
+  {
+    label: "overdue-3h",
+    minMinutes: -180,   // 1–3h overdue
+    maxMinutes: -60,
+    title: "⚠️ Task still overdue",
+    bodyFn: (task: string, goal: string) =>
+      `"${task}" in "${goal}" has been overdue for over an hour. Don't forget to complete it!`,
+  },
+  {
+    label: "overdue-24h",
+    minMinutes: -1440,  // 3–24h overdue
+    maxMinutes: -180,
+    title: "⚠️ Task overdue reminder",
+    bodyFn: (task: string, goal: string) =>
+      `"${task}" in "${goal}" is still incomplete and has been overdue for several hours.`,
+  },
 ] as const;
 
-type WindowLabel = "overdue" | "1h" | "3h" | "24h";
+// ── Anytime task reminder window ──────────────────────────────────────────────
+// Fire when the task's date is roughly "tomorrow" (12–24h from now).
+// Only one alert per anytime task, no "due in X hours" language.
+const ANYTIME_REMINDER = {
+  label: "anytime-tomorrow",
+  minMinutes: 720,    // 12h from now
+  maxMinutes: 1440,   // 24h from now
+};
 
-function buildNotificationText(label: WindowLabel, taskTitle: string, goalTitle: string) {
-  if (label === "overdue") {
-    return {
-      title: "⚠️ Task overdue",
-      body: `"${taskTitle}" in "${goalTitle}" is now overdue!`,
-    };
-  }
-  const windowMap: Record<string, string> = { "1h": "1 hour", "3h": "3 hours", "24h": "24 hours" };
-  return {
-    title: "⏰ Task deadline approaching",
-    body: `"${taskTitle}" is due within ${windowMap[label]} in "${goalTitle}".`,
-  };
-}
+type WindowLabel = "overdue-1h" | "overdue-3h" | "overdue-24h" | "anytime-tomorrow";
 
 function toAppUrl(path: string | null | undefined): string {
   if (!path) return `${APP_ORIGIN}/dashboard`;
@@ -39,11 +55,13 @@ function toAppUrl(path: string | null | undefined): string {
 }
 
 interface AlertItem {
-  goal_id: string;
   receiver_id: string;
+  goal_id: string;
+  window: WindowLabel;
+  pushTitle: string;
+  pushBody: string;
   payload: Record<string, unknown>;
   url: string;
-  window: WindowLabel;
 }
 
 async function sendPushNotifications(
@@ -59,7 +77,7 @@ async function sendPushNotifications(
     .in("user_id", receiverIds);
 
   if (error) {
-    console.error("deadline-alerts: push subscription query failed", error);
+    console.error("deadline-alerts: push subscriptions failed", error);
     return { attempted: 0, sent: 0, skipped: receiverIds.length, failed: 0 };
   }
 
@@ -74,11 +92,7 @@ async function sendPushNotifications(
     const identifier = identifierByUser.get(alert.receiver_id);
     if (!identifier) { skipped++; return; }
 
-    const taskTitle = String(alert.payload.task_title || "A task");
-    const goalTitle = String(alert.payload.goal_title || "your goal");
-    const { title, body } = buildNotificationText(alert.window, taskTitle, goalTitle);
     const url = toAppUrl(alert.url);
-
     try {
       const res = await fetch(TINYNOTIE_PUSH_URL, {
         method: "POST",
@@ -86,10 +100,10 @@ async function sendPushNotifications(
         body: JSON.stringify({
           identifier,
           payload: {
-            title,
-            body,
-            // tag deduplicates on the device: same task+window won't stack
-            tag: `task-deadline:${alert.payload.task_id}:${alert.window}`,
+            title: alert.pushTitle,
+            body: alert.pushBody,
+            // tag deduplicates on device: same task+window won't stack
+            tag: `task-alert:${alert.payload.task_id}:${alert.window}`,
             data: { type: "task_deadline", goal_id: alert.goal_id, url, ...alert.payload },
           },
           name: "Orbit",
@@ -129,14 +143,15 @@ serve(async (req: Request) => {
 
   const now = new Date();
 
-  // Fetch tasks that fall within any of our windows:
-  // oldest window starts 60 min in the past (overdue band), newest ends 24h in the future
-  const windowStart = new Date(now.getTime() - 60 * 60 * 1000);  // now - 1h
-  const windowEnd   = new Date(now.getTime() + 24 * 60 * 60 * 1000); // now + 24h
+  // Fetch the full window we care about:
+  //   - anytime tasks: up to 24h in the future
+  //   - overdue timed tasks: up to 24h in the past
+  const windowStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const windowEnd   = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
   const { data: tasks, error: tasksError } = await supabase
     .from("tasks")
-    .select("id, title, description, end_date, goal_id, user_id")
+    .select("id, title, description, end_date, goal_id, user_id, is_anytime")
     .eq("completed", false)
     .gte("end_date", windowStart.toISOString())
     .lte("end_date", windowEnd.toISOString());
@@ -173,18 +188,38 @@ serve(async (req: Request) => {
     if (g.user_id) goalOwnerMap[g.id] = g.user_id;
   }
 
-  // Build alerts — each task falls into exactly one non-overlapping band
   const alerts: AlertItem[] = [];
 
   for (const task of tasks) {
     const minutesFromNow = (new Date(task.end_date).getTime() - now.getTime()) / 60000;
-    const window = WINDOWS.find(
-      (w) => minutesFromNow >= w.minMinutes && minutesFromNow < w.maxMinutes,
-    );
-    if (!window) continue;
+    const taskTitle  = task.title || task.description || "Untitled task";
+    const goalTitle  = goalTitleMap[task.goal_id] ?? "your goal";
+    const isAnytime  = task.is_anytime === true;
 
-    const taskTitle = task.title || task.description || "Untitled task";
-    const goalTitle = goalTitleMap[task.goal_id] ?? "your goal";
+    let window: WindowLabel | null = null;
+    let pushTitle = "";
+    let pushBody  = "";
+
+    if (isAnytime) {
+      // ── Anytime task: only remind when it's "tomorrow" ──────────────────────
+      if (minutesFromNow >= ANYTIME_REMINDER.minMinutes && minutesFromNow < ANYTIME_REMINDER.maxMinutes) {
+        window    = "anytime-tomorrow";
+        pushTitle = "📅 Upcoming task tomorrow";
+        pushBody  = `Reminder: "${taskTitle}" is scheduled for tomorrow in "${goalTitle}". Don't forget!`;
+      }
+    } else {
+      // ── Timed task: only alert when already overdue ──────────────────────────
+      const band = OVERDUE_BANDS.find(
+        (b) => minutesFromNow >= b.minMinutes && minutesFromNow < b.maxMinutes,
+      );
+      if (band) {
+        window    = band.label;
+        pushTitle = band.title;
+        pushBody  = band.bodyFn(taskTitle, goalTitle);
+      }
+    }
+
+    if (!window) continue;
 
     const receivers = [...new Set([
       ...(goalMembersMap[task.goal_id] ?? []),
@@ -194,15 +229,18 @@ serve(async (req: Request) => {
 
     for (const userId of receivers) {
       alerts.push({
-        goal_id: task.goal_id,
         receiver_id: userId,
-        window: window.label,
+        goal_id: task.goal_id,
+        window,
+        pushTitle,
+        pushBody,
         payload: {
-          task_id: task.id,
+          task_id:    task.id,
           task_title: taskTitle,
           goal_title: goalTitle,
-          window: window.label,
-          end_date: task.end_date,
+          window,
+          end_date:   task.end_date,
+          is_anytime: isAnytime,
         },
         url: `/goal/${task.goal_id}?task=${task.id}`,
       });
@@ -216,7 +254,6 @@ serve(async (req: Request) => {
     );
   }
 
-  // Send push notifications only — no DB inserts
   const push = await sendPushNotifications(supabase, alerts);
 
   console.log(`deadline-alerts: ${alerts.length} alerts processed`, { push });
