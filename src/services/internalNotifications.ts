@@ -161,6 +161,7 @@ export async function fetchNotifications(opts: FetchNotificationsOptions = {}): 
     invitation_status: n.invitation_status,
     read_at: n.read_at,
     created_at: n.created_at,
+    url: n.url,
     sender_profile: {
       display_name: n.sender_display_name,
       avatar_url: n.sender_avatar_url
@@ -197,6 +198,7 @@ export async function fetchNotificationsWithCache(opts: FetchNotificationsOption
         invitation_status: n.invitation_status,
         read_at: n.read_at,
         created_at: n.created_at,
+        url: n.url,
         sender_profile: {
           display_name: n.sender_display_name,
           avatar_url: n.sender_avatar_url

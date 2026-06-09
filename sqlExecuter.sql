@@ -219,7 +219,11 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- TASK DEADLINE ALERTS — CRON JOB SETUP
 -- Run these in the Supabase SQL Editor.
 -- Requires: pg_cron and pg_net extensions enabled.
+-- pg_net creates the `net` schema used by net.http_post.
 -- ============================================
+
+CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS pg_net;
 
 -- Step 1: Add 'task_deadline' to the notifications type constraint
 ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;

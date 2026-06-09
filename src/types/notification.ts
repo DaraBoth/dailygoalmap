@@ -6,9 +6,13 @@ export type Json = string | number | boolean | null | { [key: string]: Json } | 
 
 export interface AppNotificationPayload {
   message?: string;
+  goal_id?: string;
+  goal_title?: string;
   task_id?: string;
   task_title?: string;
   action?: string;
+  window?: string;
+  end_date?: string;
 }
 
 export interface UserProfileLite {
@@ -45,6 +49,7 @@ export interface AppNotification {
   invitation_status?: 'pending' | 'accepted' | 'declined' | null;
   read_at?: string | null;
   created_at: string;
+  url?: string | null;
   // enriched client-side
   sender_profile?: UserProfileLite;
 }

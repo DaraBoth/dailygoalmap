@@ -6,7 +6,7 @@ import { updateInvitationStatus } from "@/services/internalNotifications";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import {
   Mail,
   DoorOpen,
@@ -109,11 +109,6 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
     }
   };
 
-  const viewGoal = () => {
-    if (working) return;
-    if (canViewGoal && n.goal_id) goToGoal(n.goal_id, { preload: false });
-  };
-
   // Get notification icon based on type
   const getNotificationIcon = () => {
     switch (n.type) {
@@ -129,6 +124,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
         return <Trash2 className="h-4 w-4" />;
       case 'task_updated':
         return <Edit className="h-4 w-4" />;
+      case 'task_deadline':
+        return <Clock className="h-4 w-4" />;
       case 'member_joined':
         return <CheckCircle className="h-4 w-4" />;
       default:
@@ -149,6 +146,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
     if (n.type === 'task_deleted') return 'red';
     if (n.type === 'task_updated' && (n.payload as any)?.action === 'ai_completed') return 'purple';
     if (n.type === 'task_updated') return 'blue';
+    if (n.type === 'task_deadline') return 'orange';
     if (n.type === 'member_joined') return 'green';
     return 'gray';
   };
@@ -167,7 +165,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
         setWorking(false);
       }
 
-      if ((n.type === 'task_created' || n.type === 'task_deleted' || n.type === 'task_updated') && n.payload?.task_id) {
+      if ((n.type === 'task_created' || n.type === 'task_deleted' || n.type === 'task_updated' || n.type === 'task_deadline') && n.payload?.task_id) {
         goToGoal(n.goal_id, { search: { task: n.payload.task_id } });
       } else {
         goToGoal(n.goal_id);
@@ -175,12 +173,26 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
     }
   };
 
+  const viewGoal = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    void handleNotificationClick();
+  };
+
   const renderContent = () => {
     const senderProfile = n as unknown as { sender_profile?: { display_name?: string; avatar_url?: string }; sender_email?: string };
     const senderName = senderProfile.sender_profile?.display_name || senderProfile.sender_email || "Someone";
     const avatarUrl = senderProfile.sender_profile?.avatar_url || undefined;
-    const payload = n.payload as unknown as { goal_title?: string; task_title?: string; task_id?: string; action?: string };
+    const payload = n.payload as unknown as { goal_title?: string; task_title?: string; task_id?: string; action?: string; window?: string; end_date?: string };
     const goalText = payload.goal_title ? `"${payload.goal_title}"` : "the goal";
+    const deadlineWindow =
+      payload.window === '1h' ? '1 hour' :
+      payload.window === '3h' ? '3 hours' :
+      payload.window === '24h' ? '24 hours' :
+      payload.window ?? '24 hours';
+    const deadlineDate = payload.end_date ? new Date(payload.end_date) : null;
+    const deadlineDateLabel = deadlineDate && !Number.isNaN(deadlineDate.getTime())
+      ? format(deadlineDate, "MMM d, h:mm a")
+      : null;
 
     return (
       <div className="flex gap-3 items-start">
@@ -264,6 +276,29 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
                   </Button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Deadline Notifications */}
+          {n.type === 'task_deadline' && (
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className={`text-sm font-bold ${isUnread ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                  Task Deadline
+                </div>
+                {isUnread && <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 animate-pulse"></div>}
+              </div>
+              <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {payload.task_title ? `"${payload.task_title}"` : 'A task'}
+                </span>{' '}
+                is due within {deadlineWindow} in {goalText}.
+                {deadlineDateLabel && (
+                  <span className="block mt-1 text-xs font-medium text-orange-700 dark:text-orange-300">
+                    Due {deadlineDateLabel}
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
