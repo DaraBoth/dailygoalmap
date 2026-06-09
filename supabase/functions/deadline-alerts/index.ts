@@ -15,7 +15,7 @@ const OVERDUE_BANDS = [
     label: "overdue-1h",
     minMinutes: -60,    // 0–60 min overdue
     maxMinutes: 0,
-    title: "⚠️ Task just missed",
+    title: "Task just missed",
     bodyFn: (task: string, goal: string) =>
       `"${task}" in "${goal}" just passed its deadline and is still not completed.`,
   },
@@ -23,7 +23,7 @@ const OVERDUE_BANDS = [
     label: "overdue-3h",
     minMinutes: -180,   // 1–3h overdue
     maxMinutes: -60,
-    title: "⚠️ Task still overdue",
+    title: "Task still overdue",
     bodyFn: (task: string, goal: string) =>
       `"${task}" in "${goal}" has been overdue for over an hour. Don't forget to complete it!`,
   },
@@ -31,7 +31,7 @@ const OVERDUE_BANDS = [
     label: "overdue-24h",
     minMinutes: -1440,  // 3–24h overdue
     maxMinutes: -180,
-    title: "⚠️ Task overdue reminder",
+    title: "Task overdue reminder",
     bodyFn: (task: string, goal: string) =>
       `"${task}" in "${goal}" is still incomplete and has been overdue for several hours.`,
   },
@@ -204,7 +204,7 @@ serve(async (req: Request) => {
       // ── Anytime task: only remind when it's "tomorrow" ──────────────────────
       if (minutesFromNow >= ANYTIME_REMINDER.minMinutes && minutesFromNow < ANYTIME_REMINDER.maxMinutes) {
         window    = "anytime-tomorrow";
-        pushTitle = "📅 Upcoming task tomorrow";
+        pushTitle = "Upcoming task tomorrow";
         pushBody  = `Reminder: "${taskTitle}" is scheduled for tomorrow in "${goalTitle}". Don't forget!`;
       }
     } else {
