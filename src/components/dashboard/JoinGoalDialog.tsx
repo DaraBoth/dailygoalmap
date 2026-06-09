@@ -101,11 +101,12 @@ export function JoinGoalDialog({ isOpen, onClose, onGoalJoined }: JoinGoalDialog
         const { createMemberJoinedNotifications } = await import("@/services/internalNotifications");
 
         // Send push notification
+        const joinerName = userData.user?.['display_name'] || userData.user.email || 'Someone';
         const notificationSent = await sendNotificationToGoalMembers(
-          goalToJoin.id, // goalId
-          userData.user.id, // exceptUserId
-          "New Member Joined the Goal!", // title
-          `${userData.user?.['display_name'] || userData.user.email} has joined your goal: "${goalToJoin.title}".` // body
+          goalToJoin.id,
+          userData.user.id,
+          `[${goalToJoin.title}] New member`,
+          `by ${joinerName}`
         );
 
         // Create internal notification

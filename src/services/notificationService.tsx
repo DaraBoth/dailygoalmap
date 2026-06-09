@@ -118,11 +118,12 @@ export async function sendUnifiedNotification(options: UnifiedNotificationOption
     };
 
     // 2. Send push notifications to goal members (via tinynotie API)
+    const pushBody = senderName ? (body ? `${body} by ${senderName}` : `by ${senderName}`) : body;
     const pushResult = await sendNotificationToGoalMembers(
       goalId,
       senderId,
       title,
-      body,
+      pushBody,
       notificationData
     );
 
@@ -165,8 +166,8 @@ export async function notifyTaskCreated(
     type: 'task_created',
     goalId,
     senderId,
-    title: `New task in "${goalTitle}"`,
-    body: `${taskTitle} has been added`,
+    title: `[${goalTitle}] New task`,
+    body: taskTitle,
     payload: {
       task_title: taskTitle,
       task_id: taskId,
@@ -191,12 +192,14 @@ export async function notifyTaskUpdated(
     action === 'uncompleted' ? 'reopened' : 'updated';
   const deepLink = `/goal/${goalId}?date=${encodeURIComponent(taskDate)}&taskId=${encodeURIComponent(taskId)}`;
 
+  const actionLabel = action === 'completed' ? 'Task completed' :
+    action === 'uncompleted' ? 'Task reopened' : 'Task updated';
   return sendUnifiedNotification({
     type: 'task_updated',
     goalId,
     senderId,
-    title: `Task ${actionText} in "${goalTitle}"`,
-    body: `${taskTitle} has been ${actionText}`,
+    title: `[${goalTitle}] ${actionLabel}`,
+    body: taskTitle,
     payload: {
       task_title: taskTitle,
       task_id: taskId,
@@ -224,8 +227,8 @@ export async function notifyTaskDeleted(
     type: 'task_deleted',
     goalId,
     senderId,
-    title: `Task deleted in "${goalTitle}"`,
-    body: `${taskTitle} has been deleted`,
+    title: `[${goalTitle}] Task deleted`,
+    body: taskTitle,
     payload: {
       task_title: taskTitle,
       task_id: taskId,
@@ -262,8 +265,8 @@ export async function notifyGoalInvitation(
   // Push notification
   await sendNotificationToUser(
     invitedUserId,
-    `Goal Invitation`,
-    `${senderName} invited you to join "${goalTitle}"`,
+    `[${goalTitle}] Goal invitation`,
+    `${senderName} invited you`,
     {
       type: 'invitation',
       goal_id: goalId,
@@ -292,8 +295,8 @@ export async function notifyMemberJoined(
     type: 'member_joined',
     goalId,
     senderId: memberId,
-    title: `New member in "${goalTitle}"`,
-    body: `joined the goal`,
+    title: `[${goalTitle}] New member`,
+    body: '',
     payload: {
       goal_title: goalTitle
     },
@@ -314,8 +317,8 @@ export async function notifyMemberLeft(
     type: 'member_left',
     goalId,
     senderId: memberId,
-    title: `Member left "${goalTitle}"`,
-    body: `left the goal`,
+    title: `[${goalTitle}] Member left`,
+    body: '',
     payload: {
       goal_title: goalTitle
     },
@@ -349,8 +352,8 @@ export async function notifyMemberRemoved(
   // Send to the removed user only
   await sendNotificationToUser(
     removedUserId,
-    `Removed from goal`,
-    `You were removed from "${goalTitle}" by ${removerName}`,
+    `[${goalTitle}] Removed from goal`,
+    `by ${removerName}`,
     {
       type: 'removal',
       goal_id: goalId,

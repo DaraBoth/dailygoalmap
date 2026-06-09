@@ -15,25 +15,22 @@ const OVERDUE_BANDS = [
     label: "overdue-1h",
     minMinutes: -60,    // 0–60 min overdue
     maxMinutes: 0,
-    title: "Task just missed",
-    bodyFn: (task: string, goal: string) =>
-      `"${task}" in "${goal}" just passed its deadline and is still not completed.`,
+    titleFn: (goal: string) => `[${goal}] Overdue`,
+    bodyFn: (task: string, creator: string) => `${task} by ${creator}`,
   },
   {
     label: "overdue-3h",
     minMinutes: -180,   // 1–3h overdue
     maxMinutes: -60,
-    title: "Task still overdue",
-    bodyFn: (task: string, goal: string) =>
-      `"${task}" in "${goal}" has been overdue for over an hour. Don't forget to complete it!`,
+    titleFn: (goal: string) => `[${goal}] Still overdue`,
+    bodyFn: (task: string, creator: string) => `${task} by ${creator}`,
   },
   {
     label: "overdue-24h",
     minMinutes: -1440,  // 3–24h overdue
     maxMinutes: -180,
-    title: "Task overdue reminder",
-    bodyFn: (task: string, goal: string) =>
-      `"${task}" in "${goal}" is still incomplete and has been overdue for several hours.`,
+    titleFn: (goal: string) => `[${goal}] Long overdue`,
+    bodyFn: (task: string, creator: string) => `${task} by ${creator}`,
   },
 ] as const;
 
@@ -169,10 +166,12 @@ serve(async (req: Request) => {
   }
 
   const goalIds = [...new Set(tasks.map((t: any) => t.goal_id).filter(Boolean))];
+  const creatorIds = [...new Set(tasks.map((t: any) => t.user_id).filter(Boolean))];
 
-  const [membersRes, goalsRes] = await Promise.all([
+  const [membersRes, goalsRes, profilesRes] = await Promise.all([
     supabase.from("goal_members").select("goal_id, user_id").in("goal_id", goalIds),
     supabase.from("goals").select("id, title, user_id").in("id", goalIds),
+    supabase.from("user_profiles").select("id, display_name").in("id", creatorIds),
   ]);
 
   const goalMembersMap: Record<string, string[]> = {};
@@ -188,6 +187,11 @@ serve(async (req: Request) => {
     if (g.user_id) goalOwnerMap[g.id] = g.user_id;
   }
 
+  const userNameMap: Record<string, string> = {};
+  for (const p of profilesRes.data ?? []) {
+    if (p.id && p.display_name) userNameMap[p.id] = p.display_name;
+  }
+
   const alerts: AlertItem[] = [];
 
   for (const task of tasks) {
@@ -200,12 +204,14 @@ serve(async (req: Request) => {
     let pushTitle = "";
     let pushBody  = "";
 
+    const creatorName = userNameMap[task.user_id] ?? "someone";
+
     if (isAnytime) {
       // ── Anytime task: only remind when it's "tomorrow" ──────────────────────
       if (minutesFromNow >= ANYTIME_REMINDER.minMinutes && minutesFromNow < ANYTIME_REMINDER.maxMinutes) {
         window    = "anytime-tomorrow";
-        pushTitle = "Upcoming task tomorrow";
-        pushBody  = `Reminder: "${taskTitle}" is scheduled for tomorrow in "${goalTitle}". Don't forget!`;
+        pushTitle = `[${goalTitle}] Tomorrow`;
+        pushBody  = `${taskTitle} by ${creatorName}`;
       }
     } else {
       // ── Timed task: only alert when already overdue ──────────────────────────
@@ -214,8 +220,8 @@ serve(async (req: Request) => {
       );
       if (band) {
         window    = band.label;
-        pushTitle = band.title;
-        pushBody  = band.bodyFn(taskTitle, goalTitle);
+        pushTitle = band.titleFn(goalTitle);
+        pushBody  = band.bodyFn(taskTitle, creatorName);
       }
     }
 
