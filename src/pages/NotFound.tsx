@@ -2,6 +2,7 @@
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { SmartLink } from "@/components/ui/SmartLink";
 import { ArrowLeft } from "lucide-react";
 
 const NotFound = () => {
@@ -35,6 +36,11 @@ const NotFound = () => {
           >
             Return to Home
           </Button>
+          <SmartLink to="/demo" className="w-full">
+            <Button className="w-full" variant="ghost">
+              View demo
+            </Button>
+          </SmartLink>
         </div>
       </div>
     </div>

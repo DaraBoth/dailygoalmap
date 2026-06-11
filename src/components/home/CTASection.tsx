@@ -119,6 +119,13 @@ const CTASection: React.FC = () => {
                   </Button>
                 </SmartLink>
               )}
+              {!isAuthenticated && (
+                <SmartLink to="/demo" className="w-full sm:w-auto">
+                  <Button variant="ghost" size="lg" className="w-full sm:w-auto rounded-xl px-6">
+                    See it live →
+                  </Button>
+                </SmartLink>
+              )}
             </div>
           </div>
         </motion.div>
