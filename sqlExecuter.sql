@@ -1057,3 +1057,49 @@ ALTER TABLE tasks
   ADD COLUMN IF NOT EXISTS series_detached BOOLEAN NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS idx_tasks_series_id ON tasks(series_id) WHERE series_id IS NOT NULL;
+
+
+-- ============================================
+-- DEADLINE ALERT LOG: deadline_alert_log table
+-- Tracks every push notification sent so each alert fires exactly once per task.
+-- Run in Supabase SQL Editor after deploying the updated deadline-alerts function.
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS deadline_alert_log (
+  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- NULL for daily/summary alerts (e.g. anytime-morning) that are not tied to a single task
+  task_id    UUID        REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id    UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  -- Extensible alert type string: overdue-nearby | upcoming-soon | upcoming-1month |
+  --   overdue-3months | anytime-morning | (add new types freely — no schema change needed)
+  alert_type TEXT        NOT NULL,
+  -- Global dedup key; unique constraint prevents double-sends even under concurrent cron runs
+  -- Format: "task:{task_id}:user:{user_id}:{alert_type}"  (per-task alerts)
+  --         "daily:user:{user_id}:{alert_type}:{YYYY-MM-DD}" (daily summary alerts)
+  alert_key  TEXT        NOT NULL UNIQUE,
+  sent_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Free-form JSON: task_title, goal_title, end_date, task_count, etc. — varies by alert_type
+  metadata   JSONB       NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_deadline_alert_log_task_id
+  ON deadline_alert_log(task_id) WHERE task_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_deadline_alert_log_user_id
+  ON deadline_alert_log(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_deadline_alert_log_alert_type
+  ON deadline_alert_log(alert_type);
+
+CREATE INDEX IF NOT EXISTS idx_deadline_alert_log_sent_at
+  ON deadline_alert_log(sent_at DESC);
+
+ALTER TABLE deadline_alert_log ENABLE ROW LEVEL SECURITY;
+
+-- Users can read their own alert history (useful for a "notification history" UI later)
+DROP POLICY IF EXISTS "Users can view their own alert logs" ON deadline_alert_log;
+CREATE POLICY "Users can view their own alert logs"
+  ON deadline_alert_log FOR SELECT USING (auth.uid() = user_id);
+
+-- Service role key (used by the edge function) bypasses RLS — no extra policy needed.

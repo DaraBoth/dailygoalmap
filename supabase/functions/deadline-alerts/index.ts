@@ -7,43 +7,44 @@ declare const Deno: { env: { get(key: string): string | undefined } };
 const APP_ORIGIN = "https://dailygoalmap.vercel.app";
 const TINYNOTIE_PUSH_URL = "https://tinynotie-api.vercel.app/openai/push";
 
-// ── Overdue bands (timed tasks only, is_anytime = false/null) ──────────────────
-// minutesFromNow is NEGATIVE for past tasks (end_date already passed)
-// Each band fires exactly once per task per hourly cron run.
-const OVERDUE_BANDS = [
+// ── Timed-task alert types (extensible — add more rows here to add new alert milestones) ──
+// minutesFromNow: negative = past (overdue), positive = future (upcoming)
+const TIMED_ALERT_TYPES = [
   {
-    label: "overdue-1h",
-    minMinutes: -60,    // 0–60 min overdue
+    type: "overdue-nearby",
+    minMinutes: -240,               // up to 4 h overdue
     maxMinutes: 0,
     titleFn: (goal: string) => `[${goal}] Overdue`,
-    bodyFn: (task: string, creator: string) => `${task} by ${creator}`,
+    bodyFn:  (task: string)  => `"${task}" just passed its deadline`,
   },
   {
-    label: "overdue-3h",
-    minMinutes: -180,   // 1–3h overdue
-    maxMinutes: -60,
-    titleFn: (goal: string) => `[${goal}] Still overdue`,
-    bodyFn: (task: string, creator: string) => `${task} by ${creator}`,
+    type: "upcoming-soon",
+    minMinutes: 0,
+    maxMinutes: 24 * 60,            // due within the next 24 h
+    titleFn: (goal: string) => `[${goal}] Due soon`,
+    bodyFn:  (task: string)  => `"${task}" is due within 24 hours`,
   },
   {
-    label: "overdue-24h",
-    minMinutes: -1440,  // 3–24h overdue
-    maxMinutes: -180,
-    titleFn: (goal: string) => `[${goal}] Long overdue`,
-    bodyFn: (task: string, creator: string) => `${task} by ${creator}`,
+    type: "upcoming-1month",
+    minMinutes: 25 * 24 * 60,       // 25–35 days ahead
+    maxMinutes: 35 * 24 * 60,
+    titleFn: (goal: string) => `[${goal}] Coming up`,
+    bodyFn:  (task: string)  => `"${task}" is due in about 1 month`,
+  },
+  {
+    type: "overdue-3months",
+    minMinutes: -(95 * 24 * 60),    // 85–95 days overdue
+    maxMinutes: -(85 * 24 * 60),
+    titleFn: (goal: string) => `[${goal}] Still incomplete`,
+    bodyFn:  (task: string)  => `"${task}" is 3 months overdue — don't forget!`,
   },
 ] as const;
 
-// ── Anytime task reminder window ──────────────────────────────────────────────
-// Fire when the task's date is roughly "tomorrow" (12–24h from now).
-// Only one alert per anytime task, no "due in X hours" language.
-const ANYTIME_REMINDER = {
-  label: "anytime-tomorrow",
-  minMinutes: 720,    // 12h from now
-  maxMinutes: 1440,   // 24h from now
-};
+// Anytime morning summary: UTC hours 1–3 (≈ 8–10 am UTC+7 / Cambodia)
+const MORNING_START_UTC = 1;
+const MORNING_END_UTC   = 3;
 
-type WindowLabel = "overdue-1h" | "overdue-3h" | "overdue-24h" | "anytime-tomorrow";
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function toAppUrl(path: string | null | undefined): string {
   if (!path) return `${APP_ORIGIN}/dashboard`;
@@ -51,85 +52,62 @@ function toAppUrl(path: string | null | undefined): string {
   return `${APP_ORIGIN}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-interface AlertItem {
+function makeDateStr(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+// Unique dedup key stored in deadline_alert_log.alert_key
+function taskAlertKey(taskId: string, userId: string, alertType: string): string {
+  return `task:${taskId}:user:${userId}:${alertType}`;
+}
+function dailyAlertKey(userId: string, alertType: string, dateStr: string): string {
+  return `daily:user:${userId}:${alertType}:${dateStr}`;
+}
+
+interface PushCandidate {
+  alert_key:  string;
+  task_id:    string | null;
+  user_id:    string;
+  alert_type: string;
   receiver_id: string;
-  goal_id: string;
-  window: WindowLabel;
-  pushTitle: string;
-  pushBody: string;
-  payload: Record<string, unknown>;
-  url: string;
+  goal_id:    string | null;
+  pushTitle:  string;
+  pushBody:   string;
+  url:        string;
+  payload:    Record<string, unknown>;
 }
 
-async function sendPushNotifications(
-  supabase: ReturnType<typeof createClient>,
-  alerts: AlertItem[],
-): Promise<{ attempted: number; sent: number; skipped: number; failed: number }> {
-  const receiverIds = [...new Set(alerts.map((a) => a.receiver_id))];
-  if (receiverIds.length === 0) return { attempted: 0, sent: 0, skipped: 0, failed: 0 };
-
-  const { data: subscriptions, error } = await supabase
-    .from("push_subscriptions")
-    .select("user_id, identifier")
-    .in("user_id", receiverIds);
-
-  if (error) {
-    console.error("deadline-alerts: push subscriptions failed", error);
-    return { attempted: 0, sent: 0, skipped: receiverIds.length, failed: 0 };
+async function sendOnePush(identifier: string, c: PushCandidate): Promise<boolean> {
+  try {
+    const res = await fetch(TINYNOTIE_PUSH_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        identifier,
+        payload: {
+          title: c.pushTitle,
+          body:  c.pushBody,
+          tag:   `orbit-alert:${c.alert_key}`,
+          data:  { type: "task_deadline", goal_id: c.goal_id, url: toAppUrl(c.url), ...c.payload },
+        },
+        name:  "Orbit",
+        appId: 2,
+      }),
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
-
-  const identifierByUser = new Map<string, string>();
-  for (const sub of subscriptions ?? []) {
-    if (sub.user_id && sub.identifier) identifierByUser.set(sub.user_id, sub.identifier);
-  }
-
-  let sent = 0, skipped = 0, failed = 0;
-
-  await Promise.all(alerts.map(async (alert) => {
-    const identifier = identifierByUser.get(alert.receiver_id);
-    if (!identifier) { skipped++; return; }
-
-    const url = toAppUrl(alert.url);
-    try {
-      const res = await fetch(TINYNOTIE_PUSH_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          identifier,
-          payload: {
-            title: alert.pushTitle,
-            body: alert.pushBody,
-            // tag deduplicates on device: same task+window won't stack
-            tag: `task-alert:${alert.payload.task_id}:${alert.window}`,
-            data: { type: "task_deadline", goal_id: alert.goal_id, url, ...alert.payload },
-          },
-          name: "Orbit",
-          appId: 2,
-        }),
-      });
-
-      if (!res.ok) {
-        failed++;
-        console.error("deadline-alerts: push failed", { status: res.status, receiver_id: alert.receiver_id });
-      } else {
-        sent++;
-      }
-    } catch (err) {
-      failed++;
-      console.error("deadline-alerts: push error", { receiver_id: alert.receiver_id, err });
-    }
-  }));
-
-  return { attempted: alerts.length, sent, skipped, failed };
 }
+
+// ── Main handler ──────────────────────────────────────────────────────────────
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
+  if (!req.headers.get("Authorization")) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
@@ -138,18 +116,18 @@ serve(async (req: Request) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const now = new Date();
+  const now      = new Date();
+  const dateStr  = makeDateStr(now);
+  const isMorning = now.getUTCHours() >= MORNING_START_UTC && now.getUTCHours() < MORNING_END_UTC;
 
-  // Fetch the full window we care about:
-  //   - anytime tasks: up to 24h in the future
-  //   - overdue timed tasks: up to 24h in the past
-  const windowStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const windowEnd   = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  // Wide fetch window: 95 days past → 35 days future (covers all 4 alert types)
+  const windowStart = new Date(now.getTime() - 95 * 24 * 60 * 60 * 1000);
+  const windowEnd   = new Date(now.getTime() + 35 * 24 * 60 * 60 * 1000);
 
   const { data: tasks, error: tasksError } = await supabase
     .from("tasks")
     .select("id, title, description, end_date, goal_id, user_id, is_anytime")
-    .eq("completed", false)
+    .eq("completed", false)   // completed tasks → no alerts, no log rows
     .gte("end_date", windowStart.toISOString())
     .lte("end_date", windowEnd.toISOString());
 
@@ -165,7 +143,8 @@ serve(async (req: Request) => {
     );
   }
 
-  const goalIds = [...new Set(tasks.map((t: any) => t.goal_id).filter(Boolean))];
+  // Fetch supporting data
+  const goalIds    = [...new Set(tasks.map((t: any) => t.goal_id).filter(Boolean))];
   const creatorIds = [...new Set(tasks.map((t: any) => t.user_id).filter(Boolean))];
 
   const [membersRes, goalsRes, profilesRes] = await Promise.all([
@@ -183,7 +162,7 @@ serve(async (req: Request) => {
   const goalTitleMap: Record<string, string> = {};
   const goalOwnerMap: Record<string, string> = {};
   for (const g of goalsRes.data ?? []) {
-    goalTitleMap[g.id] = g.title;
+    goalTitleMap[g.id] = g.title ?? "Goal";
     if (g.user_id) goalOwnerMap[g.id] = g.user_id;
   }
 
@@ -192,79 +171,181 @@ serve(async (req: Request) => {
     if (p.id && p.display_name) userNameMap[p.id] = p.display_name;
   }
 
-  const alerts: AlertItem[] = [];
-
-  for (const task of tasks) {
-    const minutesFromNow = (new Date(task.end_date).getTime() - now.getTime()) / 60000;
-    const taskTitle  = task.title || task.description || "Untitled task";
-    const goalTitle  = goalTitleMap[task.goal_id] ?? "your goal";
-    const isAnytime  = task.is_anytime === true;
-
-    let window: WindowLabel | null = null;
-    let pushTitle = "";
-    let pushBody  = "";
-
-    const creatorName = userNameMap[task.user_id] ?? "someone";
-
-    if (isAnytime) {
-      // ── Anytime task: only remind when it's "tomorrow" ──────────────────────
-      if (minutesFromNow >= ANYTIME_REMINDER.minMinutes && minutesFromNow < ANYTIME_REMINDER.maxMinutes) {
-        window    = "anytime-tomorrow";
-        pushTitle = `[${goalTitle}] Tomorrow`;
-        pushBody  = `${taskTitle} by ${creatorName}`;
-      }
-    } else {
-      // ── Timed task: only alert when already overdue ──────────────────────────
-      const band = OVERDUE_BANDS.find(
-        (b) => minutesFromNow >= b.minMinutes && minutesFromNow < b.maxMinutes,
-      );
-      if (band) {
-        window    = band.label;
-        pushTitle = band.titleFn(goalTitle);
-        pushBody  = band.bodyFn(taskTitle, creatorName);
-      }
-    }
-
-    if (!window) continue;
-
-    const receivers = [...new Set([
+  function receiversOf(task: any): string[] {
+    return [...new Set([
       ...(goalMembersMap[task.goal_id] ?? []),
       goalOwnerMap[task.goal_id],
       task.user_id,
     ].filter(Boolean))] as string[];
+  }
 
-    for (const userId of receivers) {
-      alerts.push({
-        receiver_id: userId,
-        goal_id: task.goal_id,
-        window,
-        pushTitle,
-        pushBody,
-        payload: {
-          task_id:    task.id,
-          task_title: taskTitle,
-          goal_title: goalTitle,
-          window,
-          end_date:   task.end_date,
-          is_anytime: isAnytime,
-        },
-        url: `/goal/${task.goal_id}?task=${task.id}`,
-      });
+  // ── Build candidates ─────────────────────────────────────────────────────────
+
+  const candidates: PushCandidate[] = [];
+
+  // anytime morning accumulator: receiverId → { goalTitle, tasks[] }[]
+  const anytimeByReceiver: Record<string, { goalTitle: string; goalId: string; tasks: any[] }[]> = {};
+
+  for (const task of tasks) {
+    const taskTitle       = task.title || task.description || "Untitled task";
+    const goalTitle       = goalTitleMap[task.goal_id] ?? "your goal";
+    const minutesFromNow  = (new Date(task.end_date).getTime() - now.getTime()) / 60000;
+    const isAnytime       = task.is_anytime === true;
+    const receivers       = receiversOf(task);
+
+    if (isAnytime) {
+      // Collect for morning summary — only during morning window
+      // Include tasks whose end_date is "today" ± 36h (timezone-agnostic)
+      if (!isMorning) continue;
+      if (minutesFromNow < -12 * 60 || minutesFromNow > 36 * 60) continue;
+
+      for (const uid of receivers) {
+        if (!anytimeByReceiver[uid]) anytimeByReceiver[uid] = [];
+        let grp = anytimeByReceiver[uid].find(g => g.goalId === task.goal_id);
+        if (!grp) {
+          grp = { goalTitle, goalId: task.goal_id, tasks: [] };
+          anytimeByReceiver[uid].push(grp);
+        }
+        // Avoid duplicating the same task under the same user/goal
+        if (!grp.tasks.find((t: any) => t.id === task.id)) grp.tasks.push(task);
+      }
+    } else {
+      // Timed task: check each alert type
+      for (const def of TIMED_ALERT_TYPES) {
+        if (minutesFromNow < def.minMinutes || minutesFromNow >= def.maxMinutes) continue;
+
+        for (const uid of receivers) {
+          candidates.push({
+            alert_key:  taskAlertKey(task.id, uid, def.type),
+            task_id:    task.id,
+            user_id:    uid,
+            alert_type: def.type,
+            receiver_id: uid,
+            goal_id:    task.goal_id,
+            pushTitle:  def.titleFn(goalTitle),
+            pushBody:   def.bodyFn(taskTitle),
+            url:        `/goal/${task.goal_id}?task=${task.id}`,
+            payload: {
+              task_id:    task.id,
+              task_title: taskTitle,
+              goal_title: goalTitle,
+              alert_type: def.type,
+              end_date:   task.end_date,
+            },
+          });
+        }
+      }
     }
   }
 
-  if (alerts.length === 0) {
+  // ── Build anytime morning summary candidates ─────────────────────────────────
+
+  for (const [uid, goalGroups] of Object.entries(anytimeByReceiver)) {
+    const totalCount = goalGroups.reduce((s, g) => s + g.tasks.length, 0);
+    if (totalCount === 0) continue;
+
+    // Summary body: up to 2 goals, up to 3 tasks each
+    const summaryParts = goalGroups.slice(0, 2).map(g => {
+      const names = g.tasks.slice(0, 3).map((t: any) => t.title || t.description || "Untitled");
+      const more  = g.tasks.length > 3 ? ` +${g.tasks.length - 3} more` : "";
+      return `${g.goalTitle}: ${names.join(", ")}${more}`;
+    });
+    if (goalGroups.length > 2) summaryParts.push(`...and ${goalGroups.length - 2} more goals`);
+
+    candidates.push({
+      alert_key:  dailyAlertKey(uid, "anytime-morning", dateStr),
+      task_id:    null,
+      user_id:    uid,
+      alert_type: "anytime-morning",
+      receiver_id: uid,
+      goal_id:    goalGroups[0]?.goalId ?? null,
+      pushTitle:  `Good morning! You have ${totalCount} task${totalCount !== 1 ? "s" : ""} today`,
+      pushBody:   summaryParts.join(" • "),
+      url:        "/dashboard",
+      payload: {
+        alert_type:  "anytime-morning",
+        task_count:  totalCount,
+        date:        dateStr,
+      },
+    });
+  }
+
+  if (candidates.length === 0) {
     return new Response(
       JSON.stringify({ ok: true, alerted: 0, message: "No tasks matched alert windows" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
-  const push = await sendPushNotifications(supabase, alerts);
+  // ── Deduplicate against already-sent log ──────────────────────────────────────
 
-  console.log(`deadline-alerts: ${alerts.length} alerts processed`, { push });
+  const allKeys = [...new Set(candidates.map(c => c.alert_key))];
+  const { data: existingRows } = await supabase
+    .from("deadline_alert_log")
+    .select("alert_key")
+    .in("alert_key", allKeys);
+
+  const sentKeys = new Set((existingRows ?? []).map((r: any) => r.alert_key));
+  const toSend   = candidates.filter(c => !sentKeys.has(c.alert_key));
+
+  if (toSend.length === 0) {
+    return new Response(
+      JSON.stringify({ ok: true, alerted: 0, message: "All eligible alerts already sent" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
+  // ── Fetch push subscriptions ──────────────────────────────────────────────────
+
+  const receiverIds = [...new Set(toSend.map(c => c.receiver_id))];
+  const { data: subscriptions } = await supabase
+    .from("push_subscriptions")
+    .select("user_id, identifier")
+    .in("user_id", receiverIds);
+
+  const identifierByUser = new Map<string, string>();
+  for (const sub of subscriptions ?? []) {
+    if (sub.user_id && sub.identifier) identifierByUser.set(sub.user_id, sub.identifier);
+  }
+
+  // ── Send and log ──────────────────────────────────────────────────────────────
+
+  let sent = 0, skipped = 0, failed = 0;
+  const logRows: any[] = [];
+
+  await Promise.all(toSend.map(async (c) => {
+    const identifier = identifierByUser.get(c.receiver_id);
+    if (!identifier) { skipped++; return; }
+
+    const ok = await sendOnePush(identifier, c);
+    if (ok) {
+      sent++;
+      logRows.push({
+        task_id:    c.task_id,
+        user_id:    c.user_id,
+        alert_type: c.alert_type,
+        alert_key:  c.alert_key,
+        metadata:   c.payload,
+      });
+    } else {
+      failed++;
+    }
+  }));
+
+  // Upsert log rows — ignore conflicts so parallel cron invocations are safe
+  if (logRows.length > 0) {
+    const { error: logError } = await supabase
+      .from("deadline_alert_log")
+      .upsert(logRows, { onConflict: "alert_key", ignoreDuplicates: true });
+
+    if (logError) console.error("deadline-alerts: log insert failed", logError);
+  }
+
+  const summary = { attempted: toSend.length, sent, skipped, failed };
+  console.log("deadline-alerts: done", summary);
+
   return new Response(
-    JSON.stringify({ ok: true, alerted: alerts.length, push }),
+    JSON.stringify({ ok: true, alerted: sent, summary }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 });
