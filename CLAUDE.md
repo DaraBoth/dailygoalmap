@@ -270,6 +270,65 @@ supabase secrets set API_KEY=value
 
 ---
 
-**Last Updated**: 2026-06-05
-**Project Version**: 1.10.76
+**Last Updated**: 2026-06-11
+**Project Version**: 1.10.101
 **Maintainer**: Daraboth
+
+---
+
+## Multi-Agent Workflow
+
+This project uses a strict two-agent workflow enforced through ORBIT (the DailyGoalMap task API).
+
+### Agents
+
+| Agent | File | Authority |
+|-------|------|-----------|
+| **coder** | `.claude/agents/coder.md` | The ONLY agent that may edit source files |
+| **code-reviewer** | `.claude/agents/code-reviewer.md` | Reviews diffs — NEVER edits code |
+
+### Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/qa-task "..."` | Create an ORBIT task from QA feedback / bug report |
+| `/implement <task-id>` | Coder implements the ORBIT task |
+| `/review-before-pr <task-id>` | Reviewer checks the diff before any push |
+| `/sync-agent-task "..."` | Record a decision, blocker, or handoff in ORBIT |
+
+### Full Workflow
+
+```
+QA Feedback → /qa-task → ORBIT task (wf:coder-task)
+  → /implement → coder builds → updates ORBIT → wf:done
+  → /review-before-pr → reviewer checks diff
+      → FAIL: creates [BLOCK] change-request → /implement again → re-review
+      → PASS: ORBIT task → wf:approved → .\deploy.ps1 "message"
+```
+
+### Rules
+
+1. **Only `coder` agent modifies source code.** Period.
+2. **`code-reviewer` never edits files.** Read-only.
+3. **No push before `code-reviewer` approves.** ORBIT task must have `wf:approved` tag.
+4. **All QA and review feedback stored in ORBIT.** Chat memory is ephemeral.
+5. **ORBIT is shared memory between agents.** Use it, not chat context.
+
+### ORBIT Setup
+
+Set your API key once per session:
+```powershell
+$env:ORBIT_API_KEY = "dgm_your_key_here"
+```
+
+Generate the key: DailyGoalMap app → Goal → Settings → API → Generate Project Key.
+Recommended: create a dedicated **"Dev Workflow"** goal for these tasks.
+
+### Reference Docs
+
+- `.claude/docs/workflow.md` — Full workflow diagram and tag lifecycle
+- `.claude/docs/project-context.md` — Token-efficient project summary (read this, not the whole repo)
+- `.claude/docs/orbit-api-notes.md` — Quick API reference for agents
+- `.claude/skills/orbit-task-manager.md` — Full ORBIT skill with examples
+- `.claude/agents/coder.md` — Coder rules and conventions
+- `.claude/agents/code-reviewer.md` — Reviewer checklist and decision matrix
