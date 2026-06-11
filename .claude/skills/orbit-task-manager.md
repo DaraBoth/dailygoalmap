@@ -33,8 +33,11 @@ X-Project-Api-Key: <ORBIT_API_KEY>
 
 All workflow tasks use a `wf:` tag prefix so they can be filtered separately from personal tasks.
 
+**Every task MUST include `project:dailygoalmap`** to scope it to this project and prevent mixing with personal or other-project tasks.
+
 | Tag | Meaning |
 |-----|---------|
+| `project:dailygoalmap` | **Required on all tasks** — scopes task to this project |
 | `wf:qa` | Created by QA feedback |
 | `wf:bug` | Bug report |
 | `wf:change-request` | Code change requested |

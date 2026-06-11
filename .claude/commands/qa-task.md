@@ -74,11 +74,11 @@ Build the title:
 - Improvement: `[IMP][P3] Short description`
 - Question: `[Q] Short description`
 
-Tags based on type:
-- Bug → `["wf:qa", "wf:bug", "wf:coder-task"]`
-- Change request → `["wf:qa", "wf:change-request", "wf:coder-task"]`
-- Improvement → `["wf:qa", "wf:improvement", "wf:coder-task"]`
-- Question → `["wf:qa", "wf:question"]`
+Tags based on type (always include `project:dailygoalmap`):
+- Bug → `["wf:qa", "wf:bug", "wf:coder-task", "project:dailygoalmap"]`
+- Change request → `["wf:qa", "wf:change-request", "wf:coder-task", "project:dailygoalmap"]`
+- Improvement → `["wf:qa", "wf:improvement", "wf:coder-task", "project:dailygoalmap"]`
+- Question → `["wf:qa", "wf:question", "project:dailygoalmap"]`
 
 Create via PowerShell:
 ```powershell
@@ -96,7 +96,9 @@ Tell the user:
 - Task ID: `<uuid>`
 - Title: `<title>`
 - Tags: `<tags>`
-- Next: "Run `/implement <task-id>` to assign this to the coder."
+- Next: "Run `/implement <task-id>` when you are ready for the coder to start."
+
+**STOP HERE.** Do not spawn agents. Do not implement anything. /qa-task only creates and assigns tasks in ORBIT.
 
 ## Token-saving rule
 
