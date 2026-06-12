@@ -11,8 +11,9 @@ import { cn } from '@/lib/utils';
 import {
   Menu, X, LayoutDashboard, BarChart2, ArrowLeft, Users, ChevronRight,
   Crown, PanelLeftClose, PanelLeftOpen, Table2, NotebookPen, MessageSquareLock,
-  LogIn, UserPlus, Lock,
+  LogIn, UserPlus, Lock, Bot,
 } from 'lucide-react';
+import AISettingTab from '@/components/demo/AISettingTab';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -81,10 +82,11 @@ const DemoGoal: React.FC = () => {
   };
 
   const navItems = [
-    { id: 'overview', label: 'Calendar', icon: LayoutDashboard },
-    { id: 'tasksTable', label: 'Tasks', icon: Table2 },
-    { id: 'notes', label: 'Notes', icon: NotebookPen },
-    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
+    { id: 'overview',    label: 'Calendar',    icon: LayoutDashboard },
+    { id: 'tasksTable',  label: 'Tasks',        icon: Table2 },
+    { id: 'notes',       label: 'Notes',        icon: NotebookPen },
+    { id: 'analytics',   label: 'Analytics',    icon: BarChart2 },
+    { id: 'aiSetting',   label: 'AI Setting',   icon: Bot },
   ];
 
   return (
@@ -223,7 +225,7 @@ const DemoGoal: React.FC = () => {
                   className="h-8 w-8 text-muted-foreground hover:text-foreground"
                   asChild
                 >
-                  <Link to="/">
+                  <Link to="/demo-dashboard">
                     <ArrowLeft className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -235,10 +237,10 @@ const DemoGoal: React.FC = () => {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                  title="Back to Home"
+                  title="Back to Demo Dashboard"
                   asChild
                 >
-                  <Link to="/">
+                  <Link to="/demo-dashboard">
                     <ArrowLeft className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -355,6 +357,19 @@ const DemoGoal: React.FC = () => {
                       </Link>
                     </Button>
                   </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'aiSetting' && (
+                <motion.div
+                  key="ai-setting"
+                  initial={{ opacity: 0, x: 16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ duration: 0.15 }}
+                  className="h-full overflow-y-auto bg-slate-100/80 dark:bg-slate-950/80 backdrop-blur-md"
+                >
+                  <AISettingTab />
                 </motion.div>
               )}
             </AnimatePresence>

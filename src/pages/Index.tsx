@@ -4,6 +4,7 @@ import FloatingNavigation from "@/components/home/FloatingNavigation";
 import Background from "@/components/home/Background";
 import HeroSection from "@/components/home/HeroSection";
 import FeaturesSection from "@/components/home/FeaturesSection";
+import AIHarnessSection from "@/components/home/AIHarnessSection";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import CTASection from "@/components/home/CTASection";
 import Footer from "@/components/home/Footer";
@@ -44,6 +45,7 @@ const Index: React.FC = () => {
         <FloatingNavigation />
 
         {/* Main Content Sections */}
+        <AIHarnessSection />
         <HeroSection />
         <FeaturesSection />
         <TestimonialsSection />

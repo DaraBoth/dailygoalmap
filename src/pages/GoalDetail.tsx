@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from '@/lib/utils';
-import { Menu, X, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2, PanelLeftClose, PanelLeftOpen, Search, Trash2, UserPlus, Settings2, Table2, NotebookPen } from 'lucide-react';
+import { Menu, X, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2, PanelLeftClose, PanelLeftOpen, Search, Trash2, UserPlus, Bot, Table2, NotebookPen } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { searchUsers, sendInvitation, SearchUser } from '@/services/internalNotifications';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,7 +28,7 @@ import { normalizeTaskList, normalizeTaskRecord } from '@/components/calendar/ta
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { UserMenu } from '@/components/user/UserMenu';
 import CustomSearchModal from '@/components/search/CustomSearchModal';
-import GoalAIContextSettings from '@/components/goal/GoalAIContextSettings';
+import GoalAISettingTab from '@/components/goal/GoalAISettingTab';
 import GoalTasksTable from '@/components/goal/GoalTasksTable';
 import GoalNotes from '@/components/goal/GoalNotes';
 
@@ -446,7 +446,7 @@ const GoalDetail: React.FC = () => {
     { id: 'tasksTable', label: 'Tasks', icon: Table2 },
     { id: 'notes', label: 'Notes', icon: NotebookPen },
     { id: 'analytics', label: 'Analytics', icon: BarChart2 },
-    { id: 'settings', label: 'Goal Settings', icon: Settings2 },
+    { id: 'settings', label: 'AI Setting', icon: Bot },
   ];
 
   return (
@@ -694,9 +694,9 @@ const GoalDetail: React.FC = () => {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -16 }}
                   transition={{ duration: 0.15 }}
-                  className="h-full min-h-0 overflow-y-auto bg-slate-100/80 dark:bg-slate-950/80 backdrop-blur-md"
+                  className="h-full min-h-0 overflow-hidden bg-slate-100/80 dark:bg-slate-950/80 backdrop-blur-md"
                 >
-                  <GoalAIContextSettings
+                  <GoalAISettingTab
                     goalId={goalId}
                     goalTitle={goalTitle}
                     goalDescription={goalDescription}

@@ -17,6 +17,8 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IosShortcutRouteImport } from './routes/ios-shortcut'
+import { Route as DemoGoalRouteImport } from './routes/demo-goal'
+import { Route as DemoDashboardRouteImport } from './routes/demo-dashboard'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ChatPopupRouteImport } from './routes/chat-popup'
@@ -66,6 +68,16 @@ const LoginRoute = LoginRouteImport.update({
 const IosShortcutRoute = IosShortcutRouteImport.update({
   id: '/ios-shortcut',
   path: '/ios-shortcut',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoGoalRoute = DemoGoalRouteImport.update({
+  id: '/demo-goal',
+  path: '/demo-goal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoDashboardRoute = DemoDashboardRouteImport.update({
+  id: '/demo-dashboard',
+  path: '/demo-dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoRoute = DemoRouteImport.update({
@@ -127,6 +139,8 @@ export interface FileRoutesByFullPath {
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/demo-dashboard': typeof DemoDashboardRoute
+  '/demo-goal': typeof DemoGoalRoute
   '/ios-shortcut': typeof IosShortcutRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -147,6 +161,8 @@ export interface FileRoutesByTo {
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/demo-dashboard': typeof DemoDashboardRoute
+  '/demo-goal': typeof DemoGoalRoute
   '/ios-shortcut': typeof IosShortcutRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -168,6 +184,8 @@ export interface FileRoutesById {
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/demo-dashboard': typeof DemoDashboardRoute
+  '/demo-goal': typeof DemoGoalRoute
   '/ios-shortcut': typeof IosShortcutRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -190,6 +208,8 @@ export interface FileRouteTypes {
     | '/chat-popup'
     | '/dashboard'
     | '/demo'
+    | '/demo-dashboard'
+    | '/demo-goal'
     | '/ios-shortcut'
     | '/login'
     | '/privacy'
@@ -210,6 +230,8 @@ export interface FileRouteTypes {
     | '/chat-popup'
     | '/dashboard'
     | '/demo'
+    | '/demo-dashboard'
+    | '/demo-goal'
     | '/ios-shortcut'
     | '/login'
     | '/privacy'
@@ -230,6 +252,8 @@ export interface FileRouteTypes {
     | '/chat-popup'
     | '/dashboard'
     | '/demo'
+    | '/demo-dashboard'
+    | '/demo-goal'
     | '/ios-shortcut'
     | '/login'
     | '/privacy'
@@ -251,6 +275,8 @@ export interface RootRouteChildren {
   ChatPopupRoute: typeof ChatPopupRoute
   DashboardRoute: typeof DashboardRoute
   DemoRoute: typeof DemoRoute
+  DemoDashboardRoute: typeof DemoDashboardRoute
+  DemoGoalRoute: typeof DemoGoalRoute
   IosShortcutRoute: typeof IosShortcutRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -320,6 +346,20 @@ declare module '@tanstack/react-router' {
       path: '/ios-shortcut'
       fullPath: '/ios-shortcut'
       preLoaderRoute: typeof IosShortcutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo-goal': {
+      id: '/demo-goal'
+      path: '/demo-goal'
+      fullPath: '/demo-goal'
+      preLoaderRoute: typeof DemoGoalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo-dashboard': {
+      id: '/demo-dashboard'
+      path: '/demo-dashboard'
+      fullPath: '/demo-dashboard'
+      preLoaderRoute: typeof DemoDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo': {
@@ -403,6 +443,8 @@ const rootRouteChildren: RootRouteChildren = {
   ChatPopupRoute: ChatPopupRoute,
   DashboardRoute: DashboardRoute,
   DemoRoute: DemoRoute,
+  DemoDashboardRoute: DemoDashboardRoute,
+  DemoGoalRoute: DemoGoalRoute,
   IosShortcutRoute: IosShortcutRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,

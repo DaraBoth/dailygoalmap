@@ -286,6 +286,70 @@ const rawDemoTasks: Task[] = [
 
 export const demoTasks: Task[] = normalizeTaskList(rawDemoTasks);
 
+export const demoGoalJapanese: Goal = {
+  id: 'demo-goal-japanese',
+  title: 'Learn Japanese to JLPT N3',
+  description: 'Master 3,000+ kanji, grammar patterns, and conversational Japanese to pass JLPT N3 in 12 months through daily study sessions.',
+  target_date: '2027-03-01',
+  no_duration: false,
+  status: 'active',
+  created_at: '2026-04-01T08:00:00.000Z',
+  updated_at: '2026-06-10T09:00:00.000Z',
+  metadata: { goal_type: 'education', category: 'Education', priority: 'medium' },
+  user_id: 'demo-user-id',
+  share_code: 'JPNDEMO',
+  is_public: true,
+  public_slug: 'learn-japanese-jlpt-n3',
+  theme_id: undefined,
+  taskCounts: { total: 12, completed: 3, incomplete: 9 },
+  memberCounts: { total: 1 },
+};
+
+export const demoGoalMarathon: Goal = {
+  id: 'demo-goal-marathon',
+  title: 'Run a Marathon Under 4 Hours',
+  description: 'Train consistently for 20 weeks using a structured running plan to complete a full marathon in under 4 hours.',
+  target_date: '2026-11-15',
+  no_duration: false,
+  status: 'active',
+  created_at: '2026-05-15T07:00:00.000Z',
+  updated_at: '2026-06-08T07:30:00.000Z',
+  metadata: { goal_type: 'general', category: 'Health', priority: 'high' },
+  user_id: 'demo-user-id',
+  share_code: 'RUNDEMO',
+  is_public: true,
+  public_slug: 'run-marathon-under-4-hours',
+  theme_id: undefined,
+  taskCounts: { total: 8, completed: 2, incomplete: 6 },
+  memberCounts: { total: 2 },
+};
+
+export const demoGoalPortfolio: Goal = {
+  id: 'demo-goal-portfolio',
+  title: 'Build an Investment Portfolio',
+  description: 'Start investing $500/month into a diversified ETF portfolio and grow assets to $10,000 within 18 months.',
+  target_date: '2027-12-31',
+  no_duration: false,
+  status: 'active',
+  created_at: '2026-06-01T10:00:00.000Z',
+  updated_at: '2026-06-05T14:00:00.000Z',
+  metadata: { goal_type: 'finance', category: 'Finance', priority: 'medium' },
+  user_id: 'demo-user-id',
+  share_code: 'INVDEMO',
+  is_public: true,
+  public_slug: 'build-investment-portfolio',
+  theme_id: undefined,
+  taskCounts: { total: 10, completed: 1, incomplete: 9 },
+  memberCounts: { total: 1 },
+};
+
+export const demoGoals: Goal[] = [
+  demoGoal,
+  demoGoalJapanese,
+  demoGoalMarathon,
+  demoGoalPortfolio,
+];
+
 export const demoMembers: GoalMember[] = [
   {
     id: 'demo-member-1',
