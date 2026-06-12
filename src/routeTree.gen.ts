@@ -17,6 +17,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IosShortcutRouteImport } from './routes/ios-shortcut'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ChatPopupRouteImport } from './routes/chat-popup'
 import { Route as AiApiRouteImport } from './routes/ai-api'
@@ -65,6 +66,11 @@ const LoginRoute = LoginRouteImport.update({
 const IosShortcutRoute = IosShortcutRouteImport.update({
   id: '/ios-shortcut',
   path: '/ios-shortcut',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/ai-api': typeof AiApiRoute
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
   '/ios-shortcut': typeof IosShortcutRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/ai-api': typeof AiApiRoute
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
   '/ios-shortcut': typeof IosShortcutRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/ai-api': typeof AiApiRoute
   '/chat-popup': typeof ChatPopupRoute
   '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
   '/ios-shortcut': typeof IosShortcutRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/ai-api'
     | '/chat-popup'
     | '/dashboard'
+    | '/demo'
     | '/ios-shortcut'
     | '/login'
     | '/privacy'
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/ai-api'
     | '/chat-popup'
     | '/dashboard'
+    | '/demo'
     | '/ios-shortcut'
     | '/login'
     | '/privacy'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/ai-api'
     | '/chat-popup'
     | '/dashboard'
+    | '/demo'
     | '/ios-shortcut'
     | '/login'
     | '/privacy'
@@ -238,6 +250,7 @@ export interface RootRouteChildren {
   AiApiRoute: typeof AiApiRoute
   ChatPopupRoute: typeof ChatPopupRoute
   DashboardRoute: typeof DashboardRoute
+  DemoRoute: typeof DemoRoute
   IosShortcutRoute: typeof IosShortcutRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -307,6 +320,13 @@ declare module '@tanstack/react-router' {
       path: '/ios-shortcut'
       fullPath: '/ios-shortcut'
       preLoaderRoute: typeof IosShortcutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -382,6 +402,7 @@ const rootRouteChildren: RootRouteChildren = {
   AiApiRoute: AiApiRoute,
   ChatPopupRoute: ChatPopupRoute,
   DashboardRoute: DashboardRoute,
+  DemoRoute: DemoRoute,
   IosShortcutRoute: IosShortcutRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
