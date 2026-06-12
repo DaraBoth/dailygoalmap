@@ -280,10 +280,18 @@ serve(async (req: Request) => {
   // ── Deduplicate against already-sent log ──────────────────────────────────────
 
   const allKeys = [...new Set(candidates.map(c => c.alert_key))];
-  const { data: existingRows } = await supabase
+  const { data: existingRows, error: logQueryError } = await supabase
     .from("deadline_alert_log")
     .select("alert_key")
     .in("alert_key", allKeys);
+
+  if (logQueryError) {
+    console.error("deadline-alerts: log query failed — run the deadline_alert_log table SQL first", logQueryError);
+    return new Response(
+      JSON.stringify({ error: "Log table unavailable: " + logQueryError.message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
 
   const sentKeys = new Set((existingRows ?? []).map((r: any) => r.alert_key));
   const toSend   = candidates.filter(c => !sentKeys.has(c.alert_key));
