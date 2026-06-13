@@ -15,6 +15,8 @@ import React from 'react'
 import { enableRealtimeForTable } from '@/components/calendar/taskDatabase'
 import EnhancedLoading from "@/components/ui/enhanced-loading"
 import { FileViewerProvider } from "@/hooks/useFileViewer"
+import { ReportBugModal } from '@/components/bug-report/ReportBugModal'
+import { registerReportModalOpener, type ReportBugContext } from '@/utils/supabaseErrorHandler'
 
 // Create React Query client with optimized settings
 const queryClient = new QueryClient({
@@ -29,6 +31,43 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+// Simple React 19-compatible error boundary
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error) {
+    // Trigger report modal via the registered opener
+    import('@/utils/supabaseErrorHandler').then(({ showErrorWithReport }) => {
+      showErrorWithReport(error.message || 'Render error', 'UI render crash');
+    });
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 text-center">
+          <p className="text-destructive font-semibold">Something went wrong.</p>
+          <p className="text-sm text-muted-foreground max-w-sm">{this.state.error.message}</p>
+          <button
+            onClick={() => this.setState({ error: null })}
+            className="text-xs underline text-muted-foreground"
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Create UserContext for authentication
 export const UserContext = React.createContext<{
@@ -48,6 +87,14 @@ function RootComponent() {
   const [authState, setAuthState] = React.useState<AuthState>(authService.getAuthState())
   const [updateAvailable, setUpdateAvailable] = React.useState(false)
   const [routeProgress, setRouteProgress] = React.useState(0)
+  const [bugReportModal, setBugReportModal] = React.useState<{ open: boolean; ctx: ReportBugContext }>({
+    open: false,
+    ctx: { prefillTitle: '', prefillDescription: '' },
+  })
+
+  React.useEffect(() => {
+    registerReportModalOpener((ctx) => setBugReportModal({ open: true, ctx }));
+  }, [])
   const [showRouteProgress, setShowRouteProgress] = React.useState(false)
 
   React.useEffect(() => {
@@ -346,8 +393,16 @@ function RootComponent() {
             </div>
           )}
           <div className="min-h-screen bg-background">
-            <Outlet />
+            <ErrorBoundary>
+              <Outlet />
+            </ErrorBoundary>
           </div>
+          <ReportBugModal
+            open={bugReportModal.open}
+            onClose={() => setBugReportModal((s) => ({ ...s, open: false }))}
+            prefillTitle={bugReportModal.ctx.prefillTitle}
+            prefillDescription={bugReportModal.ctx.prefillDescription}
+          />
           <Toaster
             position={isMobile ? "top-center" : "top-right"}
             richColors

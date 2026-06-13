@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Task } from '@/components/calendar/types';
 import { GoalTheme } from '@/types/theme';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsDeveloper } from '@/hooks/useIsDeveloper';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useGoalSharing } from '@/hooks/useGoalSharing';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -99,6 +100,7 @@ const GoalDetail: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { user } = useAuth();
+  const isDeveloper = useIsDeveloper();
 
   const goalData = loaderData?.goal || null;
   const goalTheme = goalData?.goal_themes || null;
@@ -444,7 +446,7 @@ const GoalDetail: React.FC = () => {
     { id: 'tasksTable', label: 'Tasks', icon: Table2 },
     { id: 'notes', label: 'Notes', icon: NotebookPen },
     { id: 'analytics', label: 'Analytics', icon: BarChart2 },
-    { id: 'settings', label: 'AI Setting', icon: Bot },
+    ...(isDeveloper ? [{ id: 'settings', label: 'AI Setting', icon: Bot }] : []),
   ];
 
   return (
@@ -685,7 +687,7 @@ const GoalDetail: React.FC = () => {
                 </motion.div>
               )}
 
-              {activeTab === 'settings' && (
+              {activeTab === 'settings' && isDeveloper && (
                 <motion.div
                   key="settings"
                   initial={{ opacity: 0, x: 16 }}

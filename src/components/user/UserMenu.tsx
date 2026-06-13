@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useRouterNavigation } from '@/hooks/useRouterNavigation';
 import { LogOut, User as UserIcon } from '@/components/icons/CustomIcons';
-import { PlusCircle, UserPlus, Key, Download, Bell, Smartphone } from 'lucide-react';
+import { PlusCircle, UserPlus, Key, Download, Bell, Smartphone, Bug } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -252,6 +252,9 @@ export const UserMenu: React.FC<UserMenuProps> = ({ mobileDashboardActions }) =>
               <Button variant="ghost" className="w-full justify-start" onClick={() => { setMobileMenuOpen(false); openIosShortcut(); }}>
                 <Smartphone className="mr-2 h-4 w-4" /> iPhone Shortcut
               </Button>
+              <Button variant="ghost" className="w-full justify-start" onClick={() => { setMobileMenuOpen(false); navigate({ to: '/bug-reports' as any }); }}>
+                <Bug className="mr-2 h-4 w-4" /> Bug Reports
+              </Button>
             </div>
 
             <div className="rounded-xl border border-border/60 p-3 space-y-3">
@@ -319,6 +322,9 @@ export const UserMenu: React.FC<UserMenuProps> = ({ mobileDashboardActions }) =>
             </Button>
             <Button variant="ghost" className="w-full justify-start" onClick={() => { setMobileMenuOpen(false); openIosShortcut(); }}>
               <Smartphone className="mr-2 h-4 w-4" /> iPhone Shortcut
+            </Button>
+            <Button variant="ghost" className="w-full justify-start" onClick={() => { setMobileMenuOpen(false); navigate({ to: '/bug-reports' as any }); }}>
+              <Bug className="mr-2 h-4 w-4" /> Bug Reports
             </Button>
           </div>
 

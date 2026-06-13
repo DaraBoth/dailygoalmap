@@ -65,7 +65,9 @@ export const useGoals = () => {
           )
       );
 
-      const allGoals = [...createdGoalsList, ...uniqueJoinedGoals];
+      const bugReportGoalId = import.meta.env.VITE_BUG_REPORT_GOAL_ID;
+      const allGoals = [...createdGoalsList, ...uniqueJoinedGoals]
+        .filter((g) => !bugReportGoalId || g?.id !== bugReportGoalId);
 
       // Convert the Supabase data to Goal objects with proper metadata typing
       const typedGoals: Goal[] = (allGoals || []).map((goal) => ({
