@@ -123,6 +123,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
       case 'task_deleted':
         return <Trash2 className="h-4 w-4" />;
       case 'task_updated':
+        if ((n.payload as any)?.action === 'fixed') return <CheckCircle className="h-4 w-4" />;
         return <Edit className="h-4 w-4" />;
       case 'task_deadline':
         return <Clock className="h-4 w-4" />;
@@ -145,6 +146,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
     if (n.type === 'task_created') return 'green';
     if (n.type === 'task_deleted') return 'red';
     if (n.type === 'task_updated' && (n.payload as any)?.action === 'ai_completed') return 'purple';
+    if (n.type === 'task_updated' && (n.payload as any)?.action === 'fixed') return 'green';
     if (n.type === 'task_updated') return 'blue';
     if (n.type === 'task_deadline') return 'orange';
     if (n.type === 'member_joined') return 'green';
@@ -310,6 +312,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
                   {n.type === 'task_created' ? 'New Task' :
                     n.type === 'task_deleted' ? 'Task Deleted' :
                       payload.action === 'ai_completed' ? 'AI Assistant completed' :
+                      payload.action === 'fixed' ? 'Bug Fixed!' :
                       payload.action === 'completed' ? 'Task Completed' :
                       payload.action === 'uncompleted' ? 'Task Reopened' :
                       'Task Updated'}
@@ -323,6 +326,10 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ n, onAfterAc
                     {typeof (n.payload as any)?.message === 'string' && (
                       <span className="block mt-1 text-xs text-muted-foreground">{(n.payload as any).message}</span>
                     )}
+                  </>
+                ) : payload.action === 'fixed' ? (
+                  <>
+                    Your bug report{payload.task_title ? <> <span className="font-semibold text-gray-900 dark:text-white">"{payload.task_title}"</span></> : ''} has been fixed!
                   </>
                 ) : (
                   <>
