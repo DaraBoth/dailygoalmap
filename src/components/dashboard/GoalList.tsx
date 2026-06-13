@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useRouterNavigation } from "@/hooks/useRouterNavigation";
-import { createMemberLeftNotifications } from "@/services/internalNotifications";
+import { notifyMemberLeft } from "@/services/notificationService";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -78,7 +78,8 @@ const GoalList: React.FC<GoalListProps> = React.memo(({
       }
 
       // Notify remaining members (excluding leaver) BEFORE leaving to avoid RLS issues
-      await createMemberLeftNotifications(goalId, userData.user.id);
+      const leavingGoal = goals.find(g => g.id === goalId);
+      await notifyMemberLeft(goalId, userData.user.id, leavingGoal?.title || '');
 
       const { error } = await supabase
         .from('goal_members')

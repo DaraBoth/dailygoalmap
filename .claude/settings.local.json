@@ -47,7 +47,10 @@
       "Bash(node ~/.claude/scripts/orbit.js get e8b3bf33-a973-4ccb-9f75-d80d4e8d53d9)",
       "Bash(node ~/.claude/scripts/orbit.js get 3dcf60e5-9b01-4aaf-aa5f-a9ee9f97abff)",
       "Bash(node ~/.claude/scripts/orbit.js get 84a87e2a-0828-4b47-9634-b16e62e57282)",
-      "Bash(node ~/.claude/scripts/orbit.js list --completed false --limit 50)"
+      "Bash(node ~/.claude/scripts/orbit.js list --completed false --limit 50)",
+      "Bash(node *)",
+      "PowerShell($env:ORBIT_API_KEY = \\(Get-Content \"D:\\\\Frontend project\\\\dailygoalmap\\\\.env\" | Where-Object { $_ -match \"^ORBIT_API_KEY=\" } | ForEach-Object { $_ -replace \"^ORBIT_API_KEY=\",\"\" }\\); node \"C:\\\\Users\\\\USer\\\\.claude\\\\scripts\\\\orbit.js\" tasks.list '{\"tags\":[\"wf:coder-task\"],\"limit\":10}' 2>&1)",
+      "PowerShell($env:ORBIT_API_KEY = \\(Get-Content \"D:\\\\Frontend project\\\\dailygoalmap\\\\.env\" | Where-Object { $_ -match \"^ORBIT_API_KEY=\" } | ForEach-Object { $_ -replace \"^ORBIT_API_KEY=\",\"\" }\\); node \"C:\\\\Users\\\\USer\\\\.claude\\\\scripts\\\\orbit.js\" complete 009d53f1-e6a1-4114-b0d3-9f22cd768749 2>&1; node \"C:\\\\Users\\\\USer\\\\.claude\\\\scripts\\\\orbit.js\" complete 25a10579-d3d9-4f03-978b-40ec7817140e 2>&1)"
     ]
   }
 }

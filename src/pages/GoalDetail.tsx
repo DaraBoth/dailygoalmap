@@ -18,7 +18,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { cn } from '@/lib/utils';
 import { Menu, X, LayoutDashboard, BarChart2, ArrowLeft, Users, Copy, RefreshCw, Check, ChevronRight, Crown, UserMinus, Share2, PanelLeftClose, PanelLeftOpen, Search, Trash2, UserPlus, Bot, Table2, NotebookPen } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { searchUsers, sendInvitation, SearchUser } from '@/services/internalNotifications';
+import { searchUsers, SearchUser } from '@/services/internalNotifications';
+import { notifyGoalInvitation } from '@/services/notificationService';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { ThemeSelector } from '@/components/goal/ThemeSelector';
@@ -226,22 +227,19 @@ const GoalDetail: React.FC = () => {
   const handleInvite = async (targetUser: SearchUser) => {
     if (!user?.id) return;
     setSentInvites(prev => new Set(prev).add(targetUser.id));
-    const result = await sendInvitation(goalId, targetUser.id, {
-      goal_title: goalTitle,
-      url: `/goal/${goalId}`,
-    });
-    if (!result.ok) {
-      toast({
-        title: "Couldn't send invitation",
-        description: result.error || 'Please try again.',
-        variant: 'destructive',
-      });
-      setSentInvites(prev => { const s = new Set(prev); s.delete(targetUser.id); return s; });
-    } else {
+    try {
+      await notifyGoalInvitation(goalId, user.id, goalTitle, targetUser.id);
       toast({
         title: 'Invitation sent',
         description: `${targetUser.display_name || targetUser.email || 'User'} was invited to join.`,
       });
+    } catch (err: any) {
+      toast({
+        title: "Couldn't send invitation",
+        description: err?.message || 'Please try again.',
+        variant: 'destructive',
+      });
+      setSentInvites(prev => { const s = new Set(prev); s.delete(targetUser.id); return s; });
     }
   };
 

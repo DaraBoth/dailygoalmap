@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
-import { sendNotificationToGoalMembers, sendNotificationToUser } from "@/services/notificationService"; // Import notification service
+import { notifyMemberJoined } from "@/services/notificationService";
 
 export interface JoinGoalDialogProps {
   isOpen: boolean;
@@ -98,26 +98,7 @@ export function JoinGoalDialog({ isOpen, onClose, onGoalJoined }: JoinGoalDialog
       });
 
       try {
-        const { createMemberJoinedNotifications } = await import("@/services/internalNotifications");
-
-        // Send push notification
-        const joinerName = userData.user?.['display_name'] || userData.user.email || 'Someone';
-        const notificationSent = await sendNotificationToGoalMembers(
-          goalToJoin.id,
-          userData.user.id,
-          `[${goalToJoin.title}] New member`,
-          `by ${joinerName}`
-        );
-
-        // Create internal notification
-        await createMemberJoinedNotifications(goalToJoin.id, userData.user.id, {
-          goal_title: goalToJoin.title,
-          message: `${userData.user?.['display_name'] || userData.user.email} has joined the goal`
-        });
-
-        if (!notificationSent) {
-          console.warn("Push notification not sent, but goal joined successfully.");
-        }
+        await notifyMemberJoined(goalToJoin.id, userData.user.id, goalToJoin.title);
       } catch (notifyError) {
         console.error("Failed to send notification:", notifyError);
       }
