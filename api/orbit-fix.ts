@@ -1,4 +1,4 @@
-import { buildJsonResponse, getServiceRoleClient, handleCors, getAuthenticatedUser } from './_projectApi';
+import { buildJsonResponse, getServiceRoleClient, handleCors, getAuthenticatedUser } from './_projectApi.js';
 
 export const config = { runtime: 'edge' };
 
