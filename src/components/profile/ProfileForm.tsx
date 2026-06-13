@@ -8,6 +8,7 @@ import { Loader2, UserCircle, Camera, Bot, User2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ImageCropDialog } from "./ImageCropDialog";
+import { showErrorWithReport } from "@/utils/supabaseErrorHandler";
 import { cn } from "@/lib/utils";
 
 
@@ -168,6 +169,7 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
       });
     } catch (error: any) {
       console.error("Error uploading image:", error);
+      showErrorWithReport(error.message || 'Upload failed', 'Profile image upload');
       toast({
         title: "Failed to upload image",
         description: error.message,

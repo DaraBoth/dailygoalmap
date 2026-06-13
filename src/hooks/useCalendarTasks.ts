@@ -14,6 +14,7 @@ import {
   getNextDay,
   getPreviousDay
 } from "@/components/calendar/utils/dateUtils";
+import { wrapSupabaseCall } from "@/utils/supabaseErrorHandler";
 
 interface FinancialData {
   goalId: string;
@@ -82,13 +83,15 @@ export const useCalendarTasks = ({
     setError(null);
     try {
       const { start, end } = getMonthRange(month);
-      const { data, error: fetchError } = await supabase
-        .from('tasks')
-        .select('id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, is_anytime, duration_minutes, tags, color, goal_id, user_id, created_at, updated_at, updated_by, series_id, series_detached')
-        .eq('goal_id', goalId)
-        .lt('start_date', end.toISOString())
-        .gte('end_date', start.toISOString())
-        .order('start_date', { ascending: true });
+      const { data, error: fetchError } = await wrapSupabaseCall(
+        supabase.from('tasks')
+          .select('id, title, description, completed, start_date, end_date, daily_start_time, daily_end_time, is_anytime, duration_minutes, tags, color, goal_id, user_id, created_at, updated_at, updated_by, series_id, series_detached')
+          .eq('goal_id', goalId)
+          .lt('start_date', end.toISOString())
+          .gte('end_date', start.toISOString())
+          .order('start_date', { ascending: true }),
+        'Calendar tasks'
+      );
 
       if (fetchError) {
         throw fetchError;

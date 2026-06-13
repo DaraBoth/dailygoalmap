@@ -3,6 +3,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { GoalMember } from "@/types/goal";
+import { wrapSupabaseCall } from "@/utils/supabaseErrorHandler";
 
 export const useGoalSharing = (goalId: string) => {
   const [shareCode, setShareCode] = useState<string | null>(null);
@@ -75,8 +76,10 @@ export const useGoalSharing = (goalId: string) => {
     setIsLoadingMembers(true);
     try {
       // Use RPC function to get members and avoid RLS recursion issues
-      const { data, error } = await supabase
-        .rpc('get_goal_members', { p_goal_id: goalId });
+      const { data, error } = await wrapSupabaseCall(
+        supabase.rpc('get_goal_members', { p_goal_id: goalId }),
+        'Goal sharing'
+      );
 
       if (error) {
         console.error("Error fetching members:", error);
@@ -118,8 +121,10 @@ export const useGoalSharing = (goalId: string) => {
     try {
       const removedMember = members.find(m => m.id === memberId);
 
-      const { error } = await supabase
-        .rpc('remove_goal_member', { p_member_id: memberId });
+      const { error } = await wrapSupabaseCall(
+        supabase.rpc('remove_goal_member', { p_member_id: memberId }),
+        'Goal sharing'
+      );
 
       if (error) {
         throw error;

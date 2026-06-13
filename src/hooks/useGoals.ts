@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Goal, SortOption } from "@/types/goal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { wrapSupabaseCall } from "@/utils/supabaseErrorHandler";
 
 export const useGoals = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -30,23 +31,18 @@ export const useGoals = () => {
       const userId = userData.user.id;
 
       // Fetch goals created by the user
-      const { data: createdGoals, error: createdGoalsError } = await supabase
-        .from("goals")
-        .select(
-          `
-          *,
-          goal_themes(*)
-        `
-        )
-        .eq("user_id", userId);
+      const { data: createdGoals, error: createdGoalsError } = await wrapSupabaseCall(
+        supabase.from("goals").select(`*, goal_themes(*)`).eq("user_id", userId),
+        'Goals list'
+      );
 
       if (createdGoalsError) throw createdGoalsError;
 
       // Fetch goals the user has joined
-      const { data: joinedGoals, error: joinedGoalsError } = await supabase
-        .from("goal_members")
-        .select("goal_id, goals(*,goal_themes(*))")
-        .eq("user_id", userId);
+      const { data: joinedGoals, error: joinedGoalsError } = await wrapSupabaseCall(
+        supabase.from("goal_members").select("goal_id, goals(*,goal_themes(*))").eq("user_id", userId),
+        'Goals list'
+      );
 
       if (joinedGoalsError) throw joinedGoalsError;
 

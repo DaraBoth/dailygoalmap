@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Task, TaskManagerProps } from "./types";
 import { format } from "date-fns";
 import { normalizeTaskList } from "./taskNormalization";
+import { wrapSupabaseCall } from "@/utils/supabaseErrorHandler";
 
 // Define a key rotation pool with fallback keys
 const FALLBACK_API_KEYS = [
@@ -50,9 +51,8 @@ export async function saveTaskToSupabase(task: Task, goalId: string): Promise<vo
       throw new Error("No authenticated user found");
     }
     
-    const { error } = await supabase
-      .from('tasks')
-      .insert({
+    const { error } = await wrapSupabaseCall(
+      supabase.from('tasks').insert({
         id: task.id,
         goal_id: goalId,
         user_id: userData.user.id,
@@ -63,8 +63,10 @@ export async function saveTaskToSupabase(task: Task, goalId: string): Promise<vo
         end_date: task.end_date,
         daily_start_time: task.daily_start_time,
         daily_end_time: task.daily_end_time,
-      });
-    
+      }),
+      'Task save'
+    );
+
     if (error) {
       throw error;
     }
@@ -162,11 +164,10 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
       updatePayload.end_date = task.start_date || normalizedIso;
     }
 
-    const { data: updatedRows, error } = await supabase
-      .from('tasks')
-      .update(updatePayload)
-      .eq('id', taskId)
-      .select('id');
+    const { data: updatedRows, error } = await wrapSupabaseCall(
+      supabase.from('tasks').update(updatePayload).eq('id', taskId).select('id'),
+      'Task update'
+    );
     
     if (error) {
       throw error;
@@ -228,12 +229,11 @@ export async function updateTaskCompletion(taskId: string, completed: boolean): 
 
 export async function deleteTasksForGoal(goalId: string, userId: string): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('tasks')
-      .delete()
-      .eq('goal_id', goalId)
-      .eq('user_id', userId);
-      
+    const { error } = await wrapSupabaseCall(
+      supabase.from('tasks').delete().eq('goal_id', goalId).eq('user_id', userId),
+      'Task delete'
+    );
+
     if (error) {
       console.error("Error deleting existing tasks:", error);
       throw error;
@@ -266,10 +266,11 @@ export async function insertMultipleTasks(tasks: Task[], goalId: string, userId:
     
     for (let i = 0; i < tasksToInsert.length; i += batchSize) {
       const batch = tasksToInsert.slice(i, i + batchSize);
-      const { error } = await supabase
-        .from('tasks')
-        .insert(batch);
-      
+      const { error } = await wrapSupabaseCall(
+        supabase.from('tasks').insert(batch),
+        'Task batch insert'
+      );
+
       if (error) {
         console.error(`Error inserting batch ${Math.floor(i / batchSize) + 1}:`, error);
       } else {

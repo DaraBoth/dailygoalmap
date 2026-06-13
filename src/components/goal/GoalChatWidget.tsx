@@ -26,6 +26,7 @@ import {
 } from '@/services/aiChatService';
 import { createAiCompletionNotification } from '@/services/internalNotifications';
 import { notifyTaskCreated, notifyTaskUpdated, notifyTaskDeleted } from '@/services/notificationService';
+import { showErrorWithReport } from '@/utils/supabaseErrorHandler';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -1333,7 +1334,7 @@ export const GoalChatWidget: React.FC<GoalChatWidgetProps> = ({
       body: JSON.stringify({ model: selectedModel, system: sys, messages: claudeMsgs, tools, max_tokens: 2000 }),
       signal: abortRef.current.signal,
     });
-    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `Claude ${res.status}`); }
+    if (!res.ok) { const e = await res.json().catch(() => ({})); const msg = e?.error?.message || `Claude ${res.status}`; if (res.status >= 500) showErrorWithReport(msg, 'AI chat (Claude)'); throw new Error(msg); }
     let acc = '', toolId = '', toolName = '', toolArgBuf = '', isToolCall = false;
     for await (const line of streamLines(res.body!.getReader())) {
       if (!line.startsWith('data: ')) continue;
