@@ -10,8 +10,12 @@ in their Orbit / DailyGoalMap goal via the Project API.
 The user must provide an API key in the format `dgm_...`.
 Generate one inside the app: **Goal → Settings tab → API section → Generate Project Key**.
 
-Ask for the key once if it is not already known in this conversation. Store it in a variable
-and reuse it for every subsequent call — never ask again unless it fails with 401.
+Add to the project `.env` file (gitignored):
+```
+ORBIT_API_KEY=dgm_your_key_here
+```
+
+The CLI script reads the key from `.env` automatically. No env var needed.
 
 ---
 
@@ -268,16 +272,35 @@ On `500`, suggest retrying once; if it persists, report the error message verbat
 
 ---
 
-## Direct REST alternative (for scripts / curl)
+## Calling the API (Claude Code agent)
 
-| Operation | Method + URL |
-|---|---|
-| List tasks | `GET /api/project-tasks?limit=50&offset=0` |
-| Today's tasks | `GET /api/project-tasks?date=2026-06-07` |
-| Date range | `GET /api/project-tasks?date_from=2026-06-01&date_to=2026-06-07` |
-| Incomplete only | `GET /api/project-tasks?completed=false` |
-| Filter by tag | `GET /api/project-tasks?tags=work,urgent&match=any` |
-| Create | `POST /api/project-tasks` + JSON body |
-| Update | `PUT /api/project-tasks` + JSON body with `task_id` |
-| Move/reschedule | `PATCH /api/project-tasks` + JSON body with `task_id` |
-| Delete | `DELETE /api/project-tasks?task_id=uuid` |
+Use the global script at `~/.claude/scripts/orbit.js`.
+Key is read automatically from `ORBIT_API_KEY` in the project's `.env`.
+
+```bash
+# List — today's tasks
+node ~/.claude/scripts/orbit.js list --date 2026-06-13
+
+# List — open workflow tasks
+node ~/.claude/scripts/orbit.js list --tags wf:coder-task --completed false --limit 50
+
+# Create
+node ~/.claude/scripts/orbit.js create --title "Fix mobile bug" --tags "wf:bug,wf:coder-task"
+
+# Update
+node ~/.claude/scripts/orbit.js update UUID --completed true --tags "wf:coder-task,wf:done"
+
+# Complete
+node ~/.claude/scripts/orbit.js complete UUID
+
+# Move / reschedule
+node ~/.claude/scripts/orbit.js move UUID --start 2026-06-14T09:00:00Z --end 2026-06-14T10:00:00Z
+
+# Delete (confirm with user first)
+node ~/.claude/scripts/orbit.js delete UUID
+
+# Get full JSON for one task
+node ~/.claude/scripts/orbit.js get UUID
+```
+
+> Run `node ~/.claude/scripts/orbit.js` with no args for full usage reference.

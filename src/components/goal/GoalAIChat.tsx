@@ -102,7 +102,7 @@ export const GoalAIChat: React.FC<GoalAIChatProps> = ({
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className={`bg-card border rounded-lg shadow-lg flex flex-col ${isMobile ? 'w-full h-full' : 'w-full max-w-4xl h-[90vh] max-h-screen'}`}>
             <div className="relative">
-              <ChatHeader onClose={onClose} stage={chatStage} />
+              <ChatHeader onClose={onClose} onClearHistory={handleClearChat} stage={chatStage} />
               
             </div>
             {messages.length > 1 && (

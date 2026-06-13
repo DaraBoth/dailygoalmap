@@ -6,15 +6,17 @@ Use this skill whenever an agent (coder or code-reviewer) needs to create, read,
 
 ## Setup
 
-**Environment variable:** `ORBIT_API_KEY`
-Set this once in your shell session:
-```powershell
-$env:ORBIT_API_KEY = "dgm_your_key_here"
+Add to the project `.env` file (gitignored, never committed):
+```
+ORBIT_API_KEY=dgm_your_key_here
 ```
 
 Generate the key inside the app: **Goal → Settings → API section → Generate Project Key**.
 
 Recommendation: create a dedicated goal named "Dev Workflow" and generate its API key for workflow tasks — keeps them separate from personal tasks.
+
+The CLI script (`~/.claude/scripts/orbit.js`) reads `ORBIT_API_KEY` from `.env` automatically.
+Fallback: set `$env:ORBIT_API_KEY = "dgm_..."` in the session if no `.env` is present.
 
 **Base URL:**
 ```
@@ -68,18 +70,16 @@ All workflow tasks use a `wf:` tag prefix so they can be filtered separately fro
 
 ### 1. List workflow tasks
 
-```powershell
-$body = '{"tool":"tasks.list","input":{"tags":["wf:coder-task"],"completed":false,"limit":50}}'
-$r = Invoke-RestMethod -Uri "https://dailygoalmap.vercel.app/api/mcp" -Method POST `
-  -Headers @{"Content-Type"="application/json";"X-Project-Api-Key"=$env:ORBIT_API_KEY} `
-  -Body $body
-$r.result.tasks | ForEach-Object { Write-Output "$($_.id) | $($_.title) | done=$($_.completed)" }
-```
+```bash
+# Open coder tasks
+node ~/.claude/scripts/orbit.js list --tags wf:coder-task --completed false --limit 50
 
-Filter examples:
-- Open coder tasks: `"tags":["wf:coder-task"],"completed":false`
-- Blocking reviews: `"tags":["wf:blocking"],"completed":false`
-- All workflow tasks: `"tags":["wf:qa"],"match":"any"` + add other wf: tags
+# Blocking reviews
+node ~/.claude/scripts/orbit.js list --tags wf:blocking --completed false
+
+# All workflow tasks (multiple tags — any match)
+node ~/.claude/scripts/orbit.js list --tags wf:coder-task,wf:review,wf:bug --match any --completed false
+```
 
 ---
 
@@ -152,31 +152,19 @@ Write-Output "Change request: $($r.result.task.id)"
 
 ### 4. Mark coder task as done
 
-```powershell
-$taskId = "uuid-here"
-$currentDesc = "... existing description ..."
-$appendNote = "`n`n**Implementation:** Fixed by wrapping result in normalizeTaskList() at line 92."
-$newDesc = $currentDesc + $appendNote
-$bodyObj = @{tool="tasks.update";input=@{task_id=$taskId;completed=$true;tags=@("wf:coder-task","wf:done");description=$newDesc}}
-$body = $bodyObj | ConvertTo-Json -Depth 5
-$r = Invoke-RestMethod -Uri "https://dailygoalmap.vercel.app/api/mcp" -Method POST `
-  -Headers @{"Content-Type"="application/json";"X-Project-Api-Key"=$env:ORBIT_API_KEY} `
-  -Body $body
-Write-Output "Marked done: $($r.result.task.id)"
+```bash
+# Update tags to wf:done and mark completed (append impl note via --desc if needed)
+node ~/.claude/scripts/orbit.js update UUID --completed true --tags wf:coder-task,wf:done
 ```
+
+For description append: use `get` first, then `update` with the full new description.
 
 ---
 
 ### 5. Reviewer approves (after fix verified)
 
-```powershell
-$taskId = "uuid-here"
-$bodyObj = @{tool="tasks.update";input=@{task_id=$taskId;completed=$true;tags=@("wf:review","wf:blocking","wf:change-request","wf:done","wf:approved")}}
-$body = $bodyObj | ConvertTo-Json -Depth 5
-$r = Invoke-RestMethod -Uri "https://dailygoalmap.vercel.app/api/mcp" -Method POST `
-  -Headers @{"Content-Type"="application/json";"X-Project-Api-Key"=$env:ORBIT_API_KEY} `
-  -Body $body
-Write-Output "Approved: $($r.result.task.id)"
+```bash
+node ~/.claude/scripts/orbit.js update UUID --completed true --tags wf:review,wf:blocking,wf:change-request,wf:done,wf:approved
 ```
 
 ---
@@ -208,19 +196,13 @@ Write-Output "Handoff record: $($r.result.task.id)"
 
 ---
 
-### 7. Read a specific task by listing and filtering
+### 7. Read a specific task by ID
 
-ORBIT has no single-task-by-ID endpoint. To retrieve a task by ID:
-
-```powershell
-# List recent open workflow tasks and find by ID
-$body = '{"tool":"tasks.list","input":{"limit":100,"completed":false}}'
-$r = Invoke-RestMethod -Uri "https://dailygoalmap.vercel.app/api/mcp" -Method POST `
-  -Headers @{"Content-Type"="application/json";"X-Project-Api-Key"=$env:ORBIT_API_KEY} `
-  -Body $body
-$task = $r.result.tasks | Where-Object { $_.id -eq "uuid-here" }
-$task.description
+```bash
+node ~/.claude/scripts/orbit.js get UUID
 ```
+
+Returns full task JSON. Internally calls `tasks.list` and filters by ID (no single-task endpoint in ORBIT).
 
 ---
 
@@ -281,11 +263,11 @@ $task.description
 
 ---
 
-## Required Environment Variable
+## Required Key
 
-| Variable | Value | Where to get |
-|----------|-------|--------------|
-| `ORBIT_API_KEY` | `dgm_...` | DailyGoalMap app → Goal → Settings → API → Generate Key |
+| Where | How |
+|-------|-----|
+| Project `.env` (preferred) | `ORBIT_API_KEY=dgm_your_key_here` |
+| Session fallback | `$env:ORBIT_API_KEY = "dgm_your_key_here"` |
 
-Set per session: `$env:ORBIT_API_KEY = "dgm_your_key"`
-Or add to shell profile for persistence.
+Generate at: DailyGoalMap app → Goal → Settings → API → Generate Project Key

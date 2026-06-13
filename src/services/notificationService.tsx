@@ -1,5 +1,5 @@
 
-import { supabase, supabaseAdmin } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { constructNotificationUrl } from "@/utils/urlUtils";
 import { toast } from "sonner";
 import React from "react";
@@ -60,12 +60,7 @@ export async function sendUnifiedNotification(options: UnifiedNotificationOption
       .eq('id', senderId)
       .single();
 
-    // If no display name, fetch email from auth as fallback
-    let senderName = senderProfile?.display_name;
-    if (!senderName) {
-      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(senderId);
-      senderName = userData?.user?.email || 'Someone';
-    }
+    const senderName = senderProfile?.display_name || 'Someone';
     const senderAvatar = senderProfile?.avatar_url;
 
     // 1. Show toast notification (local feedback) - BUT NOT to the sender
@@ -255,12 +250,7 @@ export async function notifyGoalInvitation(
     .eq('id', senderId)
     .single();
 
-  // If no display name, fetch email from auth as fallback
-  let senderName = senderProfile?.display_name;
-  if (!senderName) {
-    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(senderId);
-    senderName = userData?.user?.email || 'Someone';
-  }
+  const senderName = senderProfile?.display_name || 'Someone';
 
   // Push notification
   await sendNotificationToUser(
@@ -342,12 +332,7 @@ export async function notifyMemberRemoved(
     .eq('id', removerId)
     .single();
 
-  // If no display name, fetch email from auth as fallback
-  let removerName = removerProfile?.display_name;
-  if (!removerName) {
-    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(removerId);
-    removerName = userData?.user?.email || 'Someone';
-  }
+  const removerName = removerProfile?.display_name || 'Someone';
 
   // Send to the removed user only
   await sendNotificationToUser(
@@ -378,66 +363,73 @@ export async function sendNotificationToUser(
   data?: Record<string, unknown>
 ): Promise<boolean> {
   try {
-    // Get user's email from the database
-    const { data: userInfo, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+    // Resolve user email via Edge Function (service role key stays server-side)
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
+    if (!accessToken) return false;
 
-    if (userInfo) {
-      // Send notification using tinynotie-api
-      // Compute a clickable URL to include in the push payload.
-      // Prefer an explicit url provided in `data.url`. If it's relative, convert to absolute.
-      let fullUrl: string | undefined;
-      try {
-        // Get the relative path from data.url
-        const relativePath = (data?.url as string | undefined);
-        if (relativePath) {
-          fullUrl = constructNotificationUrl(relativePath);
-        }
-      } catch (e) {
-        // Fallback if something goes wrong
-        fullUrl = undefined;
-      }
-
-      const response = await fetch('https://tinynotie-api.vercel.app/openai/push', {
+    let userEmail: string | null = null;
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const res = await fetch(`${supabaseUrl}/functions/v1/get-user-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          identifier: userInfo.user.email, // Use email as identifier
-          payload: {
-            // Include sender name in title so user knows who did it from device notification
-            title: data?.userProfile
-              ? `${data.userProfile['display_name']}: ${title || 'Orbit Notification'}`
-              : title || 'Orbit Notification',
-            body: body || 'You have a new update!',
-            data: {
-              // Provide an absolute, clickable URL when possible. Also include original data for context.
-              url: fullUrl ?? data?.url,
-              // Use the task_date if present, else fallback to now
-              timestamp: (data && data.task_date) ? `${data.task_date}T00:00:00` : new Date().toISOString(),
-              senderName: data?.userProfile ? (data.userProfile['display_name'] as string || userInfo.user.email || 'Unknown') : 'Unknown',
-              ...data,
-            },
-            icon: data?.userProfile ? data.userProfile['avatar_url'] : undefined
-          },
-          name: data?.userProfile ? data.userProfile['display_name'] : 'Orbit',
-          appId: 2
-        })
+        body: JSON.stringify({ userId }),
       });
-
-      if (!response.ok) {
-        console.error("Error calling tinynotie-api:", response.statusText);
-        return false;
+      if (res.ok) {
+        const emailData = await res.json();
+        userEmail = emailData.email ?? null;
       }
-
-      const result = await response.json();
-      console.log(`Successfully sent notification to user ${userId}:`, result);
-    } else {
-      console.log("user is id", userId, " is ", userInfo);
-
-      return false
+    } catch {
+      // fall through — push skipped if email unavailable
     }
 
+    if (!userEmail) {
+      console.log(`No email resolved for user ${userId} — skipping push`);
+      return false;
+    }
+
+    let fullUrl: string | undefined;
+    try {
+      const relativePath = (data?.url as string | undefined);
+      if (relativePath) fullUrl = constructNotificationUrl(relativePath);
+    } catch {
+      fullUrl = undefined;
+    }
+
+    const response = await fetch('https://tinynotie-api.vercel.app/openai/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        identifier: userEmail,
+        payload: {
+          title: data?.userProfile
+            ? `${data.userProfile['display_name']}: ${title || 'Orbit Notification'}`
+            : title || 'Orbit Notification',
+          body: body || 'You have a new update!',
+          data: {
+            url: fullUrl ?? data?.url,
+            timestamp: (data && data.task_date) ? `${data.task_date}T00:00:00` : new Date().toISOString(),
+            senderName: data?.userProfile ? (data.userProfile['display_name'] as string || userEmail || 'Unknown') : 'Unknown',
+            ...data,
+          },
+          icon: data?.userProfile ? data.userProfile['avatar_url'] : undefined
+        },
+        name: data?.userProfile ? data.userProfile['display_name'] : 'Orbit',
+        appId: 2
+      })
+    });
+
+    if (!response.ok) {
+      console.error("Error calling tinynotie-api:", response.statusText);
+      return false;
+    }
+
+    const result = await response.json();
+    console.log(`Successfully sent notification to user ${userId}:`, result);
     return true;
   } catch (error) {
     console.error("Error sending notification to user:", error);

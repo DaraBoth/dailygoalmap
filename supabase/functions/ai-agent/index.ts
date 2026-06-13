@@ -4,12 +4,13 @@
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 import { AgentContext, Message, ModelType, ToolParams } from './types.ts';
 import { getModelInfo, getKeyTypeFromProvider } from './models.ts';
 import { executeTool } from './tools.ts';
+import { checkAiRateLimit } from '../_shared/rateLimit.ts';
 
 type StreamPayload = Record<string, unknown>;
 
@@ -266,11 +267,21 @@ PARAMS: {"param": "value"}
 - Keep answers high-level and friendly. Do not expose tool names or raw IDs in the final response.`;
 
 serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get('Origin'));
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Authorization header required' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { messages, userId, goalId, sessionId, stream, modelId, selectedKeyIds } = await req.json() as {
       messages: unknown;
       userId?: string;
@@ -280,7 +291,7 @@ serve(async (req: Request) => {
       modelId?: string;
       selectedKeyIds?: string[];
     };
-    
+
     if (!userId) {
       throw new Error("userId is required");
     }
@@ -289,6 +300,31 @@ serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Verify JWT and ensure caller can only act as themselves
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user: callerUser }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !callerUser) {
+      return new Response(JSON.stringify({ error: 'Invalid authentication' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (callerUser.id !== userId) {
+      return new Response(JSON.stringify({ error: 'Forbidden: userId mismatch' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Per-user rate limiting
+    const { allowed, retryAfterSeconds } = await checkAiRateLimit(supabase, userId);
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded. Try again later.' }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(retryAfterSeconds) },
+      });
+    }
 
     // Normalise incoming messages
     const aiMessages: Message[] = Array.isArray(messages)

@@ -7,7 +7,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, UserCircle, Camera, Bot, User2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { put } from "@vercel/blob";
 import { ImageCropDialog } from "./ImageCropDialog";
 import { cn } from "@/lib/utils";
 
@@ -142,12 +141,25 @@ const ProfileForm = ({ onSave, onCancel }: ProfileFormProps) => {
     setCropDialogOpen(false);
 
     try {
-      const filename = `goalmap/${Date.now()}-profile.jpg`;
-      const { url } = await put(filename, croppedImage, {
-        access: 'public',
-        token: import.meta.env.VITE_VERCEL_BLOB,
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const form = new FormData();
+      form.append('file', croppedImage, 'profile.jpg');
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const res = await fetch(`${supabaseUrl}/functions/v1/upload-avatar`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+        body: form,
       });
 
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || 'Upload failed');
+      }
+
+      const { url } = await res.json();
       setAvatarUrl(url);
 
       toast({

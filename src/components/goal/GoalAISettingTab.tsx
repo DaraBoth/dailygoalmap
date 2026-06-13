@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Bold, Brain, Calendar, Code2, Eye, ExternalLink, FileCode2,
-  FileText, Heading1, Italic, KeyRound, Link2, List, ListChecks,
-  Loader2, Pencil, Save, ShieldCheck, Sparkles, Tag, Trash2, Type, Bot,
+  Bold, Brain, Calendar, Check, Code2, Copy, Download, Eye, ExternalLink,
+  FileCode2, FileText, Heading1, Italic, KeyRound, Link2, List, ListChecks,
+  Loader2, Pencil, Save, ShieldCheck, Sparkles, Tag, Terminal, Trash2, Type, Bot,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
@@ -160,6 +160,147 @@ interface ProjectApiKeyMeta {
   created_at: string;
   last_used_at?: string | null;
 }
+
+// ─── Claude Code setup helpers ───────────────────────────────────────────────
+
+const CopySnippet: React.FC<{ code: string; className?: string }> = ({ code, className }) => {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className={cn('flex items-center rounded-xl border border-border/50 bg-background/80 overflow-hidden', className)}>
+      <code className="flex-1 px-3 py-2 text-xs font-mono overflow-x-auto whitespace-nowrap text-foreground/80 leading-relaxed">{code}</code>
+      <button
+        type="button"
+        onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+        className="shrink-0 flex items-center justify-center px-2.5 py-2 border-l border-border/50 hover:bg-muted/50 transition-colors"
+        title="Copy"
+      >
+        {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
+      </button>
+    </div>
+  );
+};
+
+const MAC_INSTALL = 'mkdir -p ~/.claude/scripts && curl -fsSL https://dailygoalmap.vercel.app/orbit.js -o ~/.claude/scripts/orbit.js';
+const WIN_INSTALL = 'New-Item -Force -ItemType Directory "$HOME\\.claude\\scripts" | Out-Null; Invoke-WebRequest https://dailygoalmap.vercel.app/orbit.js -OutFile "$HOME\\.claude\\scripts\\orbit.js"';
+
+const ClaudeCodeSetupCard: React.FC<{
+  hasKey: boolean;
+  keyCount: number;
+  generatedKey: string | null;
+}> = ({ hasKey, keyCount, generatedKey }) => {
+  const [os, setOs] = useState<'mac' | 'win'>('mac');
+  const envLine = generatedKey ? `ORBIT_API_KEY=${generatedKey}` : `ORBIT_API_KEY=dgm_your_key_here`;
+
+  const stepBase = 'rounded-xl border p-3.5 space-y-2.5';
+  const stepDone = 'border-emerald-500/25 bg-emerald-500/5';
+  const stepPending = 'border-border/50 bg-background/40';
+
+  return (
+    <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-b from-violet-500/5 to-transparent p-5 space-y-4">
+      {/* Header */}
+      <div className="flex items-start gap-3">
+        <div className="h-9 w-9 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
+          <Terminal className="h-[18px] w-[18px] text-violet-500" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold">Claude Code Setup</p>
+            <Badge variant="secondary" className="text-[10px] px-2 py-0">4 steps</Badge>
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Connect Claude Code CLI to this goal — agents can then read and write tasks automatically from your terminal.
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {/* Step 1 */}
+        <div className={cn(stepBase, hasKey ? stepDone : stepPending)}>
+          <div className="flex items-center gap-2.5">
+            <span className={cn('h-5 w-5 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0',
+              hasKey ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground')}>
+              {hasKey ? <Check className="h-3 w-3" /> : '1'}
+            </span>
+            <p className="text-sm font-medium">Generate a Project API Key</p>
+          </div>
+          <p className="text-[11px] text-muted-foreground ml-8">
+            {hasKey
+              ? <span className="text-emerald-600 dark:text-emerald-400">✓ {keyCount} active key{keyCount > 1 ? 's' : ''} — ready to use.</span>
+              : 'Use the Project API Keys card above, then return here.'}
+          </p>
+        </div>
+
+        {/* Step 2 */}
+        <div className={cn(stepBase, generatedKey ? stepDone : stepPending)}>
+          <div className="flex items-center gap-2.5">
+            <span className={cn('h-5 w-5 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0',
+              generatedKey ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground')}>
+              {generatedKey ? <Check className="h-3 w-3" /> : '2'}
+            </span>
+            <p className="text-sm font-medium">Add your key to <code className="text-xs bg-muted/60 px-1.5 py-0.5 rounded">.env</code></p>
+          </div>
+          <div className="ml-8 space-y-1.5">
+            <CopySnippet code={envLine} />
+            <p className="text-[10px] text-muted-foreground">
+              The CLI reads this file automatically — no shell exports needed.
+              {!generatedKey && ' Generate a key above to see your actual value here.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Step 3 */}
+        <div className={cn(stepBase, stepPending)}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className="h-5 w-5 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 bg-muted text-muted-foreground">3</span>
+              <p className="text-sm font-medium">Install the ORBIT CLI helper <span className="text-[11px] text-muted-foreground font-normal">(one-time, global)</span></p>
+            </div>
+            <a
+              href="/orbit.js"
+              download="orbit.js"
+              className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-border/60 bg-background/80 px-2.5 py-1 text-[11px] font-medium hover:bg-accent transition-colors"
+            >
+              <Download className="h-3 w-3" />Download
+            </a>
+          </div>
+          <div className="ml-8 space-y-2">
+            <div className="flex gap-1">
+              {(['mac', 'win'] as const).map(p => (
+                <button key={p} type="button"
+                  onClick={() => setOs(p)}
+                  className={cn('px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors border',
+                    os === p ? 'bg-violet-500/10 border-violet-500/30 text-violet-500' : 'border-transparent text-muted-foreground hover:bg-muted/40')}
+                >
+                  {p === 'mac' ? 'macOS / Linux' : 'Windows'}
+                </button>
+              ))}
+            </div>
+            <CopySnippet code={os === 'mac' ? MAC_INSTALL : WIN_INSTALL} />
+            <p className="text-[10px] text-muted-foreground">
+              Or download above and move to <code className="bg-muted/60 px-1 rounded">~/.claude/scripts/orbit.js</code>
+            </p>
+          </div>
+        </div>
+
+        {/* Step 4 */}
+        <div className={cn(stepBase, stepPending)}>
+          <div className="flex items-center gap-2.5">
+            <span className="h-5 w-5 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 bg-muted text-muted-foreground">4</span>
+            <p className="text-sm font-medium">Test the connection</p>
+          </div>
+          <div className="ml-8 space-y-1.5">
+            <CopySnippet code="node ~/.claude/scripts/orbit.js list" />
+            <p className="text-[10px] text-muted-foreground">
+              Run this from your project root. It lists all tasks in this goal — a successful response means you're connected.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Goal types ───────────────────────────────────────────────────────────────
 
 const goalTypes: { value: GoalType; label: string }[] = [
   { value: 'general',   label: 'General Goal' },
@@ -850,6 +991,12 @@ PATCH  /api/project-tasks              move task`}
                       </p>
                     </div>
                   </div>
+
+                  <ClaudeCodeSetupCard
+                    hasKey={projectApiKeys.length > 0}
+                    keyCount={projectApiKeys.length}
+                    generatedKey={generatedProjectApiKey}
+                  />
                 </div>
               )}
 

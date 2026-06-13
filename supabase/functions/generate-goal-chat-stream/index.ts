@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-// CORS headers for all responses
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkAiRateLimit } from '../_shared/rateLimit.ts';
 
 declare const Deno: {
   env: {
@@ -27,9 +23,37 @@ interface RequestData {
 
 // Main serve handler
 serve(async (req: Request) => {
+  const corsHeaders = {
+    ...getCorsHeaders(req.headers.get('Origin')),
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return handleCorsPreflightRequest();
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  // Rate limiting: verify JWT and check per-user limit (fail open if table missing)
+  const authHeader = req.headers.get('Authorization');
+  if (authHeader) {
+    try {
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
+      const { data: { user } } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (user) {
+        const { allowed, retryAfterSeconds } = await checkAiRateLimit(supabaseAdmin, user.id);
+        if (!allowed) {
+          return new Response(JSON.stringify({ error: 'Rate limit exceeded. Try again later.' }), {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(retryAfterSeconds) },
+          });
+        }
+      }
+    } catch {
+      // Fail open — don't block if rate-limit check itself fails
+    }
   }
 
   try {
@@ -54,14 +78,6 @@ serve(async (req: Request) => {
     return createErrorResponse(`Processing error: ${errorMessage}`);
   }
 });
-
-// Handle CORS preflight requests
-function handleCorsPreflightRequest(): Response {
-  return new Response(null, { 
-    status: 204, 
-    headers: corsHeaders 
-  });
-}
 
 // Parse request data
 async function parseRequestData(req: Request): Promise<RequestData> {

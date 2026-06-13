@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 import { createClient } from "./utils/dbClient.ts";
 import { generateTasksForGoal } from "./utils/taskGenerator.ts";
 import { getCurrentApiKey, rotateApiKey, hasMoreKeysToTry, resetAttemptedKeys } from "./utils/apiKeyManager.ts";
@@ -29,6 +29,8 @@ interface GeneratedTask {
 }
 
 serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get('Origin'));
+
   // Handle CORS preflight request
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });

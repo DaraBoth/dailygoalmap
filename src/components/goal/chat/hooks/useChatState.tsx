@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Goal } from "@/types/goal";
-import { Message, ChatStage, STORAGE_KEYS, GoalData } from "../types";
+import { Message, ChatStage, STORAGE_KEYS, GoalData, CHAT_MAX_MESSAGES, CHAT_HISTORY_TTL_MS } from "../types";
 
 interface UseChatStateProps {
   onGoalDataGenerated: (goalData: Goal) => void;
@@ -21,13 +21,19 @@ export const useChatState = ({ onGoalDataGenerated, onClose }: UseChatStateProps
   const [goalCreationTimeout, setGoalCreationTimeout] = useState<NodeJS.Timeout | null>(null);
   const [retryDelay, setRetryDelay] = useState(0);
 
-  // Load chat state from localStorage on mount
+  // Load chat state from localStorage on mount; discard if older than 24h
   useEffect(() => {
+    const savedAt = localStorage.getItem(STORAGE_KEYS.SAVED_AT);
+    if (savedAt && Date.now() - Number(savedAt) > CHAT_HISTORY_TTL_MS) {
+      Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
+      return;
+    }
+
     const storedMessages = localStorage.getItem(STORAGE_KEYS.MESSAGES);
     const storedChatStage = localStorage.getItem(STORAGE_KEYS.CHAT_STAGE);
     const storedGoalData = localStorage.getItem(STORAGE_KEYS.GOAL_DATA);
     const storedLastAssistantMessage = localStorage.getItem(STORAGE_KEYS.LAST_ASSISTANT_MESSAGE);
-    
+
     if (storedMessages) {
       try {
         setMessages(JSON.parse(storedMessages));
@@ -35,11 +41,11 @@ export const useChatState = ({ onGoalDataGenerated, onClose }: UseChatStateProps
         console.error("Error parsing stored messages:", error);
       }
     }
-    
+
     if (storedChatStage) {
       setChatStage(storedChatStage as ChatStage);
     }
-    
+
     if (storedGoalData) {
       try {
         setGoalData(JSON.parse(storedGoalData));
@@ -47,44 +53,40 @@ export const useChatState = ({ onGoalDataGenerated, onClose }: UseChatStateProps
         console.error("Error parsing stored goal data:", error);
       }
     }
-    
+
     if (storedLastAssistantMessage) {
       setLastAssistantMessage(storedLastAssistantMessage);
     }
   }, []);
 
-  // Persist chat state to localStorage
+  // Persist chat state to localStorage (capped at CHAT_MAX_MESSAGES, with TTL timestamp)
   const persistChatState = useCallback((
     currentMessages: Message[],
-    currentChatStage: ChatStage, 
+    currentChatStage: ChatStage,
     conversationId: string,
     isPendingConfirmation: boolean,
     currentGoalData: GoalData | null,
     currentLastAssistantMessage: string,
     interactionCount: number
   ) => {
-    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(currentMessages));
+    const trimmed = currentMessages.slice(-CHAT_MAX_MESSAGES);
+    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(trimmed));
     localStorage.setItem(STORAGE_KEYS.CHAT_STAGE, currentChatStage);
     localStorage.setItem(STORAGE_KEYS.CONVERSATION_ID, conversationId);
     localStorage.setItem(STORAGE_KEYS.IS_PENDING_CONFIRMATION, String(isPendingConfirmation));
-    
+    localStorage.setItem(STORAGE_KEYS.SAVED_AT, String(Date.now()));
+
     if (currentGoalData) {
       localStorage.setItem(STORAGE_KEYS.GOAL_DATA, JSON.stringify(currentGoalData));
     }
-    
+
     localStorage.setItem(STORAGE_KEYS.LAST_ASSISTANT_MESSAGE, currentLastAssistantMessage);
     localStorage.setItem(STORAGE_KEYS.INTERACTION_COUNT, String(interactionCount));
   }, []);
 
   // Clear chat state from localStorage
   const clearChatState = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEYS.MESSAGES);
-    localStorage.removeItem(STORAGE_KEYS.CHAT_STAGE);
-    localStorage.removeItem(STORAGE_KEYS.CONVERSATION_ID);
-    localStorage.removeItem(STORAGE_KEYS.IS_PENDING_CONFIRMATION);
-    localStorage.removeItem(STORAGE_KEYS.GOAL_DATA);
-    localStorage.removeItem(STORAGE_KEYS.LAST_ASSISTANT_MESSAGE);
-    localStorage.removeItem(STORAGE_KEYS.INTERACTION_COUNT);
+    Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
 
     // Reset state variables
     setMessages([]);

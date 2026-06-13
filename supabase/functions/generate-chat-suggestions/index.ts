@@ -1,10 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-// Set up CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 // In-memory cache for suggestions to reduce API calls
 const suggestionCache: Record<string, {suggestions: string[], timestamp: number}> = {};
@@ -17,6 +12,8 @@ declare const Deno: {
 };
 
 serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get('Origin'));
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });

@@ -37,7 +37,17 @@
       "Bash(git diff *)",
       "Bash(git log *)",
       "Bash(git status)",
-      "Bash(npx tsc --noEmit)"
+      "Bash(npx tsc --noEmit)",
+      "Bash(git -C \"D:\\\\Frontend project\\\\dailygoalmap\" ls-files .claude/)",
+      "Read(//c/Users/USer/.claude/scripts/**)",
+      "Bash(node ~/.claude/scripts/orbit.js get d81f0d61-a73a-480e-817a-20c73b2d519a)",
+      "Bash(node ~/.claude/scripts/orbit.js get 127c587c-225c-4d8a-a897-3a8525cef432)",
+      "Bash(node ~/.claude/scripts/orbit.js get 486931ab-3cf1-4120-b11e-564cb473ba89)",
+      "Bash(node ~/.claude/scripts/orbit.js get 3e1d6d96-5634-4bc0-834c-7e63e7b4febb)",
+      "Bash(node ~/.claude/scripts/orbit.js get e8b3bf33-a973-4ccb-9f75-d80d4e8d53d9)",
+      "Bash(node ~/.claude/scripts/orbit.js get 3dcf60e5-9b01-4aaf-aa5f-a9ee9f97abff)",
+      "Bash(node ~/.claude/scripts/orbit.js get 84a87e2a-0828-4b47-9634-b16e62e57282)",
+      "Bash(node ~/.claude/scripts/orbit.js list --completed false --limit 50)"
     ]
   }
 }

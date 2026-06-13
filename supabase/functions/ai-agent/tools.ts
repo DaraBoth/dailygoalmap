@@ -917,6 +917,51 @@ async function sendNotification(params: ToolParams, context: AgentContext, supab
   }
 }
 
+// Reject URLs that point to private/metadata network ranges to prevent SSRF
+function validateUrlForCrawl(rawUrl: string): { valid: boolean; error?: string } {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return { valid: false, error: `Invalid URL: ${rawUrl}` };
+  }
+
+  if (parsed.protocol !== 'https:') {
+    return { valid: false, error: 'Only HTTPS URLs are allowed' };
+  }
+
+  const host = parsed.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+
+  // Block explicit loopback / unroutable hostnames
+  if (host === 'localhost' || host === '0.0.0.0' || host === '::1') {
+    return { valid: false, error: 'URL not allowed' };
+  }
+
+  // Block IPv6 link-local and unique-local
+  if (host.startsWith('fe80:') || host.startsWith('fc') || host.startsWith('fd')) {
+    return { valid: false, error: 'URL not allowed' };
+  }
+
+  // Block IPv4 private + metadata ranges
+  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4) {
+    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
+    if (
+      a === 127 ||                           // loopback
+      a === 10 ||                            // RFC 1918
+      (a === 172 && b >= 16 && b <= 31) ||  // RFC 1918
+      (a === 192 && b === 168) ||            // RFC 1918
+      (a === 169 && b === 254) ||            // link-local / AWS+GCP metadata
+      a === 0 ||                             // reserved
+      (a === 100 && b >= 64 && b <= 127)    // CGNAT shared address space
+    ) {
+      return { valid: false, error: 'URL not allowed' };
+    }
+  }
+
+  return { valid: true };
+}
+
 /**
  * Crawl a webpage and extract content
  * Uses a simple fetch-based approach with HTML parsing
@@ -924,27 +969,19 @@ async function sendNotification(params: ToolParams, context: AgentContext, supab
 async function crawlWebpage(params: ToolParams, context: AgentContext, supabase: any) {
   const url = params.url;
   const formats = params.formats || ['markdown'];
-  
+
   if (!url) {
-    return {
-      success: false,
-      error: 'URL is required for crawling'
-    };
+    return { success: false, error: 'URL is required for crawling' };
   }
-  
-  // Validate URL format
+
   let formattedUrl = url.trim();
   if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
     formattedUrl = `https://${formattedUrl}`;
   }
-  
-  try {
-    new URL(formattedUrl);
-  } catch (e) {
-    return {
-      success: false,
-      error: `Invalid URL format: ${url}`
-    };
+
+  const { valid, error: urlError } = validateUrlForCrawl(formattedUrl);
+  if (!valid) {
+    return { success: false, error: urlError };
   }
   
   console.log('🌐 [crawlWebpage] Fetching:', formattedUrl);
@@ -1004,12 +1041,16 @@ async function crawlWebpage(params: ToolParams, context: AgentContext, supabase:
         'Accept-Language': 'en-US,en;q=0.5',
       },
     });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    
-    const html = await response.text();
+
+    // Cap response at 2 MB to prevent ingesting huge pages
+    const MAX_BYTES = 2 * 1024 * 1024;
+    const rawBuffer = await response.arrayBuffer();
+    const truncated = rawBuffer.byteLength > MAX_BYTES ? rawBuffer.slice(0, MAX_BYTES) : rawBuffer;
+    const html = new TextDecoder().decode(truncated);
     
     // Extract basic content from HTML
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);

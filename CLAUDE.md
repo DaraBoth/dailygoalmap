@@ -30,7 +30,7 @@ No test suite. Manual testing only (Desktop, Mobile, Offline).
 - **Frontend**: React 19.2.1, TypeScript 5.5, Vite 7.2
 - **Router**: TanStack Router 1.131 (file-based routes in `src/routes/`)
 - **Backend**: Supabase (PostgreSQL, Auth, Realtime, Storage, Edge Functions)
-- **UI**: Radix UI, shadcn/ui, Tailwind CSS 3.4, Framer Motion
+- **UI**: Radix UI, shadcn/ui, Tailwind CSS 3.4, Framer Motion, MUI v9 (`@mui/material`, `@mui/x-date-pickers`)
 - **Rich Text**: TipTap 3 (used in `src/components/editor/MarkdownEditor.tsx` for notes)
 - **State**: TanStack Query 5.56 (QueryClient configured in root, used selectively) + React Context for auth
 - **PWA**: Service Worker, IndexedDB for offline, Push Notifications (Firebase)
@@ -56,6 +56,9 @@ src/routes/
   ai-api.tsx              → AI API settings page
   chat-popup.tsx          → Standalone chat popup
   ios-shortcut.tsx        → iOS Shortcuts integration guide
+  demo.tsx                → Redirects to /demo-dashboard
+  demo-dashboard.tsx      → Unauthenticated demo showcase (lazy-loaded, no auth required)
+  demo-goal.tsx           → Unauthenticated goal demo (lazy-loaded, no auth required)
   about.tsx / privacy.tsx / terms.tsx / security.tsx
   $.tsx                   → 404 catch-all
 ```
@@ -109,6 +112,7 @@ The main feature page, rendered by `goal.$id.tsx`. On mount it calls `fetchAllGo
 - **GoalTasksTable** — tabular task view
 - **GoalNotes / GoalNoteEditor** — rich text notes with visibility control (see Notes below)
 - **GoalAIChat / GoalChatWidget** — AI chat (**lazy-loaded** via `React.lazy` + ErrorBoundary — do not import directly)
+- **GoalAISettingTab** — AI settings sidebar with four sections: AI Harness, Context, Details, API
 - **SmartAnalytics / GoalAnalytics** — progress charts
 - **GoalSwitcher** — dropdown to switch between goals
 - **GoalSidebar** — desktop sidebar with goal info, sharing, themes
@@ -208,10 +212,12 @@ src/
 ├── components/
 │   ├── calendar/         # Calendar helpers, taskDatabase, taskNormalization, types
 │   ├── dashboard/        # GoalList, GoalSorter, EditGoalSlidePanel, TodaysTasks
+│   ├── demo/             # FakeTerminal, FakeAgentTaskTable, AISettingTab — marketing/demo widgets
 │   ├── editor/           # MarkdownEditor (TipTap), TaskEmbedPicker
 │   ├── goal/             # GoalNotes, GoalNoteEditor, GoalTasksTable, GoalSwitcher,
-│   │                     #   GoalAIChat, GoalChatWidget (lazy), GoalSidebar, ThemeSelector
+│   │                     #   GoalAIChat, GoalChatWidget (lazy), GoalSidebar, GoalAISettingTab, ThemeSelector
 │   │   └── chat/         # Chat sub-components and hooks
+│   ├── home/             # Landing page sections (AIHarnessSection, etc.)
 │   ├── notifications/    # NotificationBell, NotificationList
 │   ├── goal-form/        # Multi-step goal creation form steps
 │   ├── auth/             # ProtectedRoute, OAuthButtons
@@ -220,8 +226,9 @@ src/
 │   ├── pwa/              # InstallButton, NotificationSettings, UpdateNotification
 │   ├── theme/            # ThemeProvider, ThemeSwitcher
 │   └── ui/               # shadcn/ui base components
+├── data/                 # Static data (demoData.ts — demo goals/tasks, no Supabase)
 ├── hooks/                # useGoals, useAuth, useIsMobile, useCalendarTasks, etc.
-├── pages/                # Page components (Dashboard, GoalDetail, Profile, etc.)
+├── pages/                # Page components (Dashboard, GoalDetail, DemoDashboard, DemoGoal, Profile, etc.)
 ├── routes/               # TanStack Router route files
 ├── services/             # authService, internalNotifications, aiChatService, notificationService
 ├── pwa/                  # registerSW, offlineDashboardCache, offlineTaskSync, notificationService
@@ -270,29 +277,32 @@ supabase secrets set API_KEY=value
 
 ---
 
-**Last Updated**: 2026-06-11
-**Project Version**: 1.10.101
+**Last Updated**: 2026-06-13
+**Project Version**: 1.10.103
 **Maintainer**: Daraboth
 
 ---
 
 ## Multi-Agent Workflow
 
-This project uses a strict two-agent workflow enforced through ORBIT (the DailyGoalMap task API).
+This project uses a multi-agent workflow enforced through ORBIT (the DailyGoalMap task API).
 
 ### Agents
 
 | Agent | File | Authority |
 |-------|------|-----------|
-| **coder** | `.claude/agents/coder.md` | The ONLY agent that may edit source files |
+| **dev** | `.claude/agents/dev.md` | Primary developer. Deep project knowledge, security/perf rules, orbit.js for all ORBIT ops. The ONLY agent that may edit source files. |
 | **code-reviewer** | `.claude/agents/code-reviewer.md` | Reviews diffs — NEVER edits code |
+| **qa-agent** | `.claude/agents/qa-agent.md` | Tests the app, files ORBIT bug reports — NEVER edits code |
+
+> Legacy: `.claude/agents/dev-agent.md` is the old coder agent. Prefer `dev` for new work.
 
 ### Commands
 
 | Command | Purpose |
 |---------|---------|
 | `/qa-task "..."` | Create an ORBIT task from QA feedback / bug report |
-| `/implement <task-id>` | Coder implements the ORBIT task |
+| `/implement <task-id>` | Dev agent implements the ORBIT task |
 | `/review-before-pr <task-id>` | Reviewer checks the diff before any push |
 | `/sync-agent-task "..."` | Record a decision, blocker, or handoff in ORBIT |
 
@@ -300,7 +310,7 @@ This project uses a strict two-agent workflow enforced through ORBIT (the DailyG
 
 ```
 QA Feedback → /qa-task → ORBIT task (wf:coder-task)
-  → /implement → coder builds → updates ORBIT → wf:done
+  → /implement → dev reads task → builds → closes task (wf:done)
   → /review-before-pr → reviewer checks diff
       → FAIL: creates [BLOCK] change-request → /implement again → re-review
       → PASS: ORBIT task → wf:approved → .\deploy.ps1 "message"
@@ -308,18 +318,20 @@ QA Feedback → /qa-task → ORBIT task (wf:coder-task)
 
 ### Rules
 
-1. **Only `coder` agent modifies source code.** Period.
+1. **Only `dev` agent modifies source code.** Period.
 2. **`code-reviewer` never edits files.** Read-only.
 3. **No push before `code-reviewer` approves.** ORBIT task must have `wf:approved` tag.
 4. **All QA and review feedback stored in ORBIT.** Chat memory is ephemeral.
 5. **ORBIT is shared memory between agents.** Use it, not chat context.
+6. **Use `node ~/.claude/scripts/orbit.js` for all ORBIT calls.** Saves tokens vs raw PowerShell.
 
 ### ORBIT Setup
 
-Set your API key once per session:
-```powershell
-$env:ORBIT_API_KEY = "dgm_your_key_here"
+Add your key to `.env` at the project root (the CLI script reads it automatically):
 ```
+ORBIT_API_KEY=dgm_your_key_here
+```
+Fallback if no `.env`: set `$env:ORBIT_API_KEY = "dgm_your_key_here"` in a PowerShell session.
 
 Generate the key: DailyGoalMap app → Goal → Settings → API → Generate Project Key.
 Recommended: create a dedicated **"Dev Workflow"** goal for these tasks.
@@ -327,8 +339,8 @@ Recommended: create a dedicated **"Dev Workflow"** goal for these tasks.
 ### Reference Docs
 
 - `.claude/docs/workflow.md` — Full workflow diagram and tag lifecycle
-- `.claude/docs/project-context.md` — Token-efficient project summary (read this, not the whole repo)
-- `.claude/docs/orbit-api-notes.md` — Quick API reference for agents
-- `.claude/skills/orbit-task-manager.md` — Full ORBIT skill with examples
-- `.claude/agents/coder.md` — Coder rules and conventions
+- `.claude/docs/project-context.md` — Token-efficient project summary (read this first, not the whole repo)
+- `.claude/docs/orbit-api-notes.md` — Quick API reference (orbit.js CLI + fallback raw API)
+- `.claude/agents/dev.md` — Dev agent rules, patterns, security/perf checklist
 - `.claude/agents/code-reviewer.md` — Reviewer checklist and decision matrix
+- `.claude/agents/qa-agent.md` — QA checklist and bug report format

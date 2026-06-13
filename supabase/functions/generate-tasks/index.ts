@@ -4,7 +4,9 @@ import { buildPrompt } from "./utils/promptBuilder.ts";
 import { extractTasksFromResponse } from "./utils/taskExtractor.ts";
 import { distributeTasks, enhanceTravelTasks } from "./utils/taskDistribution.ts";
 import { createFallbackTasks } from "./utils/fallbackTasks.ts";
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkAiRateLimit } from '../_shared/rateLimit.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { v4 as uuidv4 } from "https://esm.sh/uuid@9.0.1";
 
 declare const Deno: {
@@ -23,14 +25,39 @@ interface Task {
 }
 
 serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get('Origin'));
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Rate limiting (fail open if table missing)
+  const authHeader = req.headers.get('Authorization');
+  if (authHeader) {
+    try {
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
+      const { data: { user } } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (user) {
+        const { allowed, retryAfterSeconds } = await checkAiRateLimit(supabaseAdmin, user.id);
+        if (!allowed) {
+          return new Response(JSON.stringify({ error: 'Rate limit exceeded. Try again later.' }), {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(retryAfterSeconds) },
+          });
+        }
+      }
+    } catch {
+      // Fail open
+    }
+  }
+
   try {
     // Parse request body
-    const { 
+    const {
       goalTitle, 
       goalDescription, 
       financialData, 

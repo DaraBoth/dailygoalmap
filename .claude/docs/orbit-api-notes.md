@@ -1,120 +1,104 @@
 # ORBIT API Notes for Agents
 
-Quick reference for agents calling the ORBIT task API during workflow operations.
+Quick reference for agents calling the ORBIT task API.
+**Always use `node ~/.claude/scripts/orbit.js` — shorter, fewer tokens, reads `.env` automatically.**
 
-## Endpoint
+---
+
+## CLI Reference (preferred)
+
+```bash
+# List open coder tasks
+node ~/.claude/scripts/orbit.js list --tags wf:coder-task --completed false
+
+# List blocking review tasks
+node ~/.claude/scripts/orbit.js list --tags wf:blocking --completed false
+
+# Get full JSON for one task (lookup by ID)
+node ~/.claude/scripts/orbit.js get UUID
+
+# Create a task
+node ~/.claude/scripts/orbit.js create --title "[BUG][P2] Title" --tags "wf:qa,wf:bug,wf:coder-task"
+
+# Update — ALWAYS include all tags you want to keep (update replaces entirely)
+node ~/.claude/scripts/orbit.js update UUID --completed true --tags "wf:coder-task,wf:done"
+
+# Mark complete shorthand
+node ~/.claude/scripts/orbit.js complete UUID
+```
+
+Script location: `~/.claude/scripts/orbit.js` (global, reads `ORBIT_API_KEY` from project `.env`).
+
+---
+
+## Tag Rules
+
+Tags **replace entirely** on `tasks.update` — always carry forward the full set:
+
+```bash
+# WRONG — loses all existing tags
+node ~/.claude/scripts/orbit.js update UUID --tags wf:done
+
+# CORRECT — preserves existing tags and adds wf:done
+node ~/.claude/scripts/orbit.js update UUID --tags "wf:qa,wf:bug,wf:coder-task,wf:done"
+```
+
+---
+
+## Workflow Tag Reference
+
+| Tag | Meaning |
+|-----|---------|
+| `project:dailygoalmap` | Scope this project (include on all tasks) |
+| `wf:qa` | Created from QA feedback |
+| `wf:bug` | Bug report |
+| `wf:change-request` | Code change requested by reviewer |
+| `wf:improvement` | Enhancement request |
+| `wf:review` | Created by code-reviewer |
+| `wf:blocking` | Blocks push/PR |
+| `wf:non-blocking` | Advisory only |
+| `wf:coder-task` | Assigned to dev/coder |
+| `wf:done` | Implementation finished |
+| `wf:approved` | Reviewer approved |
+| `wf:sync` | Decision / handoff record |
+| `wf:handoff` | Dev → Reviewer handoff |
+
+---
+
+## Title Format
+
+```
+[BUG][P1]    — Priority 1 bug
+[BUG][P2]    — Priority 2 bug
+[CR][P2]     — Change request
+[BLOCK]      — Reviewer blocker
+[FEEDBACK]   — Non-blocking review note
+[SYNC][handoff]  — Dev → Reviewer handoff
+[SYNC][decision] — Architecture decision record
+```
+
+---
+
+## Raw MCP Endpoint (fallback if orbit.js unavailable)
 
 ```
 POST https://dailygoalmap.vercel.app/api/mcp
 Content-Type: application/json
-X-Project-Api-Key: <$env:ORBIT_API_KEY>
+X-Project-Api-Key: <ORBIT_API_KEY>
+
+{ "tool": "tasks.list", "input": { "tags": ["wf:coder-task"], "completed": false, "limit": 50 } }
 ```
 
-## Available Tools
+Response: `{ "ok": true, "status": 200, "result": { "tasks": [...] } }`
 
-| Tool | Purpose |
-|------|---------|
-| `tasks.list` | List tasks with filters (date, tags, completed) |
-| `tasks.create` | Create a new task (title required) |
-| `tasks.update` | Update any fields by task_id |
-| `tasks.move` | Reschedule dates/times only |
-| `tasks.complete` | Toggle completed state |
-| `tasks.delete` | Delete permanently (confirm first) |
+---
 
-## No Single-Task Lookup
-
-There is no `tasks.get` endpoint. To read a specific task by ID:
+## Environment
 
 ```powershell
-$body = '{"tool":"tasks.list","input":{"limit":100,"completed":false}}'
-$r = Invoke-RestMethod -Uri "https://dailygoalmap.vercel.app/api/mcp" -Method POST `
-  -Headers @{"Content-Type"="application/json";"X-Project-Api-Key"=$env:ORBIT_API_KEY} `
-  -Body $body
-$task = $r.result.tasks | Where-Object { $_.id -eq "your-uuid" }
-```
-
-If the task is completed, add `"completed":true` to the filter or omit `completed` entirely.
-
-## Tags Replace Entirely on Update
-
-When calling `tasks.update` with a `tags` array, it **replaces** all existing tags.
-Always include all the tags you want to keep:
-
-```powershell
-# WRONG — loses existing tags
-@{tags=@("wf:done")}
-
-# CORRECT — preserves existing tags plus adds new one
-@{tags=@("wf:qa","wf:bug","wf:coder-task","wf:done")}
-```
-
-## JSON Encoding in PowerShell
-
-Use `ConvertTo-Json -Depth 5` for nested objects to avoid truncation:
-
-```powershell
-$bodyObj = @{
-  tool = "tasks.create"
-  input = @{
-    title = "[BUG][P2] Example"
-    description = "Multi`nline`ndescription"
-    tags = @("wf:qa","wf:bug","wf:coder-task")
-  }
-}
-$body = $bodyObj | ConvertTo-Json -Depth 5
-```
-
-For multi-line descriptions in PowerShell strings, use backtick-n `` `n `` for newlines, or use a here-string `@"..."@` and then replace newlines with `\n` if needed by the JSON encoder.
-
-## Finding Open Coder Tasks
-
-```powershell
-$body = '{"tool":"tasks.list","input":{"tags":["wf:coder-task"],"completed":false,"limit":50}}'
-```
-
-## Finding Blocking Review Tasks
-
-```powershell
-$body = '{"tool":"tasks.list","input":{"tags":["wf:blocking"],"completed":false,"limit":20}}'
-```
-
-## Finding All Workflow Tasks (any wf: tag)
-
-List with multiple tag options using `"match":"any"`:
-
-```powershell
-$body = '{"tool":"tasks.list","input":{"tags":["wf:qa","wf:review","wf:sync"],"match":"any","limit":100}}'
-```
-
-## Response Shape
-
-```json
-{ "ok": true, "status": 200, "result": { "tasks": [...] } }
-{ "ok": true, "status": 201, "result": { "task": {...} } }
-{ "ok": false, "error": "description" }
-```
-
-## Task Object Fields Used by Workflow
-
-```
-id           — UUID, use for updates/references
-title        — "[TYPE][PRIORITY] Short description"
-description  — Structured markdown with all context
-tags         — ["wf:qa","wf:bug","wf:coder-task"] etc.
-completed    — false=open, true=resolved
-created_at   — when created
-updated_at   — when last modified
-```
-
-## Environment Variable
-
-```powershell
-# Set once per session
+# Set once per session (if .env not present in project root)
 $env:ORBIT_API_KEY = "dgm_your_key_here"
-
-# Verify it's set
-Write-Output $env:ORBIT_API_KEY
 ```
 
-Get the key: DailyGoalMap app → Goal → Settings tab → API section → Generate Project Key.
-Use a dedicated "Dev Workflow" goal to keep workflow tasks separate from personal tasks.
+Get the key: DailyGoalMap app → Goal → Settings → API → Generate Project Key.
+Use a dedicated **"Dev Workflow"** goal to keep workflow tasks separate from personal tasks.

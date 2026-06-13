@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -57,6 +57,48 @@ function splitTaskEmbeds(content: string): Block[] {
     }
 
     return out;
+}
+
+// Extracted component so we can use useRef — rehype-highlight turns code
+// content into highlighted <span> elements, making String(children) produce
+// "[object Object]". Reading textContent from the DOM gives the plain text.
+function CodeBlock({ className, children, lang, ...props }: {
+    className?: string;
+    children: React.ReactNode;
+    lang?: string;
+    [key: string]: unknown;
+}) {
+    const codeRef = useRef<HTMLElement>(null);
+
+    const handleCopy = () => {
+        const text = codeRef.current?.textContent ?? String(children);
+        navigator.clipboard.writeText(text.replace(/\n$/, ''));
+        toast({ title: '✓ Copied!', description: 'Code copied to clipboard.' });
+    };
+
+    return (
+        <div className="relative group/code my-4">
+            <div className="absolute right-3 top-3 z-10">
+                <button
+                    onClick={handleCopy}
+                    className="px-2.5 py-1 text-xs bg-zinc-800/80 hover:bg-zinc-700 text-zinc-100 backdrop-blur rounded-md font-medium shadow-md flex items-center gap-1.5 border border-white/10"
+                    aria-label="Copy code"
+                    title="Copy code"
+                >
+                    <Copy className="w-3 h-3" />
+                    Copy
+                </button>
+            </div>
+            {lang && (
+                <div className="absolute left-3 top-3 text-xs text-gray-400 font-mono uppercase tracking-wider">
+                    {lang}
+                </div>
+            )}
+            <code ref={codeRef} className={className} {...props}>
+                {children}
+            </code>
+        </div>
+    );
 }
 
 interface MarkdownRendererProps {
@@ -126,7 +168,6 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                             const lang = match?.[1];
                             const isInline = !match;
 
-                            // Render chart blocks as interactive charts
                             if (lang === 'chart') {
                                 return <ChartRenderer raw={String(children).replace(/\n$/, '')} />;
                             }
@@ -140,40 +181,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                             }
 
                             return (
-                                <div className="relative group/code my-4">
-                                    {/* COPY CODE BUTTON — always visible so it
-                                        works on touch devices too (was hover-only). */}
-                                    <div className="absolute right-3 top-3 z-10">
-                                        <button
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(
-                                                    String(children).replace(/\n$/, '')
-                                                );
-                                                toast({
-                                                    title: '✓ Copied!',
-                                                    description: 'Code copied to clipboard.',
-                                                });
-                                            }}
-                                            className="px-2.5 py-1 text-xs bg-zinc-800/80 hover:bg-zinc-700 text-zinc-100 backdrop-blur rounded-md font-medium shadow-md flex items-center gap-1.5 border border-white/10"
-                                            aria-label="Copy code"
-                                            title="Copy code"
-                                        >
-                                            <Copy className="w-3 h-3" />
-                                            Copy
-                                        </button>
-                                    </div>
-
-                                    {/* LANGUAGE LABEL */}
-                                    {lang && (
-                                        <div className="absolute left-3 top-3 text-xs text-gray-400 font-mono uppercase tracking-wider">
-                                            {lang}
-                                        </div>
-                                    )}
-
-                                    <code className={className} {...props}>
-                                        {children}
-                                    </code>
-                                </div>
+                                <CodeBlock className={className} lang={lang} {...props}>
+                                    {children}
+                                </CodeBlock>
                             );
                         },
 

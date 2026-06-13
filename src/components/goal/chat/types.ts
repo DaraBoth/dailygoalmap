@@ -40,5 +40,9 @@ export const STORAGE_KEYS = {
   IS_PENDING_CONFIRMATION: "goal_chat_pending_confirmation",
   GOAL_DATA: "goal_chat_goal_data",
   LAST_ASSISTANT_MESSAGE: "goal_chat_last_assistant_message",
-  INTERACTION_COUNT: "goal_chat_interaction_count"
+  INTERACTION_COUNT: "goal_chat_interaction_count",
+  SAVED_AT: "goal_chat_saved_at"
 };
+
+export const CHAT_MAX_MESSAGES = 50;
+export const CHAT_HISTORY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours

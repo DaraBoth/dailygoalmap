@@ -5,16 +5,17 @@
  * forwarded directly to Anthropic — it is never stored.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-anthropic-key",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 declare const Deno: { env: { get(key: string): string | undefined } };
 
 serve(async (req: Request) => {
+  const corsHeaders = {
+    ...getCorsHeaders(req.headers.get('Origin')),
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-anthropic-key',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
